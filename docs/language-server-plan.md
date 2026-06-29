@@ -135,6 +135,10 @@ of falling back to the bare member name, so unrelated same-named member calls
 are not reported together. Module-qualified references include the declaration
 inside the target module by searching that module with the unqualified imported
 member name.
+Dudu class member declaration references now use class-qualified identity for
+the selected declaration and receiver-type checks for member expressions, so
+`Player.hp` references do not include unrelated `Enemy.hp` declarations or
+uses.
 
 ## Architecture
 

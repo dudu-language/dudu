@@ -1,0 +1,17 @@
+#pragma once
+
+#include "dudu/lsp/language_server_types.hpp"
+
+#include <optional>
+#include <string>
+
+namespace dudu {
+
+struct Json;
+struct ModuleAst;
+
+std::optional<std::string> member_declaration_reference_query_at(const Document& doc,
+                                                                 const Json* params,
+                                                                 const ModuleAst* module);
+
+} // namespace dudu

@@ -132,6 +132,16 @@ def assert_documentation_contains(item, text):
         raise AssertionError(f"missing documentation {text!r} in {item!r}")
 
 
+def has_start(result, uri, line, character):
+    for item in result:
+        if item.get("uri") != uri:
+            continue
+        start = item.get("range", {}).get("start", {})
+        if start.get("line") == line and start.get("character") == character:
+            return True
+    return False
+
+
 tmp = pathlib.Path(tempfile.mkdtemp(prefix="dudu_lsp_matrix_"))
 try:
     (tmp / "math_utils.dd").write_text(
@@ -187,6 +197,12 @@ class Player:
     @operator("==")
     def equals(self, other: Player) -> bool:
         return self.hp == other.hp
+
+class Enemy:
+    hp: i32
+
+    def hurt(self) -> i32:
+        return self.hp
 """
     )
     main_source = """import math_utils as math
@@ -259,6 +275,7 @@ def main() -> i32:
 
     main = tmp / "main.dd"
     entities = tmp / "entities.dd"
+    entities_source = entities.read_text()
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
     missing = tmp / "missing_import.dd"
@@ -298,6 +315,7 @@ def main() -> i32:
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
         request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
+        request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -351,6 +369,14 @@ def main() -> i32:
     module_hover_value = module_hover["contents"]["value"]
     if "Entities module docs." not in module_hover_value:
         raise AssertionError(f"missing module docs: {module_hover!r}")
+    member_refs = response(messages, 38)
+    assert_nonempty(member_refs, "member identity references")
+    player_self_hp = position(entities_source, "self.hp", add=len("self."))
+    enemy_self_hp = position(entities_source, "self.hp", occurrence=3, add=len("self."))
+    if not has_start(member_refs, entities.as_uri(), player_self_hp["line"], player_self_hp["character"]):
+        raise AssertionError(f"missing Player.self hp reference: {member_refs!r}")
+    if has_start(member_refs, entities.as_uri(), enemy_self_hp["line"], enemy_self_hp["character"]):
+        raise AssertionError(f"Enemy.self hp reference leaked into Player.hp refs: {member_refs!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])

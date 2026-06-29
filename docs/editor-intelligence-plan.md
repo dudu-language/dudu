@@ -47,6 +47,10 @@ view.
 Find-references for local variables now scopes same-named bindings to the
 selected function/method body in direct LSP tests, so unrelated locals with the
 same spelling are not reported together.
+Find-references for Dudu member declarations now uses a class-qualified
+`Class.member` query internally and filters member expressions by receiver
+type, so same-named fields or methods on unrelated classes are not reported
+together.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

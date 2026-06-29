@@ -1,9 +1,9 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
@@ -263,31 +263,6 @@ void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int c
     collect_block_locals(scope, fn.statements, cursor_line);
 }
 
-std::optional<FunctionScope> local_scope_before_cursor(const ModuleAst& module,
-                                                       const Json* params) {
-    const int cursor_line = one_based_cursor_line(params);
-    Symbols symbols = collect_symbols(module);
-    FunctionScope scope(symbols);
-    for (const FunctionDecl& fn : module.functions) {
-        if (!function_contains_line(fn, cursor_line)) {
-            continue;
-        }
-        collect_function_locals(scope, fn, cursor_line);
-        return scope;
-    }
-    for (const ClassDecl& klass : module.classes) {
-        for (const FunctionDecl& method : klass.methods) {
-            if (!function_contains_line(method, cursor_line)) {
-                continue;
-            }
-            scope.current_class = klass.name;
-            collect_function_locals(scope, method, cursor_line);
-            return scope;
-        }
-    }
-    return std::nullopt;
-}
-
 } // namespace
 
 std::optional<std::string> member_completion_target(const Document& doc, const Json* params) {
@@ -310,9 +285,31 @@ TypeRef local_type_ref_before_cursor(const ModuleAst& module, const std::string&
 
 std::map<std::string, TypeRef> local_type_refs_before_cursor(const ModuleAst& module,
                                                              const Json* params) {
+    return local_type_refs_before_line(module, one_based_cursor_line(params));
+}
+
+std::map<std::string, TypeRef> local_type_refs_before_line(const ModuleAst& module,
+                                                           int one_based_line) {
     try {
-        if (const std::optional<FunctionScope> scope = local_scope_before_cursor(module, params)) {
-            return scope->local_type_refs;
+        Symbols symbols = collect_symbols(module);
+        FunctionScope scope(symbols);
+        for (const FunctionDecl& fn : module.functions) {
+            if (!function_contains_line(fn, one_based_line)) {
+                continue;
+            }
+            collect_function_locals(scope, fn, one_based_line);
+            return scope.local_type_refs;
+        }
+        for (const ClassDecl& klass : module.classes) {
+            for (const FunctionDecl& method : klass.methods) {
+                if (!function_contains_line(method, one_based_line)) {
+                    continue;
+                }
+                scope.current_class = klass.name;
+                collect_function_locals(scope, method, one_based_line);
+                lsp_bind_local(scope, "self", named_type_ref(klass.name, method.location));
+                return scope.local_type_refs;
+            }
         }
     } catch (const std::exception&) {
     }

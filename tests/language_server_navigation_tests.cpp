@@ -7,9 +7,9 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
-#include "dudu/project/module_loader.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <cassert>
@@ -393,7 +393,8 @@ void test_lsp_references_track_assignment_bindings() {
     assert(used_refs.size() == 2);
     const std::vector<dudu::ReferenceLocation> left_refs = dudu::references_in(module, doc, "left");
     assert(left_refs.size() == 2);
-    const std::vector<dudu::ReferenceLocation> right_refs = dudu::references_in(module, doc, "right");
+    const std::vector<dudu::ReferenceLocation> right_refs =
+        dudu::references_in(module, doc, "right");
     assert(right_refs.size() == 2);
 }
 
@@ -435,6 +436,36 @@ void test_lsp_references_track_qualified_type_refs() {
     const std::string refs_json = dudu::references_json(doc, &params, workspace);
     assert(refs_json.find("\"start\":{\"line\":2,\"character\":18}") != std::string::npos);
     assert(refs_json.find("\"start\":{\"line\":3,\"character\":11}") != std::string::npos);
+}
+
+void test_lsp_references_use_member_identity() {
+    const dudu::Document doc{.uri = "file:///member_identity_refs.dd",
+                             .path = "member_identity_refs.dd",
+                             .text = "class Player:\n"
+                                     "    hp: i32\n"
+                                     "\n"
+                                     "    def heal(self) -> i32:\n"
+                                     "        return self.hp\n"
+                                     "\n"
+                                     "class Enemy:\n"
+                                     "    hp: i32\n"
+                                     "\n"
+                                     "    def hurt(self) -> i32:\n"
+                                     "        return self.hp\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    player: Player = Player(1)\n"
+                                     "    enemy: Enemy = Enemy(2)\n"
+                                     "    return player.hp + enemy.hp\n"};
+    const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":1,\"character\":5}}").parse();
+    const std::string refs = dudu::references_json(doc, &params, workspace);
+    assert(refs.find("\"start\":{\"line\":1,\"character\":4}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":4,\"character\":20}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":15,\"character\":18}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":7,\"character\":4}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":10,\"character\":20}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":15,\"character\":29}") == std::string::npos);
 }
 
 void test_lsp_module_reference_filters_alias_target() {
@@ -620,6 +651,7 @@ int main() {
         test_lsp_references_track_assignment_bindings();
         test_lsp_references_scope_same_named_locals_by_function();
         test_lsp_references_track_qualified_type_refs();
+        test_lsp_references_use_member_identity();
         test_lsp_module_reference_filters_alias_target();
         test_lsp_module_references_include_target_declaration();
         test_lsp_selective_import_references_include_target_declaration();

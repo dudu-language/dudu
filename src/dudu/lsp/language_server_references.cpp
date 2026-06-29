@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
@@ -218,9 +219,13 @@ const ModuleAst* workspace_candidate_unit(const ProjectIndex* workspace_index,
     return visible_document_unit(index, candidate);
 }
 
-std::string reference_query_at(const Document& doc, const AstSelection& selection,
-                               const ModuleAst* module,
+std::string reference_query_at(const Document& doc, const Json* params,
+                               const AstSelection& selection, const ModuleAst* module,
                                const std::vector<Symbol>& symbols_with_native) {
+    if (const std::optional<std::string> member_query =
+            member_declaration_reference_query_at(doc, params, module)) {
+        return *member_query;
+    }
     const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;
     std::vector<std::string> paths;
@@ -294,18 +299,17 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
 }
 
 ReferenceScope reference_scope_at(const Document& doc, const Json* params, const std::string& name,
-                                  const AstSelection& selection, const ModuleAst* module,
+                                  const ModuleAst* module,
                                   const std::vector<Symbol>& symbols_without_native,
                                   const std::vector<Symbol>& symbols_with_native) {
     if (name.empty()) {
         return ReferenceScope::None;
     }
+    if (name.find('.') != std::string::npos) {
+        return ReferenceScope::Workspace;
+    }
     if (declaration_at_position(doc, params, name, symbols_without_native).has_value()) {
         return ReferenceScope::WorkspaceSkipRedeclarations;
-    }
-    if (selection.symbol_path.has_value() &&
-        selection.symbol_path->find('.') != std::string::npos) {
-        return ReferenceScope::Workspace;
     }
     if (selective_import_target(doc, name).has_value()) {
         return ReferenceScope::Workspace;
@@ -336,10 +340,10 @@ std::string references_json(const Document& doc, const Json* params,
     const std::vector<Symbol> current_symbols_without_native =
         current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
     const std::string query =
-        reference_query_at(doc, selection, current_unit, current_symbols_with_native);
+        reference_query_at(doc, params, selection, current_unit, current_symbols_with_native);
     const ReferenceScope scope =
-        reference_scope_at(doc, params, query, selection, current_unit,
-                           current_symbols_without_native, current_symbols_with_native);
+        reference_scope_at(doc, params, query, current_unit, current_symbols_without_native,
+                           current_symbols_with_native);
     if (scope == ReferenceScope::None) {
         return "[]";
     }

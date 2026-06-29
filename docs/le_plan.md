@@ -2280,7 +2280,10 @@ push. They are not release packaging work.
    imported member name. Selective `from module import name as alias`
    references now use the same resolved module target, include the original
    declaration, and exclude other files that reuse the alias for a different
-   module.
+   module. Dudu class member declaration references now use class-qualified
+   `Class.member` identity plus receiver-type checks for member expressions, so
+   references for a field such as `Player.hp` do not include unrelated same-name
+   fields such as `Enemy.hp`.
 
    The LSP server now caches the expanded workspace document set across
    requests and invalidates it when open buffers change. References, rename,
