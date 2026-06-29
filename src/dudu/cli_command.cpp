@@ -365,7 +365,8 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "dirty",
                            std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "emit", *options.output);
-        write_cpp_module_artifacts(*options.output, index.merged_module());
+        write_cpp_artifacts(*options.output,
+                            emit_cpp_module_artifacts(index.merged_module(), affected_modules));
         index.write_source_stamp_file(stamp_file);
         return 0;
     }
@@ -385,8 +386,8 @@ int run_cli(int argc, char** argv) {
                            std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
-                                                 index.merged_module(), options.test_filter,
-                                                 !options.no_capture));
+                                                 index.merged_module(), affected_modules,
+                                                 options.test_filter, !options.no_capture));
         index.write_source_stamp_file(stamp_file);
         return 0;
     }

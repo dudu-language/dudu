@@ -523,6 +523,21 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("main.cpp").find("render_camera.make_camera") == std::string::npos);
     assert(by_path.at("main.cpp").find("int main()") != std::string::npos);
     assert(by_path.at("main.cpp").find("return dudu_main_main();") != std::string::npos);
+
+    by_path.clear();
+    const std::vector<dudu::CppModuleArtifact> selected_artifacts =
+        dudu::emit_cpp_module_artifacts(module, {"camera"});
+    for (const dudu::CppModuleArtifact& artifact : selected_artifacts) {
+        by_path[artifact.path] = artifact.content;
+    }
+    assert(by_path.contains("dudu_runtime.hpp"));
+    assert(by_path.contains("camera.hpp"));
+    assert(by_path.contains("camera.cpp"));
+    assert(!by_path.contains(std::filesystem::path("renderer") / "camera.hpp"));
+    assert(!by_path.contains(std::filesystem::path("renderer") / "camera.cpp"));
+    assert(!by_path.contains("main.hpp"));
+    assert(!by_path.contains("main.cpp"));
+    assert(dudu::emit_cpp_module_artifacts(module, {}).empty());
 }
 
 void test_cpp_module_artifacts_use_resolved_dependency_paths() {

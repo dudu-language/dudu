@@ -268,6 +268,14 @@ std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>&
     return out;
 }
 
+std::set<std::string> module_filter(const std::vector<std::string>& module_paths) {
+    return {module_paths.begin(), module_paths.end()};
+}
+
+bool should_emit_module(const std::set<std::string>& module_paths, const ModuleAst& unit) {
+    return module_paths.empty() || module_paths.contains(unit.module_path);
+}
+
 ModuleAst test_harness_module(const ModuleAst& module) {
     ModuleAst out;
     const std::vector<ModuleAst>& units =
@@ -301,20 +309,40 @@ std::string test_harness_source(const ModuleAst& module, const std::string& filt
 } // namespace
 
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module) {
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    std::vector<std::string> module_paths;
+    module_paths.reserve(units.size());
+    for (const ModuleAst& unit : units) {
+        module_paths.push_back(unit.module_path);
+    }
+    return emit_cpp_module_artifacts(module, module_paths);
+}
+
+std::vector<CppModuleArtifact>
+emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string>& module_paths) {
     std::vector<CppModuleArtifact> out;
+    if (module_paths.empty()) {
+        return out;
+    }
+    const std::set<std::string> filter = module_filter(module_paths);
     out.push_back({.path = "dudu_runtime.hpp",
                    .module_path = {},
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
     if (module.module_units.empty()) {
-        append_artifacts(out, module, {{module.module_path, &module}}, false,
-                         preserve_public_abi_names(module));
+        if (should_emit_module(filter, module)) {
+            append_artifacts(out, module, {{module.module_path, &module}}, false,
+                             preserve_public_abi_names(module));
+        }
         return out;
     }
     const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
     const bool public_abi = preserve_public_abi_names(module);
     for (const ModuleAst& unit : module.module_units) {
-        append_artifacts(out, unit, modules, false, public_abi);
+        if (should_emit_module(filter, unit)) {
+            append_artifacts(out, unit, modules, false, public_abi);
+        }
     }
     return out;
 }
@@ -322,17 +350,39 @@ std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module
 std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& module,
                                                               const std::string& filter,
                                                               bool capture_output) {
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    std::vector<std::string> module_paths;
+    module_paths.reserve(units.size());
+    for (const ModuleAst& unit : units) {
+        module_paths.push_back(unit.module_path);
+    }
+    return emit_cpp_test_module_artifacts(module, module_paths, filter, capture_output);
+}
+
+std::vector<CppModuleArtifact>
+emit_cpp_test_module_artifacts(const ModuleAst& module,
+                               const std::vector<std::string>& module_paths,
+                               const std::string& filter, bool capture_output) {
     std::vector<CppModuleArtifact> out;
+    if (module_paths.empty()) {
+        return out;
+    }
+    const std::set<std::string> module_filter_set = module_filter(module_paths);
     out.push_back({.path = "dudu_runtime.hpp",
                    .module_path = {},
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
     if (module.module_units.empty()) {
-        append_artifacts(out, module, {{module.module_path, &module}}, true);
+        if (should_emit_module(module_filter_set, module)) {
+            append_artifacts(out, module, {{module.module_path, &module}}, true);
+        }
     } else {
         const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
         for (const ModuleAst& unit : module.module_units) {
-            append_artifacts(out, unit, modules, true);
+            if (should_emit_module(module_filter_set, unit)) {
+                append_artifacts(out, unit, modules, true);
+            }
         }
     }
     out.push_back({.path = "test_harness.cpp",
