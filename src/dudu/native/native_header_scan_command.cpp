@@ -126,7 +126,7 @@ std::filesystem::path native_header_temp_base(const std::filesystem::path& sourc
 
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags) {
-    return "v3|" + native_header_unquoted(import.module_path) + "|" +
+    return "v4|" + native_header_unquoted(import.module_path) + "|" +
            native_header_clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
            header_stamp(import, options);
 }
@@ -165,7 +165,7 @@ std::string native_header_clang_base_command(const NativeHeaderOptions& options,
                           " -std=" + shell_quote_arg(options.config.cpp_std) +
                           " -x c++ -fsyntax-only -fno-color-diagnostics ";
     if (ast_dump) {
-        command += "-Xclang -ast-dump ";
+        command += "-fparse-all-comments -Xclang -ast-dump ";
     }
     return command + shell_quote_path(cpp) + flags;
 }

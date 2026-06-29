@@ -1,5 +1,5 @@
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_header_cache_deps.hpp"
 #include "dudu/native/native_header_parse.hpp"
@@ -105,6 +105,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     bool saw_namespace_identity = false;
     bool saw_type_identity = false;
     bool saw_function_identity = false;
+    bool saw_function_doc = false;
     bool saw_value_identity = false;
     bool saw_macro_identity = false;
     for (const dudu::NativeNamespaceDecl& ns : module.native_namespaces) {
@@ -123,6 +124,9 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
         if (fn.name == "dudu_native.add") {
             assert(fn.identity.canonical_path == "dudu_native.add");
             saw_function_identity = true;
+        } else if (fn.name == "dudu_native_add") {
+            assert(fn.doc_comment.find("Adds two native integers.") != std::string::npos);
+            saw_function_doc = true;
         }
     }
     for (const dudu::NativeValueDecl& value : module.native_values) {
@@ -157,6 +161,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(saw_namespace_identity);
     assert(saw_type_identity);
     assert(saw_function_identity);
+    assert(saw_function_doc);
     assert(saw_value_identity);
     assert(saw_macro_identity);
     bool saw_lsp_type_identity = false;

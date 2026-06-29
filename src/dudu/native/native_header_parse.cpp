@@ -1,7 +1,7 @@
 #include "dudu/native/native_header_parse.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"
@@ -16,6 +16,22 @@ namespace {
 struct TemplateContext {
     int depth = 0;
     std::vector<std::string> params;
+};
+
+enum class CommentTargetKind {
+    Type,
+    Value,
+    Function,
+    Class,
+    Field,
+    Method,
+};
+
+struct CommentTarget {
+    int depth = 0;
+    CommentTargetKind kind = CommentTargetKind::Function;
+    size_t primary = 0;
+    size_t secondary = 0;
 };
 
 TypeRef normalize_native_type_ref(TypeRef type);
@@ -135,12 +151,63 @@ void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& lo
     klass.base_class_refs.push_back(std::move(decl));
 }
 
+void append_doc_text(std::string& doc, std::string text) {
+    text = trim_copy(std::move(text));
+    if (text.empty()) {
+        return;
+    }
+    if (!doc.empty()) {
+        doc += "\n";
+    }
+    doc += text;
+}
+
+void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const std::string& text) {
+    switch (target.kind) {
+    case CommentTargetKind::Type:
+        if (target.primary < scan.types.size()) {
+            append_doc_text(scan.types[target.primary].doc_comment, text);
+        }
+        break;
+    case CommentTargetKind::Value:
+        if (target.primary < scan.values.size()) {
+            append_doc_text(scan.values[target.primary].doc_comment, text);
+        }
+        break;
+    case CommentTargetKind::Function:
+        if (target.primary < scan.functions.size()) {
+            append_doc_text(scan.functions[target.primary].doc_comment, text);
+        }
+        break;
+    case CommentTargetKind::Class:
+        if (target.primary < scan.classes.size()) {
+            append_doc_text(scan.classes[target.primary].doc_comment, text);
+        }
+        break;
+    case CommentTargetKind::Field:
+        if (target.primary < scan.classes.size() &&
+            target.secondary < scan.classes[target.primary].fields.size()) {
+            append_doc_text(scan.classes[target.primary].fields[target.secondary].doc_comment,
+                            text);
+        }
+        break;
+    case CommentTargetKind::Method:
+        if (target.primary < scan.classes.size() &&
+            target.secondary < scan.classes[target.primary].methods.size()) {
+            append_doc_text(scan.classes[target.primary].methods[target.secondary].doc_comment,
+                            text);
+        }
+        break;
+    }
+}
+
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
                     std::vector<std::pair<int, size_t>>& classes,
                     std::vector<std::pair<int, std::string>>& enums,
                     std::vector<TemplateContext>& templates,
-                    std::vector<std::pair<int, size_t>>& functions, const SourceLocation& location,
+                    std::vector<std::pair<int, size_t>>& functions,
+                    std::vector<CommentTarget>& comment_targets, const SourceLocation& location,
                     std::string& current_file) {
     const SourceLocation decl_location = ast_source_location(line, location, current_file);
     if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
@@ -164,7 +231,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex enum_value_decl(
         R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex var_decl(R"(VarDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex text_comment(R"re(Text="(.*)")re");
     const int depth = ast_depth(line);
+    std::smatch match;
+    while (!comment_targets.empty() && comment_targets.back().depth >= depth) {
+        comment_targets.pop_back();
+    }
+    if (!comment_targets.empty() && line.find("TextComment") != std::string::npos &&
+        std::regex_search(line, match, text_comment)) {
+        append_doc_text(scan, comment_targets.back(), match[1].str());
+        return;
+    }
     while (!namespaces.empty() && namespaces.back().first >= depth) {
         namespaces.pop_back();
     }
@@ -180,7 +257,6 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!functions.empty() && functions.back().first >= depth) {
         functions.pop_back();
     }
-    std::smatch match;
     if (line.find("FunctionTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth, .params = {}});
     }
@@ -222,6 +298,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                   .type_ref = type_ref,
                                   .identity = native_identity(name, current_file),
                                   .location = decl_location});
+            comment_targets.push_back({.depth = depth,
+                                       .kind = CommentTargetKind::Type,
+                                       .primary = scan.types.size() - 1});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
                 line.find("CXXRecordDecl") != std::string::npos) &&
@@ -237,6 +316,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                   .type_ref = {},
                                   .identity = native_identity(name, current_file),
                                   .location = decl_location});
+            comment_targets.push_back({.depth = depth,
+                                       .kind = CommentTargetKind::Type,
+                                       .primary = scan.types.size() - 1});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
@@ -244,6 +326,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
                 classes.push_back({depth, scan.classes.size() - 1});
+                comment_targets.push_back({.depth = depth,
+                                           .kind = CommentTargetKind::Class,
+                                           .primary = scan.classes.size() - 1});
             }
         }
     } else if (line.find("EnumDecl") != std::string::npos &&
@@ -255,6 +340,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                   .type_ref = {},
                                   .identity = native_identity(name, current_file),
                                   .location = decl_location});
+            comment_targets.push_back({.depth = depth,
+                                       .kind = CommentTargetKind::Type,
+                                       .primary = scan.types.size() - 1});
             enums.push_back({depth, name});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
@@ -284,6 +372,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         fn.location = decl_location;
         scan.functions.push_back(std::move(fn));
         functions.push_back({depth, scan.functions.size() - 1});
+        comment_targets.push_back({.depth = depth,
+                                   .kind = CommentTargetKind::Function,
+                                   .primary = scan.functions.size() - 1});
     } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
@@ -306,7 +397,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             method.params.push_back(std::move(decl));
         }
         method.location = decl_location;
-        scan.classes[classes.back().second].methods.push_back(std::move(method));
+        const size_t class_index = classes.back().second;
+        scan.classes[class_index].methods.push_back(std::move(method));
+        comment_targets.push_back({.depth = depth,
+                                   .kind = CommentTargetKind::Method,
+                                   .primary = class_index,
+                                   .secondary = scan.classes[class_index].methods.size() - 1});
     } else if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
                std::regex_search(line, match, ctor_decl)) {
         const std::vector<std::string> params =
@@ -323,15 +419,25 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             ctor.params.push_back(std::move(decl));
         }
         ctor.location = decl_location;
-        scan.classes[classes.back().second].methods.push_back(std::move(ctor));
+        const size_t class_index = classes.back().second;
+        scan.classes[class_index].methods.push_back(std::move(ctor));
+        comment_targets.push_back({.depth = depth,
+                                   .kind = CommentTargetKind::Method,
+                                   .primary = class_index,
+                                   .secondary = scan.classes[class_index].methods.size() - 1});
     } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
                std::regex_search(line, match, field_decl)) {
         const std::string type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str()));
-        scan.classes[classes.back().second].fields.push_back(
+        const size_t class_index = classes.back().second;
+        scan.classes[class_index].fields.push_back(
             {.name = match[1].str(),
              .type_ref = parse_native_type_text(type, decl_location),
              .value_expr = {},
              .location = decl_location});
+        comment_targets.push_back({.depth = depth,
+                                   .kind = CommentTargetKind::Field,
+                                   .primary = class_index,
+                                   .secondary = scan.classes[class_index].fields.size() - 1});
     } else if (!classes.empty() &&
                (line.find("public '") != std::string::npos ||
                 line.find("protected '") != std::string::npos ||
@@ -353,6 +459,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                    .enum_constant = true,
                                    .identity = native_identity(name, current_file),
                                    .location = decl_location});
+            comment_targets.push_back({.depth = depth,
+                                       .kind = CommentTargetKind::Value,
+                                       .primary = scan.values.size() - 1});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
@@ -365,6 +474,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                    .type_ref = parse_native_type_text(type, decl_location),
                                    .identity = native_identity(name, current_file),
                                    .location = decl_location});
+            comment_targets.push_back({.depth = depth,
+                                       .kind = CommentTargetKind::Value,
+                                       .primary = scan.values.size() - 1});
         }
     }
 }
@@ -378,12 +490,13 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
     std::vector<std::pair<int, std::string>> enums;
     std::vector<TemplateContext> templates;
     std::vector<std::pair<int, size_t>> functions;
+    std::vector<CommentTarget> comment_targets;
     std::string current_file;
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions, location,
-                       current_file);
+        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions,
+                       comment_targets, location, current_file);
     }
 }
 

@@ -268,7 +268,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = "native class " + klass.name,
                        .location = klass.location,
                        .kind = lsp_symbol_kind::Class,
-                       .native_identity_key = native_identity_key(klass.identity)});
+                       .native_identity_key = native_identity_key(klass.identity),
+                       .doc_comment = klass.doc_comment});
         for (const FunctionDecl& method : klass.methods) {
             out.push_back({.name = klass.name + "." + method.name,
                            .detail = function_detail(method),

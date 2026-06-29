@@ -87,7 +87,9 @@ Native hover now surfaces the scanner's canonical native identity key when the
 symbol has one, so hover shows both the Dudu-shaped signature/type and the
 identity used by native references. Native function hover/detail also includes
 a compact scanner-derived native signature suffix when concrete
-return/parameter spelling is available.
+return/parameter spelling is available. The native scanner now runs Clang with
+parsed comments and attaches scanned header comments to native declarations, so
+hover can show real C/C++ declaration docs when the header exposes them.
 Native find-references now consults `ProjectIndex`'s per-module native identity
 table instead of rebuilding LSP symbol lists for every candidate document. Open
 single-file editor overlays are indexed with their entry path, so unsaved or

@@ -18,6 +18,6 @@ enum DuduNativeKind {
 #define DUDU_NATIVE_CHECK() dudu_native_ready(nullptr)
 
 bool dudu_native_ready(DuduNativeEvent* event);
-int dudu_native_add(int a, int b);
+/** Adds two native integers. */ int dudu_native_add(int a, int b);
 const char* dudu_native_format(const char* text, ...);
 DuduNativeProc dudu_native_proc(void);

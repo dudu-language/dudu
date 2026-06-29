@@ -446,6 +446,10 @@ without aliases are covered for completion, signature help, and definition.
 Native function hover/detail includes the lowered Dudu signature plus a compact
 scanner-derived native signature suffix such as `native i32(i32, i32)` when the
 scanner has non-synthesized return/parameter spelling.
+The native scanner also parses Clang `FullComment`/`TextComment` nodes and
+preserves header comments on native declarations through the scan cache, so
+hover/completion/signature-help documentation can include real C/C++ declaration
+docs when available.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
