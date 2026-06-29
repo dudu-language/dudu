@@ -560,7 +560,8 @@ signature help now share that member inventory too: `Counter.` completes
 constants, static fields, and methods, and `Counter.bump(` surfaces the method
 signature/docs in the JSON-RPC matrix. Constructor signature help now uses the
 indexed class shape as well, so class calls such as `Player(` show field/init
-parameters and docs.
+parameters and docs. Workspace-symbol results include class/static member
+symbols such as `Counter.count` and carry first-doc-line detail summaries.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

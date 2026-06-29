@@ -14,17 +14,6 @@
 namespace dudu {
 namespace {
 
-std::string symbol_json(const Symbol& symbol, const std::string& default_uri) {
-    const std::string uri = symbol.location.file.empty()
-                                ? default_uri
-                                : file_uri(std::filesystem::path(symbol.location.file));
-    std::ostringstream out;
-    out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
-        << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
-        << json_escape(uri) << "\",\"range\":" << range_json(symbol.location) << "}}";
-    return out.str();
-}
-
 std::string first_doc_line(std::string_view doc_comment) {
     const size_t newline = doc_comment.find('\n');
     return std::string(doc_comment.substr(0, newline));
@@ -38,6 +27,18 @@ std::string symbol_detail_with_doc(const Symbol& symbol) {
         return first_doc_line(symbol.doc_comment);
     }
     return symbol.detail + " - " + first_doc_line(symbol.doc_comment);
+}
+
+std::string symbol_json(const Symbol& symbol, const std::string& default_uri) {
+    const std::string uri = symbol.location.file.empty()
+                                ? default_uri
+                                : file_uri(std::filesystem::path(symbol.location.file));
+    std::ostringstream out;
+    out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
+        << ",\"detail\":\"" << json_escape(symbol_detail_with_doc(symbol))
+        << "\",\"location\":{\"uri\":\"" << json_escape(uri)
+        << "\",\"range\":" << range_json(symbol.location) << "}}";
+    return out.str();
 }
 
 std::string document_symbol_json(const Symbol& symbol) {

@@ -455,6 +455,7 @@ def main() -> i32:
         request(15, "workspace/symbol", {"query": "MAX_HP"}),
         request(16, "workspace/symbol", {"query": "mix"}),
         request(17, "workspace/symbol", {"query": "add"}),
+        request(78, "workspace/symbol", {"query": "Counter.count"}),
         request(20, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math."))}),
         request(21, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=1)}),
         request(22, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
@@ -539,6 +540,10 @@ def main() -> i32:
         raise AssertionError(f"missing Mode doc detail in {entity_symbols!r}")
     for request_id in range(11, 18):
         assert_nonempty(response(messages, request_id), f"workspace symbol {request_id}")
+    counter_workspace_symbols = response(messages, 78)
+    assert_symbol_names(counter_workspace_symbols, ["Counter.count"])
+    if "Counter mutable count docs." not in item_named(counter_workspace_symbols, "Counter.count").get("detail", ""):
+        raise AssertionError(f"missing Counter.count workspace symbol docs: {counter_workspace_symbols!r}")
     for request_id in range(20, 30):
         assert_nonempty(response(messages, request_id), f"definition {request_id}")
     player_definition = response(messages, 21)

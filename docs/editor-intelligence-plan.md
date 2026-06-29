@@ -68,6 +68,9 @@ method signature plus attached docs through the real `dudu-lsp` JSON-RPC matrix.
 Constructor calls now participate in signature help too: `Player(` reports the
 field/init-derived constructor signature and declaration docs from the indexed
 class shape.
+Workspace-symbol results now include class/static member symbols such as
+`Counter.count` and use the same first-doc-line detail summaries as document
+symbols, so quick-open style searches carry useful context.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant. Payload
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for

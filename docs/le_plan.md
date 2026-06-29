@@ -2375,7 +2375,9 @@ push. They are not release packaging work.
    and signature help use that same inventory, so `Counter.` completes
    constants, static fields, and methods, and `Counter.bump(` shows signature
    docs over JSON-RPC. Constructor signature help now uses indexed class shapes,
-   so `Player(` shows field/init parameters and declaration docs.
+   so `Player(` shows field/init parameters and declaration docs. Workspace
+   symbols include class/static members such as `Counter.count` with first-doc-
+   line detail summaries.
    Native function hover/detail includes both the lowered Dudu signature and a
    compact scanner-derived native signature suffix when concrete
    return/parameter spelling is available.
