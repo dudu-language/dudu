@@ -1949,6 +1949,13 @@ push. They are not release packaging work.
    around 66ms, indexing around 124ms, matches around 61ms, operators around
    90ms, and mixed around 89ms. Keep treating cache-size tuning as measured,
    not guessed; larger cache sizes need their own diverse validation.
+   Replacing the arithmetic/comparison string helper calls in
+   `sema_expr_type_ops` with local `ExprOpCode` switch helpers was tried and
+   rejected. Although the AST already stores compact operator codes, the local
+   rewrite regressed the focused five-sample Release shape set: expressions
+   moved to about 202ms, indexing to about 130ms, generics to about 83ms, and
+   operators to about 89ms. Do not repeat that exact helper rewrite without a
+   deeper profile showing operator text conversion is again dominant.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused
