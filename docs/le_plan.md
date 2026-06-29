@@ -1963,6 +1963,13 @@ push. They are not release packaging work.
    69ms, indexing around 129ms, generics around 79ms, matches around 62ms,
    operators around 92ms, and mixed around 86ms. The current by-value API may
    still be inelegant, but this local signature change is not a throughput win.
+   Removing the statement-block capacity pre-scan was tried and rejected. It
+   looked attractive because huge generated functions were walking the same
+   block once to reserve and once to parse, but vector growth cost was worse
+   than the pre-scan. A focused five-sample Release run regressed expressions
+   to about 203ms, indexing to about 130ms, operators to about 92ms, and mixed
+   to about 90ms, with higher RSS on several shapes. Keep the reserve pre-scan
+   until a different block representation makes that scan unnecessary.
    Collapsing the index-expression local receiver path from `contains` plus
    lookup to a single pointer lookup was also tried and rejected. It looked
    like a clear cleanup, but focused five-sample Release results regressed
