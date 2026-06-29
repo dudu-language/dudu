@@ -347,6 +347,32 @@ void test_lsp_hover_uses_ast_doc_comments() {
     assert(hover.find("Keeps hover docs on the AST.") != std::string::npos);
 }
 
+void test_lsp_hover_uses_constant_and_alias_docs() {
+    const dudu::Document doc{.uri = "file:///constant_alias_docs.dd",
+                             .path = "constant_alias_docs.dd",
+                             .text = "# Player id docs.\n"
+                                     "type PlayerId = i32\n"
+                                     "\n"
+                                     "# Default player id docs.\n"
+                                     "DEFAULT_PLAYER_ID: PlayerId = 7\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    value: PlayerId = DEFAULT_PLAYER_ID\n"
+                                     "    return value\n"};
+
+    dudu::Json alias_params =
+        dudu::JsonParser("{\"position\":{\"line\":7,\"character\":12}}").parse();
+    const std::string alias_hover = dudu::hover_json(doc, "", &alias_params);
+    assert(alias_hover.find("type PlayerId = i32") != std::string::npos);
+    assert(alias_hover.find("Player id docs.") != std::string::npos);
+
+    dudu::Json constant_params =
+        dudu::JsonParser("{\"position\":{\"line\":7,\"character\":25}}").parse();
+    const std::string constant_hover = dudu::hover_json(doc, "", &constant_params);
+    assert(constant_hover.find("DEFAULT_PLAYER_ID: PlayerId") != std::string::npos);
+    assert(constant_hover.find("Default player id docs.") != std::string::npos);
+}
+
 void test_lsp_hover_uses_imported_ast_doc_comments() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_doc_hover_test";
@@ -920,6 +946,7 @@ int main() {
         test_lsp_native_field_references_filter_by_receiver_type();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_hover_uses_ast_doc_comments();
+        test_lsp_hover_uses_constant_and_alias_docs();
         test_lsp_hover_uses_imported_ast_doc_comments();
         test_lsp_hover_uses_imported_enum_value_identity();
         test_lsp_hover_uses_imported_member_identity_for_field_docs();

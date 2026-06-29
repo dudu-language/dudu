@@ -368,17 +368,19 @@ module import alias.
 Completion items now carry those AST docs for local, imported, and Dudu member
 symbols, and `completionItem/resolve` preserves that documentation payload
 instead of reconstructing it from display text. Signature help also shows those
-docs for Dudu functions visible through the ProjectIndex. Field/constant/alias
-docstrings and native C/C++ documentation are still planned. Misplaced
+docs for Dudu functions visible through the ProjectIndex. Type aliases are now
+first-class LSP symbols, so hover and definition can use their attached docs the
+same way classes and other type declarations do. Misplaced
 module/class/enum/function docstrings now produce explicit parser diagnostics
 instead of generic syntax failures or inert string statements. Document symbols
 now use proper LSP `DocumentSymbol` objects and put a short AST doc summary
 into `detail` when a symbol has docs. The JSON-RPC LSP matrix covers class,
 field, typed field hover, method, imported completion, signature help, import
 hover, and document-symbol doc propagation, including docstring-backed module,
-class, enum, enum-value, method, and function docs. Hover for selective imports
-preserves suffix identity, so `Mode.Play` resolves through the imported `Mode`
-symbol to the enum variant docs.
+class, enum, enum-value, method, and function docs, plus leading-comment docs
+for constants and aliases. Hover for selective imports preserves suffix
+identity, so `Mode.Play` resolves through the imported `Mode` symbol to the enum
+variant docs.
 
 Semantic tokens are also ProjectIndex-aware for Dudu imports. Module aliases
 such as `math`, selective imported classes such as `Player`, imported functions
@@ -388,15 +390,15 @@ the returned token stream and asserts those imported token kinds.
 
 Remaining work:
 
-1. Decide and implement a Python-shaped larger-doc form for fields, constants,
-   and aliases; leading `#` docs already work for these one-line declarations.
+1. Decide whether one-line declarations such as fields, constants, and aliases
+   need a larger-doc form beyond leading `#` comments.
 2. Add direct native C/C++ documentation fixtures once scanner support exists.
 3. Extend formatting rules and formatter behavior for docstrings, including
    indentation trimming and blank-line preservation.
 4. Extend parser diagnostics for malformed docstrings if new malformed cases
    appear beyond unterminated triple strings and misplaced docstrings.
-5. Add more LSP fixtures for constant/alias documentation once their larger-doc
-   syntax is decided.
+5. Add larger-doc LSP fixtures for fields/constants/aliases if a larger-doc
+   syntax is added.
 6. Extend native C/C++ documentation fixtures beyond native functions when the
    scanner exposes useful docs for more declaration kinds.
 

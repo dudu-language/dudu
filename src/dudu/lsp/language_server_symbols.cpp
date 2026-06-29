@@ -210,6 +210,14 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .doc_comment = value.doc_comment});
         }
     }
+    for (const TypeAliasDecl& alias : module.aliases) {
+        out.push_back({.name = alias.name,
+                       .detail = "type " + alias.name + " = " + type_ref_text(alias.type_ref),
+                       .location = alias.location,
+                       .kind = lsp_symbol_kind::Struct,
+                       .native_identity_key = std::nullopt,
+                       .doc_comment = alias.doc_comment});
+    }
     for (const ConstDecl& constant : module.constants) {
         out.push_back({.name = constant.name,
                        .detail = constant.name + ": " + type_ref_text(constant.type_ref),
