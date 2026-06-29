@@ -2,8 +2,8 @@
 
 #include "dudu/core/ast.hpp"
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/lsp/language_server_types.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/lsp/language_server_types.hpp"
 
 #include <filesystem>
 #include <optional>
@@ -24,6 +24,7 @@ struct AstSelection {
     std::optional<std::string> symbol;
     std::optional<std::string> symbol_path;
     std::optional<ExprPath> expr_path;
+    std::optional<Expr> operator_expr;
     bool call_callee = false;
 };
 

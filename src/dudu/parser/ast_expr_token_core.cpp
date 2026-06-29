@@ -359,6 +359,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
         if (precedence < min_precedence) {
             break;
         }
+        const SourceLocation op_location = current().location;
         const std::string_view op = canonical_operator_text(current().text);
         ++cursor_;
         Expr rhs = (stop_at(stops) || at_end())
@@ -366,6 +367,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
                        : parse_binary(precedence + 1, stops);
         Expr binary = make_node(ExprKind::Binary, begin, cursor_);
         binary.op = op;
+        binary.op_location = op_location;
         binary.children.reserve(2);
         binary.children.push_back(std::move(lhs));
         binary.children.push_back(std::move(rhs));

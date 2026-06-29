@@ -173,6 +173,7 @@ bool operator!=(std::string_view left, ExprOp right) {
 
 Expr::Expr(const Expr& other)
     : kind(other.kind), name(other.name), value(other.value), op(other.op),
+      op_location(other.op_location),
       callee(other.callee == nullptr ? nullptr
                                      : std::make_unique<std::vector<Expr>>(*other.callee)),
       template_args(other.template_args == nullptr
@@ -193,8 +194,8 @@ Expr& Expr::operator=(const Expr& other) {
     name = other.name;
     value = other.value;
     op = other.op;
-    callee =
-        other.callee == nullptr ? nullptr : std::make_unique<std::vector<Expr>>(*other.callee);
+    op_location = other.op_location;
+    callee = other.callee == nullptr ? nullptr : std::make_unique<std::vector<Expr>>(*other.callee);
     template_args = other.template_args == nullptr
                         ? nullptr
                         : std::make_unique<std::vector<Expr>>(*other.template_args);

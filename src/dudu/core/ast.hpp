@@ -216,6 +216,7 @@ struct Expr {
     SourceTextAtom name;
     SourceTextAtom value;
     ExprOp op;
+    SourceLocation op_location;
     std::unique_ptr<std::vector<Expr>> callee;
     std::unique_ptr<std::vector<Expr>> template_args;
     std::unique_ptr<std::vector<TypeRef>> template_type_args;

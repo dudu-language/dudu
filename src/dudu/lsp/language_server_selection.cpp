@@ -18,6 +18,13 @@ bool contains_name(const SourceLocation& location, const std::string& name,
     return target_column >= start && target_column <= end;
 }
 
+bool contains_operator(const Expr& expr, const LspPosition& position) {
+    if (expr.kind != ExprKind::Binary || expr.op_location.line <= 0) {
+        return false;
+    }
+    return contains_name(expr.op_location, std::string(expr.op), position);
+}
+
 void collect_call_callee_selection(const Expr& expr, const LspPosition& position,
                                    AstSelection& selection) {
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
@@ -65,6 +72,12 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
     };
     const auto visit_expr = [&](const Expr& expr) {
         collect_call_callee_selection(expr, position, selection);
+        if (!selection.operator_expr && contains_operator(expr, position)) {
+            selection.symbol = std::string(expr.op);
+            selection.symbol_path = std::string(expr.op);
+            selection.operator_expr = expr;
+            return;
+        }
         if (!selection.call_callee &&
             (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
             expr_callee(expr).size() == 1 && expr_callee(expr).front().kind == ExprKind::Name &&
@@ -122,6 +135,12 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
     };
     const auto visit_expr = [&](const Expr& expr) {
         collect_call_callee_selection(expr, position, selection);
+        if (!selection.operator_expr && contains_operator(expr, position)) {
+            selection.symbol = std::string(expr.op);
+            selection.symbol_path = std::string(expr.op);
+            selection.operator_expr = expr;
+            return;
+        }
         if (!selection.call_callee &&
             (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
             expr_callee(expr).size() == 1 && expr_callee(expr).front().kind == ExprKind::Name &&

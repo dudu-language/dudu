@@ -82,6 +82,10 @@ Enum value declaration references use the same qualified identity shape, so
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for
 hover and references, so constructor-like variants do not collide with
 same-named variants on other enums.
+Operator tokens now carry source locations in the AST, and go-to-definition on
+a Dudu operator use such as `left + right` resolves through operand type
+inference to the matching `@operator("+")` method. The JSON-RPC matrix asserts
+the operator use-site jump, not only the operator method declaration.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

@@ -3795,3 +3795,7 @@ push. They are not release packaging work.
    JSON-RPC matrix: completion and hover show docs, definition jumps to the
    header declaration, references include the use site, and semantic tokens mark
    the value readonly/native.
+   Dudu operator tokens now preserve AST source locations for editor selection,
+   and LSP go-to-definition on a binary operator use resolves through operand
+   type inference to the matching `@operator(...)` method. The JSON-RPC matrix
+   covers the actual `left + right` use site.

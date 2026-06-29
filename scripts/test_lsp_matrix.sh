@@ -558,6 +558,7 @@ def main() -> i32:
         request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
+        request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(51, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MatrixNativePoint", add=len("nb."))}),
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -874,6 +875,12 @@ def main() -> i32:
         raise AssertionError(f"missing unresolved return variable token: {unresolved_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
+    operator_use_definition = response(messages, 94)
+    operator_add_decl = position(ops_source, "add(self", add=0)
+    if operator_use_definition["uri"] != ops.as_uri():
+        raise AssertionError(f"operator use definition did not jump to source file: {operator_use_definition!r}")
+    if operator_use_definition["range"]["start"]["line"] != operator_add_decl["line"]:
+        raise AssertionError(f"operator use definition jumped to wrong line: {operator_use_definition!r}")
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
