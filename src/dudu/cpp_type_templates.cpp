@@ -3,6 +3,7 @@
 #include "dudu/cpp_type_internal.hpp"
 
 #include <sstream>
+#include <string_view>
 
 namespace dudu {
 namespace {
@@ -47,7 +48,7 @@ std::string join_lowered_type_args(const std::vector<TypeRef>& args,
 } // namespace
 
 std::string lower_template_type(const TypeRef& type) {
-    const std::string& name = type.name;
+    const std::string_view name = type.name;
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
         type.children.front().kind == TypeKind::Function) {
         return "std::function<" + lower_cpp_function_type(type.children.front(), false) + ">";
@@ -86,13 +87,13 @@ std::string lower_template_type(const TypeRef& type) {
         return "std::variant<" + join_lowered_type_args(type.children) + ">";
     }
     std::ostringstream out;
-    out << replace_dots(name) << "<" << join_lowered_type_args(type.children) << ">";
+    out << replace_dots(std::string{name}) << "<" << join_lowered_type_args(type.children) << ">";
     return out.str();
 }
 
 std::string lower_template_type(const TypeRef& type,
                                 const std::vector<std::string>& namespace_aliases) {
-    const std::string& name = type.name;
+    const std::string_view name = type.name;
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
         type.children.front().kind == TypeKind::Function) {
         return "std::function<" +
@@ -136,7 +137,7 @@ std::string lower_template_type(const TypeRef& type,
         return "std::variant<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
     }
     std::ostringstream out;
-    out << replace_dots(strip_c_import_type_aliases(name, namespace_aliases)) << "<"
+    out << replace_dots(strip_c_import_type_aliases(std::string{name}, namespace_aliases)) << "<"
         << join_lowered_type_args(type.children, namespace_aliases) << ">";
     return out.str();
 }
@@ -144,7 +145,7 @@ std::string lower_template_type(const TypeRef& type,
 std::string lower_template_type(const TypeRef& type,
                                 const std::vector<std::string>& namespace_aliases,
                                 const CppEmitOptions& options) {
-    const std::string& name = type.name;
+    const std::string_view name = type.name;
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
         type.children.front().kind == TypeKind::Function) {
         return "std::function<" +
@@ -194,7 +195,8 @@ std::string lower_template_type(const TypeRef& type,
     }
     std::ostringstream out;
     out << replace_dots(
-               emitted_type_name(strip_c_import_type_aliases(name, namespace_aliases), options))
+               emitted_type_name(strip_c_import_type_aliases(std::string{name}, namespace_aliases),
+                                 options))
         << "<" << join_lowered_type_args(type.children, namespace_aliases, options) << ">";
     return out.str();
 }

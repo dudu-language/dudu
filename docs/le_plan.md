@@ -1466,7 +1466,9 @@ push. They are not release packaging work.
    Add both isolated stress shapes and combination cases that cross features
    such as templates plus overloads plus native imports, because a compiler can
    look fast on every single-feature corpus while one real feature interaction
-   dominates user-visible compile time.
+   dominates user-visible compile time. Every compiler-speed optimization must
+   be tested against a diverse shape set selected for the suspected hot path,
+   not only the benchmark that first exposed the slowdown.
    Reject a speed patch if it only improves one generated shape while
    regressing other representative shapes; that is a local trick, not a
    compiler throughput win.
@@ -1915,6 +1917,18 @@ push. They are not release packaging work.
    lookup cache landed, and was not kept: it still regressed indexing,
    generics, and mixed project-shaped code compared with the simpler
    cache-only path.
+   A narrower `lower_template_type` cleanup then kept local template names as
+   `std::string_view` while leaving fallback emission paths string-based. This
+   avoids repeated `std::string == "literal"` dispatch in a hot template
+   lowering path without reintroducing the rejected static-atom rewrite. A
+   five-sample focused Release run measured indexing 50k around 128ms, arrays
+   around 68ms, generics around 77ms, matches around 62ms, operators around
+   93ms, and mixed around 88ms. A three-sample broad Release run stayed in the
+   same band: expressions around 200ms, calls/functions around 52ms,
+   classes around 40ms, modules around 66ms, arrays around 69ms, generics
+   around 79ms, indexing around 131ms, matches around 64ms, operators around
+   92ms, and mixed around 91ms. Keep this as a small hot-path cleanup, not as
+   a major compiler-speed milestone.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release
