@@ -1986,6 +1986,14 @@ push. They are not release packaging work.
    124ms, generics around 74ms, matches around 59ms, operators around 90ms,
    and mixed around 87ms. Treat this as string-comparison cleanup, not a major
    expression-throughput fix.
+   Native signature matching then stopped re-inferring argument types for every
+   overload candidate. `match_native_signature` now computes argument TypeRefs
+   once per native call and passes them through matching and overload
+   diagnostics. This is a general native-resolution cleanup, not a fixture
+   special case. A focused five-sample Release run with the new local native
+   generated shape measured native 50k around 236ms and 68MB RSS, down from the
+   initial native-shape baseline around 246ms and 70MB RSS, while expressions
+   stayed around 195ms, indexing around 123ms, and mixed around 86ms.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused
