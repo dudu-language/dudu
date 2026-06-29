@@ -160,7 +160,7 @@ FormatPathOptions format_options_for_project(const CliOptions& options) {
     return out;
 }
 
-ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
+ProjectIndex checked_index(const CliOptions& options, const std::string& source, bool check_bodies) {
     const bool detail_output = !options.quiet && options.timings;
     print_project_step(detail_output, "config", options.input);
     const ProjectConfig config = config_for_options(options);
@@ -182,7 +182,11 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
                                                                         check_bodies}});
     print_project_step(detail_output, "indexed", options.input);
     print_project_step(detail_output, "checked", options.input);
-    return checked.merged_module();
+    return checked;
+}
+
+ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
+    return checked_index(options, source, check_bodies).merged_module();
 }
 
 void check_source_file(CliOptions options, const std::filesystem::path& path) {
@@ -351,9 +355,9 @@ int run_cli(int argc, char** argv) {
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
-        const ModuleAst module = checked_module(options, source, true);
+        const ProjectIndex index = checked_index(options, source, true);
         print_project_step(project_output, "emit", *options.output);
-        write_cpp_module_artifacts(*options.output, module);
+        write_cpp_module_artifacts(*options.output, index.merged_module());
         return 0;
     }
     if (options.emit_test_modules) {
@@ -362,10 +366,11 @@ int run_cli(int argc, char** argv) {
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
-        const ModuleAst module = checked_module(options, source, true);
+        const ProjectIndex index = checked_index(options, source, true);
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
-                                                 module, options.test_filter, !options.no_capture));
+                                                 index.merged_module(), options.test_filter,
+                                                 !options.no_capture));
         return 0;
     }
     if (options.emit_cpp) {
