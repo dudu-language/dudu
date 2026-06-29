@@ -2261,10 +2261,13 @@ push. They are not release packaging work.
    The LSP server now caches the expanded workspace document set across
    requests and invalidates it when open buffers change. References, rename,
    and code-action requests reuse that warm workspace set instead of rescanning
-   imported modules and the filesystem on every request. Workspace-symbol now
-   walks shared ProjectIndex module graphs for the open documents directly and
-   de-duplicates symbols across overlapping project graphs, so it no longer
-   reparses a synthetic workspace document map.
+   imported modules and the filesystem on every request. That workspace set now
+   fills ProjectIndex module-graph documents first and tracks those indexed
+   paths separately from the bounded recursive scan used only for non-indexed
+   import-discovery candidates. Workspace-symbol now walks shared ProjectIndex
+   module graphs for the open documents directly and de-duplicates symbols
+   across overlapping project graphs, so it no longer reparses a synthetic
+   workspace document map.
    `scripts/bench_compiler.sh` now includes repeated workspace-symbol and
    references requests in its LSP probe so this warm-request path remains
    visible in benchmark runs.

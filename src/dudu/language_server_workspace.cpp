@@ -16,9 +16,16 @@
 namespace dudu {
 namespace {
 
+std::filesystem::path canonical_workspace_path(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
+
 void collect_indexed_documents(const Document& doc,
                                const std::set<std::filesystem::path>& open_paths,
-                               std::map<std::string, Document>& out, size_t& scanned) {
+                               std::set<std::filesystem::path>& indexed_paths,
+                               std::map<std::string, Document>& out) {
     const ProjectIndex* index = nullptr;
     try {
         index = &project_index_for_document(doc, false);
@@ -26,14 +33,12 @@ void collect_indexed_documents(const Document& doc,
         return;
     }
     for (const ProjectModuleSummary& module : index->modules()) {
-        if (scanned >= 1000 || module.source_path.empty()) {
+        if (module.source_path.empty()) {
             return;
         }
-        std::error_code error;
-        const std::filesystem::path canonical =
-            std::filesystem::weakly_canonical(module.source_path, error);
-        if (error || open_paths.contains(canonical)) {
-            error.clear();
+        const std::filesystem::path canonical = canonical_workspace_path(module.source_path);
+        indexed_paths.insert(canonical);
+        if (open_paths.contains(canonical)) {
             continue;
         }
         const std::string uri = file_uri(module.source_path);
@@ -46,12 +51,12 @@ void collect_indexed_documents(const Document& doc,
         }
         const Document imported{.uri = uri, .path = module.source_path, .text = std::move(*text)};
         out.try_emplace(uri, imported);
-        ++scanned;
     }
 }
 
 void collect_workspace_documents(const std::filesystem::path& root,
                                  const std::set<std::filesystem::path>& open_paths,
+                                 const std::set<std::filesystem::path>& indexed_paths,
                                  std::map<std::string, Document>& out, size_t& scanned) {
     std::error_code error;
     if (root.empty() || !std::filesystem::exists(root, error) || error) {
@@ -70,7 +75,7 @@ void collect_workspace_documents(const std::filesystem::path& root,
             continue;
         }
         const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
-        if (error || open_paths.contains(canonical)) {
+        if (error || open_paths.contains(canonical) || indexed_paths.contains(canonical)) {
             error.clear();
             continue;
         }
@@ -92,11 +97,11 @@ std::map<std::string, Document>
 workspace_documents(const std::map<std::string, Document>& open_documents) {
     std::map<std::string, Document> out = open_documents;
     std::set<std::filesystem::path> open_paths;
+    std::set<std::filesystem::path> indexed_paths;
     std::set<std::filesystem::path> roots;
     for (const auto& [uri, doc] : open_documents) {
         (void)uri;
-        std::error_code error;
-        open_paths.insert(std::filesystem::weakly_canonical(doc.path, error));
+        open_paths.insert(canonical_workspace_path(doc.path));
         const std::filesystem::path config = project_config_path(doc.path);
         roots.insert(config.empty() ? doc.path.parent_path() : config.parent_path());
     }
@@ -107,10 +112,10 @@ workspace_documents(const std::map<std::string, Document>& open_documents) {
         seed_documents.push_back(doc);
     }
     for (const Document& doc : seed_documents) {
-        collect_indexed_documents(doc, open_paths, out, scanned);
+        collect_indexed_documents(doc, open_paths, indexed_paths, out);
     }
     for (const std::filesystem::path& root : roots) {
-        collect_workspace_documents(root, open_paths, out, scanned);
+        collect_workspace_documents(root, open_paths, indexed_paths, out, scanned);
     }
     return out;
 }
