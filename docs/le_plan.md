@@ -2054,6 +2054,15 @@ push. They are not release packaging work.
    did not recover the expression case and also left calls/native noisy or
    worse. Do not repeat this exact stop-mask rewrite unless a better expression
    parser design removes the extra top-level checks entirely.
+   Reusing a single `template_type_refs(expr)` result through
+   `direct_template_call_type_ref` was tried and rejected. It looked like a
+   harmless way to avoid rebuilding the same template-argument vector for
+   generic class, native template, and template-constructor paths, but the
+   focused five-sample 50k Release matrix regressed the intended paths:
+   generics landed around 81ms, indexing around 134ms, native around 248ms,
+   mixed around 91ms, and calls around 55ms, with no compensating expression
+   win. The extra eager vector construction is worse than the current lazy
+   per-branch calls.
    Removing the statement-block capacity pre-scan was tried and rejected. It
    looked attractive because huge generated functions were walking the same
    block once to reserve and once to parse, but vector growth cost was worse
