@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/parser/ast_type_token_parser.hpp"
 #include "dudu/parser/lexer.hpp"
+#include "dudu/parser/parser_doc_comments.hpp"
 #include "dudu/parser/parser_internal.hpp"
 #include "dudu/parser/parser_utils.hpp"
 
@@ -454,7 +455,9 @@ ModuleAst parse_module(std::span<const Token> tokens) {
 }
 
 ModuleAst parse_source(std::string_view source, const std::filesystem::path& file) {
-    return parse_module(lex_source(source, file));
+    ModuleAst module = parse_module(lex_source(source, file));
+    attach_leading_doc_comments(module, source);
+    return module;
 }
 
 } // namespace dudu

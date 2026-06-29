@@ -116,13 +116,31 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = "class " + klass.name,
                        .location = klass.location,
                        .kind = lsp_symbol_kind::Class,
-                       .native_identity_key = std::nullopt});
+                       .native_identity_key = std::nullopt,
+                       .doc_comment = klass.doc_comment});
         for (const FieldDecl& field : klass.fields) {
             out.push_back({.name = field.name,
                            .detail = field.name + ": " + type_ref_text(field.type_ref),
                            .location = field.location,
                            .kind = lsp_symbol_kind::Field,
-                           .native_identity_key = std::nullopt});
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = field.doc_comment});
+        }
+        for (const ConstDecl& constant : klass.constants) {
+            out.push_back({.name = constant.name,
+                           .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                           .location = constant.location,
+                           .kind = lsp_symbol_kind::Constant,
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = constant.doc_comment});
+        }
+        for (const ConstDecl& field : klass.static_fields) {
+            out.push_back({.name = field.name,
+                           .detail = field.name + ": " + type_ref_text(field.type_ref),
+                           .location = field.location,
+                           .kind = lsp_symbol_kind::Field,
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = field.doc_comment});
         }
         for (const FunctionDecl& method : klass.methods) {
             out.push_back({.name = method.name,
@@ -131,7 +149,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .kind = is_constructor_method_name(method.name)
                                        ? lsp_symbol_kind::Constructor
                                        : lsp_symbol_kind::Method,
-                           .native_identity_key = std::nullopt});
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = method.doc_comment});
         }
     }
     for (const EnumDecl& en : module.enums) {
@@ -139,14 +158,16 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = "enum " + en.name,
                        .location = en.location,
                        .kind = lsp_symbol_kind::Enum,
-                       .native_identity_key = std::nullopt});
+                       .native_identity_key = std::nullopt,
+                       .doc_comment = en.doc_comment});
         for (const EnumValueDecl& value : en.values) {
             const std::string name = en.name + "." + value.name;
             out.push_back({.name = name,
                            .detail = "enum variant " + name,
                            .location = value.location,
                            .kind = lsp_symbol_kind::EnumMember,
-                           .native_identity_key = std::nullopt});
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = value.doc_comment});
         }
     }
     for (const ConstDecl& constant : module.constants) {
@@ -154,14 +175,16 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                        .location = constant.location,
                        .kind = lsp_symbol_kind::Constant,
-                       .native_identity_key = std::nullopt});
+                       .native_identity_key = std::nullopt,
+                       .doc_comment = constant.doc_comment});
     }
     for (const FunctionDecl& fn : module.functions) {
         out.push_back({.name = fn.name,
                        .detail = function_detail(fn),
                        .location = fn.location,
                        .kind = lsp_symbol_kind::Function,
-                       .native_identity_key = std::nullopt});
+                       .native_identity_key = std::nullopt,
+                       .doc_comment = fn.doc_comment});
     }
     if (!include_native) {
         return out;

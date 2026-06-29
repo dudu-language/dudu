@@ -235,6 +235,7 @@ struct FieldDecl {
     TypeRef type_ref;
     Expr value_expr;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct Stmt {
@@ -263,6 +264,7 @@ struct TypeAliasDecl {
     TypeRef type_ref;
     std::string origin_module;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct NativeSymbolId {
@@ -326,6 +328,7 @@ struct EnumValueDecl {
     std::vector<EnumPayloadField> payload_fields;
     bool tuple_payload = false;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct EnumDecl {
@@ -335,6 +338,7 @@ struct EnumDecl {
     std::string origin_module;
     std::vector<EnumValueDecl> values;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct FunctionDecl {
@@ -350,6 +354,7 @@ struct FunctionDecl {
     std::string origin_module;
     std::vector<Stmt> statements;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct ConstDecl {
@@ -359,6 +364,7 @@ struct ConstDecl {
     Expr value_expr;
     std::string origin_module;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct BaseClassDecl {
@@ -380,6 +386,7 @@ struct ClassDecl {
     std::vector<FunctionDecl> methods;
     std::string origin_module;
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct StaticAssertDecl {

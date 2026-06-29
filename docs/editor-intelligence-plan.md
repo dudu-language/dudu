@@ -52,6 +52,9 @@ enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts
 token text, kind, and modifiers against the original source for the core Dudu
 token classes.
+Leading `#` declaration comments now attach to parsed Dudu declarations and
+flow through hover for same-file and imported Dudu symbols. Hover no longer
+recovers those comments by scanning source lines at request time.
 
 ## Target Behavior
 

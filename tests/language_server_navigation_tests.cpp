@@ -258,6 +258,39 @@ void test_lsp_hover_uses_loaded_module_units() {
     assert(hover.find("def inc(value: i32) -> i32") != std::string::npos);
 }
 
+void test_lsp_hover_uses_ast_doc_comments() {
+    const dudu::Document doc{.uri = "file:///doc_hover.dd",
+                             .path = "doc_hover.dd",
+                             .text = "# Adds two numbers.\n"
+                                     "# Keeps hover docs on the AST.\n"
+                                     "def add(left: i32, right: i32) -> i32:\n"
+                                     "    return left + right\n"};
+    const std::string hover = dudu::hover_json(doc, "add");
+    assert(hover.find("def add(left: i32, right: i32) -> i32") != std::string::npos);
+    assert(hover.find("Adds two numbers.") != std::string::npos);
+    assert(hover.find("Keeps hover docs on the AST.") != std::string::npos);
+}
+
+void test_lsp_hover_uses_imported_ast_doc_comments() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_doc_hover_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "maths.dd", "# Imported increment helper.\n"
+                                 "def inc(value: i32) -> i32:\n"
+                                 "    return value + 1\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import maths\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return maths.inc(1)\n"};
+    const std::string hover = dudu::hover_json(doc, "maths.inc");
+    assert(hover.find("def inc(value: i32) -> i32") != std::string::npos);
+    assert(hover.find("Imported increment helper.") != std::string::npos);
+}
+
 void test_lsp_unreachable_lint_uses_branch_structure() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_unreachable.dd",
@@ -577,6 +610,8 @@ int main() {
         test_lsp_hover_infers_local_from_native_call();
         test_lsp_references_keep_unbound_member_query_dotted();
         test_lsp_hover_uses_loaded_module_units();
+        test_lsp_hover_uses_ast_doc_comments();
+        test_lsp_hover_uses_imported_ast_doc_comments();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_unreachable_lint_does_not_flag_return_continuation();

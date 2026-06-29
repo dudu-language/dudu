@@ -46,6 +46,7 @@ struct Symbol {
     SourceLocation location;
     int kind = lsp_symbol_kind::Variable;
     std::optional<std::string> native_identity_key;
+    std::string doc_comment{};
 };
 
 struct ReferenceLocation {

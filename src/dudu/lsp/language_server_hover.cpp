@@ -22,27 +22,12 @@
 namespace dudu {
 namespace {
 
-std::string doc_comment_before(const Document& doc, int one_based_line) {
-    const std::vector<std::string> lines = document_lines(doc.text);
-    int row = one_based_line - 2;
-    std::vector<std::string> comments;
-    while (row >= 0 && row < static_cast<int>(lines.size())) {
-        const std::string trimmed = trim_copy(lines[static_cast<size_t>(row)]);
-        if (!starts_with(trimmed, "#")) {
-            break;
-        }
-        comments.push_back(trim_copy(trimmed.substr(1)));
-        --row;
+std::string hover_markdown(const Symbol& symbol) {
+    std::string markdown = "`" + symbol.detail + "`";
+    if (!symbol.doc_comment.empty()) {
+        markdown += "\n\n" + symbol.doc_comment;
     }
-    std::reverse(comments.begin(), comments.end());
-    std::ostringstream out;
-    for (size_t i = 0; i < comments.size(); ++i) {
-        if (i > 0) {
-            out << "\n";
-        }
-        out << comments[i];
-    }
-    return out.str();
+    return markdown;
 }
 
 std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
@@ -80,8 +65,8 @@ std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
             if (symbol.name != target) {
                 continue;
             }
-            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
-                   json_escape(symbol.detail) + "`\"}}";
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" +
+                   json_escape(hover_markdown(symbol)) + "\"}}";
         }
     }
     return std::nullopt;
@@ -117,19 +102,14 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
     return std::nullopt;
 }
 
-std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
-    std::string markdown = "`" + symbol.detail + "`";
-    if (uri_for_location(symbol.location, doc) == doc.uri) {
-        if (const std::string docs = doc_comment_before(doc, symbol.location.line); !docs.empty()) {
-            markdown += "\n\n" + docs;
-        }
-    }
+std::string symbol_hover_json(const Symbol& symbol) {
+    const std::string markdown = hover_markdown(symbol);
     return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
            "\"},\"range\":" + range_json(symbol.location) + "}";
 }
 
-std::optional<std::string> member_hover_json(const Document& doc, const ExprPath& path,
-                                             const Json* params, const ModuleAst& current,
+std::optional<std::string> member_hover_json(const ExprPath& path, const Json* params,
+                                             const ModuleAst& current,
                                              const ModuleAst& module) {
     if (params == nullptr || path.segments.size() < 2 ||
         path.segments.front().kind != ExprPathSegmentKind::Name ||
@@ -151,43 +131,47 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
             }
             for (const FieldDecl& field : klass.fields) {
                 if (field.name == member) {
-                    return symbol_hover_json(
-                        doc, {.name = field.name,
-                              .detail = field.name + ": " + type_ref_text(field.type_ref),
-                              .location = field.location,
-                              .kind = lsp_symbol_kind::Field,
-                              .native_identity_key = std::nullopt});
+                    return symbol_hover_json({.name = field.name,
+                                              .detail = field.name + ": " +
+                                                        type_ref_text(field.type_ref),
+                                              .location = field.location,
+                                              .kind = lsp_symbol_kind::Field,
+                                              .native_identity_key = std::nullopt,
+                                              .doc_comment = field.doc_comment});
                 }
             }
             for (const ConstDecl& constant : klass.constants) {
                 if (constant.name == member) {
-                    return symbol_hover_json(
-                        doc, {.name = constant.name,
-                              .detail = constant.name + ": " + type_ref_text(constant.type_ref),
-                              .location = constant.location,
-                              .kind = lsp_symbol_kind::Constant,
-                              .native_identity_key = std::nullopt});
+                    return symbol_hover_json({.name = constant.name,
+                                              .detail = constant.name + ": " +
+                                                        type_ref_text(constant.type_ref),
+                                              .location = constant.location,
+                                              .kind = lsp_symbol_kind::Constant,
+                                              .native_identity_key = std::nullopt,
+                                              .doc_comment = constant.doc_comment});
                 }
             }
             for (const ConstDecl& field : klass.static_fields) {
                 if (field.name == member) {
-                    return symbol_hover_json(
-                        doc, {.name = field.name,
-                              .detail = field.name + ": " + type_ref_text(field.type_ref),
-                              .location = field.location,
-                              .kind = lsp_symbol_kind::Field,
-                              .native_identity_key = std::nullopt});
+                    return symbol_hover_json({.name = field.name,
+                                              .detail = field.name + ": " +
+                                                        type_ref_text(field.type_ref),
+                                              .location = field.location,
+                                              .kind = lsp_symbol_kind::Field,
+                                              .native_identity_key = std::nullopt,
+                                              .doc_comment = field.doc_comment});
                 }
             }
             for (const FunctionDecl& method : klass.methods) {
                 if (method.name == member) {
-                    return symbol_hover_json(doc, {.name = method.name,
-                                                   .detail = function_detail(method),
-                                                   .location = method.location,
-                                                   .kind = is_constructor_method_name(method.name)
-                                                               ? lsp_symbol_kind::Constructor
-                                                               : lsp_symbol_kind::Method,
-                                                   .native_identity_key = std::nullopt});
+                    return symbol_hover_json({.name = method.name,
+                                              .detail = function_detail(method),
+                                              .location = method.location,
+                                              .kind = is_constructor_method_name(method.name)
+                                                          ? lsp_symbol_kind::Constructor
+                                                          : lsp_symbol_kind::Method,
+                                              .native_identity_key = std::nullopt,
+                                              .doc_comment = method.doc_comment});
                 }
             }
         }
@@ -222,7 +206,7 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
-        return symbol_hover_json(doc, *exact);
+        return symbol_hover_json(*exact);
     }
     if (const std::optional<std::string> imported =
             imported_symbol_hover_json(*index, current, query)) {
@@ -244,11 +228,11 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         const std::vector<Symbol> native_symbols =
             symbols_for_module(native->visible_unit_for_path(doc.path), true);
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
-            return symbol_hover_json(doc, *exact);
+            return symbol_hover_json(*exact);
         }
         if (const std::optional<Symbol> suffix =
                 unambiguous_suffix_symbol_match(native_symbols, query)) {
-            return symbol_hover_json(doc, *suffix);
+            return symbol_hover_json(*suffix);
         }
     } catch (const std::exception&) {
     }
@@ -256,15 +240,14 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         try {
             const ProjectIndex* native = load_native_index();
             if (const std::optional<std::string> member_hover =
-                    member_hover_json(doc, *selected_path, params, current,
-                                      native->merged_module())) {
+                    member_hover_json(*selected_path, params, current, native->merged_module())) {
                 return *member_hover;
             }
         } catch (const std::exception&) {
         }
     }
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
-        return symbol_hover_json(doc, *suffix);
+        return symbol_hover_json(*suffix);
     }
     std::string local_type =
         !query.empty() && params != nullptr

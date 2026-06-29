@@ -337,27 +337,24 @@ notes. Docstrings are documentation, not runtime string expressions. Unlike
 Rust/Zig-style declaration docs, large Dudu docstrings live inside the thing
 they document because the broader language goal is Python-shaped source.
 
-Current support is partial: hover can show contiguous `#` comments immediately
-above declarations in the current Dudu document. The implementation currently
-recovers those comments from source lines at hover time instead of attaching
-documentation to declaration AST nodes.
+Current support is partial: contiguous `#` comments immediately above Dudu
+declarations attach to parsed declaration AST nodes. Hover shows those docs for
+same-file declarations and imported Dudu module symbols. Triple-quoted
+docstrings and native C/C++ documentation are still planned.
 
 Remaining work:
 
-1. Parse declaration docs into structured AST fields instead of scanning source
-   lines from the hover path.
-2. Support leading `''' ... '''` docstrings for modules, classes, methods,
+1. Support leading `''' ... '''` docstrings for modules, classes, methods,
    functions, enums, fields, constants, and aliases.
-3. Preserve docs through module loading so imported Dudu symbols show their
-   docs in hover, completion, signature help, and document symbols.
-4. Define formatting rules for docstrings, including indentation trimming and
+2. Preserve docs in completion, signature help, and document symbols.
+3. Define formatting rules for docstrings, including indentation trimming and
    blank-line preservation.
-5. Add parser diagnostics for malformed or misplaced docstrings.
-6. Add LSP fixtures for same-file docs, imported module docs, class/member
-   docs, and completion/signature-help documentation.
-7. Extend native header scanning to capture C/C++ comments when Clang exposes
+4. Add parser diagnostics for malformed or misplaced docstrings.
+5. Add LSP fixtures for class/member docs and completion/signature-help
+   documentation.
+6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
-8. Show native C/C++ documentation in hover/completion/signature help when
+7. Show native C/C++ documentation in hover/completion/signature help when
    available, while clearly falling back to signature-only hover when native
    docs cannot be recovered.
 
@@ -493,8 +490,9 @@ Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and
 exception handlers are covered.
 Hover for typed locals and simple inferred locals is covered.
-Hover for Dudu declaration doc comments is covered.
-Hover for Dudu symbols imported through module aliases is covered.
+Hover for Dudu declaration doc comments is covered through AST-attached
+declaration docs, including same-file declarations and Dudu symbols imported
+through module aliases.
 Format and organize-imports code actions are covered. Formatter and LSP
 organize-imports behavior share the same structured leading-import block
 helper.
