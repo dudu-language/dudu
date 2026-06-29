@@ -52,7 +52,7 @@ class Lexer {
     }
 
     void push(TokenKind kind, std::string_view text, int line, int column) {
-        tokens_.push_back({kind, text, loc(line, column)});
+        tokens_.push_back({.text = text, .location = loc(line, column), .kind = kind});
     }
 
     void lex_line() {

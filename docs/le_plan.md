@@ -2007,6 +2007,16 @@ push. They are not release packaging work.
    127ms, native around 242ms with the usual first-sample header cost, and RSS
    did not improve. Do not add transparent interner machinery again unless a
    fresh profile shows pre-lookup string allocation is a real bottleneck.
+   Token storage was then compacted by making `TokenKind` a one-byte enum and
+   placing it after the larger token fields. This is a direct representation
+   fix for the lexer-token heap bucket from the massif profile. A same-session
+   A/B kept it: with compact tokens, five-sample Release results measured
+   expressions around 202ms and 165MB RSS, indexing around 122ms and 68MB RSS,
+   arrays around 64ms and 38MB RSS, native around 237ms and 65MB RSS, and
+   mixed around 85ms. Reverting the patch and rebuilding in the same session
+   moved a three-sample comparison to expressions around 220ms and 176MB RSS,
+   indexing around 129ms and 72MB RSS, arrays around 70ms and 40MB RSS, native
+   around 248ms and 70MB RSS, and mixed around 87ms.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused

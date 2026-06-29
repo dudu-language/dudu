@@ -79,7 +79,7 @@ std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
     if (!out.empty()) {
         end_location = token_end_location(out.back());
     }
-    out.push_back({.kind = TokenKind::End, .text = "", .location = end_location});
+    out.push_back({.text = "", .location = end_location, .kind = TokenKind::End});
     return out;
 }
 

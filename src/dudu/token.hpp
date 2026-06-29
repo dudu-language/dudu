@@ -3,13 +3,14 @@
 #include "dudu/source.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace dudu {
 
-enum class TokenKind {
+enum class TokenKind : uint8_t {
     Identifier,
     Number,
     String,
@@ -33,9 +34,9 @@ enum class TokenKind {
 };
 
 struct Token {
-    TokenKind kind = TokenKind::End;
     std::string_view text;
     SourceLocation location;
+    TokenKind kind = TokenKind::End;
 };
 
 template <size_t N> bool text_is(std::string_view text, const char (&literal)[N]) {
