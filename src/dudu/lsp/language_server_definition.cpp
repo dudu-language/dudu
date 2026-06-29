@@ -461,6 +461,10 @@ std::string definition_json(const Document& doc, const Json* params) {
     }
     const std::vector<Symbol> native_symbols =
         symbols_for_module(native->visible_unit_for_path(doc.path), true);
+    if (const std::optional<Symbol> native_namespace =
+            native_namespace_segment_symbol(native_symbols, selection.symbol, word)) {
+        return symbol_definition_json(*native_namespace, doc);
+    }
     if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }

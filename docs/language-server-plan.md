@@ -576,6 +576,11 @@ Native C++ constructor signatures and go-to-definition are also covered in the
 matrix with a local fixture header: `MatrixWidget(` shows the scanned
 constructor docs, definition jumps to the constructor declaration, and hover on
 the constructor call shows the constructor docs/signature.
+Native C++ namespaces are covered in the matrix too. Scanned namespace
+declarations are LSP symbols with native identities, hover and definition on
+the namespace segment jump to/show the namespace declaration, completion after
+the namespace path lists namespaced functions with docs, and semantic tokens
+classify the namespace as a native namespace token.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.
@@ -650,8 +655,8 @@ indexes Dudu classes/enums/enum members directly, so Dudu class return types,
 enum member expressions, and member calls are no longer colored as generic
 types/properties/functions. The LSP matrix decodes semantic-token responses from
 `dudu-lsp`, including static declarations, readonly class constants, native
-function/macro tokens, and unresolved-token modifiers, so transport coverage
-now matches the direct frontend assertions.
+namespace/function/macro tokens, and unresolved-token modifiers, so transport
+coverage now matches the direct frontend assertions.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and

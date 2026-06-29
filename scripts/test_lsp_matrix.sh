@@ -403,6 +403,23 @@ def other() -> i32:
     return widget.scaled(4) + widget.value
 """
     (tmp / "native_cpp_other.dd").write_text(native_cpp_other_source)
+    (tmp / "native_namespace.hpp").write_text(
+        """#pragma once
+
+namespace matrix_space {
+    /** Adds inside a native namespace. */
+    inline int namespaced_add(int left, int right) {
+        return left + right;
+    }
+}
+"""
+    )
+    native_namespace_source = """import cpp "native_namespace.hpp"
+
+def main() -> i32:
+    return matrix_space.namespaced_add(2, 3)
+"""
+    (tmp / "native_namespace_user.dd").write_text(native_namespace_source)
     unresolved_source = """class Player:
     hp: i32
 
@@ -434,6 +451,7 @@ def main() -> i32:
     native_cpp = tmp / "native_cpp_user.dd"
     native_cpp_same = tmp / "native_cpp_same.dd"
     native_cpp_other = tmp / "native_cpp_other.dd"
+    native_namespace = tmp / "native_namespace_user.dd"
     unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
     messages = [
@@ -446,6 +464,7 @@ def main() -> i32:
         open_message(native_cpp),
         open_message(native_cpp_same),
         open_message(native_cpp_other),
+        open_message(native_namespace),
         open_message(unresolved),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
@@ -523,6 +542,10 @@ def main() -> i32:
         request(81, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=len("MatrixWidget("))}),
         request(82, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=1)}),
         request(83, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=1)}),
+        request(86, "textDocument/hover", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=1)}),
+        request(87, "textDocument/definition", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=1)}),
+        request(88, "textDocument/completion", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=len("matrix_space."))}),
+        request(89, "textDocument/semanticTokens/full", {"textDocument": text_document(native_namespace)}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -883,6 +906,22 @@ def main() -> i32:
         raise AssertionError(f"missing native constructor hover signature: {native_constructor_hover!r}")
     if "Builds a matrix widget from a seed." not in native_constructor_hover:
         raise AssertionError(f"missing native constructor hover docs: {native_constructor_hover!r}")
+    native_namespace_hover = response(messages, 86)["contents"]["value"]
+    if "native namespace matrix_space" not in native_namespace_hover:
+        raise AssertionError(f"missing native namespace hover: {native_namespace_hover!r}")
+    if "Native identity:" not in native_namespace_hover:
+        raise AssertionError(f"missing native namespace identity: {native_namespace_hover!r}")
+    native_namespace_definition = response(messages, 87)
+    if not native_namespace_definition["uri"].endswith("/native_namespace.hpp"):
+        raise AssertionError(f"native namespace definition did not jump to header: {native_namespace_definition!r}")
+    if native_namespace_definition["range"]["start"]["line"] != 2:
+        raise AssertionError(f"native namespace definition jumped to wrong line: {native_namespace_definition!r}")
+    native_namespace_completion = response(messages, 88)
+    assert_completion_labels(native_namespace_completion, ["namespaced_add"])
+    assert_documentation_contains(item_named(native_namespace_completion, "namespaced_add"), "Adds inside a native namespace.")
+    native_namespace_tokens = decode_semantic_tokens(native_namespace_source, response(messages, 89)["data"], legend)
+    if not has_semantic(native_namespace_tokens, "matrix_space", "namespace", native_modifier):
+        raise AssertionError(f"missing native namespace semantic token: {native_namespace_tokens!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

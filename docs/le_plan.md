@@ -3783,3 +3783,7 @@ push. They are not release packaging work.
    The JSON-RPC semantic-token matrix now explicitly asserts static field
    declaration modifiers, readonly class constants, and native function/macro
    modifiers instead of only checking imported and unresolved token classes.
+   Native namespace declarations now participate in the shared LSP symbol
+   inventory. Hover and definition on a selected namespace segment target the
+   namespace declaration, completion after the namespace lists scanned members,
+   and the matrix checks native namespace semantic-token classification.

@@ -14,6 +14,9 @@ std::optional<Symbol> exact_symbol_match(const std::vector<Symbol>& symbols,
                                          const std::string& query);
 std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>& symbols,
                                                       const std::string& query);
+std::optional<Symbol> native_namespace_segment_symbol(const std::vector<Symbol>& symbols,
+                                                      const std::optional<std::string>& selected,
+                                                      const std::string& query);
 bool is_constructor_method_name(const std::string& name);
 std::string function_detail(const FunctionDecl& fn);
 std::string constructor_detail(const ClassDecl& klass);

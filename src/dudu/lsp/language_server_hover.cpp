@@ -357,6 +357,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
         const std::vector<Symbol> native_symbols =
             symbols_for_module(native->visible_unit_for_path(doc.path), true);
+        if (has_selection) {
+            if (const std::optional<Symbol> native_namespace =
+                    native_namespace_segment_symbol(native_symbols, selection.symbol, query)) {
+                return symbol_hover_json(*native_namespace);
+            }
+        }
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
             return symbol_hover_json(*exact);
         }

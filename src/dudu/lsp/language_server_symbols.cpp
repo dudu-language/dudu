@@ -262,6 +262,13 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
         return out;
     }
     const NativeClassDefinitionIndex native_class_index = native_class_definition_index(module);
+    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+        out.push_back({.name = ns.name,
+                       .detail = "native namespace " + ns.name,
+                       .location = ns.location,
+                       .kind = lsp_symbol_kind::Namespace,
+                       .native_identity_key = native_identity_key(ns.identity)});
+    }
     for (const NativeTypeDecl& type : module.native_types) {
         out.push_back({.name = type.name,
                        .detail = native_type_detail(native_class_index, type),
@@ -363,6 +370,20 @@ std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>&
         return std::nullopt;
     }
     return matches.front();
+}
+
+std::optional<Symbol> native_namespace_segment_symbol(const std::vector<Symbol>& symbols,
+                                                      const std::optional<std::string>& selected,
+                                                      const std::string& query) {
+    if (!selected || *selected == query) {
+        return std::nullopt;
+    }
+    const std::optional<Symbol> symbol = exact_symbol_match(symbols, *selected);
+    if (symbol && symbol->kind == lsp_symbol_kind::Namespace &&
+        symbol->native_identity_key.has_value()) {
+        return symbol;
+    }
+    return std::nullopt;
 }
 
 } // namespace dudu
