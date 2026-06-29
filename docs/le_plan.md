@@ -1919,7 +1919,12 @@ push. They are not release packaging work.
    shape differences were noise-level. A last-local-type lookup cache inside
    `FunctionScope` was tried and rejected: it made expression-heavy code,
    arrays, functions, control flow, and mixed project-shaped code worse despite
-   slightly helping generics. The
+   slightly helping generics. A fixed-array rank helper in `sema_index` that
+   avoided repeated numeric/symbolic shape extraction for slice cases was tried
+   and rejected after the new indexing benchmark shape landed: the targeted 50k
+   indexing shape stayed around 132ms in a five-sample Release run and did not
+   show a clear win over baseline noise. The repeated shape extraction looks
+   ugly, but the current bottleneck is not fixed by that small helper. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
