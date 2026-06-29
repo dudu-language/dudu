@@ -314,6 +314,8 @@ covering declarations, parameters, fields, locals, types, literals, calls, and
 member expressions. Semantic tokens merge scanned native header symbols as a
 classification layer, so native C/C++ references in Dudu code can carry the
 `native` modifier without emitting header-file token ranges.
+Unmatched expression names, callees, and member fallbacks now carry the
+advertised `unresolved` modifier while known local bindings stay unmarked.
 
 ## Doc Comments And Docstrings
 

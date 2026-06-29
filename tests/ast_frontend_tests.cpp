@@ -260,6 +260,31 @@ void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     require_decoded_semantic_token(tokens, "\"ok\"", token_string, 0);
 }
 
+void test_unresolved_semantic_tokens_are_marked() {
+    const std::string source = "def main() -> i32:\n"
+                               "    local_value = 1\n"
+                               "    local_value\n"
+                               "    missing_obj.field\n"
+                               "    missing_call()\n"
+                               "    return missing_value\n";
+    const dudu::ModuleAst module = dudu::parse_source(source, "unresolved_semantic_tokens.dd");
+    const std::vector<DecodedSemanticToken> tokens =
+        decoded_semantic_tokens(source, dudu::semantic_tokens_json(module));
+
+    constexpr int token_function = 4;
+    constexpr int token_variable = 6;
+    constexpr int token_property = 8;
+    constexpr int mod_declaration = 1;
+    constexpr int mod_unresolved = 32;
+
+    require_decoded_semantic_token(tokens, "local_value", token_variable, mod_declaration);
+    require_decoded_semantic_token(tokens, "local_value", token_variable, 0);
+    require_decoded_semantic_token(tokens, "missing_obj", token_variable, mod_unresolved);
+    require_decoded_semantic_token(tokens, "field", token_property, mod_unresolved);
+    require_decoded_semantic_token(tokens, "missing_call", token_function, mod_unresolved);
+    require_decoded_semantic_token(tokens, "missing_value", token_variable, mod_unresolved);
+}
+
 void test_project_semantic_tokens_are_import_aware() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_project_semantic_tokens_test";
@@ -787,6 +812,7 @@ int main() {
     try {
         test_native_semantic_tokens();
         test_decoded_semantic_tokens_cover_core_dudu_kinds();
+        test_unresolved_semantic_tokens_are_marked();
         test_project_semantic_tokens_are_import_aware();
         test_ast_constructor_assignment_aliases();
         test_ast_index_receiver_type_inference();

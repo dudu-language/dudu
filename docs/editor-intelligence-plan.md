@@ -13,11 +13,11 @@ must wire those facts through standard LSP features.
 
 The current `dudu-lsp` server advertises semantic tokens and already
 implements many hover, definition, references, completion, and diagnostic
-requests. The local VS Code extension, however, still uses a small hand-written
-JSON-RPC client. That client wires several requests manually, but it does not
-register semantic-token support with VS Code. In practice, `.dd` coloring is
-still mostly the TextMate grammar, so it looks flat compared with Rust or C/C++
-tooling.
+requests. The local VS Code extension now uses VS Code's standard
+`vscode-languageclient` package instead of the old broad hand-written JSON-RPC
+client, so normal LSP capability registration is available to the editor.
+Remaining gaps are server/index coverage, richer symbol facts, and making every
+position-based request fast and identity-aware.
 
 Some intelligence also remains incomplete server-side:
 
@@ -66,6 +66,9 @@ imported functions, and imported constants receive namespace/class/function/
 readonly-variable token identities instead of syntax-only fallback coloring.
 The JSON-RPC LSP matrix decodes those token streams and asserts the imported
 symbol kinds.
+Unmatched expression names, callees, and member fallbacks now carry the
+`unresolved` semantic-token modifier while known locals stay unmarked, giving
+themes and diagnostics a stable server-side distinction for unknown symbols.
 Leading `#` declaration comments and first-body triple-single-quoted
 docstrings for modules, functions, methods, classes, and enums now attach to
 parsed Dudu declarations and flow through hover for same-file and imported Dudu
@@ -217,8 +220,9 @@ small fixtures rather than only checking that some token data exists.
 Status: direct frontend coverage now decodes semantic-token deltas back to
 source text and asserts the actual token name, kind, and modifiers for module
 constants, classes, fields, static fields, methods, parameters, implicit locals,
-functions, enums, enum members, numbers, and strings. JSON-RPC smoke tests still
-cover semantic-token transport through `dudu-lsp`.
+functions, enums, enum members, unresolved names/callees/member fallbacks,
+numbers, and strings. JSON-RPC smoke tests still cover semantic-token transport
+through `dudu-lsp`.
 
 ## Validation
 

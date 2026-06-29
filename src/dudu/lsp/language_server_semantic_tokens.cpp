@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -42,6 +43,7 @@ constexpr int mod_declaration = 1;
 constexpr int mod_readonly = 4;
 constexpr int mod_static = 8;
 constexpr int mod_native = 16;
+constexpr int mod_unresolved = 32;
 
 void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
                         std::string_view text, int type, int modifiers = 0) {
@@ -153,9 +155,81 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
     }
 }
 
+bool is_local_binding(const std::set<std::string>* local_bindings, const std::string& name) {
+    return local_bindings != nullptr && local_bindings->contains(name);
+}
+
+TypeRef local_type_ref(const std::map<std::string, TypeRef>* local_types, const std::string& name) {
+    if (local_types == nullptr) {
+        return {};
+    }
+    const auto found = local_types->find(name);
+    return found == local_types->end() ? TypeRef{} : found->second;
+}
+
+TypeRef obvious_expr_type(const Expr& expr, const DuduSemanticIndex& dudu_index,
+                          const std::map<std::string, TypeRef>* local_types) {
+    if (expr.kind == ExprKind::Name) {
+        const TypeRef local_type = local_type_ref(local_types, expr.name);
+        if (has_type_ref(local_type)) {
+            return local_type;
+        }
+    }
+    if ((expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
+        has_expr_callee(expr)) {
+        const Expr& callee = expr_callee(expr).front();
+        if (callee.kind == ExprKind::Name && dudu_index.classes.contains(callee.name)) {
+            return named_type_ref(callee.name, callee.location);
+        }
+    }
+    return {};
+}
+
+TypeRef local_binding_type(const Stmt& stmt, const DuduSemanticIndex& dudu_index,
+                           const std::map<std::string, TypeRef>& local_types) {
+    if (has_stmt_type_ref(stmt)) {
+        return stmt_type_ref(stmt);
+    }
+    return obvious_expr_type(stmt.value_expr, dudu_index, &local_types);
+}
+
+std::optional<int> member_token_type_for_receiver(const Expr& receiver, std::string_view member,
+                                                  const DuduSemanticIndex& dudu_index,
+                                                  const NativeSemanticIndex* native_index,
+                                                  const std::map<std::string, TypeRef>* local_types,
+                                                  bool callee) {
+    const TypeRef receiver_type = obvious_expr_type(receiver, dudu_index, local_types);
+    const std::string type_name = type_ref_head_name(receiver_type);
+    if (type_name.empty()) {
+        return std::nullopt;
+    }
+    const std::string key = type_name + "." + std::string(member);
+    if (dudu_index.functions.contains(key)) {
+        return token_method;
+    }
+    if (dudu_index.values.contains(key)) {
+        return token_property;
+    }
+    if (dudu_index.enum_members.contains(key)) {
+        return token_enum_member;
+    }
+    if (native_index != nullptr && native_index->methods.contains(key)) {
+        return token_method;
+    }
+    if (native_index != nullptr && native_index->values.contains(key)) {
+        return token_property;
+    }
+    if (callee) {
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                          const DuduSemanticIndex& dudu_index,
-                         const NativeSemanticIndex* native_index);
+                         const NativeSemanticIndex* native_index,
+                         const std::set<std::string>* local_bindings,
+                         const std::map<std::string, TypeRef>* local_types);
 
 std::optional<std::string> expr_path_key(const Expr& expr) {
     const std::optional<ExprPath> path = expr_path_from_expr(expr);
@@ -164,7 +238,9 @@ std::optional<std::string> expr_path_key(const Expr& expr) {
 
 void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                                 const DuduSemanticIndex& dudu_index,
-                                const NativeSemanticIndex* native_index) {
+                                const NativeSemanticIndex* native_index,
+                                const std::set<std::string>* local_bindings,
+                                const std::map<std::string, TypeRef>* local_types) {
     if (expr.kind == ExprKind::Name) {
         if (native_index != nullptr && native_index->macros.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_macro);
@@ -175,13 +251,15 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         } else if (dudu_index.enums.contains(expr.name)) {
             add_semantic_token(tokens, expr.location, expr.name, token_enum);
         } else {
-            add_semantic_token(tokens, expr.location, expr.name, token_function);
+            const int modifiers = is_local_binding(local_bindings, expr.name) ? 0 : mod_unresolved;
+            add_semantic_token(tokens, expr.location, expr.name, token_function, modifiers);
         }
         return;
     }
     if (expr.kind == ExprKind::Member) {
         for (const Expr& child : expr.children) {
-            collect_expr_tokens(child, tokens, dudu_index, native_index);
+            collect_expr_tokens(child, tokens, dudu_index, native_index, local_bindings,
+                                local_types);
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
@@ -197,19 +275,27 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
             add_native_semantic_token(tokens, member_location, expr.name, token_function);
         } else if (native_index != nullptr && path && native_index->methods.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_method);
+        } else if (!expr.children.empty()) {
+            const std::optional<int> receiver_type = member_token_type_for_receiver(
+                expr.children.front(), expr.name, dudu_index, native_index, local_types, true);
+            add_semantic_token(tokens, member_location, expr.name,
+                               receiver_type.value_or(token_method),
+                               receiver_type ? 0 : mod_unresolved);
         } else if (path && dudu_index.enum_members.contains(*path)) {
             add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
-            add_semantic_token(tokens, member_location, expr.name, token_method);
+            add_semantic_token(tokens, member_location, expr.name, token_method, mod_unresolved);
         }
         return;
     }
-    collect_expr_tokens(expr, tokens, dudu_index, native_index);
+    collect_expr_tokens(expr, tokens, dudu_index, native_index, local_bindings, local_types);
 }
 
 void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                          const DuduSemanticIndex& dudu_index,
-                         const NativeSemanticIndex* native_index) {
+                         const NativeSemanticIndex* native_index,
+                         const std::set<std::string>* local_bindings,
+                         const std::map<std::string, TypeRef>* local_types) {
     switch (expr.kind) {
     case ExprKind::Name:
         if (native_index != nullptr && (native_index->classes.contains(expr.name) ||
@@ -242,20 +328,24 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         } else if (dudu_index.values.contains(expr.name)) {
             add_semantic_token(tokens, expr.location, expr.name, token_variable, mod_readonly);
         } else {
-            add_semantic_token(tokens, expr.location, expr.name, token_variable);
+            const int modifiers = is_local_binding(local_bindings, expr.name) ? 0 : mod_unresolved;
+            add_semantic_token(tokens, expr.location, expr.name, token_variable, modifiers);
         }
         break;
     case ExprKind::Call:
     case ExprKind::TemplateCall:
         if (has_expr_callee(expr)) {
-            collect_call_callee_tokens(expr_callee(expr).front(), tokens, dudu_index, native_index);
+            collect_call_callee_tokens(expr_callee(expr).front(), tokens, dudu_index, native_index,
+                                       local_bindings, local_types);
         } else {
-            add_semantic_token(tokens, expr.location, expr.name, token_function);
+            const int modifiers = is_local_binding(local_bindings, expr.name) ? 0 : mod_unresolved;
+            add_semantic_token(tokens, expr.location, expr.name, token_function, modifiers);
         }
         break;
     case ExprKind::Member: {
         for (const Expr& child : expr.children) {
-            collect_expr_tokens(child, tokens, dudu_index, native_index);
+            collect_expr_tokens(child, tokens, dudu_index, native_index, local_bindings,
+                                local_types);
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
@@ -283,8 +373,14 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         } else if (native_index != nullptr && path && native_index->enum_members.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
+        } else if (!expr.children.empty()) {
+            const std::optional<int> receiver_type = member_token_type_for_receiver(
+                expr.children.front(), expr.name, dudu_index, native_index, local_types, false);
+            add_semantic_token(tokens, member_location, expr.name,
+                               receiver_type.value_or(token_property),
+                               receiver_type ? 0 : mod_unresolved);
         } else {
-            add_semantic_token(tokens, member_location, expr.name, token_property);
+            add_semantic_token(tokens, member_location, expr.name, token_property, mod_unresolved);
         }
         return;
     }
@@ -305,11 +401,12 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
     }
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         for (const Expr& callee : expr_callee(expr)) {
-            collect_expr_tokens(callee, tokens, dudu_index, native_index);
+            collect_expr_tokens(callee, tokens, dudu_index, native_index, local_bindings,
+                                local_types);
         }
     }
     for (const Expr& child : expr.children) {
-        collect_expr_tokens(child, tokens, dudu_index, native_index);
+        collect_expr_tokens(child, tokens, dudu_index, native_index, local_bindings, local_types);
     }
     if (has_expr_template_type_args(expr)) {
         for (const TypeRef& arg : expr_template_type_args(expr)) {
@@ -317,7 +414,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         }
     } else {
         for (const Expr& arg : expr_template_args(expr)) {
-            collect_expr_tokens(arg, tokens, dudu_index, native_index);
+            collect_expr_tokens(arg, tokens, dudu_index, native_index, local_bindings, local_types);
         }
     }
 }
@@ -325,42 +422,64 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
 void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<SemanticToken>& tokens,
                          const DuduSemanticIndex& dudu_index,
                          const NativeSemanticIndex* native_index,
-                         std::set<std::string>& local_bindings) {
+                         std::set<std::string>& local_bindings,
+                         std::map<std::string, TypeRef>& local_types) {
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
             local_bindings.insert(stmt.name);
+            const TypeRef binding_type = local_binding_type(stmt, dudu_index, local_types);
+            if (has_type_ref(binding_type)) {
+                local_types[stmt.name] = binding_type;
+            }
             collect_type_tokens(stmt_type_ref(stmt), tokens, dudu_index, native_index);
-            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index, &local_bindings,
+                                &local_types);
         } else if (stmt.kind == StmtKind::Assign) {
             const Expr& target = stmt_target_expr(stmt);
             if (target.kind == ExprKind::Name && !local_bindings.contains(target.name)) {
                 add_semantic_token(tokens, target.location, target.name, token_variable,
                                    mod_declaration);
                 local_bindings.insert(target.name);
+                const TypeRef binding_type = local_binding_type(stmt, dudu_index, local_types);
+                if (has_type_ref(binding_type)) {
+                    local_types[target.name] = binding_type;
+                }
             } else {
-                collect_expr_tokens(target, tokens, dudu_index, native_index);
+                collect_expr_tokens(target, tokens, dudu_index, native_index, &local_bindings,
+                                    &local_types);
             }
-            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index, &local_bindings,
+                                &local_types);
         } else if (stmt.kind == StmtKind::CompoundAssign) {
-            collect_expr_tokens(stmt_target_expr(stmt), tokens, dudu_index, native_index);
-            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt_target_expr(stmt), tokens, dudu_index, native_index,
+                                &local_bindings, &local_types);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index, &local_bindings,
+                                &local_types);
         } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
                    stmt.kind == StmtKind::Delete) {
-            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index, &local_bindings,
+                                &local_types);
         } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
                    stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||
                    stmt.kind == StmtKind::DebugAssert) {
-            collect_expr_tokens(stmt_condition_expr(stmt), tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt_condition_expr(stmt), tokens, dudu_index, native_index,
+                                &local_bindings, &local_types);
         } else if (stmt.kind == StmtKind::For) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
             local_bindings.insert(stmt.name);
+            if (has_stmt_type_ref(stmt)) {
+                local_types[stmt.name] = stmt_type_ref(stmt);
+            }
             collect_type_tokens(stmt_type_ref(stmt), tokens, dudu_index, native_index);
-            collect_expr_tokens(stmt_iterable_expr(stmt), tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt_iterable_expr(stmt), tokens, dudu_index, native_index,
+                                &local_bindings, &local_types);
         } else if (stmt.kind == StmtKind::Expr) {
-            collect_expr_tokens(stmt.expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.expr, tokens, dudu_index, native_index, &local_bindings,
+                                &local_types);
         }
-        collect_stmt_tokens(stmt.children, tokens, dudu_index, native_index, local_bindings);
+        collect_stmt_tokens(stmt.children, tokens, dudu_index, native_index, local_bindings,
+                            local_types);
     }
 }
 
@@ -405,7 +524,8 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         for (const EnumValueDecl& value : en.values) {
             add_semantic_token(tokens, value.location, value.name, token_enum_member,
                                mod_declaration);
-            collect_expr_tokens(value.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(value.value_expr, tokens, dudu_index, native_index, nullptr,
+                                nullptr);
         }
     }
     for (const ClassDecl& klass : module.classes) {
@@ -413,56 +533,72 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         for (const FieldDecl& field : klass.fields) {
             add_semantic_token(tokens, field.location, field.name, token_property, mod_declaration);
             collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
-            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index, nullptr,
+                                nullptr);
         }
         for (const ConstDecl& constant : klass.constants) {
             add_semantic_token(tokens, constant.location, constant.name, token_property,
                                mod_declaration | mod_readonly);
             collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
-            collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index, nullptr,
+                                nullptr);
         }
         for (const ConstDecl& field : klass.static_fields) {
             add_semantic_token(tokens, field.location, field.name, token_property,
                                mod_declaration | mod_static);
             collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
-            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index);
+            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index, nullptr,
+                                nullptr);
         }
         for (const FunctionDecl& method : klass.methods) {
             add_semantic_token(tokens, method.location, method.name, token_method, mod_declaration);
             std::set<std::string> local_bindings;
+            std::map<std::string, TypeRef> local_types;
             for (const ParamDecl& param : method.params) {
                 add_semantic_token(tokens, param.location, param.name, token_parameter,
                                    mod_declaration);
                 local_bindings.insert(param.name);
                 if (param.name != "self") {
                     collect_type_tokens(param.type_ref, tokens, dudu_index, native_index);
+                    if (has_type_ref(param.type_ref)) {
+                        local_types[param.name] = param.type_ref;
+                    }
+                } else {
+                    local_types[param.name] = named_type_ref(klass.name, param.location);
                 }
             }
             collect_type_tokens(method.return_type_ref, tokens, dudu_index, native_index);
-            collect_stmt_tokens(method.statements, tokens, dudu_index, native_index,
-                                local_bindings);
+            collect_stmt_tokens(method.statements, tokens, dudu_index, native_index, local_bindings,
+                                local_types);
         }
     }
     for (const ConstDecl& constant : module.constants) {
         add_semantic_token(tokens, constant.location, constant.name, token_variable,
                            mod_declaration | mod_readonly);
         collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
-        collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index);
+        collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index, nullptr,
+                            nullptr);
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        collect_expr_tokens(assertion.expression_expr, tokens, dudu_index, native_index);
+        collect_expr_tokens(assertion.expression_expr, tokens, dudu_index, native_index, nullptr,
+                            nullptr);
     }
     for (const FunctionDecl& fn : module.functions) {
         add_semantic_token(tokens, fn.location, fn.name, token_function, mod_declaration);
         std::set<std::string> local_bindings;
+        std::map<std::string, TypeRef> local_types;
         for (const ParamDecl& param : fn.params) {
             add_semantic_token(tokens, param.location, param.name, token_parameter,
                                mod_declaration);
             local_bindings.insert(param.name);
+            if (has_type_ref(param.type_ref)) {
+                local_types[param.name] = param.type_ref;
+            }
             collect_type_tokens(param.type_ref, tokens, dudu_index, native_index);
         }
         collect_type_tokens(fn.return_type_ref, tokens, dudu_index, native_index);
-        collect_stmt_tokens(fn.statements, tokens, dudu_index, native_index, local_bindings);
+        collect_stmt_tokens(fn.statements, tokens, dudu_index, native_index, local_bindings,
+                            local_types);
     }
 }
 
