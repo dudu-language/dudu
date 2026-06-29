@@ -1947,6 +1947,13 @@ push. They are not release packaging work.
    69ms, indexing around 129ms, generics around 79ms, matches around 62ms,
    operators around 92ms, and mixed around 86ms. The current by-value API may
    still be inelegant, but this local signature change is not a throughput win.
+   Collapsing the index-expression local receiver path from `contains` plus
+   lookup to a single pointer lookup was also tried and rejected. It looked
+   like a clear cleanup, but focused five-sample Release results regressed
+   indexing to about 128ms and mixed project-shaped code to about 89ms while
+   providing no broad win. The repeated map lookup is ugly, but this local
+   rewrite changes enough control flow that it is not a safe performance
+   improvement.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release
