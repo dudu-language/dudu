@@ -52,18 +52,19 @@ enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts
 token text, kind, and modifiers against the original source for the core Dudu
 token classes.
-Leading `#` declaration comments now attach to parsed Dudu declarations and
-flow through hover for same-file and imported Dudu symbols. Completion items
-for Dudu symbols also carry those AST docs through current-document, imported,
-module, and member completion paths. Hover no longer recovers declaration
-comments by scanning source lines at request time, and completion resolve
-preserves documentation attached to the item instead of fabricating docs from
-display text. Signature help also surfaces those docs for Dudu functions from
-the visible symbol index. Document symbols now use LSP `DocumentSymbol` shape
-and include a short AST doc summary in their detail text when available. The
-LSP matrix fixture now exercises doc propagation for classes, fields, methods,
-imported completions, signature help, and document symbols through actual
-JSON-RPC requests.
+Leading `#` declaration comments and first-body triple-single-quoted
+docstrings for functions, methods, classes, and enums now attach to parsed Dudu
+declarations and flow through hover for same-file and imported Dudu symbols.
+Completion items for Dudu symbols also carry those AST docs through
+current-document, imported, module, and member completion paths. Hover no longer
+recovers declaration comments by scanning source lines at request time, and
+completion resolve preserves documentation attached to the item instead of
+fabricating docs from display text. Signature help also surfaces those docs for
+Dudu functions from the visible symbol index. Document symbols now use LSP
+`DocumentSymbol` shape and include a short AST doc summary in their detail text
+when available. The LSP matrix fixture now exercises doc propagation for
+classes, fields, methods, imported completions, signature help, and document
+symbols through actual JSON-RPC requests, including docstring-backed symbols.
 
 ## Target Behavior
 

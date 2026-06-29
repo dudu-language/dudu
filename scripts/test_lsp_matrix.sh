@@ -138,8 +138,8 @@ try:
         """# Magic value used by matrix fixture docs.
 MAGIC: i32 = 9
 
-# Mixes two numbers for signature docs.
 def mix(left: i32, right: i32) -> i32:
+    '''Mixes two numbers for signature docs.'''
     return left + right + MAGIC
 """
     )
@@ -172,13 +172,13 @@ class Box[T]:
 def identity[T](value: T) -> T:
     return value
 
-# Runtime player docs.
 class Player:
+    '''Runtime player docs.'''
     # Current hit points docs.
     hp: i32
 
-    # Moves the player docs.
     def move(self, dx: i32, dy: i32) -> i32:
+        '''Moves the player docs.'''
         self.hp += dx + dy
         return self.hp
 

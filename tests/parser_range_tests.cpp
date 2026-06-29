@@ -81,6 +81,34 @@ void test_keyword_statements_keep_token_ranges() {
     assert(dudu::stmt_message_expr(call_assert).value == "in range");
 }
 
+void test_docstrings_attach_and_do_not_emit_as_statements() {
+    const dudu::ModuleAst module = dudu::parse_source("class Player:\n"
+                                                      "    '''Runtime player docs.\n"
+                                                      "\n"
+                                                      "    Keeps indentation useful.\n"
+                                                      "    '''\n"
+                                                      "    hp: i32\n"
+                                                      "\n"
+                                                      "    def move(self) -> i32:\n"
+                                                      "        '''Moves the player docs.'''\n"
+                                                      "        return self.hp\n"
+                                                      "\n"
+                                                      "def helper() -> i32:\n"
+                                                      "    '''Helper docs.'''\n"
+                                                      "    return 1\n",
+                                                      "docstrings.dd");
+    assert(module.classes.size() == 1);
+    assert(module.classes.front().doc_comment ==
+           "Runtime player docs.\n\nKeeps indentation useful.");
+    assert(module.classes.front().methods.front().doc_comment == "Moves the player docs.");
+    assert(module.classes.front().methods.front().statements.size() == 1);
+    assert(module.classes.front().methods.front().statements.front().kind ==
+           dudu::StmtKind::Return);
+    assert(module.functions.front().doc_comment == "Helper docs.");
+    assert(module.functions.front().statements.size() == 1);
+    assert(module.functions.front().statements.front().kind == dudu::StmtKind::Return);
+}
+
 } // namespace
 
 int main() {
@@ -88,6 +116,7 @@ int main() {
         test_statement_source_range_uses_token_span();
         test_digit_suffixed_member_receiver();
         test_keyword_statements_keep_token_ranges();
+        test_docstrings_attach_and_do_not_emit_as_statements();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -337,28 +337,32 @@ notes. Docstrings are documentation, not runtime string expressions. Unlike
 Rust/Zig-style declaration docs, large Dudu docstrings live inside the thing
 they document because the broader language goal is Python-shaped source.
 
-Current support is partial: contiguous `#` comments immediately above Dudu
-declarations attach to parsed declaration AST nodes. Hover shows those docs for
-same-file declarations and imported Dudu module symbols. Completion items now
-carry those AST docs for local, imported, and Dudu member symbols, and
-`completionItem/resolve` preserves that documentation payload instead of
-reconstructing it from display text. Signature help also shows those docs for
-Dudu functions visible through the ProjectIndex. Triple-quoted docstrings,
-native C/C++ documentation, and broader class/member doc fixtures are still
-planned. Document symbols now use proper LSP `DocumentSymbol` objects and put a
-short AST doc summary into `detail` when a symbol has leading `#` docs. The
-JSON-RPC LSP matrix covers class, field, method, imported completion, signature
-help, and document-symbol doc propagation.
+Current support is partial but real: contiguous `#` comments immediately above
+Dudu declarations attach to parsed declaration AST nodes, and first-body
+triple-single-quoted docstrings attach to functions, methods, classes, and
+enums. Docstring statements are removed from the executable statement list, so
+they are documentation rather than runtime string expressions. Hover shows
+attached docs for same-file declarations and imported Dudu module symbols.
+Completion items now carry those AST docs for local, imported, and Dudu member
+symbols, and `completionItem/resolve` preserves that documentation payload
+instead of reconstructing it from display text. Signature help also shows those
+docs for Dudu functions visible through the ProjectIndex. Module docstrings,
+field/constant/alias docstrings, native C/C++ documentation, and malformed
+docstring diagnostics are still planned. Document symbols now use proper LSP
+`DocumentSymbol` objects and put a short AST doc summary into `detail` when a
+symbol has docs. The JSON-RPC LSP matrix covers class, field, method, imported
+completion, signature help, and document-symbol doc propagation, including
+docstring-backed class, method, and function docs.
 
 Remaining work:
 
-1. Support leading `''' ... '''` docstrings for modules, classes, methods,
-   functions, enums, fields, constants, and aliases.
+1. Support leading `''' ... '''` docstrings for modules, fields, constants, and
+   aliases.
 2. Add direct native C/C++ documentation fixtures once scanner support exists.
-3. Define formatting rules for docstrings, including indentation trimming and
-   blank-line preservation.
+3. Extend formatting rules and formatter behavior for docstrings, including
+   indentation trimming and blank-line preservation.
 4. Add parser diagnostics for malformed or misplaced docstrings.
-5. Add more LSP fixtures for docstrings once parser support exists.
+5. Add more LSP fixtures for module, enum, and misplaced docstrings.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when

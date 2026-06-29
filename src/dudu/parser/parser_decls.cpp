@@ -1,6 +1,7 @@
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/parser/parser_doc_comments.hpp"
 #include "dudu/parser/parser_internal.hpp"
 #include "dudu/parser/parser_utils.hpp"
 
@@ -53,11 +54,23 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
         fail_current("expected indented class body");
     }
     std::vector<Decorator> member_decorators;
+    bool can_accept_docstring = true;
     while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
         if (at(TokenKind::Newline)) {
             match(TokenKind::Newline);
             continue;
         }
+        if (can_accept_docstring && at(TokenKind::String)) {
+            require_no_decorators(member_decorators, "class docstring");
+            const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
+            const Expr expr = parse_expr_piece(doc);
+            klass.doc_comment = normalize_docstring_text(expr.value);
+            ++cursor_;
+            consume(TokenKind::Newline, "expected newline after class docstring");
+            can_accept_docstring = false;
+            continue;
+        }
+        can_accept_docstring = false;
         if (match(TokenKind::At)) {
             member_decorators.push_back(parse_decorator(previous()));
             continue;
@@ -133,10 +146,21 @@ EnumDecl Parser::parse_enum(const Token& start) {
     if (!match(TokenKind::Indent)) {
         fail_current("expected indented enum body");
     }
+    bool can_accept_docstring = true;
     while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
         if (match(TokenKind::Newline)) {
             continue;
         }
+        if (can_accept_docstring && at(TokenKind::String)) {
+            const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
+            const Expr expr = parse_expr_piece(doc);
+            en.doc_comment = normalize_docstring_text(expr.value);
+            ++cursor_;
+            consume(TokenKind::Newline, "expected newline after enum docstring");
+            can_accept_docstring = false;
+            continue;
+        }
+        can_accept_docstring = false;
         EnumValueDecl value;
         const Token& name = consume_identifier("expected enum value");
         value.name = name.text;
