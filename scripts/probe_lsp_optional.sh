@@ -46,15 +46,17 @@ def pkg_exists(name):
 
 
 def run_case(case):
-    if not pkg_exists(case["pkg"]):
+    pkg = case.get("pkg")
+    if pkg is not None and not pkg_exists(pkg):
         print(f"skip {case['name']}: pkg-config package not found")
         return
 
     work = repo_root / "build" / "lsp-optional" / case["name"]
     work.mkdir(parents=True, exist_ok=True)
-    (work / "dudu.toml").write_text(
-        f'name = "{case["name"]}"\nentry = "main.dd"\n\n[pkg]\nlibs = ["{case["pkg"]}"]\n'
-    )
+    manifest = f'name = "{case["name"]}"\nentry = "main.dd"\n'
+    if pkg is not None:
+        manifest += f'\n[pkg]\nlibs = ["{pkg}"]\n'
+    (work / "dudu.toml").write_text(manifest)
     source = "\n".join(case["source"]) + "\n"
     (work / "main.dd").write_text(source)
     uri = f"file://{work / 'main.dd'}"
@@ -168,6 +170,25 @@ def run_case(case):
 
 cases = [
     {
+        "name": "cpp_stdlib_vector",
+        "pkg": None,
+        "source": [
+            'import cpp "vector" as std',
+            "",
+            "def main() -> i32:",
+            "    values: std.vector[i32]",
+            "    values.push_back(42)",
+            "    return i32(values.size())",
+        ],
+        "completion_position": {"line": 3, "character": 16},
+        "completion_labels": ["vector"],
+        "signature_position": {"line": 4, "character": 23},
+        "signature_contains": "push_back",
+        "definition_position": {"line": 3, "character": 16},
+        "hover_position": {"line": 3, "character": 16},
+        "hover_contains": "vector",
+    },
+    {
         "name": "sqlite3",
         "pkg": "sqlite3",
         "source": [
@@ -243,10 +264,9 @@ cases = [
 ]
 
 
-if shutil.which("pkg-config") is None:
-    print("skip optional LSP probes: pkg-config not found")
-    sys.exit(0)
-
 for case in cases:
+    if case.get("pkg") is not None and shutil.which("pkg-config") is None:
+        print(f"skip {case['name']}: pkg-config not found")
+        continue
     run_case(case)
 PY

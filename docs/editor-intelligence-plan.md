@@ -207,6 +207,11 @@ For imported native code:
 - native source locations should point at headers, not generated C++
 - synthesized symbols and macro-generated declarations should be labeled as such
 
+Status: the optional real-header LSP probe imports the system C++
+standard-library `<vector>` header and checks `std.` completion, `std.vector`
+hover/definition, and `std.vector[i32].push_back(...)` signature help through
+`dudu-lsp`, alongside the existing sqlite/raylib/SDL3/GLFW real-header probes.
+
 ### Standard Library And Installed Sources
 
 Dudu should eventually be able to jump into installed Dudu source the way Rust

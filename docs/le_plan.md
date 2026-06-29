@@ -2394,9 +2394,14 @@ push. They are not release packaging work.
    help can show real C/C++ docs when the imported header provides them. The
    JSON-RPC LSP matrix now asserts native function docs through completion and
    signature help, and native C++ member docs through member completion plus
-   receiver-aware method signature help. Native C++ member method definition
-   and references are also covered in the JSON-RPC matrix with an unrelated
-   receiver type containing the same method name filtered out.
+   receiver-aware method signature help. The optional real-header LSP probe now
+   also imports the system C++ standard-library `<vector>` header and checks
+   `std.` completion, `std.vector` hover/definition, and
+   `std.vector[i32].push_back(...)` signature help, so standard library symbols
+   are exercised as editor symbols rather than only as compile fixtures. Native
+   C++ member method definition and references are also covered in the
+   JSON-RPC matrix with an unrelated receiver type containing the same method
+   name filtered out.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
    Field/constant/alias larger-doc syntax and broader native C/C++ declaration

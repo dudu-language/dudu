@@ -704,9 +704,13 @@ and warm definition, hover, references, completion, and semantic-token latency
 for `raymarch-dd` and `dudu-webserver`.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
-completion, signature help, definition, and hover. They are part of
-`scripts/test_full.sh` so the broad developer sweep exercises real-header
-editor behavior as well as native compile/run probes.
+completion, signature help, definition, and hover. The same optional probe now
+also checks real C++ standard-library editor intelligence without `pkg-config`
+by importing `<vector>` and asserting `std.` completion, `std.vector`
+hover/definition, and `std.vector[i32].push_back(...)` signature help against
+the system STL headers. They are part of `scripts/test_full.sh` so the broad
+developer sweep exercises real-header editor behavior as well as native
+compile/run probes.
 
 Status: `scripts/test_lsp_matrix.sh` now builds a deterministic temporary
 multi-file workspace and drives JSON-RPC requests for module aliases,
