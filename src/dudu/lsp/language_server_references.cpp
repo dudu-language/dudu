@@ -207,6 +207,17 @@ const ModuleAst* visible_document_unit(const ProjectIndex* index, const Document
     return &index->visible_unit_for_path(doc.path);
 }
 
+const ModuleAst* workspace_candidate_unit(const ProjectIndex* workspace_index,
+                                          const Document& candidate, bool include_native) {
+    if (workspace_index != nullptr) {
+        if (const ModuleAst* unit = workspace_index->unit_for_path(candidate.path)) {
+            return unit;
+        }
+    }
+    const ProjectIndex* index = document_project_index(candidate, include_native);
+    return visible_document_unit(index, candidate);
+}
+
 std::string reference_query_at(const Document& doc, const AstSelection& selection,
                                const ModuleAst* module,
                                const std::vector<Symbol>& symbols_with_native) {
@@ -346,8 +357,7 @@ std::string references_json(const Document& doc, const Json* params,
         if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const ProjectIndex* candidate_index = document_project_index(candidate, false);
-        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
+        const ModuleAst* candidate_unit = workspace_candidate_unit(current_index, candidate, false);
         if (candidate_unit == nullptr) {
             continue;
         }
@@ -398,19 +408,12 @@ std::string references_json(const Document& doc, const Json* params,
         }
         if (!target_module_document && !target_selective_document && native_identity.has_value()) {
             std::vector<Symbol> candidate_symbols_with_native;
-            if (dudu_module_identity(*native_identity)) {
-                if (const ModuleAst* candidate_visible =
-                        visible_document_unit(candidate_index, candidate)) {
-                    candidate_symbols_with_native =
-                        symbols_for_module(*candidate_visible, true);
-                }
-            } else {
-                const ProjectIndex* candidate_tree = document_project_index(candidate, true);
-                if (const ModuleAst* candidate_visible =
-                        visible_document_unit(candidate_tree, candidate)) {
-                    candidate_symbols_with_native =
-                        symbols_for_module(*candidate_visible, true);
-                }
+            const bool need_native_index = !dudu_module_identity(*native_identity);
+            const ModuleAst* native_candidate_unit =
+                need_native_index ? workspace_candidate_unit(current_index, candidate, true)
+                                  : candidate_unit;
+            if (native_candidate_unit != nullptr) {
+                candidate_symbols_with_native = symbols_for_module(*native_candidate_unit, true);
             }
             if (!document_has_native_identity_for_query(candidate_symbols_with_native,
                                                         candidate_query, *native_identity)) {
@@ -453,8 +456,7 @@ std::string rename_json(const Document& doc, const Json* params,
         if (scope == RenameScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const ProjectIndex* candidate_index = document_project_index(candidate, false);
-        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
+        const ModuleAst* candidate_unit = workspace_candidate_unit(current_index, candidate, false);
         if (candidate_unit == nullptr) {
             continue;
         }

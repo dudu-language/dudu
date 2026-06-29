@@ -121,6 +121,10 @@ native references across workspace documents when identity metadata is
 available, so two headers imported under the same alias with the same function
 name are not conflated. Broader native references still need a canonical
 identity index instead of recomputing symbol identity per candidate document.
+Reference and rename workspace scans now prefer module units from the already
+loaded warm `ProjectIndex` for candidate files in the same module tree before
+falling back to per-document project loads, keeping repeated requests on shared
+server/index state.
 Definition and hover symbol lookup now prefer exact symbols, and only fall back
 to suffix matching when the suffix is unambiguous. Receiver-aware member
 definition and hover run before suffix fallback, so native classes with

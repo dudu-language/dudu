@@ -2254,10 +2254,13 @@ push. They are not release packaging work.
    identity metadata is available, so two headers imported under the same alias
    with the same function name are not conflated. Native hover now also shows
    the canonical native identity key beside the Dudu-shaped signature/type when
-   scanner metadata provides one. Definition and hover symbol lookup now prefer
-   exact symbols and only use suffix matches when unambiguous; receiver-aware
-   member definition and hover run before suffix fallback, so same-named native
-   methods resolve through the expression receiver type instead of scan order.
+   scanner metadata provides one. Reference and rename workspace scans now
+   prefer module units from the already loaded warm `ProjectIndex` for
+   candidate files in the same module tree before falling back to per-document
+   project loads. Definition and hover symbol lookup now prefer exact symbols
+   and only use suffix matches when unambiguous; receiver-aware member
+   definition and hover run before suffix fallback, so same-named native methods
+   resolve through the expression receiver type instead of scan order.
    Cursor selection for definition and reference queries now runs through a
    shared AST-backed selection pass that records the simple symbol, dotted
    symbol path, and expression path together. This removes duplicated parse/walk

@@ -304,6 +304,7 @@ def main() -> i32:
         request(51, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MatrixNativePoint", add=len("nb."))}),
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
+        request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
@@ -361,6 +362,7 @@ def main() -> i32:
     native_macro_hover = response(messages, 53)["contents"]["value"]
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
+    assert_nonempty(response(messages, 54), "native function references")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")
