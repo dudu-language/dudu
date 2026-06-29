@@ -277,7 +277,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .kind = is_constructor_method_name(method.name)
                                        ? lsp_symbol_kind::Constructor
                                        : lsp_symbol_kind::Method,
-                           .native_identity_key = native_identity_key(method.native_identity)});
+                           .native_identity_key = native_identity_key(method.native_identity),
+                           .doc_comment = method.doc_comment});
         }
     }
     return out;

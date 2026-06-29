@@ -189,11 +189,12 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
             continue;
         }
         for (const FieldDecl& field : klass.fields) {
-            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref),
+                field.doc_comment);
         }
         for (const FunctionDecl& method : klass.methods) {
             add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
-                function_detail(method));
+                function_detail(method), method.doc_comment);
         }
         break;
     }
@@ -210,6 +211,38 @@ struct SignatureCandidate {
     std::string label;
     std::string documentation;
 };
+
+void add_member_signature_candidates(std::vector<SignatureCandidate>& signatures,
+                                     const ProjectIndex& index, const ModuleAst& current,
+                                     const CallSite& call, const Json* params) {
+    const size_t dot = call.name.rfind('.');
+    if (dot == std::string::npos || dot == 0 || dot + 1 >= call.name.size()) {
+        return;
+    }
+    const std::string receiver = call.name.substr(0, dot);
+    const std::string member = call.name.substr(dot + 1);
+    const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
+    if (!has_type_ref(type_ref)) {
+        return;
+    }
+    const ModuleAst& module = index.merged_module();
+    const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
+    const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
+        for (const ClassDecl& klass : classes) {
+            if (!candidate_types.contains(klass.name)) {
+                continue;
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                if (method.name == member) {
+                    signatures.push_back(
+                        {.label = function_detail(method), .documentation = method.doc_comment});
+                }
+            }
+        }
+    };
+    add_from_classes(module.classes);
+    add_from_classes(module.native_classes);
+}
 
 bool signature_token_before_cursor(const Token& token, int line, int character) {
     if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
@@ -399,6 +432,7 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     std::vector<SignatureCandidate> signatures;
     if (const ProjectIndex* index = completion_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
+        add_member_signature_candidates(signatures, *index, current, call, params);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
             if (symbol_matches(symbol.name, call.name) &&
                 (symbol.kind == lsp_symbol_kind::Function ||

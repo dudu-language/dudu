@@ -305,6 +305,29 @@ def main() -> i32:
     return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2))
 """
     (tmp / "native_user.dd").write_text(native_source)
+    (tmp / "native_widget.hpp").write_text(
+        """#pragma once
+
+class MatrixWidget {
+  public:
+    /** Scales the matrix widget by a factor. */
+    int scaled(int factor) const {
+        return value * factor;
+    }
+
+    /** Current widget value. */
+    int value = 0;
+};
+"""
+    )
+    native_cpp_source = """import cpp "native_widget.hpp"
+
+def main() -> i32:
+    widget: MatrixWidget
+    widget.value = 5
+    return widget.scaled(2)
+"""
+    (tmp / "native_cpp_user.dd").write_text(native_cpp_source)
     unresolved_source = """class Player:
     hp: i32
 
@@ -333,6 +356,7 @@ def main() -> i32:
     entities_source = entities.read_text()
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
+    native_cpp = tmp / "native_cpp_user.dd"
     unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
     messages = [
@@ -342,6 +366,7 @@ def main() -> i32:
         open_message(entities),
         open_message(ops),
         open_message(native),
+        open_message(native_cpp),
         open_message(unresolved),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
@@ -388,6 +413,9 @@ def main() -> i32:
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
+        request(56, "textDocument/completion", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
+        request(57, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
+        request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -533,6 +561,17 @@ def main() -> i32:
     native_signature_docs = native_signature_help["signatures"][0]["documentation"]["value"]
     if "Adds two matrix fixture integers." not in native_signature_docs:
         raise AssertionError(f"missing native signature docs: {native_signature_help!r}")
+    native_member_completion = response(messages, 56)
+    assert_completion_labels(native_member_completion, ["scaled", "value"])
+    assert_documentation_contains(item_named(native_member_completion, "scaled"), "Scales the matrix widget by a factor.")
+    assert_documentation_contains(item_named(native_member_completion, "value"), "Current widget value.")
+    native_member_hover = response(messages, 57)["contents"]["value"]
+    if "Current widget value." not in native_member_hover:
+        raise AssertionError(f"missing native member hover docs: {native_member_hover!r}")
+    native_member_signature = response(messages, 58)
+    native_member_signature_docs = native_member_signature["signatures"][0]["documentation"]["value"]
+    if "Scales the matrix widget by a factor." not in native_member_signature_docs:
+        raise AssertionError(f"missing native member signature docs: {native_member_signature!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

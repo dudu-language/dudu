@@ -252,6 +252,47 @@ void test_lsp_signature_help_uses_visible_imported_functions() {
     assert(help.find("\"activeParameter\":1") != std::string::npos);
 }
 
+void test_lsp_native_member_docs_reach_completion_and_signature_help() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_member_docs_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_widget.hpp", "#pragma once\n"
+                                          "\n"
+                                          "class NativeWidget {\n"
+                                          "  public:\n"
+                                          "    /** Scale docs for native member. */\n"
+                                          "    int scaled(int factor) const {\n"
+                                          "        return value * factor;\n"
+                                          "    }\n"
+                                          "\n"
+                                          "    /** Value docs for native field. */\n"
+                                          "    int value = 0;\n"
+                                          "};\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"native_widget.hpp\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    widget: NativeWidget\n"
+                                     "    widget.value = 5\n"
+                                     "    return widget.scaled(2)\n"};
+    dudu::Json completion_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":11}}").parse();
+    const std::string completions = dudu::completion_json(&doc, &completion_params);
+    assert(completions.find("\"label\":\"scaled\"") != std::string::npos);
+    assert(completions.find("Scale docs for native member.") != std::string::npos);
+    assert(completions.find("\"label\":\"value\"") != std::string::npos);
+    assert(completions.find("Value docs for native field.") != std::string::npos);
+
+    dudu::Json signature_params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":26}}").parse();
+    const std::string help = dudu::signature_help_json(&doc, &signature_params);
+    assert(help.find("scaled(arg0: i32) -> i32") != std::string::npos);
+    assert(help.find("Scale docs for native member.") != std::string::npos);
+}
+
 void test_lsp_module_completion_uses_loaded_module_units() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_completion_unit_test";
@@ -481,6 +522,7 @@ int main() {
         test_lsp_member_completion_includes_ast_docs();
         test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_signature_help_uses_visible_imported_functions();
+        test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
         test_lsp_project_index_cache_invalidates_imported_file_changes();

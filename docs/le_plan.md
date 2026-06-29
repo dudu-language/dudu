@@ -2372,7 +2372,8 @@ push. They are not release packaging work.
    declaration docs through the scan cache, so LSP hover/completion/signature
    help can show real C/C++ docs when the imported header provides them. The
    JSON-RPC LSP matrix now asserts native function docs through completion and
-   signature help.
+   signature help, and native C++ member docs through member completion plus
+   receiver-aware method signature help.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
    Field/constant/alias larger-doc syntax and broader native C/C++ declaration
