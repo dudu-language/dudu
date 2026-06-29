@@ -2032,6 +2032,15 @@ push. They are not release packaging work.
    83ms, native from about 240ms to about 244ms, and mixed from about 90ms to
    about 89ms. Some native cached RSS moved down, but the broader shape matrix
    did not prove a compiler-speed win.
+   Reducing the lexer token-vector reserve from `source.size() / 2` to
+   `source.size() * 5 / 12` was tried and rejected. Massif showed the original
+   reserve as a large early retained heap bucket on expression-heavy code, and
+   generated-shape token-density probes showed the smaller reserve still fit
+   the densest current generated expressions. The broad five-sample 50k Release
+   matrix rejected it anyway: expressions stayed around 202ms with no useful
+   RSS movement, arrays regressed to about 74ms, indexing to about 134ms,
+   generics to about 85ms, native to about 248ms, and mixed to about 91ms. Keep
+   the current reserve until token storage is redesigned structurally.
    Removing the statement-block capacity pre-scan was tried and rejected. It
    looked attractive because huge generated functions were walking the same
    block once to reserve and once to parse, but vector growth cost was worse
