@@ -498,6 +498,8 @@ def main() -> i32:
         request(44, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "move(self")}),
         request(45, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
         request(46, "textDocument/semanticTokens/full", {"textDocument": text_document(main)}),
+        request(84, "textDocument/semanticTokens/full", {"textDocument": text_document(native)}),
+        request(85, "textDocument/semanticTokens/full", {"textDocument": text_document(entities)}),
         request(47, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Mode.Play", add=len("Mode."))}),
         request(48, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
         request(62, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
@@ -771,7 +773,10 @@ def main() -> i32:
     semantic_legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]
     legend = semantic_legend["tokenTypes"]
     token_modifiers = semantic_legend["tokenModifiers"]
+    declaration = modifier_mask(token_modifiers, "declaration")
     readonly = modifier_mask(token_modifiers, "readonly")
+    static = modifier_mask(token_modifiers, "static")
+    native_modifier = modifier_mask(token_modifiers, "native")
     unresolved_modifier = modifier_mask(token_modifiers, "unresolved")
     decoded_tokens = decode_semantic_tokens(main_source, response(messages, 46)["data"], legend)
     if not has_semantic(decoded_tokens, "math", "namespace", 0):
@@ -782,6 +787,16 @@ def main() -> i32:
         raise AssertionError(f"missing imported function semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "MAGIC", "variable", readonly):
         raise AssertionError(f"missing imported const semantic token: {decoded_tokens!r}")
+    native_tokens = decode_semantic_tokens(native_source, response(messages, 84)["data"], legend)
+    if not has_semantic(native_tokens, "matrix_native_add", "function", native_modifier):
+        raise AssertionError(f"missing native function semantic token: {native_tokens!r}")
+    if not has_semantic(native_tokens, "DUDU_MATRIX_NATIVE_SCALE", "macro", native_modifier):
+        raise AssertionError(f"missing native macro semantic token: {native_tokens!r}")
+    entity_tokens = decode_semantic_tokens(entities_source, response(messages, 85)["data"], legend)
+    if not has_semantic(entity_tokens, "count", "property", declaration | static):
+        raise AssertionError(f"missing static field declaration semantic token: {entity_tokens!r}")
+    if not has_semantic(entity_tokens, "LIMIT", "property", declaration | readonly):
+        raise AssertionError(f"missing class constant declaration semantic token: {entity_tokens!r}")
     unresolved_tokens = decode_semantic_tokens(unresolved_source, response(messages, 70)["data"], legend)
     if not has_semantic(unresolved_tokens, "local_value", "variable", 0):
         raise AssertionError(f"known local was marked unresolved: {unresolved_tokens!r}")

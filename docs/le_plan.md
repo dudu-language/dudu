@@ -3780,3 +3780,6 @@ push. They are not release packaging work.
    as `MatrixWidget(5)` can jump to the scanned header constructor declaration,
    and hover/signature help show the matching native constructor signature and
    docs. The JSON-RPC matrix covers all three requests.
+   The JSON-RPC semantic-token matrix now explicitly asserts static field
+   declaration modifiers, readonly class constants, and native function/macro
+   modifiers instead of only checking imported and unresolved token classes.

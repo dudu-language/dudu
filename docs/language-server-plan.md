@@ -649,8 +649,9 @@ unresolved symbols, numbers, and strings. The semantic-token collector also
 indexes Dudu classes/enums/enum members directly, so Dudu class return types,
 enum member expressions, and member calls are no longer colored as generic
 types/properties/functions. The LSP matrix decodes semantic-token responses from
-`dudu-lsp`, including unresolved-token modifiers, so transport coverage now
-matches the direct frontend assertions.
+`dudu-lsp`, including static declarations, readonly class constants, native
+function/macro tokens, and unresolved-token modifiers, so transport coverage
+now matches the direct frontend assertions.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and
