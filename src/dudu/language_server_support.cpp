@@ -28,7 +28,57 @@ struct ModuleCacheKey {
     }
 };
 
-std::map<ModuleCacheKey, ProjectIndex> project_index_cache;
+struct ModuleCacheEntry {
+    ProjectIndex index;
+    std::map<std::string, std::filesystem::file_time_type> dependency_mtimes;
+};
+
+std::filesystem::path canonical_key_path(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
+
+std::string path_key(const std::filesystem::path& path) {
+    return canonical_key_path(path).string();
+}
+
+std::map<std::string, std::filesystem::file_time_type>
+dependency_mtimes_for_index(const ProjectIndex& index, const std::filesystem::path& entry_path) {
+    std::map<std::string, std::filesystem::file_time_type> out;
+    const std::string entry_key = path_key(entry_path);
+    for (const ProjectModuleSummary& module : index.modules()) {
+        if (module.source_path.empty()) {
+            continue;
+        }
+        const std::string key = path_key(module.source_path);
+        if (key == entry_key) {
+            continue;
+        }
+        std::error_code error;
+        const std::filesystem::file_time_type mtime =
+            std::filesystem::last_write_time(module.source_path, error);
+        if (!error) {
+            out[key] = mtime;
+        }
+    }
+    return out;
+}
+
+bool dependency_mtimes_current(
+    const std::map<std::string, std::filesystem::file_time_type>& mtimes) {
+    for (const auto& [path, mtime] : mtimes) {
+        std::error_code error;
+        const std::filesystem::file_time_type current =
+            std::filesystem::last_write_time(path, error);
+        if (error || current != mtime) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::map<ModuleCacheKey, ModuleCacheEntry> project_index_cache;
 
 } // namespace
 
@@ -85,7 +135,10 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
                              .text_hash = std::hash<std::string>{}(doc.text),
                              .include_native_headers = include_native_headers};
     if (const auto found = project_index_cache.find(key); found != project_index_cache.end()) {
-        return found->second;
+        if (dependency_mtimes_current(found->second.dependency_mtimes)) {
+            return found->second.index;
+        }
+        project_index_cache.erase(found);
     }
     const ProjectConfig config = config_for_file(doc.path);
     ProjectIndexOptions options;
@@ -99,8 +152,10 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     options.include_native_headers_in_merged_module = include_native_headers;
     options.check_semantics = false;
     ProjectIndex index = ProjectIndex::load(options);
-    auto result = project_index_cache.emplace(key, std::move(index));
-    return result.first->second;
+    ModuleCacheEntry entry{.index = std::move(index), .dependency_mtimes = {}};
+    entry.dependency_mtimes = dependency_mtimes_for_index(entry.index, doc.path);
+    auto result = project_index_cache.emplace(key, std::move(entry));
+    return result.first->second.index;
 }
 
 void clear_language_server_module_cache() {

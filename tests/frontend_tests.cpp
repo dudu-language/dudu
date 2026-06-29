@@ -14,6 +14,7 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_reference_collect.hpp"
 #include "dudu/language_server_references.hpp"
+#include "dudu/language_server_support.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
@@ -30,6 +31,7 @@
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -882,6 +884,45 @@ void test_lsp_definition_uses_loaded_module_units() {
     const std::string definition = dudu::definition_json(doc, &params);
     assert(definition.find(dudu::file_uri(dir / "maths.dd")) != std::string::npos);
     assert(definition.find("\"line\":0") != std::string::npos);
+}
+
+void test_lsp_project_index_cache_invalidates_imported_file_changes() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_project_index_stale_dep_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path dependency = dir / "maths.dd";
+    write_file(dependency, "def inc(value: i32) -> i32:\n"
+                           "    return value + 1\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import maths\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return maths.inc(1)\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
+    dudu::clear_language_server_module_cache();
+    const std::string first_definition = dudu::definition_json(doc, &params);
+    assert(first_definition.find(dudu::file_uri(dependency)) != std::string::npos);
+    assert(first_definition.find("\"line\":0") != std::string::npos);
+
+    write_file(dependency, "# shifted\n"
+                           "def inc(value: i32) -> i32:\n"
+                           "    return value + 2\n");
+    std::error_code error;
+    std::filesystem::last_write_time(dependency,
+                                     std::filesystem::file_time_type::clock::now() +
+                                         std::chrono::seconds(5),
+                                     error);
+    assert(!error);
+
+    const std::string second_definition = dudu::definition_json(doc, &params);
+    assert(second_definition.find(dudu::file_uri(dependency)) != std::string::npos);
+    assert(second_definition.find("\"line\":1") != std::string::npos);
+    dudu::clear_language_server_module_cache();
 }
 
 void test_lsp_definition_jumps_to_native_header_type() {
@@ -1935,6 +1976,7 @@ int main() {
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
+        test_lsp_project_index_cache_invalidates_imported_file_changes();
         test_lsp_definition_jumps_to_native_header_type();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
