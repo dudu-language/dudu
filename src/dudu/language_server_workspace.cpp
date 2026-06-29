@@ -3,8 +3,7 @@
 #include "dudu/file_io.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
-#include "dudu/module_names.hpp"
-#include "dudu/parser.hpp"
+#include "dudu/project_index.hpp"
 
 #include <filesystem>
 #include <map>
@@ -17,45 +16,37 @@
 namespace dudu {
 namespace {
 
-void collect_imported_documents(const Document& doc,
-                                const std::set<std::filesystem::path>& open_paths,
-                                std::map<std::string, Document>& out,
-                                std::set<std::filesystem::path>& visiting, size_t& scanned) {
-    if (scanned >= 1000) {
-        return;
-    }
-    ModuleAst module;
+void collect_indexed_documents(const Document& doc,
+                               const std::set<std::filesystem::path>& open_paths,
+                               std::map<std::string, Document>& out, size_t& scanned) {
+    const ProjectIndex* index = nullptr;
     try {
-        module = parse_source(doc.text, doc.path);
+        index = &project_index_for_document(doc, false);
     } catch (const std::exception&) {
         return;
     }
-    for (const ImportDecl& import : module.imports) {
-        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
-            continue;
+    for (const ProjectModuleSummary& module : index->modules()) {
+        if (scanned >= 1000 || module.source_path.empty()) {
+            return;
         }
-        const std::filesystem::path path =
-            module_path_to_file(doc.path.parent_path(), import.module_path);
         std::error_code error;
-        const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
-        if (error || open_paths.contains(canonical) || visiting.contains(canonical)) {
+        const std::filesystem::path canonical =
+            std::filesystem::weakly_canonical(module.source_path, error);
+        if (error || open_paths.contains(canonical)) {
             error.clear();
             continue;
         }
-        std::optional<std::string> text = try_read_text_file(path);
+        const std::string uri = file_uri(module.source_path);
+        if (out.contains(uri)) {
+            continue;
+        }
+        std::optional<std::string> text = try_read_text_file(module.source_path);
         if (!text) {
             continue;
         }
-        const std::string uri = file_uri(path);
-        const Document imported{.uri = uri, .path = path, .text = std::move(*text)};
+        const Document imported{.uri = uri, .path = module.source_path, .text = std::move(*text)};
         out.try_emplace(uri, imported);
         ++scanned;
-        visiting.insert(canonical);
-        collect_imported_documents(imported, open_paths, out, visiting, scanned);
-        visiting.erase(canonical);
-        if (scanned >= 1000) {
-            return;
-        }
     }
 }
 
@@ -110,14 +101,13 @@ workspace_documents(const std::map<std::string, Document>& open_documents) {
         roots.insert(config.empty() ? doc.path.parent_path() : config.parent_path());
     }
     size_t scanned = 0;
-    std::set<std::filesystem::path> visiting;
     std::vector<Document> seed_documents;
     for (const auto& [uri, doc] : out) {
         (void)uri;
         seed_documents.push_back(doc);
     }
     for (const Document& doc : seed_documents) {
-        collect_imported_documents(doc, open_paths, out, visiting, scanned);
+        collect_indexed_documents(doc, open_paths, out, scanned);
     }
     for (const std::filesystem::path& root : roots) {
         collect_workspace_documents(root, open_paths, out, scanned);
