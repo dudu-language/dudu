@@ -2210,10 +2210,10 @@ push. They are not release packaging work.
    remain rejected until symbol identity is strong enough to avoid editing
    unrelated same-named locals. Declaration-anchored references use the same
    conservative redeclaration filter, while imported module/member references
-   keep workspace search. LSP diagnostics now load multi-file module trees with
-   the open editor buffer as the entry source, so unsaved fixes to imports or
-   entry code are analyzed consistently with the saved dependency modules
-   instead of rereading a stale entry file from disk. Member completion,
+   keep workspace search. LSP diagnostics now load multi-file module trees
+   through shared ProjectIndex source overlays for all open editor buffers, so
+   unsaved fixes to entry files and imported modules are analyzed consistently
+   instead of rereading stale dependency modules from disk. Member completion,
    member-definition lookup, native alias hover, top-level completion, and
    signature help now use the same shared LSP module view, including imported
    Dudu module shapes, visible imported functions, and native headers. Fields
@@ -2265,10 +2265,14 @@ push. They are not release packaging work.
    `scripts/bench_compiler.sh` now includes repeated workspace-symbol and
    references requests in its LSP probe so this warm-request path remains
    visible in benchmark runs.
-   The LSP support layer also caches parsed/merged module views keyed by the
-   open document text and native-header mode. Hover, definition, references,
-   completion, and diagnostics should hit that warm module view for repeated
-   requests instead of reparsing source trees and remerging native metadata.
+   The LSP support layer also caches parsed/merged ProjectIndex views keyed by
+   the open document text, open-document source overlays, project config, and
+   native-header mode. Hover, definition, references, completion, and
+   diagnostics should hit that warm module view for repeated requests instead
+   of reparsing source trees and remerging native metadata. Open-buffer changes
+   no longer clear the whole ProjectIndex cache; the overlay fingerprint
+   naturally misses only the affected project view while unrelated warm entries
+   remain available.
 
    The validation suite must not rely only on `raymarch-dd` and
    `dudu-webserver`. Add curated, cheap mini-workspaces for each editor-action

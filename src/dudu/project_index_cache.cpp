@@ -48,11 +48,21 @@ std::string fingerprint_build_values(const std::map<std::string, std::string>& v
     return out.str();
 }
 
+std::string fingerprint_source_overrides(
+    const std::map<std::filesystem::path, std::string>& source_overrides) {
+    std::ostringstream out;
+    for (const auto& [path, source] : source_overrides) {
+        out << normalized_path_text(path) << '\0' << std::hash<std::string>{}(source) << '\0';
+    }
+    return out.str();
+}
+
 } // namespace
 
 ProjectIndexCache::CacheKey ProjectIndexCache::key_for_options(const ProjectIndexOptions& options) {
     return {.entry_path = normalized_path_text(options.entry_path),
             .source_hash = std::hash<std::string>{}(std::string(options.entry_source)),
+            .source_overrides_fingerprint = fingerprint_source_overrides(options.source_overrides),
             .source_dir = normalized_path_text(options.source_dir),
             .config_fingerprint = fingerprint_config(options.config),
             .build_values_fingerprint = fingerprint_build_values(options.build_values),

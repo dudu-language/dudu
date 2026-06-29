@@ -98,12 +98,16 @@ ModuleAst load_project_module(const ProjectIndexOptions& options) {
     if (options.entry_path.empty()) {
         return parse_source(std::string(options.entry_source), options.entry_path);
     }
+    std::map<std::filesystem::path, std::string> source_overrides = options.source_overrides;
+    if (!options.entry_source.empty() && !source_overrides.contains(options.entry_path)) {
+        source_overrides[options.entry_path] = std::string(options.entry_source);
+    }
     if (options.allow_module_tree && options.force_module_tree) {
-        return load_source_tree(options.entry_path, options.entry_source);
+        return load_source_tree(options.entry_path, source_overrides);
     }
     ModuleAst parsed = parse_source(std::string(options.entry_source), options.entry_path);
     if (options.allow_module_tree && has_dudu_module_imports(parsed)) {
-        return load_source_tree(options.entry_path, options.entry_source);
+        return load_source_tree(options.entry_path, source_overrides);
     }
     return parsed;
 }

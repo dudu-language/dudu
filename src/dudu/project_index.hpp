@@ -17,6 +17,7 @@ namespace dudu {
 struct ProjectIndexOptions {
     std::filesystem::path entry_path;
     std::string_view entry_source;
+    std::map<std::filesystem::path, std::string> source_overrides;
     ProjectConfig config;
     std::filesystem::path source_dir;
     std::map<std::string, std::string> build_values;

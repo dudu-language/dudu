@@ -11,6 +11,13 @@ namespace dudu {
 namespace {
 
 ProjectIndexCache project_index_cache;
+std::map<std::filesystem::path, std::string> open_document_sources;
+
+std::filesystem::path canonical_overlay_path(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
 
 } // namespace
 
@@ -65,9 +72,12 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
 const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
                                                bool check_semantics) {
     const ProjectConfig config = config_for_file(doc.path);
+    std::map<std::filesystem::path, std::string> source_overrides = open_document_sources;
+    source_overrides[canonical_overlay_path(doc.path)] = doc.text;
     ProjectIndexOptions options;
     options.entry_path = doc.path;
     options.entry_source = doc.text;
+    options.source_overrides = std::move(source_overrides);
     options.config = config;
     options.source_dir = doc.path.parent_path();
     options.allow_module_tree = doc.path.has_parent_path() &&
@@ -83,8 +93,17 @@ ProjectIndexCacheStats language_server_project_index_cache_stats() {
     return project_index_cache.stats();
 }
 
+void set_language_server_open_documents(const std::map<std::string, Document>& documents) {
+    open_document_sources.clear();
+    for (const auto& [uri, doc] : documents) {
+        (void)uri;
+        open_document_sources[canonical_overlay_path(doc.path)] = doc.text;
+    }
+}
+
 void clear_language_server_module_cache() {
     project_index_cache.clear();
+    open_document_sources.clear();
 }
 
 int leading_spaces(const std::string& line) {

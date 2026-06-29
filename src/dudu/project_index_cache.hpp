@@ -27,6 +27,7 @@ class ProjectIndexCache {
     struct CacheKey {
         std::string entry_path;
         size_t source_hash = 0;
+        std::string source_overrides_fingerprint;
         std::string source_dir;
         std::string config_fingerprint;
         std::string build_values_fingerprint;

@@ -27,6 +27,12 @@ std::string read_text_file(const std::filesystem::path& path) {
                        "could not open module");
 }
 
+std::filesystem::path canonical_source_path(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
+
 void stamp_module_origin(ModuleAst& module, const std::filesystem::path& source_path,
                          const std::string& module_path) {
     module.source_path = source_path;
@@ -270,8 +276,7 @@ void add_from_import_aliases(ModuleAst& module) {
 }
 
 const ModuleAst& load_one(const std::filesystem::path& path, const std::filesystem::path& root,
-                          const std::filesystem::path& entry,
-                          std::optional<std::string_view> entry_source,
+                          const std::map<std::filesystem::path, std::string>& source_overrides,
                           std::vector<std::filesystem::path>& stack,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
                           std::vector<std::filesystem::path>& ordered) {
@@ -285,9 +290,11 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
     }
     stack.push_back(canonical);
 
-    const bool use_entry_source = canonical == entry && entry_source.has_value();
-    ModuleAst parsed =
-        parse_source(use_entry_source ? std::string(*entry_source) : read_text_file(path), path);
+    const auto source_override = source_overrides.find(canonical);
+    ModuleAst parsed = parse_source(source_override == source_overrides.end()
+                                        ? read_text_file(path)
+                                        : source_override->second,
+                                    path);
     stamp_module_origin(parsed, canonical, module_name_from_file(root, canonical));
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
@@ -302,7 +309,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
                                module_cycle_message(root, stack, canonical_dependency));
         }
         const ModuleAst& dependency_module =
-            load_one(dependency, root, entry, entry_source, stack, loaded, ordered);
+            load_one(dependency, root, source_overrides, stack, loaded, ordered);
         parsed.dependencies.push_back({.kind = import.kind,
                                        .import_module_path = import.module_path,
                                        .resolved_module_path = dependency_module.module_path,
@@ -356,13 +363,18 @@ void collect_files(const std::filesystem::path& path, std::vector<std::filesyste
 
 } // namespace
 
-ModuleAst load_source_tree(const std::filesystem::path& entry, std::string_view entry_source) {
+ModuleAst load_source_tree(const std::filesystem::path& entry,
+                           const std::map<std::filesystem::path, std::string>& source_overrides) {
     const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(entry);
     const std::filesystem::path root = canonical_entry.parent_path();
+    std::map<std::filesystem::path, std::string> canonical_overrides;
+    for (const auto& [path, source] : source_overrides) {
+        canonical_overrides[canonical_source_path(path)] = source;
+    }
     std::vector<std::filesystem::path> stack;
     std::map<std::filesystem::path, ModuleAst> loaded;
     std::vector<std::filesystem::path> ordered;
-    (void)load_one(canonical_entry, root, canonical_entry, entry_source, stack, loaded, ordered);
+    (void)load_one(canonical_entry, root, canonical_overrides, stack, loaded, ordered);
 
     ModuleAst merged;
     merged.source_path = canonical_entry;
@@ -376,6 +388,10 @@ ModuleAst load_source_tree(const std::filesystem::path& entry, std::string_view 
     }
     add_from_import_aliases(merged);
     return merged;
+}
+
+ModuleAst load_source_tree(const std::filesystem::path& entry, std::string_view entry_source) {
+    return load_source_tree(entry, {{entry, std::string(entry_source)}});
 }
 
 ModuleAst load_source_tree(const std::filesystem::path& entry) {

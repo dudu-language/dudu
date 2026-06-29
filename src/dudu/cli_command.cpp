@@ -177,6 +177,7 @@ const ProjectIndex& checked_index(const CliOptions& options, const std::string& 
     const ProjectIndex& checked = cli_project_index_cache.get(
         {.entry_path = options.input,
          .entry_source = source,
+         .source_overrides = {},
          .config = config,
          .source_dir = source_dir,
          .build_values = options.build_values,
