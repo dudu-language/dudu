@@ -14,7 +14,8 @@
     "onCommand:dudu.checkFile",
     "onCommand:dudu.buildProject",
     "onCommand:dudu.runFile",
-    "onCommand:dudu.testProject"
+    "onCommand:dudu.testProject",
+    "onCommand:dudu.restartLsp"
   ],
   "categories": [
     "Programming Languages"
@@ -81,5 +82,8 @@
         }
       }
     }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^10.0.1"
   }
 }

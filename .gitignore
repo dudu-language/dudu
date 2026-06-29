@@ -5,6 +5,7 @@ third_party/
 .idea/
 .vscode/
 compile_commands.json
+node_modules/
 .dudu_native_headers_*
 *.o
 *.obj

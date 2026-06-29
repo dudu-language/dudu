@@ -229,13 +229,15 @@ tokens, are wired by normal client plumbing while `dudu-lsp` remains the owner o
 compiler intelligence.
 
 Status: the local VS Code extension currently starts `dudu-lsp`, forwards document
-open/change/save events, debounces rapid change notifications, displays LSP
-diagnostics, uses the LSP formatting provider for `Dudu: Format Current File`
-and format-on-save, and shows a status bar item with LSP process state,
-configured `duc` path, and native-header diagnostic state. The status tooltip
-also shows the current `dudu.toml` `[target]` kind/mode when available. Command
-palette actions are registered for formatting, checking the current file,
-building the project, running the current file, and running project tests.
+open/change/save events, displays LSP diagnostics, uses the LSP formatting
+provider for `Dudu: Format Current File` and format-on-save, and shows a status
+bar item with LSP process state, configured `dudu` / `dudu-lsp` paths, target
+kind/mode, and native-header diagnostic state. Command palette actions are
+registered for formatting, checking the current file, building the project,
+running the current file, running project tests, and restarting the language
+server. The extension now uses VS Code's standard `vscode-languageclient`
+package instead of a broad hand-written JSON-RPC client, so semantic tokens and
+normal LSP capabilities are wired through standard client plumbing.
 The clean target is a dedicated `dudu-lsp` binary; do not preserve `duc lsp` as
 an alias after the tool split lands.
 

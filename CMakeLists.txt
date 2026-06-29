@@ -52,6 +52,7 @@ install(TARGETS dudu duc dudu-lsp
 
 install(DIRECTORY editors/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/editors
+    PATTERN "node_modules" EXCLUDE
 )
 
 install(DIRECTORY docs/
