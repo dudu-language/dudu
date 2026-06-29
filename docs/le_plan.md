@@ -2041,6 +2041,15 @@ push. They are not release packaging work.
    RSS movement, arrays regressed to about 74ms, indexing to about 134ms,
    generics to about 85ms, native to about 248ms, and mixed to about 91ms. Keep
    the current reserve until token storage is redesigned structurally.
+   Replacing expression-parser `std::initializer_list<TokenKind>` stop sets
+   with a compact bit-mask was tried and rejected. The idea was to reduce
+   recursive parser overhead without changing AST shape. A broad five-sample
+   50k Release run was mixed: modules, calls, arrays, indexing, and native
+   initially looked better, but expression-heavy code regressed from the
+   current baseline around 199ms to about 210ms. Adding an empty-stop fast path
+   did not recover the expression case and also left calls/native noisy or
+   worse. Do not repeat this exact stop-mask rewrite unless a better expression
+   parser design removes the extra top-level checks entirely.
    Removing the statement-block capacity pre-scan was tried and rejected. It
    looked attractive because huge generated functions were walking the same
    block once to reserve and once to parse, but vector growth cost was worse
