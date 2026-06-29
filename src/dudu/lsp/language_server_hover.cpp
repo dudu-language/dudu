@@ -1,16 +1,16 @@
 #include "dudu/lsp/language_server_hover.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
-#include "dudu/project/module_names.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/project/module_names.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -28,6 +28,30 @@ std::string hover_markdown(const Symbol& symbol) {
         markdown += "\n\n" + symbol.doc_comment;
     }
     return markdown;
+}
+
+std::optional<std::string> imported_module_hover_json(const ProjectIndex& index,
+                                                      const ModuleAst& current,
+                                                      const std::string& word) {
+    if (word.empty()) {
+        return std::nullopt;
+    }
+    for (const ImportDecl& import : current.imports) {
+        if (import.kind != ImportKind::Module || bound_import_name(import) != word) {
+            continue;
+        }
+        const ModuleAst* imported = index.imported_unit(current, import);
+        if (imported == nullptr) {
+            continue;
+        }
+        std::string markdown = "`module " + import.module_path + "`";
+        if (!imported->doc_comment.empty()) {
+            markdown += "\n\n" + imported->doc_comment;
+        }
+        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+               "\"},\"range\":" + range_json(import.location) + "}";
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
@@ -109,8 +133,7 @@ std::string symbol_hover_json(const Symbol& symbol) {
 }
 
 std::optional<std::string> member_hover_json(const ExprPath& path, const Json* params,
-                                             const ModuleAst& current,
-                                             const ModuleAst& module) {
+                                             const ModuleAst& current, const ModuleAst& module) {
     if (params == nullptr || path.segments.size() < 2 ||
         path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
@@ -131,35 +154,35 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
             }
             for (const FieldDecl& field : klass.fields) {
                 if (field.name == member) {
-                    return symbol_hover_json({.name = field.name,
-                                              .detail = field.name + ": " +
-                                                        type_ref_text(field.type_ref),
-                                              .location = field.location,
-                                              .kind = lsp_symbol_kind::Field,
-                                              .native_identity_key = std::nullopt,
-                                              .doc_comment = field.doc_comment});
+                    return symbol_hover_json(
+                        {.name = field.name,
+                         .detail = field.name + ": " + type_ref_text(field.type_ref),
+                         .location = field.location,
+                         .kind = lsp_symbol_kind::Field,
+                         .native_identity_key = std::nullopt,
+                         .doc_comment = field.doc_comment});
                 }
             }
             for (const ConstDecl& constant : klass.constants) {
                 if (constant.name == member) {
-                    return symbol_hover_json({.name = constant.name,
-                                              .detail = constant.name + ": " +
-                                                        type_ref_text(constant.type_ref),
-                                              .location = constant.location,
-                                              .kind = lsp_symbol_kind::Constant,
-                                              .native_identity_key = std::nullopt,
-                                              .doc_comment = constant.doc_comment});
+                    return symbol_hover_json(
+                        {.name = constant.name,
+                         .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                         .location = constant.location,
+                         .kind = lsp_symbol_kind::Constant,
+                         .native_identity_key = std::nullopt,
+                         .doc_comment = constant.doc_comment});
                 }
             }
             for (const ConstDecl& field : klass.static_fields) {
                 if (field.name == member) {
-                    return symbol_hover_json({.name = field.name,
-                                              .detail = field.name + ": " +
-                                                        type_ref_text(field.type_ref),
-                                              .location = field.location,
-                                              .kind = lsp_symbol_kind::Field,
-                                              .native_identity_key = std::nullopt,
-                                              .doc_comment = field.doc_comment});
+                    return symbol_hover_json(
+                        {.name = field.name,
+                         .detail = field.name + ": " + type_ref_text(field.type_ref),
+                         .location = field.location,
+                         .kind = lsp_symbol_kind::Field,
+                         .native_identity_key = std::nullopt,
+                         .doc_comment = field.doc_comment});
                 }
             }
             for (const FunctionDecl& method : klass.methods) {
@@ -207,6 +230,10 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
         return symbol_hover_json(*exact);
+    }
+    if (const std::optional<std::string> module_hover =
+            imported_module_hover_json(*index, current, query)) {
+        return *module_hover;
     }
     if (const std::optional<std::string> imported =
             imported_symbol_hover_json(*index, current, query)) {

@@ -82,7 +82,9 @@ void test_keyword_statements_keep_token_ranges() {
 }
 
 void test_docstrings_attach_and_do_not_emit_as_statements() {
-    const dudu::ModuleAst module = dudu::parse_source("class Player:\n"
+    const dudu::ModuleAst module = dudu::parse_source("'''Module docs.'''\n"
+                                                      "\n"
+                                                      "class Player:\n"
                                                       "    '''Runtime player docs.\n"
                                                       "\n"
                                                       "    Keeps indentation useful.\n"
@@ -95,8 +97,14 @@ void test_docstrings_attach_and_do_not_emit_as_statements() {
                                                       "\n"
                                                       "def helper() -> i32:\n"
                                                       "    '''Helper docs.'''\n"
-                                                      "    return 1\n",
+                                                      "    return 1\n"
+                                                      "\n"
+                                                      "enum Mode:\n"
+                                                      "    '''Mode docs.'''\n"
+                                                      "    Play\n"
+                                                      "    Pause\n",
                                                       "docstrings.dd");
+    assert(module.doc_comment == "Module docs.");
     assert(module.classes.size() == 1);
     assert(module.classes.front().doc_comment ==
            "Runtime player docs.\n\nKeeps indentation useful.");
@@ -107,6 +115,7 @@ void test_docstrings_attach_and_do_not_emit_as_statements() {
     assert(module.functions.front().doc_comment == "Helper docs.");
     assert(module.functions.front().statements.size() == 1);
     assert(module.functions.front().statements.front().kind == dudu::StmtKind::Return);
+    assert(module.enums.front().doc_comment == "Mode docs.");
 }
 
 } // namespace

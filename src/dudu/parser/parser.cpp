@@ -1,7 +1,7 @@
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/parser/ast_expr_token_parser.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/parser/ast_type_token_parser.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser_doc_comments.hpp"
@@ -92,12 +92,24 @@ Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
 ModuleAst Parser::parse() {
     ModuleAst module;
     std::vector<Decorator> decorators;
+    bool can_accept_docstring = true;
 
     while (!at(TokenKind::End)) {
         skip_newlines();
         if (at(TokenKind::End)) {
             break;
         }
+        if (can_accept_docstring && at(TokenKind::String)) {
+            require_no_decorators(decorators, "module docstring");
+            const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
+            const Expr expr = parse_expr_piece(doc);
+            module.doc_comment = normalize_docstring_text(expr.value);
+            ++cursor_;
+            consume(TokenKind::Newline, "expected newline after module docstring");
+            can_accept_docstring = false;
+            continue;
+        }
+        can_accept_docstring = false;
         if (match(TokenKind::At)) {
             decorators.push_back(parse_decorator(previous()));
             continue;

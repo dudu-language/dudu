@@ -149,13 +149,15 @@ def mix(left: i32, right: i32) -> i32:
 """
     )
     (tmp / "entities.dd").write_text(
-        """import transitive
+        """'''Entities module docs.'''
+
+import transitive
 
 # Max health for player docs.
 MAX_HP: i32 = 42
 
-# Mode enum docs.
 enum Mode:
+    '''Mode enum docs.'''
     Play
     Pause
 
@@ -295,6 +297,7 @@ def main() -> i32:
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
+        request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -323,6 +326,8 @@ def main() -> i32:
         raise AssertionError(f"missing Player doc detail in {entity_symbols!r}")
     if "Moves the player docs." not in item_named(entity_symbols, "move").get("detail", ""):
         raise AssertionError(f"missing move doc detail in {entity_symbols!r}")
+    if "Mode enum docs." not in item_named(entity_symbols, "Mode").get("detail", ""):
+        raise AssertionError(f"missing Mode doc detail in {entity_symbols!r}")
     for request_id in range(11, 18):
         assert_nonempty(response(messages, request_id), f"workspace symbol {request_id}")
     for request_id in range(20, 30):
@@ -341,6 +346,10 @@ def main() -> i32:
     signature_docs = signature_help["signatures"][0]["documentation"]["value"]
     if "Mixes two numbers for signature docs." not in signature_docs:
         raise AssertionError(f"missing signature docs: {signature_help!r}")
+    module_hover = response(messages, 37)
+    module_hover_value = module_hover["contents"]["value"]
+    if "Entities module docs." not in module_hover_value:
+        raise AssertionError(f"missing module docs: {module_hover!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
