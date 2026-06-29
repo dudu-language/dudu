@@ -251,7 +251,10 @@ It should keep commands such as:
 - `duc emit-modules`
 - `duc emit-test-modules`
 - `duc fmt`
-- `duc lsp` as a compatibility/developer alias
+
+It should not own language-server startup. There are no existing Dudu users to
+protect, so keeping a second `duc lsp` spelling would add avoidable toolchain
+surface area.
 
 ### Keep `dudu`
 
@@ -270,7 +273,7 @@ It should keep commands such as:
 
 Add a dedicated language-server executable named `dudu-lsp`.
 
-This is the cleaner long-term shape:
+This is the clean toolchain shape:
 
 - editor settings can point directly at a language server binary
 - logs/process names clearly show `dudu-lsp`
@@ -278,12 +281,8 @@ This is the cleaner long-term shape:
   the language server
 - future LSP-only startup flags do not crowd `duc`
 
-Keep `duc lsp` as an alias that runs the same LSP entry point. That is useful
-for developers and avoids immediately breaking existing extension settings or
-scripts.
-
-The VS Code extension should eventually default to `dudu-lsp` if present and
-fall back to `duc lsp` only for developer builds or older installs.
+Remove `duc lsp` as part of this refactor. The VS Code extension and LSP scripts
+should call `dudu-lsp` directly.
 
 ### Is LSP As A Compiler Mode Normal?
 
@@ -297,8 +296,8 @@ Examples:
 - Some smaller languages start with `compiler lsp` because it is simple and
   shares code easily.
 
-For Dudu, `duc lsp` was a good bootstrap. A serious toolchain should provide
-`dudu-lsp` while keeping the shared compiler library underneath.
+For Dudu, `duc lsp` was a good bootstrap. A serious unreleased toolchain should
+replace it with `dudu-lsp` while keeping the shared compiler library underneath.
 
 ## CMake Refactor
 
@@ -333,7 +332,7 @@ minimal compiler frontend unless it is intentionally shared.
    - Create `src/tools/duc.cpp`, `src/tools/dudu.cpp`, and
      `src/tools/dudu_lsp.cpp`.
    - Add an explicit `run_lsp_cli()` or equivalent library entry point.
-   - Keep `duc lsp` working.
+   - Remove `duc lsp` from CLI parsing and usage.
    - Install `dudu-lsp`.
 
 2. Move files mechanically by subsystem.
@@ -355,9 +354,9 @@ minimal compiler frontend unless it is intentionally shared.
 
 5. Update scripts and docs.
    - `install-local.sh` should install/symlink `dudu-lsp`.
-   - VS Code extension should prefer `dudu-lsp`.
-   - LSP scripts can call `dudu-lsp` directly once available.
-   - `duc lsp` remains covered by a compatibility smoke test.
+   - VS Code extension should use `dudu-lsp`.
+   - LSP scripts should call `dudu-lsp` directly.
+   - Remove `duc lsp` references from docs, scripts, tests, and editor settings.
 
 6. Optional later cleanup.
    - Rename files after the directory split if prefixes become redundant.
@@ -375,7 +374,6 @@ After each phase:
 After LSP binary work:
 
 - `dudu-lsp` initializes over JSON-RPC
-- `duc lsp` still initializes over JSON-RPC
 - VS Code extension can start the configured server
 
 Before pushing larger file-move milestones:
@@ -391,5 +389,4 @@ Before pushing larger file-move milestones:
 - Do not rewrite compiler architecture during the mechanical move.
 - Do not change Dudu language behavior.
 - Do not flatten all files into `src/`.
-- Do not remove `duc lsp` until editor tooling and docs have moved cleanly to
-  `dudu-lsp`.
+- Do not keep stale compatibility aliases such as `duc lsp`.

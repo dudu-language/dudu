@@ -2200,7 +2200,7 @@ push. They are not release packaging work.
 
 13. Language Server And Formatter
 
-   Implement `duc lsp` so editors can show diagnostics, warnings, hover,
+   Implement `dudu-lsp` so editors can show diagnostics, warnings, hover,
    completion, go to definition, find references, rename, formatting, semantic
    highlighting, and native header navigation. The concrete plans are
    [Language Server Plan](language-server-plan.md) and

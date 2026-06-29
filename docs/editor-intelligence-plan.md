@@ -11,12 +11,13 @@ must wire those facts through standard LSP features.
 
 ## Current Gap
 
-The `duc lsp` server advertises semantic tokens and already implements many
-hover, definition, references, completion, and diagnostic requests. The local VS
-Code extension, however, still uses a small hand-written JSON-RPC client. That
-client wires several requests manually, but it does not register semantic-token
-support with VS Code. In practice, `.dd` coloring is still mostly the TextMate
-grammar, so it looks flat compared with Rust or C/C++ tooling.
+The current `duc lsp` bootstrap server advertises semantic tokens and already
+implements many hover, definition, references, completion, and diagnostic
+requests. The local VS Code extension, however, still uses a small hand-written
+JSON-RPC client. That client wires several requests manually, but it does not
+register semantic-token support with VS Code. In practice, `.dd` coloring is
+still mostly the TextMate grammar, so it looks flat compared with Rust or C/C++
+tooling.
 
 Some intelligence also remains incomplete server-side:
 
@@ -90,7 +91,7 @@ instead of maintaining a broad hand-written LSP client.
 Required work:
 
 - keep TextMate highlighting as a baseline for startup and non-LSP editors
-- use `vscode-languageclient` for `duc lsp`
+- use `vscode-languageclient` for `dudu-lsp`
 - let the standard client wire diagnostics, hover, definition, references,
   rename, completion, signature help, formatting, code actions, document symbols,
   workspace symbols, and semantic tokens
@@ -102,7 +103,7 @@ Required work:
   state
 
 The extension must not duplicate compiler logic in JavaScript. If a feature
-needs type or symbol knowledge, that knowledge belongs in `duc lsp`.
+needs type or symbol knowledge, that knowledge belongs in `dudu-lsp`.
 
 ## Server Work
 

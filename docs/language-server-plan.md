@@ -132,7 +132,7 @@ member name.
 
 ## Architecture
 
-Add `duc lsp` as the editor-facing server process.
+Add `dudu-lsp` as the editor-facing server process.
 
 The server should be built on the existing compiler library:
 
@@ -205,7 +205,7 @@ Warnings should be opt-in at first if they risk noise. Errors should match
 
 ## VS Code Integration
 
-The existing VS Code extension should start `duc lsp` for `.dd` files.
+The existing VS Code extension should start `dudu-lsp` for `.dd` files.
 
 The extension should provide:
 
@@ -219,16 +219,17 @@ The extension should provide:
   awareness is active
 
 The extension should not duplicate compiler logic in TypeScript. It should
-delegate intelligence to `duc lsp`.
+delegate intelligence to `dudu-lsp`.
 
 The current extension uses a hand-written JSON-RPC client. That was enough to
 bootstrap diagnostics and several requests, but it leaves feature classes such as
 semantic tokens easy to miss. The serious path is to use VS Code's
 `vscode-languageclient` package so standard LSP capabilities, including semantic
-tokens, are wired by normal client plumbing while `duc lsp` remains the owner of
+tokens, are wired by normal client plumbing while `dudu-lsp` remains the owner of
 compiler intelligence.
 
-Status: the local VS Code extension starts `duc lsp`, forwards document
+Status: the local VS Code extension currently starts the bootstrap `duc lsp`,
+forwards document
 open/change/save events, debounces rapid change notifications, displays LSP
 diagnostics, uses the LSP formatting provider for `Dudu: Format Current File`
 and format-on-save, and shows a status bar item with LSP process state,
@@ -236,6 +237,8 @@ configured `duc` path, and native-header diagnostic state. The status tooltip
 also shows the current `dudu.toml` `[target]` kind/mode when available. Command
 palette actions are registered for formatting, checking the current file,
 building the project, running the current file, and running project tests.
+The clean target is a dedicated `dudu-lsp` binary; do not preserve `duc lsp` as
+an alias after the tool split lands.
 
 ## Protocol Features By Milestone
 
@@ -251,7 +254,7 @@ building the project, running the current file, and running project tests.
 This milestone proves the server process, document sync, parse errors, semantic
 errors, and formatter integration.
 
-Status: initial `duc lsp` support is implemented. It speaks JSON-RPC over
+Status: initial bootstrap LSP support is implemented. It speaks JSON-RPC over
 stdio, handles full-document sync, publishes parse/semantic/native-header
 and build-configuration diagnostics, including invalid project config and
 missing `pkg-config` package diagnostics, and returns full-document formatting edits.
