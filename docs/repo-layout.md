@@ -21,6 +21,10 @@ The `src/main.cpp` plus `src/dudu/` split is intentional. `src/main.cpp` is only
 the CLI front door; the actual compiler source lives under `src/dudu/` and is
 built as the `dudu_frontend` library.
 
+The current `src/dudu/` directory is still too flat internally. The clean
+subsystem split and `dudu-lsp` binary plan lives in
+[Repository Refactor Plan](repo-refactor-plan.md).
+
 ## What Does Not Belong Here
 
 Do not put personal scratch repos or generated playground output inside this
