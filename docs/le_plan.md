@@ -1899,6 +1899,15 @@ push. They are not release packaging work.
    project-shaped RSS to about 118MB. The deep-copy behavior is the wrong
    ownership shape for the current AST; revisit only as part of a broader
    compact/arena AST design where statement copies are controlled explicitly.
+   A narrower variant that changed only `Stmt::type_ref` from `shared_ptr` to
+   `unique_ptr` was also tried and rejected. It shrank `Stmt` from 448 bytes
+   to 440 bytes after text interning, but same-session A/B benchmarks across
+   expressions, calls, control, mixed, modules, generics, classes, and arrays
+   did not show a reliable speed win. The confirming pass regressed calls,
+   classes, and mixed project-shaped code while only giving small/noisy RSS
+   movement. Do not keep tiny AST-size wins that add ownership/copy
+   complexity unless diverse generated shapes show a repeatable throughput or
+   memory improvement.
    Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
