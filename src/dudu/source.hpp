@@ -31,6 +31,60 @@ std::ostream& operator<<(std::ostream& out, const SourceFileName& file);
 bool operator==(const SourceFileName& left, std::string_view right);
 bool operator!=(const SourceFileName& left, std::string_view right);
 
+class SourceTextAtom {
+  public:
+    SourceTextAtom() = default;
+    explicit SourceTextAtom(const char* text);
+    explicit SourceTextAtom(std::string text);
+    explicit SourceTextAtom(std::string_view text);
+
+    const std::string& str() const;
+    bool empty() const;
+    size_t size() const;
+    const char* c_str() const;
+    char operator[](size_t index) const;
+    char front() const;
+    char back() const;
+    size_t find(std::string_view needle, size_t position = 0) const;
+    size_t rfind(std::string_view needle, size_t position = std::string::npos) const;
+    bool starts_with(std::string_view prefix) const;
+    bool ends_with(std::string_view suffix) const;
+    std::string substr(size_t position, size_t count = std::string::npos) const;
+    std::string::const_iterator begin() const;
+    std::string::const_iterator end() const;
+
+    SourceTextAtom& operator=(const char* text);
+    SourceTextAtom& operator=(const std::string& text);
+    SourceTextAtom& operator=(std::string_view text);
+    SourceTextAtom& operator+=(std::string_view text);
+
+    operator const std::string&() const;
+    operator std::string_view() const;
+
+  private:
+    uint32_t text_id_ = 0;
+};
+
+std::ostream& operator<<(std::ostream& out, const SourceTextAtom& text);
+bool operator==(const SourceTextAtom& left, std::string_view right);
+bool operator==(std::string_view left, const SourceTextAtom& right);
+bool operator==(const SourceTextAtom& left, const SourceTextAtom& right);
+bool operator==(const SourceTextAtom& left, const char* right);
+bool operator==(const char* left, const SourceTextAtom& right);
+bool operator==(const SourceTextAtom& left, const std::string& right);
+bool operator==(const std::string& left, const SourceTextAtom& right);
+bool operator!=(const SourceTextAtom& left, std::string_view right);
+bool operator!=(std::string_view left, const SourceTextAtom& right);
+bool operator!=(const SourceTextAtom& left, const SourceTextAtom& right);
+bool operator!=(const SourceTextAtom& left, const char* right);
+bool operator!=(const char* left, const SourceTextAtom& right);
+bool operator!=(const SourceTextAtom& left, const std::string& right);
+bool operator!=(const std::string& left, const SourceTextAtom& right);
+std::string operator+(const std::string& left, const SourceTextAtom& right);
+std::string operator+(const SourceTextAtom& left, const std::string& right);
+std::string operator+(const char* left, const SourceTextAtom& right);
+std::string operator+(const SourceTextAtom& left, const char* right);
+
 struct SourceLocation {
     SourceFileName file;
     int line = 1;

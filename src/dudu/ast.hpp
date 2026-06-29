@@ -66,8 +66,8 @@ enum class TypeKind {
 struct TypeRef {
     TypeKind kind = TypeKind::Unknown;
     bool malformed = false;
-    std::string name;
-    std::string value;
+    SourceTextAtom name;
+    SourceTextAtom value;
     std::vector<TypeRef> children;
     SourceLocation location;
     SourceRange range;
@@ -213,8 +213,8 @@ struct Expr {
     Expr& operator=(Expr&&) noexcept = default;
 
     ExprKind kind = ExprKind::Missing;
-    std::string name;
-    std::string value;
+    SourceTextAtom name;
+    SourceTextAtom value;
     ExprOp op;
     std::unique_ptr<std::vector<Expr>> callee;
     std::unique_ptr<std::vector<Expr>> template_args;

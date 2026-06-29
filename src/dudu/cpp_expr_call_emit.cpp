@@ -211,7 +211,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
         return lower_expr(expr_callee(expr).front(), aliases, locals, local_type_refs, symbols,
                           options);
     }
-    return locals.contains(expr.name) ? expr.name : emitted_value_name(expr.name, options);
+    return locals.contains(expr.name) ? expr.name.str() : emitted_value_name(expr.name, options);
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,

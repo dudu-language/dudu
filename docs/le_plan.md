@@ -1876,6 +1876,22 @@ push. They are not release packaging work.
    about 79ms and 49MB RSS, generics about 85ms and 40MB RSS, and mixed about
    101ms and 94MB RSS. Keep it as another representation cleanup: it reduces
    memory broadly, but the throughput effect is still mostly noise.
+   `Expr.name`, `Expr.value`, `TypeRef.name`, and `TypeRef.value` then moved
+   from owning `std::string` fields to compact interned `SourceTextAtom`
+   values. The constructors must stay explicit: implicit construction polluted
+   normal `std::string_view == "literal"` comparisons through ADL and caused
+   widespread overload ambiguity. This shrinks `TypeRef` from 128 bytes to 72
+   bytes, `Expr` from 168 bytes to 104 bytes, and `Stmt` from 576 bytes to 448
+   bytes. A five-sample focused Release run measured expression-heavy 50k at
+   about 205ms and 177MB RSS, calls at about 52ms and 41MB RSS, control at
+   about 63ms and 47MB RSS, and mixed at about 89ms and 70MB RSS. A
+   three-sample broad Release run measured expressions about 204ms and 177MB
+   RSS, calls about 52ms and 40MB RSS, functions about 52ms and 38MB RSS,
+   classes about 41ms and 28MB RSS, modules about 65ms and 75MB RSS, arrays
+   about 71ms and 40MB RSS, generics about 79ms and 33MB RSS, and mixed about
+   87ms and 70MB RSS. This is a real broad win, not just a one-shape memory
+   cleanup; keep watching native-heavy and LSP paths because interner lookup
+   behavior is now on more hot paths.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release
