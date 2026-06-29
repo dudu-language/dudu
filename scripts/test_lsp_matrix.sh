@@ -338,6 +338,12 @@ typedef struct MatrixNativePoint {
     int y;
 } MatrixNativePoint;
 
+typedef enum MatrixNativeMode {
+    /** Native mode fast docs. */
+    MATRIX_MODE_FAST = 7,
+    MATRIX_MODE_SLOW = 8
+} MatrixNativeMode;
+
 /** Adds two matrix fixture integers. */ int matrix_native_add(int a, int b);
 """
     )
@@ -346,7 +352,7 @@ typedef struct MatrixNativePoint {
 def main() -> i32:
     point: nb.MatrixNativePoint
     point.x = nb.DUDU_MATRIX_NATIVE_MAGIC
-    return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2))
+    return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2)) + nb.MATRIX_MODE_FAST
 """
     (tmp / "native_user.dd").write_text(native_source)
     (tmp / "native_widget.hpp").write_text(
@@ -558,6 +564,9 @@ def main() -> i32:
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
+        request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
+        request(92, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
+        request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(56, "textDocument/completion", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(57, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
@@ -843,6 +852,8 @@ def main() -> i32:
         raise AssertionError(f"missing native function semantic token: {native_tokens!r}")
     if not has_semantic(native_tokens, "DUDU_MATRIX_NATIVE_SCALE", "macro", native_modifier):
         raise AssertionError(f"missing native macro semantic token: {native_tokens!r}")
+    if not has_semantic(native_tokens, "MATRIX_MODE_FAST", "variable", readonly | native_modifier):
+        raise AssertionError(f"missing native value semantic token: {native_tokens!r}")
     entity_tokens = decode_semantic_tokens(entities_source, response(messages, 85)["data"], legend)
     if not has_semantic(entity_tokens, "count", "property", declaration | static):
         raise AssertionError(f"missing static field declaration semantic token: {entity_tokens!r}")
@@ -864,8 +875,9 @@ def main() -> i32:
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     native_completion = response(messages, 50)
-    assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
+    assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
+    assert_documentation_contains(item_named(native_completion, "MATRIX_MODE_FAST"), "Native mode fast docs.")
     for request_id in (51, 52, 53):
         assert_nonempty(response(messages, request_id), f"native request {request_id}")
     native_type_hover = response(messages, 51)["contents"]["value"]
@@ -875,6 +887,16 @@ def main() -> i32:
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
     assert_nonempty(response(messages, 54), "native function references")
+    native_value_hover = response(messages, 91)["contents"]["value"]
+    if "MATRIX_MODE_FAST:" not in native_value_hover or "Native mode fast docs." not in native_value_hover:
+        raise AssertionError(f"missing native value hover docs: {native_value_hover!r}")
+    native_value_definition = response(messages, 92)
+    if not native_value_definition["uri"].endswith("/native_bridge.h"):
+        raise AssertionError(f"native value definition did not jump to header: {native_value_definition!r}")
+    native_value_refs = response(messages, 93)
+    native_value_use = position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))
+    if not has_start(native_value_refs, native.as_uri(), native_value_use["line"], native_value_use["character"]):
+        raise AssertionError(f"missing native value reference: {native_value_refs!r}")
     native_signature_help = response(messages, 55)
     native_signature_docs = native_signature_help["signatures"][0]["documentation"]["value"]
     if "Adds two matrix fixture integers." not in native_signature_docs:

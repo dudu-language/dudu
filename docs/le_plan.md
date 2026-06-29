@@ -3791,3 +3791,7 @@ push. They are not release packaging work.
    so same-header uses are included without leaking same-spelled namespaces from
    unrelated headers. Header comments on native namespace declarations are now
    preserved through the scan cache and shown in hover.
+   Doc-commented native enum constants are now covered as native values in the
+   JSON-RPC matrix: completion and hover show docs, definition jumps to the
+   header declaration, references include the use site, and semantic tokens mark
+   the value readonly/native.

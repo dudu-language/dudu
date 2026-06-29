@@ -449,6 +449,10 @@ without aliases are covered for completion, signature help, and definition.
 Native function hover/detail includes the lowered Dudu signature plus a compact
 scanner-derived native signature suffix such as `native i32(i32, i32)` when the
 scanner has non-synthesized return/parameter spelling.
+Doc-commented native enum constants are covered as native values in the
+JSON-RPC matrix: completion and hover show scanned docs, definition jumps to
+the header declaration, references include the value use site, and semantic
+tokens classify the value as readonly/native.
 The native scanner also parses Clang `FullComment`/`TextComment` nodes and
 preserves header comments on native declarations through the scan cache, so
 hover/completion/signature-help documentation can include real C/C++ declaration
