@@ -97,6 +97,9 @@ a compact scanner-derived native signature suffix when concrete
 return/parameter spelling is available. The native scanner now runs Clang with
 parsed comments and attaches scanned header comments to native declarations, so
 hover can show real C/C++ declaration docs when the header exposes them.
+Native C++ class docs are covered in direct tests and the JSON-RPC matrix, and
+native alias hover can reuse the resolved class documentation when the alias
+itself has no separate comment.
 Native find-references now consults `ProjectIndex`'s per-module native identity
 table instead of rebuilding LSP symbol lists for every candidate document. Open
 single-file editor overlays are indexed with their entry path, so unsaved or

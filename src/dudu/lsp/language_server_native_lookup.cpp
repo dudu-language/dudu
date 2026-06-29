@@ -10,7 +10,8 @@ namespace dudu {
 NativeClassDefinitionIndex native_class_definition_index(const ModuleAst& module) {
     NativeClassDefinitionIndex out;
     for (const ClassDecl& klass : module.native_classes) {
-        NativeClassDefinition definition{.name = klass.name, .location = klass.location};
+        NativeClassDefinition definition{
+            .name = klass.name, .location = klass.location, .doc_comment = klass.doc_comment};
         if (!klass.name.empty()) {
             out.by_name.emplace(klass.name, definition);
         }

@@ -452,10 +452,12 @@ scanner has non-synthesized return/parameter spelling.
 The native scanner also parses Clang `FullComment`/`TextComment` nodes and
 preserves header comments on native declarations through the scan cache, so
 hover/completion/signature-help documentation can include real C/C++ declaration
-docs when available. The JSON-RPC LSP matrix covers native function header docs
-through completion and signature help, plus native C++ member field/method docs
-through member completion, receiver-aware field go-to-definition, and
-receiver-aware method signature help.
+docs when available. Direct tests cover native C++ class docs and alias hover
+falling back to the resolved native class docs. The JSON-RPC LSP matrix covers
+native function header docs through completion and signature help, native C++
+class docs through hover, plus native C++ member field/method docs through
+member completion, receiver-aware field go-to-definition, and receiver-aware
+method signature help.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented

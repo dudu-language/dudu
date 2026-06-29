@@ -124,8 +124,12 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
         const std::string identity = native_symbol_identity_key(type.identity);
         const std::string identity_text =
             identity.empty() ? std::string{} : "\n\nNative identity: `" + identity + "`";
+        const std::string doc_comment =
+            !type.doc_comment.empty() ? type.doc_comment : target->doc_comment;
+        const std::string doc_text = doc_comment.empty() ? std::string{} : "\n\n" + doc_comment;
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-               json_escape(identity_text) + "\"},\"range\":" + range_json(type.location) + "}";
+               json_escape(identity_text) + json_escape(doc_text) +
+               "\"},\"range\":" + range_json(type.location) + "}";
     };
     for (const NativeTypeDecl& type : module.native_types) {
         if (type.name == word) {

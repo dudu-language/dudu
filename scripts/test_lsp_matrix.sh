@@ -313,6 +313,7 @@ def main() -> i32:
     (tmp / "native_widget.hpp").write_text(
         """#pragma once
 
+/** Matrix widget class docs. */
 class MatrixWidget {
   public:
     /** Scales the matrix widget by a factor. */
@@ -452,6 +453,7 @@ def main() -> i32:
         request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
         request(59, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(60, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
+        request(61, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget: MatrixWidget", add=len("widget: "))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -620,7 +622,7 @@ def main() -> i32:
     native_member_definition = response(messages, 59)
     if not native_member_definition["uri"].endswith("/native_widget.hpp"):
         raise AssertionError(f"native member definition did not jump to header: {native_member_definition!r}")
-    if native_member_definition["range"]["start"]["line"] != 10:
+    if native_member_definition["range"]["start"]["line"] != 11:
         raise AssertionError(f"native member definition jumped to wrong line: {native_member_definition!r}")
     native_member_refs = response(messages, 60)
     if not has_start(native_member_refs, native_cpp.as_uri(), 4, len("    widget.")):
@@ -629,6 +631,9 @@ def main() -> i32:
         raise AssertionError(f"missing native member reference in same-header doc: {native_member_refs!r}")
     if has_start(native_member_refs, native_cpp_other.as_uri(), 4, len("    return widget.")):
         raise AssertionError(f"unrelated native member reference leaked across receiver type: {native_member_refs!r}")
+    native_class_hover = response(messages, 61)["contents"]["value"]
+    if "native class MatrixWidget" not in native_class_hover or "Matrix widget class docs." not in native_class_hover:
+        raise AssertionError(f"missing native class header docs: {native_class_hover!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

@@ -11,6 +11,7 @@ namespace dudu {
 struct NativeClassDefinition {
     std::string name;
     SourceLocation location;
+    std::string doc_comment;
 };
 
 struct NativeClassDefinitionIndex {

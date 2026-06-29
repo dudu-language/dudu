@@ -259,6 +259,7 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     std::filesystem::create_directories(dir);
     write_file(dir / "native_widget.hpp", "#pragma once\n"
                                           "\n"
+                                          "/** Native widget class docs. */\n"
                                           "class NativeWidget {\n"
                                           "  public:\n"
                                           "    /** Scale docs for native member. */\n"
@@ -268,7 +269,9 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
                                           "\n"
                                           "    /** Value docs for native field. */\n"
                                           "    int value = 0;\n"
-                                          "};\n");
+                                          "};\n"
+                                          "\n"
+                                          "using NativeWidgetAlias = NativeWidget;\n");
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
@@ -277,6 +280,7 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
                                      "    widget.value = 5\n"
+                                     "    alias_widget: NativeWidgetAlias\n"
                                      "    return widget.scaled(2)\n"};
     dudu::Json completion_params =
         dudu::JsonParser("{\"position\":{\"line\":4,\"character\":11}}").parse();
@@ -287,10 +291,22 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     assert(completions.find("Value docs for native field.") != std::string::npos);
 
     dudu::Json signature_params =
-        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":26}}").parse();
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":26}}").parse();
     const std::string help = dudu::signature_help_json(&doc, &signature_params);
     assert(help.find("scaled(arg0: i32) -> i32") != std::string::npos);
     assert(help.find("Scale docs for native member.") != std::string::npos);
+
+    dudu::Json hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &hover_params);
+    assert(hover.find("native class NativeWidget") != std::string::npos);
+    assert(hover.find("Native widget class docs.") != std::string::npos);
+
+    dudu::Json alias_hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":18}}").parse();
+    const std::string alias_hover = dudu::hover_json(doc, "", &alias_hover_params);
+    assert(alias_hover.find("native type = NativeWidget") != std::string::npos);
+    assert(alias_hover.find("Native widget class docs.") != std::string::npos);
 }
 
 void test_lsp_module_completion_uses_loaded_module_units() {
