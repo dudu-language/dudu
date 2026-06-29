@@ -1483,7 +1483,11 @@ push. They are not release packaging work.
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
    speed. Summary output reports lines per second in addition to elapsed time
-   and peak RSS. A local one-sample
+   and peak RSS. Low-level `duc --timings` output now brackets frontend work
+   with explicit `parse` and `parsed` steps before `native-merge`, `sema`, and
+   `checked`, so local profiling can distinguish parse/import latency from
+   semantic analysis without adding a separate benchmark command. A local
+   one-sample
    baseline on 2026-06-28 measured the original many-functions shape at about
    13.3s and 318MB RSS for roughly 10k generated Dudu lines, which is too slow
    for the language goal and should trigger profiling before larger 50k+ runs

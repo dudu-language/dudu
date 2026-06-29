@@ -131,7 +131,7 @@ compile_and_expect value_match_assign 60
 "$repo_root/build/dudu" check "$repo_root/tests/fixtures/project_import_metadata/main.dd"
 "$repo_root/build/dudu" --version | grep -q '^dudu 0\.1\.0$'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'
-"$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet]'
+"$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet] [--timings]'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'
 init_parent="$(mktemp -d)"
 init_smoke="$init_parent/hello_init"
@@ -190,7 +190,8 @@ rm -rf "$emit_timing_dir"
 emit_timing_output="$("$repo_root/build/duc" emit-modules \
     "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
     -o "$emit_timing_dir" --timings 2>&1)"
-printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] load '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parse '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parsed '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] sema '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
 rejected_direct_backend="$repo_root/build/rejected_direct_backend_smoke"

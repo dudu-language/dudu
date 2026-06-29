@@ -172,7 +172,7 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
     const bool detail_output = !options.quiet && options.timings;
     print_project_step(detail_output, "config", options.input);
     const ProjectConfig config = config_for_options(options);
-    print_project_step(detail_output, "load", options.input);
+    print_project_step(detail_output, "parse", options.input);
     const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
                                    options.c_header_output.has_value();
     const bool force_module_tree =
@@ -188,6 +188,7 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
             module = load_source_tree(options.input, source);
         }
     }
+    print_project_step(detail_output, "parsed", options.input);
     const bool per_module_output = force_module_tree || !module.module_units.empty();
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
