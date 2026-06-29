@@ -1,42 +1,16 @@
 #include "dudu/language_server_support.hpp"
 
-#include "dudu/project_index.hpp"
+#include "dudu/project_index_cache.hpp"
 
 #include <algorithm>
 #include <filesystem>
-#include <functional>
-#include <map>
 #include <sstream>
 #include <string>
 
 namespace dudu {
 namespace {
 
-struct ModuleCacheKey {
-    std::string path;
-    size_t text_hash = 0;
-    bool include_native_headers = false;
-    bool check_semantics = false;
-
-    friend bool operator<(const ModuleCacheKey& lhs, const ModuleCacheKey& rhs) {
-        if (lhs.path != rhs.path) {
-            return lhs.path < rhs.path;
-        }
-        if (lhs.text_hash != rhs.text_hash) {
-            return lhs.text_hash < rhs.text_hash;
-        }
-        if (lhs.include_native_headers != rhs.include_native_headers) {
-            return lhs.include_native_headers < rhs.include_native_headers;
-        }
-        return lhs.check_semantics < rhs.check_semantics;
-    }
-};
-
-struct ModuleCacheEntry {
-    ProjectIndex index;
-};
-
-std::map<ModuleCacheKey, ModuleCacheEntry> project_index_cache;
+ProjectIndexCache project_index_cache;
 
 } // namespace
 
@@ -90,16 +64,6 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
 
 const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
                                                bool check_semantics) {
-    const ModuleCacheKey key{.path = doc.path.lexically_normal().string(),
-                             .text_hash = std::hash<std::string>{}(doc.text),
-                             .include_native_headers = include_native_headers,
-                             .check_semantics = check_semantics};
-    if (const auto found = project_index_cache.find(key); found != project_index_cache.end()) {
-        if (found->second.index.source_stamps_current()) {
-            return found->second.index;
-        }
-        project_index_cache.erase(found);
-    }
     const ProjectConfig config = config_for_file(doc.path);
     ProjectIndexOptions options;
     options.entry_path = doc.path;
@@ -112,10 +76,7 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     options.include_native_headers_in_merged_module = include_native_headers;
     options.check_semantics = check_semantics;
     options.semantic_options = {.check_bodies = true};
-    ProjectIndex index = ProjectIndex::load(options);
-    ModuleCacheEntry entry{.index = std::move(index)};
-    auto result = project_index_cache.emplace(key, std::move(entry));
-    return result.first->second.index;
+    return project_index_cache.get(options);
 }
 
 void clear_language_server_module_cache() {

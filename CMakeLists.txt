@@ -118,6 +118,7 @@ add_library(dudu_frontend
     src/dudu/project_config.cpp
     src/dudu/project_driver.cpp
     src/dudu/project_index.cpp
+    src/dudu/project_index_cache.cpp
     src/dudu/sema.cpp
     src/dudu/sema_alloc.cpp
     src/dudu/sema_assignment.cpp
