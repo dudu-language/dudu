@@ -965,6 +965,67 @@ void test_lsp_native_references_filter_by_identity() {
     assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
 }
 
+void test_lsp_static_class_member_definition_hover_and_references() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_static_member_navigation_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "entities.dd", "class Counter:\n"
+                                    "    # Count docs.\n"
+                                    "    count: static[i32] = 0\n"
+                                    "\n"
+                                    "    def bump() -> i32:\n"
+                                    "        '''Bump docs.'''\n"
+                                    "        Counter.count += 1\n"
+                                    "        return Counter.count\n"
+                                    "\n"
+                                    "class OtherCounter:\n"
+                                    "    count: static[i32] = 0\n"
+                                    "\n"
+                                    "    def bump() -> i32:\n"
+                                    "        OtherCounter.count += 10\n"
+                                    "        return OtherCounter.count\n");
+    write_file(dir / "main.dd", "from entities import Counter\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return Counter.bump() + Counter.count\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    dudu::Json count_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":38}}").parse();
+    const std::string definition = dudu::definition_json(main_doc, &count_params);
+    assert(definition.find(dudu::file_uri(dir / "entities.dd")) != std::string::npos);
+    assert(definition.find("\"line\":2") != std::string::npos);
+
+    const std::string hover = dudu::hover_json(main_doc, "", &count_params);
+    assert(hover.find("count: i32") != std::string::npos);
+    assert(hover.find("Count docs.") != std::string::npos);
+
+    const std::map<std::string, dudu::Document> workspace{
+        {main_doc.uri, main_doc},
+        {dudu::file_uri(dir / "entities.dd"),
+         {.uri = dudu::file_uri(dir / "entities.dd"),
+          .path = dir / "entities.dd",
+          .text = read_file(dir / "entities.dd")}},
+    };
+    const std::string refs = dudu::references_json(main_doc, &count_params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find("\"line\":2") != std::string::npos);
+    assert(refs.find("\"line\":6") != std::string::npos);
+    assert(refs.find("\"line\":10") == std::string::npos);
+
+    dudu::Json bump_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":19}}").parse();
+    const std::string method_hover = dudu::hover_json(main_doc, "", &bump_params);
+    assert(method_hover.find("bump() -> i32") != std::string::npos);
+    assert(method_hover.find("Bump docs.") != std::string::npos);
+    const std::string method_refs = dudu::references_json(main_doc, &bump_params, workspace);
+    assert(method_refs.find("\"line\":4") != std::string::npos);
+    assert(method_refs.find("\"line\":12") == std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -1002,6 +1063,7 @@ int main() {
         test_lsp_module_references_include_target_declaration();
         test_lsp_selective_import_references_include_target_declaration();
         test_lsp_native_references_filter_by_identity();
+        test_lsp_static_class_member_definition_hover_and_references();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

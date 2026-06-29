@@ -2367,7 +2367,11 @@ push. They are not release packaging work.
    symbol identities. Imported Dudu function and constant references are also
    covered in the matrix with same-named symbols in unrelated modules filtered
    out, including same-file member expressions like `other_entities.MAX_HP`
-   that should not count as bare `MAX_HP` references.
+   that should not count as bare `MAX_HP` references. Class-scoped/static
+   member paths such as `Counter.count`, `Counter.LIMIT`, and `Counter.bump()`
+   now resolve through class member identity for definition, hover, and
+   references, with same-named members on an unrelated `OtherCounter` filtered
+   out in direct tests and the JSON-RPC matrix.
    Native function hover/detail includes both the lowered Dudu signature and a
    compact scanner-derived native signature suffix when concrete
    return/parameter spelling is available.

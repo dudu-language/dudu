@@ -552,6 +552,10 @@ selective-import identity in the JSON-RPC matrix. The fixture includes
 same-named functions/constants in unrelated modules and same-file member
 expressions such as `other_entities.MAX_HP`, and those unrelated symbols are
 filtered out of `math.mix` / `MAX_HP` reference results.
+Class-scoped/static Dudu member paths now resolve as class member identities for
+definition, hover, and references. Direct tests and the JSON-RPC matrix cover
+`Counter.count`, `Counter.LIMIT`, and `Counter.bump()` with same-named members
+on an unrelated `OtherCounter` filtered out.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

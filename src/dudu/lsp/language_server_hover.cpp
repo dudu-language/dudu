@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -264,8 +265,20 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
         return native_index;
     };
+    if (selected_path.has_value()) {
+        if (const std::optional<Symbol> class_member =
+                class_member_symbol_for_path(current, *selected_path)) {
+            return symbol_hover_json(*class_member);
+        }
+    }
     try {
         const ProjectIndex* native = load_native_index();
+        if (selected_path.has_value()) {
+            if (const std::optional<Symbol> class_member = class_member_symbol_for_path(
+                    native->visible_unit_for_path(doc.path), *selected_path)) {
+                return symbol_hover_json(*class_member);
+            }
+        }
         if (const std::optional<std::string> native_alias =
                 native_alias_hover_json(query, native->merged_module())) {
             return *native_alias;

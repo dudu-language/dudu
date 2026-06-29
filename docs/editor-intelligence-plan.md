@@ -58,6 +58,10 @@ type, so same-named fields or methods on unrelated classes are not reported
 together. Member use sites such as `player.hp` and `player.move(...)` now
 resolve through the receiver's structured type to the same qualified member
 identity, including when the class was imported from another Dudu module.
+Class-scoped/static member paths such as `Counter.count`, `Counter.LIMIT`, and
+`Counter.bump()` now share the same identity behavior for definition, hover, and
+references. Direct tests and the JSON-RPC matrix cover same-named members on an
+unrelated `OtherCounter`, so type/member paths do not fall back to tail spelling.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant. Payload
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for

@@ -256,6 +256,25 @@ class Enemy:
 
     def hurt(self) -> i32:
         return self.hp
+
+class Counter:
+    # Counter limit docs.
+    LIMIT: i32 = 10
+    # Counter mutable count docs.
+    count: static[i32] = 0
+
+    def bump() -> i32:
+        '''Bumps the counter docs.'''
+        Counter.count += 1
+        return Counter.count
+
+class OtherCounter:
+    LIMIT: i32 = 900
+    count: static[i32] = 0
+
+    def bump() -> i32:
+        OtherCounter.count += 10
+        return OtherCounter.count
 """
     )
     (tmp / "other_entities.dd").write_text(
@@ -274,6 +293,7 @@ from entities import Token
 from entities import Box
 from entities import identity
 from entities import PlayerId
+from entities import Counter
 
 def main() -> i32:
     player: Player = Player(MAX_HP)
@@ -284,10 +304,11 @@ def main() -> i32:
     token: Token = Token.IntLit(i64(41))
     score = math.mix(current, identity[i32](1))
     other_score = other_math.mix(other_entities.MAX_HP, other_math.MAGIC)
+    counter_score = Counter.bump() + Counter.count + Counter.LIMIT
     box: Box[i32] = Box[i32](score)
     same = player == Player(MAX_HP)
     if same:
-        return box.get() + transitive.transitive_value() + other_score
+        return box.get() + transitive.transitive_value() + other_score + counter_score
     return math.MAGIC
 """
     (tmp / "main.dd").write_text(main_source)
@@ -445,11 +466,17 @@ def main() -> i32:
         request(28, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Box[i32]", add=1)}),
         request(29, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(49, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
+        request(68, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
+        request(69, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Counter.LIMIT", add=len("Counter."))}),
         request(30, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "current", occurrence=1)}),
         request(31, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player: Player", add=1)}),
+        request(71, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
+        request(72, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
         request(32, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "current =")}),
         request(66, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math."))}),
         request(67, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
+        request(73, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
+        request(74, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
@@ -636,6 +663,49 @@ def main() -> i32:
         raise AssertionError(f"imported alias definition did not jump to source module: {alias_definition!r}")
     if alias_definition["range"]["start"]["line"] != 5:
         raise AssertionError(f"imported alias definition jumped to wrong line: {alias_definition!r}")
+    counter_count_definition = response(messages, 68)
+    counter_count_decl = position(entities_source, "count: static[i32]")
+    other_counter_count_decl = position(entities_source, "count: static[i32]", occurrence=1)
+    if counter_count_definition["uri"] != entities.as_uri():
+        raise AssertionError(f"Counter.count definition did not jump to source module: {counter_count_definition!r}")
+    if counter_count_definition["range"]["start"]["line"] != counter_count_decl["line"]:
+        raise AssertionError(f"Counter.count definition jumped to wrong line: {counter_count_definition!r}")
+    counter_limit_definition = response(messages, 69)
+    counter_limit_decl = position(entities_source, "LIMIT: i32")
+    if counter_limit_definition["uri"] != entities.as_uri():
+        raise AssertionError(f"Counter.LIMIT definition did not jump to source module: {counter_limit_definition!r}")
+    if counter_limit_definition["range"]["start"]["line"] != counter_limit_decl["line"]:
+        raise AssertionError(f"Counter.LIMIT definition jumped to wrong line: {counter_limit_definition!r}")
+    counter_count_hover = response(messages, 71)["contents"]["value"]
+    if "count: i32" not in counter_count_hover or "Counter mutable count docs." not in counter_count_hover:
+        raise AssertionError(f"missing Counter.count hover docs: {counter_count_hover!r}")
+    counter_bump_hover = response(messages, 72)["contents"]["value"]
+    if "bump() -> i32" not in counter_bump_hover or "Bumps the counter docs." not in counter_bump_hover:
+        raise AssertionError(f"missing Counter.bump hover docs: {counter_bump_hover!r}")
+    counter_count_refs = response(messages, 73)
+    main_counter_count = position(main_source, "Counter.count", add=len("Counter."))
+    entities_counter_count_use = position(entities_source, "Counter.count", add=len("Counter."))
+    entities_other_counter_count_use = position(entities_source, "OtherCounter.count", add=len("OtherCounter."))
+    if not has_start(counter_count_refs, entities.as_uri(), counter_count_decl["line"], counter_count_decl["character"]):
+        raise AssertionError(f"missing Counter.count declaration ref: {counter_count_refs!r}")
+    if not has_start(counter_count_refs, main.as_uri(), main_counter_count["line"], main_counter_count["character"]):
+        raise AssertionError(f"missing Counter.count main ref: {counter_count_refs!r}")
+    if not has_start(counter_count_refs, entities.as_uri(), entities_counter_count_use["line"], entities_counter_count_use["character"]):
+        raise AssertionError(f"missing Counter.count method-body ref: {counter_count_refs!r}")
+    if has_start(counter_count_refs, entities.as_uri(), other_counter_count_decl["line"], other_counter_count_decl["character"]):
+        raise AssertionError(f"OtherCounter.count declaration leaked into Counter.count refs: {counter_count_refs!r}")
+    if has_start(counter_count_refs, entities.as_uri(), entities_other_counter_count_use["line"], entities_other_counter_count_use["character"]):
+        raise AssertionError(f"OtherCounter.count use leaked into Counter.count refs: {counter_count_refs!r}")
+    counter_bump_refs = response(messages, 74)
+    counter_bump_decl = position(entities_source, "bump()")
+    other_counter_bump_decl = position(entities_source, "bump()", occurrence=1)
+    main_counter_bump = position(main_source, "Counter.bump", add=len("Counter."))
+    if not has_start(counter_bump_refs, entities.as_uri(), counter_bump_decl["line"], counter_bump_decl["character"]):
+        raise AssertionError(f"missing Counter.bump declaration ref: {counter_bump_refs!r}")
+    if not has_start(counter_bump_refs, main.as_uri(), main_counter_bump["line"], main_counter_bump["character"]):
+        raise AssertionError(f"missing Counter.bump main ref: {counter_bump_refs!r}")
+    if has_start(counter_bump_refs, entities.as_uri(), other_counter_bump_decl["line"], other_counter_bump_decl["character"]):
+        raise AssertionError(f"OtherCounter.bump declaration leaked into Counter.bump refs: {counter_bump_refs!r}")
     initialize = response(messages, 1)
     semantic_legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]
     legend = semantic_legend["tokenTypes"]

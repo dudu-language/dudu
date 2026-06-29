@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
+#include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -370,8 +371,16 @@ std::string definition_json(const Document& doc, const Json* params) {
     };
     const std::optional<ExprPath>& path = selection.expr_path;
     if (path && path->segments.size() >= 2) {
+        if (const std::optional<Symbol> class_member =
+                class_member_symbol_for_path(current, *path)) {
+            return symbol_definition_json(*class_member, doc);
+        }
         try {
             const ProjectIndex* native = load_native_index();
+            if (const std::optional<Symbol> class_member = class_member_symbol_for_path(
+                    native->visible_unit_for_path(doc.path), *path)) {
+                return symbol_definition_json(*class_member, doc);
+            }
             if (const std::optional<std::string> member_definition =
                     member_definition_json(doc, *path, params, current, native->merged_module())) {
                 return *member_definition;
