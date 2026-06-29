@@ -2170,6 +2170,10 @@ push. They are not release packaging work.
    generated C++ translation units to recompile. Project builds use this CMake
    path. `[build] backend` is no longer a supported manifest key; `dudu build`
    and `dudu run` exercise generated/user-owned CMake for small projects too.
+   A fast regression fixture now edits one module in a copied multi-module
+   project, checks that reverse-dependency dirty reporting selects only the
+   changed module plus its dependent entry, and verifies unrelated generated
+   module artifacts keep their mtimes.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process.
