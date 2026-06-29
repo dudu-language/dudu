@@ -123,6 +123,18 @@ std::string member_completion_json(const Document& doc, const ModuleAst& module,
             module_completion_json(doc, module, current, target)) {
         return *module_result;
     }
+    const std::string prefix = target + ".";
+    std::vector<Symbol> prefixed_symbols;
+    for (Symbol symbol : symbols_for_module(current, true)) {
+        if (symbol.name.rfind(prefix, 0) != 0 || symbol.name.size() == prefix.size()) {
+            continue;
+        }
+        symbol.name = symbol.name.substr(prefix.size());
+        prefixed_symbols.push_back(std::move(symbol));
+    }
+    if (!prefixed_symbols.empty()) {
+        return completion_items_json(prefixed_symbols);
+    }
     const TypeRef type_ref = local_type_ref_before_cursor(current, target, params);
     if (!has_type_ref(type_ref)) {
         return "[]";

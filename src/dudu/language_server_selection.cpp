@@ -33,15 +33,9 @@ void collect_call_callee_selection(const Expr& expr, const LspPosition& position
             continue;
         }
         selection.call_callee = true;
-        if (!selection.symbol) {
-            selection.symbol = segment.text;
-        }
-        if (!selection.symbol_path) {
-            selection.symbol_path = rendered_path;
-        }
-        if (!selection.expr_path) {
-            selection.expr_path = path;
-        }
+        selection.symbol = segment.text;
+        selection.symbol_path = rendered_path;
+        selection.expr_path = path;
         return;
     }
 }
@@ -59,6 +53,9 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
         }
     };
     const auto visit_type = [&](const TypeRef& type) {
+        const std::string head = type_ref_head_name(type);
+        set_symbol(head, type.location);
+        set_symbol_path(head, type.location);
         const std::string text = type_ref_text(type);
         set_symbol(text, type.location);
         set_symbol_path(text, type.location);
@@ -113,6 +110,9 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         }
     };
     const auto visit_type = [&](const TypeRef& type) {
+        const std::string head = type_ref_head_name(type);
+        set_symbol(head, type.location);
+        set_symbol_path(head, type.location);
         const std::string text = type_ref_text(type);
         set_symbol(text, type.location);
         set_symbol_path(text, type.location);

@@ -2089,3 +2089,4 @@ assert shutdown["result"] is None
 PY
 
 echo "lsp smoke checks passed"
+"$repo_root/scripts/test_lsp_matrix.sh"

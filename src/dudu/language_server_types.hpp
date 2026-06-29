@@ -20,6 +20,7 @@ inline constexpr int Enum = 10;
 inline constexpr int Function = 12;
 inline constexpr int Variable = 13;
 inline constexpr int Constant = 14;
+inline constexpr int EnumMember = 22;
 inline constexpr int Struct = 23;
 } // namespace lsp_symbol_kind
 

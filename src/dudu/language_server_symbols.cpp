@@ -139,6 +139,14 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .location = en.location,
                        .kind = lsp_symbol_kind::Enum,
                        .native_identity_key = std::nullopt});
+        for (const EnumValueDecl& value : en.values) {
+            const std::string name = en.name + "." + value.name;
+            out.push_back({.name = name,
+                           .detail = "enum variant " + name,
+                           .location = value.location,
+                           .kind = lsp_symbol_kind::EnumMember,
+                           .native_identity_key = std::nullopt});
+        }
     }
     for (const ConstDecl& constant : module.constants) {
         out.push_back({.name = constant.name,

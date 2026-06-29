@@ -2274,6 +2274,15 @@ push. They are not release packaging work.
    LSP suite should prove each behavior in deterministic fixtures with cold and
    warm latency coverage.
 
+   Status: `scripts/test_lsp_matrix.sh` now creates a deterministic temporary
+   multi-file workspace and drives JSON-RPC requests for module aliases,
+   selective imports, direct module imports, transitive import graph loading,
+   classes, instance methods, fields, constants, enums, sum-type variants,
+   generic functions/classes, overloaded operators, locals, module-qualified
+   completion, native headers, native functions, native types, native macros,
+   and missing import diagnostics. `scripts/test_lsp.sh` runs that matrix after
+   the older smoke suite.
+
    Documentation hover needs a real documentation model, not only line scanning.
    Dudu should support Python-shaped contiguous `#` declaration comments and
    Python-style triple-single-quoted `''' ... '''` docstrings as the first

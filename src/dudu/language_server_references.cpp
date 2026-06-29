@@ -149,6 +149,14 @@ bool document_has_direct_native_symbol(const Document& doc, const std::string& n
     return false;
 }
 
+bool document_has_structured_references(const Document& doc, const std::string& name,
+                                        const ModuleAst* module) {
+    if (name.empty() || name.find('.') != std::string::npos || module == nullptr) {
+        return false;
+    }
+    return !references_in(*module, doc, name).empty();
+}
+
 std::optional<std::string> native_identity_for_query(const std::vector<Symbol>& symbols,
                                                      const std::string& query) {
     if (query.empty()) {
@@ -303,6 +311,9 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
     }
     if (unique_document_declaration_for_references(doc, name, module, symbols_without_native)
             .has_value()) {
+        return ReferenceScope::CurrentDocument;
+    }
+    if (document_has_structured_references(doc, name, module)) {
         return ReferenceScope::CurrentDocument;
     }
     if (document_has_direct_native_symbol(doc, name, symbols_with_native)) {

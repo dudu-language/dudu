@@ -186,8 +186,15 @@ std::optional<std::string> import_definition_json(const Document& doc, const Mod
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
-        if (import.kind == ImportKind::From && bound_import_name(import) != word) {
-            continue;
+        std::string from_suffix;
+        if (import.kind == ImportKind::From) {
+            const std::string bound = bound_import_name(import);
+            if (bound != word) {
+                if (word.rfind(bound + ".", 0) != 0) {
+                    continue;
+                }
+                from_suffix = word.substr(bound.size());
+            }
         }
         std::string target;
         if (import.kind == ImportKind::Module) {
@@ -227,7 +234,7 @@ std::optional<std::string> import_definition_json(const Document& doc, const Mod
             imported = &visible_module_unit(loaded_imported, file);
         }
         if (import.kind == ImportKind::From) {
-            target = import.imported_name;
+            target = import.imported_name + from_suffix;
         }
         for (const Symbol& symbol : symbols_for_module(*imported, false)) {
             if (symbol.name == target) {

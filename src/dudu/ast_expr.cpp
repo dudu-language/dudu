@@ -33,6 +33,16 @@ std::string malformed_expr_display(std::string_view kind) {
     return "<malformed " + std::string(kind) + " expression>";
 }
 
+SourceLocation member_name_location(const Expr& expr) {
+    if (expr.kind == ExprKind::Member && !expr.children.empty() &&
+        expr.children.front().range.end.column > 0) {
+        SourceLocation location = range_end_location(expr.children.front().range);
+        location.column += 1;
+        return location;
+    }
+    return expr.location;
+}
+
 } // namespace
 
 std::optional<std::string> path_index_from_expr(const Expr& expr) {
@@ -78,8 +88,9 @@ std::optional<ExprPath> expr_path_from_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
         std::optional<ExprPath> receiver = expr_path_from_expr(expr.children.front());
         if (receiver.has_value()) {
-            receiver->segments.push_back(
-                {.kind = ExprPathSegmentKind::Name, .text = expr.name, .location = expr.location});
+            receiver->segments.push_back({.kind = ExprPathSegmentKind::Name,
+                                          .text = expr.name,
+                                          .location = member_name_location(expr)});
             return receiver;
         }
     }

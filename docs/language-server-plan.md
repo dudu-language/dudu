@@ -536,6 +536,15 @@ completion, signature help, definition, and hover. They are part of
 `scripts/test_full.sh` so the broad developer sweep exercises real-header
 editor behavior as well as native compile/run probes.
 
+Status: `scripts/test_lsp_matrix.sh` now builds a deterministic temporary
+multi-file workspace and drives JSON-RPC requests for module aliases,
+selective imports, direct module imports, transitive import graph loading,
+classes, instance methods, fields, constants, enums, sum-type variants,
+generic functions/classes, overloaded operators, locals, module-qualified
+completion, native headers, native functions, native types, native macros, and
+missing import diagnostics. `scripts/test_lsp.sh` runs this matrix after the
+older smoke suite.
+
 ## Non-Goals
 
 - implementing a separate parser in TypeScript
