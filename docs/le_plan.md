@@ -1940,6 +1940,13 @@ push. They are not release packaging work.
    around 60ms, modules around 58ms, arrays around 67ms, indexing around
    125ms, generics around 73ms, matches around 60ms, operators around 90ms,
    and mixed around 86ms. Keep it as a real broad frontend-throughput win.
+   Changing `named_type_ref` from an owning `std::string` parameter to
+   `std::string_view` was tried and rejected even though it looked like an
+   obvious way to avoid temporary strings before atom interning. Focused
+   five-sample Release results regressed the same shape set: arrays around
+   69ms, indexing around 129ms, generics around 79ms, matches around 62ms,
+   operators around 92ms, and mixed around 86ms. The current by-value API may
+   still be inelegant, but this local signature change is not a throughput win.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release
