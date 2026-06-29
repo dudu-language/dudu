@@ -520,6 +520,7 @@ def main() -> i32:
         request(65, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled", add=len("widget."))}),
         request(81, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=len("MatrixWidget("))}),
         request(82, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=1)}),
+        request(83, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=1)}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -862,6 +863,11 @@ def main() -> i32:
         raise AssertionError(f"native constructor definition did not jump to header: {native_constructor_definition!r}")
     if native_constructor_definition["range"]["start"]["line"] != 6:
         raise AssertionError(f"native constructor definition jumped to wrong line: {native_constructor_definition!r}")
+    native_constructor_hover = response(messages, 83)["contents"]["value"]
+    if "MatrixWidget(arg0: i32)" not in native_constructor_hover:
+        raise AssertionError(f"missing native constructor hover signature: {native_constructor_hover!r}")
+    if "Builds a matrix widget from a seed." not in native_constructor_hover:
+        raise AssertionError(f"missing native constructor hover docs: {native_constructor_hover!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

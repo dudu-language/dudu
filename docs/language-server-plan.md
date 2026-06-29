@@ -463,6 +463,8 @@ native receiver type filtered out. Native C++ constructor calls are covered as
 well: signature help surfaces scanned constructor docs/signatures, and
 go-to-definition on a constructor call targets the scanned constructor
 declaration instead of the containing class when that location is available.
+Hover uses the same constructor target, so constructor-call hover reports the
+constructor signature/docs rather than the class declaration docs.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
@@ -572,7 +574,8 @@ parameters and docs. Workspace-symbol results include class/static member
 symbols such as `Counter.count` and carry first-doc-line detail summaries.
 Native C++ constructor signatures and go-to-definition are also covered in the
 matrix with a local fixture header: `MatrixWidget(` shows the scanned
-constructor docs and definition jumps to the constructor declaration.
+constructor docs, definition jumps to the constructor declaration, and hover on
+the constructor call shows the constructor docs/signature.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

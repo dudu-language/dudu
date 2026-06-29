@@ -3778,5 +3778,5 @@ push. They are not release packaging work.
    LSP go-to-definition now treats parsed class calls as constructor-call
    targets before generic type/class lookup. Native C++ constructor calls such
    as `MatrixWidget(5)` can jump to the scanned header constructor declaration,
-   and the JSON-RPC matrix also covers the matching native constructor
-   signature help/docs.
+   and hover/signature help show the matching native constructor signature and
+   docs. The JSON-RPC matrix covers all three requests.

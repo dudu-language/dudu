@@ -72,7 +72,8 @@ Native C++ constructor calls now use the same indexed constructor shape:
 `MatrixWidget(` surfaces scanned header constructor docs/signatures, and
 go-to-definition on `MatrixWidget(5)` jumps to the constructor declaration
 instead of stopping at the class declaration when the scanner has that source
-location.
+location. Hover on the constructor call also shows the constructor signature and
+docs instead of falling back to class/type hover.
 Workspace-symbol results now include class/static member symbols such as
 `Counter.count` and use the same first-doc-line detail summaries as document
 symbols, so quick-open style searches carry useful context.

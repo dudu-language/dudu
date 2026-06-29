@@ -16,6 +16,8 @@ std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>&
                                                       const std::string& query);
 bool is_constructor_method_name(const std::string& name);
 std::string function_detail(const FunctionDecl& fn);
+std::string constructor_detail(const ClassDecl& klass);
+std::string constructor_doc_comment(const ClassDecl& klass);
 std::string native_macro_detail(const NativeMacroDecl& macro);
 std::string native_function_detail(const NativeFunctionDecl& fn);
 

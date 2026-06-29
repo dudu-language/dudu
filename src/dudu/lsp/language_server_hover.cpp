@@ -151,6 +151,63 @@ std::string symbol_hover_json(const Symbol& symbol) {
            "\"},\"range\":" + range_json(symbol.location) + "}";
 }
 
+std::optional<std::string> constructor_hover_json(const ModuleAst& module,
+                                                  const AstSelection& selection) {
+    if (!selection.call_callee) {
+        return std::nullopt;
+    }
+    std::vector<std::string> candidates;
+    if (selection.symbol) {
+        candidates.push_back(*selection.symbol);
+    }
+    if (selection.expr_path && !selection.expr_path->segments.empty()) {
+        candidates.push_back(selection.expr_path->segments.back().text);
+    }
+    if (selection.symbol_path) {
+        candidates.push_back(*selection.symbol_path);
+    }
+    std::ranges::sort(candidates);
+    candidates.erase(std::ranges::unique(candidates).begin(), candidates.end());
+    const auto find_constructor =
+        [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+        for (const ClassDecl& klass : classes) {
+            if (std::ranges::find(candidates, klass.name) == candidates.end()) {
+                continue;
+            }
+            SourceLocation location = klass.location;
+            std::optional<std::string> native_identity;
+            for (const FunctionDecl& method : klass.methods) {
+                if (!is_constructor_method_name(method.name)) {
+                    continue;
+                }
+                location = method.location;
+                const std::string identity = native_symbol_identity_key(method.native_identity);
+                if (!identity.empty()) {
+                    native_identity = identity;
+                }
+                break;
+            }
+            if (!native_identity) {
+                const std::string identity = native_symbol_identity_key(klass.identity);
+                if (!identity.empty()) {
+                    native_identity = identity;
+                }
+            }
+            return symbol_hover_json({.name = klass.name,
+                                      .detail = constructor_detail(klass),
+                                      .location = location,
+                                      .kind = lsp_symbol_kind::Constructor,
+                                      .native_identity_key = native_identity,
+                                      .doc_comment = constructor_doc_comment(klass)});
+        }
+        return std::nullopt;
+    };
+    if (const std::optional<std::string> native = find_constructor(module.native_classes)) {
+        return native;
+    }
+    return find_constructor(module.classes);
+}
+
 std::optional<std::string> member_hover_json(const ExprPath& path, const Json* params,
                                              const ModuleAst& current, const ModuleAst& module) {
     if (params == nullptr || path.segments.size() < 2 ||
@@ -237,13 +294,22 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     const ModuleAst& current = index->visible_unit_for_path(doc.path);
     std::string query = word;
+    AstSelection selection;
+    bool has_selection = false;
     if ((query.empty() || !selected_path.has_value()) && params != nullptr) {
-        const AstSelection selection = ast_selection_at(current, params);
+        selection = ast_selection_at(current, params);
+        has_selection = true;
         if (query.empty()) {
             query = selection.symbol_path.value_or("");
         }
         if (!selected_path.has_value()) {
             selected_path = selection.expr_path;
+        }
+    }
+    if (has_selection) {
+        if (const std::optional<std::string> constructor =
+                constructor_hover_json(current, selection)) {
+            return *constructor;
         }
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
@@ -273,6 +339,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     try {
         const ProjectIndex* native = load_native_index();
+        if (has_selection) {
+            if (const std::optional<std::string> constructor =
+                    constructor_hover_json(native->visible_unit_for_path(doc.path), selection)) {
+                return *constructor;
+            }
+        }
         if (selected_path.has_value()) {
             if (const std::optional<Symbol> class_member = class_member_symbol_for_path(
                     native->visible_unit_for_path(doc.path), *selected_path)) {

@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/sema/sema_constructors.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -30,6 +31,29 @@ std::string function_detail(const FunctionDecl& fn) {
         out << " -> " << type_ref_text(fn.return_type_ref);
     }
     return out.str();
+}
+
+std::string constructor_detail(const ClassDecl& klass) {
+    std::ostringstream out;
+    out << klass.name << "(";
+    const std::vector<ConstructorParam> params = constructor_params(klass);
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << params[i].name << ": " << type_ref_text(params[i].type_ref);
+    }
+    out << ")";
+    return out.str();
+}
+
+std::string constructor_doc_comment(const ClassDecl& klass) {
+    for (const FunctionDecl& method : klass.methods) {
+        if (is_constructor_method_name(method.name) && !method.doc_comment.empty()) {
+            return method.doc_comment;
+        }
+    }
+    return klass.doc_comment;
 }
 
 std::string native_macro_detail(const NativeMacroDecl& macro) {

@@ -10,7 +10,6 @@
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/project/module_names.hpp"
-#include "dudu/sema/sema_constructors.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -218,36 +217,13 @@ struct SignatureCandidate {
     std::string documentation;
 };
 
-std::string constructor_signature_label(const ClassDecl& klass) {
-    std::ostringstream out;
-    out << klass.name << "(";
-    const std::vector<ConstructorParam> params = constructor_params(klass);
-    for (size_t i = 0; i < params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << params[i].name << ": " << type_ref_text(params[i].type_ref);
-    }
-    out << ")";
-    return out.str();
-}
-
-std::string constructor_signature_docs(const ClassDecl& klass) {
-    for (const FunctionDecl& method : klass.methods) {
-        if (method.name == "init" && !method.doc_comment.empty()) {
-            return method.doc_comment;
-        }
-    }
-    return klass.doc_comment;
-}
-
 void add_constructor_signature_candidates(std::vector<SignatureCandidate>& signatures,
                                           const ModuleAst& current, const std::string& call_name) {
     const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
         for (const ClassDecl& klass : classes) {
             if (klass.name == call_name) {
-                signatures.push_back({.label = constructor_signature_label(klass),
-                                      .documentation = constructor_signature_docs(klass)});
+                signatures.push_back({.label = constructor_detail(klass),
+                                      .documentation = constructor_doc_comment(klass)});
             }
         }
     };
