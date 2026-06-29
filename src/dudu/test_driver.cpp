@@ -7,7 +7,7 @@
 #include "dudu/native_build.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
-#include "dudu/project_index.hpp"
+#include "dudu/project_index_cache.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -79,7 +79,8 @@ bool module_has_tests(const ModuleAst& module) {
     return std::any_of(module.module_units.begin(), module.module_units.end(), unit_has_tests);
 }
 
-bool file_has_tests(const ProjectConfig& config, const std::filesystem::path& path) {
+bool file_has_tests(ProjectIndexCache& cache, const ProjectConfig& config,
+                    const std::filesystem::path& path) {
     const std::string source = read_required_text_file(path);
     ProjectIndexOptions index_options;
     index_options.entry_path = path;
@@ -89,12 +90,13 @@ bool file_has_tests(const ProjectConfig& config, const std::filesystem::path& pa
     index_options.allow_module_tree = false;
     index_options.include_native_headers = false;
     index_options.check_semantics = false;
-    return module_has_tests(ProjectIndex::load(index_options).merged_module());
+    return module_has_tests(cache.get(index_options).merged_module());
 }
 
 std::vector<std::filesystem::path> discover_test_files(const ProjectConfig& config,
                                                        const std::filesystem::path& root) {
     std::vector<std::filesystem::path> files;
+    ProjectIndexCache cache;
     std::filesystem::recursive_directory_iterator it(root);
     const std::filesystem::recursive_directory_iterator end;
     for (; it != end; ++it) {
@@ -105,7 +107,7 @@ std::vector<std::filesystem::path> discover_test_files(const ProjectConfig& conf
         if (!it->is_regular_file() || it->path().extension() != ".dd") {
             continue;
         }
-        if (file_has_tests(config, it->path())) {
+        if (file_has_tests(cache, config, it->path())) {
             files.push_back(it->path());
         }
     }

@@ -2,7 +2,7 @@
 
 #include "dudu/cpp_emit_modules.hpp"
 #include "dudu/file_io.hpp"
-#include "dudu/project_index.hpp"
+#include "dudu/project_index_cache.hpp"
 
 #include <sstream>
 #include <string_view>
@@ -10,8 +10,10 @@
 namespace dudu {
 namespace {
 
-ProjectIndex load_cmake_project_index(const ProjectConfig& config,
-                                      const std::filesystem::path& input) {
+ProjectIndexCache cmake_project_index_cache;
+
+const ProjectIndex& load_cmake_project_index(const ProjectConfig& config,
+                                             const std::filesystem::path& input) {
     const std::string source = read_required_text_file(input);
     ProjectIndexOptions options;
     options.entry_path = input;
@@ -21,7 +23,7 @@ ProjectIndex load_cmake_project_index(const ProjectConfig& config,
     options.force_module_tree = true;
     options.include_native_headers = false;
     options.check_semantics = false;
-    return ProjectIndex::load(options);
+    return cmake_project_index_cache.get(options);
 }
 
 std::string cmake_quote(const std::string& value) {

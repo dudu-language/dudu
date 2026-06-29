@@ -13,7 +13,7 @@
 #include "dudu/native_headers.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
-#include "dudu/project_index.hpp"
+#include "dudu/project_index_cache.hpp"
 #include "dudu/test_driver.hpp"
 
 #include <algorithm>
@@ -29,6 +29,8 @@
 
 namespace dudu {
 namespace {
+
+ProjectIndexCache cli_project_index_cache;
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
@@ -161,7 +163,8 @@ FormatPathOptions format_options_for_project(const CliOptions& options) {
     return out;
 }
 
-ProjectIndex checked_index(const CliOptions& options, const std::string& source, bool check_bodies) {
+const ProjectIndex& checked_index(const CliOptions& options, const std::string& source,
+                                  bool check_bodies) {
     const bool detail_output = !options.quiet && options.timings;
     print_project_step(detail_output, "config", options.input);
     const ProjectConfig config = config_for_options(options);
@@ -171,16 +174,16 @@ ProjectIndex checked_index(const CliOptions& options, const std::string& source,
     const bool force_module_tree =
         !merged_cpp_output && (options.emit_modules || options.project_driver);
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    ProjectIndex checked = ProjectIndex::load({.entry_path = options.input,
-                                               .entry_source = source,
-                                               .config = config,
-                                               .source_dir = source_dir,
-                                               .build_values = options.build_values,
-                                               .force_module_tree = force_module_tree,
-                                               .include_native_headers = true,
-                                               .check_semantics = true,
-                                               .semantic_options = {.check_bodies =
-                                                                        check_bodies}});
+    const ProjectIndex& checked = cli_project_index_cache.get(
+        {.entry_path = options.input,
+         .entry_source = source,
+         .config = config,
+         .source_dir = source_dir,
+         .build_values = options.build_values,
+         .force_module_tree = force_module_tree,
+         .include_native_headers = true,
+         .check_semantics = true,
+         .semantic_options = {.check_bodies = check_bodies}});
     print_project_step(detail_output, "indexed", options.input);
     print_project_step(detail_output, "checked", options.input);
     return checked;
