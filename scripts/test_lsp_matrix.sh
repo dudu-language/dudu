@@ -335,6 +335,10 @@ class MatrixWidget {
 
 class OtherWidget {
   public:
+    int scaled(int factor) const {
+        return factor;
+    }
+
     int value = 0;
 };
 """
@@ -351,14 +355,14 @@ def main() -> i32:
 
 def same() -> i32:
     widget: MatrixWidget
-    return widget.value
+    return widget.scaled(3) + widget.value
 """
     (tmp / "native_cpp_same.dd").write_text(native_cpp_same_source)
     native_cpp_other_source = """import cpp "native_other_widget.hpp"
 
 def other() -> i32:
     widget: OtherWidget
-    return widget.value
+    return widget.scaled(4) + widget.value
 """
     (tmp / "native_cpp_other.dd").write_text(native_cpp_other_source)
     unresolved_source = """class Player:
@@ -460,6 +464,8 @@ def main() -> i32:
         request(59, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(60, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(61, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget: MatrixWidget", add=len("widget: "))}),
+        request(64, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled", add=len("widget."))}),
+        request(65, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled", add=len("widget."))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -647,13 +653,25 @@ def main() -> i32:
     native_member_refs = response(messages, 60)
     if not has_start(native_member_refs, native_cpp.as_uri(), 4, len("    widget.")):
         raise AssertionError(f"missing native member reference in source doc: {native_member_refs!r}")
-    if not has_start(native_member_refs, native_cpp_same.as_uri(), 4, len("    return widget.")):
+    if not has_start(native_member_refs, native_cpp_same.as_uri(), 4, len("    return widget.scaled(3) + widget.")):
         raise AssertionError(f"missing native member reference in same-header doc: {native_member_refs!r}")
-    if has_start(native_member_refs, native_cpp_other.as_uri(), 4, len("    return widget.")):
+    if has_start(native_member_refs, native_cpp_other.as_uri(), 4, len("    return widget.scaled(4) + widget.")):
         raise AssertionError(f"unrelated native member reference leaked across receiver type: {native_member_refs!r}")
     native_class_hover = response(messages, 61)["contents"]["value"]
     if "native class MatrixWidget" not in native_class_hover or "Matrix widget class docs." not in native_class_hover:
         raise AssertionError(f"missing native class header docs: {native_class_hover!r}")
+    native_method_definition = response(messages, 64)
+    if not native_method_definition["uri"].endswith("/native_widget.hpp"):
+        raise AssertionError(f"native method definition did not jump to header: {native_method_definition!r}")
+    if native_method_definition["range"]["start"]["line"] != 6:
+        raise AssertionError(f"native method definition jumped to wrong line: {native_method_definition!r}")
+    native_method_refs = response(messages, 65)
+    if not has_start(native_method_refs, native_cpp.as_uri(), 5, len("    return widget.")):
+        raise AssertionError(f"missing native method reference in source doc: {native_method_refs!r}")
+    if not has_start(native_method_refs, native_cpp_same.as_uri(), 4, len("    return widget.")):
+        raise AssertionError(f"missing native method reference in same-header doc: {native_method_refs!r}")
+    if has_start(native_method_refs, native_cpp_other.as_uri(), 4, len("    return widget.")):
+        raise AssertionError(f"unrelated native method reference leaked across receiver type: {native_method_refs!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

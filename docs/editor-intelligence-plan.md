@@ -114,6 +114,10 @@ Native C++ member field references are also covered through direct tests and
 the JSON-RPC matrix: a `MatrixWidget.value` query includes other receiver-typed
 uses of the same native field shape without leaking to an unrelated
 `OtherWidget.value`.
+Native C++ member method definition and references are now covered through the
+JSON-RPC matrix as well: `MatrixWidget.scaled` jumps to the scanned header
+method and finds other receiver-typed uses without leaking to an unrelated
+`OtherWidget.scaled`.
 
 ## Target Behavior
 

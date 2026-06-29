@@ -457,7 +457,9 @@ falling back to the resolved native class docs. The JSON-RPC LSP matrix covers
 native function header docs through completion and signature help, native C++
 class docs through hover, plus native C++ member field/method docs through
 member completion, receiver-aware field go-to-definition, and receiver-aware
-method signature help.
+method signature help. The matrix also covers native C++ member method
+go-to-definition and find-references with a same-named method on an unrelated
+native receiver type filtered out.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
@@ -591,9 +593,9 @@ Go-to-definition for native C++ member methods is covered with a local fixture
 header. Go-to-definition for imported native type annotations also follows a
 structured native type alias to its scanned class declaration when that target
 is available.
-Find-references for native C++ member fields is covered in direct tests and the
-JSON-RPC matrix with same-named fields on unrelated receiver types filtered out
-by the receiver's structured type.
+Find-references for native C++ member fields and methods is covered in direct
+tests and the JSON-RPC matrix with same-named members on unrelated receiver
+types filtered out by the receiver's structured type.
 Go-to-definition for imported C/C++ headers respects manifest-relative
 `[include] paths`, matching the project-driver path contract.
 Native overloaded function signature help is covered with a local fixture
