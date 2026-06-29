@@ -1956,6 +1956,14 @@ push. They are not release packaging work.
    moved to about 202ms, indexing to about 130ms, generics to about 83ms, and
    operators to about 89ms. Do not repeat that exact helper rewrite without a
    deeper profile showing operator text conversion is again dominant.
+   A smaller operator comparison cleanup was kept: preserve the `ExprOp` API,
+   but make `operator==(ExprOp, string_view)` compare the stored operator code
+   directly against the queried spelling instead of converting the code back
+   to text and using `string_view` comparison. A broad three-sample Release
+   run was modest but acceptable: expressions around 195ms, indexing around
+   124ms, generics around 74ms, matches around 59ms, operators around 90ms,
+   and mixed around 87ms. Treat this as string-comparison cleanup, not a major
+   expression-throughput fix.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused

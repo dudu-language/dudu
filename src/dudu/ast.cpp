@@ -112,11 +112,55 @@ ExprOp expr_op_from_text(std::string_view text) {
 }
 
 bool operator==(ExprOp left, std::string_view right) {
-    return expr_op_text(left) == right;
+    switch (left.code) {
+    case ExprOpCode::None:
+        return right.empty();
+    case ExprOpCode::Add:
+        return right.size() == 1 && right[0] == '+';
+    case ExprOpCode::Sub:
+        return right.size() == 1 && right[0] == '-';
+    case ExprOpCode::Mul:
+        return right.size() == 1 && right[0] == '*';
+    case ExprOpCode::Div:
+        return right.size() == 1 && right[0] == '/';
+    case ExprOpCode::Mod:
+        return right.size() == 1 && right[0] == '%';
+    case ExprOpCode::BitAnd:
+        return right.size() == 1 && right[0] == '&';
+    case ExprOpCode::BitOr:
+        return right.size() == 1 && right[0] == '|';
+    case ExprOpCode::BitXor:
+        return right.size() == 1 && right[0] == '^';
+    case ExprOpCode::ShiftLeft:
+        return right.size() == 2 && right[0] == '<' && right[1] == '<';
+    case ExprOpCode::ShiftRight:
+        return right.size() == 2 && right[0] == '>' && right[1] == '>';
+    case ExprOpCode::Equal:
+        return right.size() == 2 && right[0] == '=' && right[1] == '=';
+    case ExprOpCode::NotEqual:
+        return right.size() == 2 && right[0] == '!' && right[1] == '=';
+    case ExprOpCode::Less:
+        return right.size() == 1 && right[0] == '<';
+    case ExprOpCode::LessEqual:
+        return right.size() == 2 && right[0] == '<' && right[1] == '=';
+    case ExprOpCode::Greater:
+        return right.size() == 1 && right[0] == '>';
+    case ExprOpCode::GreaterEqual:
+        return right.size() == 2 && right[0] == '>' && right[1] == '=';
+    case ExprOpCode::And:
+        return right == "and";
+    case ExprOpCode::Or:
+        return right == "or";
+    case ExprOpCode::Not:
+        return right == "not";
+    case ExprOpCode::BitNot:
+        return right.size() == 1 && right[0] == '~';
+    }
+    return false;
 }
 
 bool operator==(std::string_view left, ExprOp right) {
-    return left == expr_op_text(right);
+    return right == left;
 }
 
 bool operator!=(ExprOp left, std::string_view right) {
