@@ -318,6 +318,7 @@ def main() -> i32:
 
     @operator("+")
     def add(self, other: Vec2) -> Vec2:
+        '''Adds two Vec2 values docs.'''
         return Vec2(self.x + other.x, self.y + other.y)
 
 def main() -> i32:
@@ -559,6 +560,8 @@ def main() -> i32:
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
+        request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
+        request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(51, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MatrixNativePoint", add=len("nb."))}),
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -881,6 +884,15 @@ def main() -> i32:
         raise AssertionError(f"operator use definition did not jump to source file: {operator_use_definition!r}")
     if operator_use_definition["range"]["start"]["line"] != operator_add_decl["line"]:
         raise AssertionError(f"operator use definition jumped to wrong line: {operator_use_definition!r}")
+    operator_hover = response(messages, 95)["contents"]["value"]
+    if "add(self" not in operator_hover or "Adds two Vec2 values docs." not in operator_hover:
+        raise AssertionError(f"missing operator use hover docs/signature: {operator_hover!r}")
+    operator_refs = response(messages, 96)
+    operator_use = position(ops_source, "left + right", add=len("left "))
+    if not has_start(operator_refs, ops.as_uri(), operator_add_decl["line"], operator_add_decl["character"]):
+        raise AssertionError(f"missing operator method declaration ref: {operator_refs!r}")
+    if not has_start(operator_refs, ops.as_uri(), operator_use["line"], operator_use["character"]):
+        raise AssertionError(f"missing operator use ref: {operator_refs!r}")
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")

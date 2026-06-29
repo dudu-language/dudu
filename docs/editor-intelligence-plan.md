@@ -85,7 +85,10 @@ same-named variants on other enums.
 Operator tokens now carry source locations in the AST, and go-to-definition on
 a Dudu operator use such as `left + right` resolves through operand type
 inference to the matching `@operator("+")` method. The JSON-RPC matrix asserts
-the operator use-site jump, not only the operator method declaration.
+the operator use-site jump, not only the operator method declaration. Hover and
+find-references use the same `Class.method` operator identity, so the operator
+token shows the method signature/docs and references include both the operator
+method declaration and typed operator uses.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

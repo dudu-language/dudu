@@ -8,6 +8,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_operator.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_header_identity.hpp"
@@ -307,6 +308,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
     }
     if (has_selection) {
+        if (selection.operator_expr) {
+            if (const std::optional<Symbol> op = dudu_operator_symbol_for_expr(
+                    current, *selection.operator_expr, lsp_position(params).line + 1)) {
+                return symbol_hover_json(*op);
+            }
+        }
         if (const std::optional<std::string> constructor =
                 constructor_hover_json(current, selection)) {
             return *constructor;

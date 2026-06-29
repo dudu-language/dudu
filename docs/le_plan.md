@@ -3798,4 +3798,6 @@ push. They are not release packaging work.
    Dudu operator tokens now preserve AST source locations for editor selection,
    and LSP go-to-definition on a binary operator use resolves through operand
    type inference to the matching `@operator(...)` method. The JSON-RPC matrix
-   covers the actual `left + right` use site.
+   covers the actual `left + right` use site. Hover and references reuse the
+   same class-qualified operator identity, so operator tokens expose method
+   docs/signatures and references include both declarations and typed uses.

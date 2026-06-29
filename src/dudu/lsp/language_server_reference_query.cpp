@@ -4,6 +4,7 @@
 #include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_operator.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 
 #include <optional>
@@ -35,6 +36,12 @@ std::string reference_query_at(const Document& doc, const Json* params,
     if (const std::optional<std::string> enum_value_query =
             enum_value_declaration_reference_query_at(doc, params, module)) {
         return *enum_value_query;
+    }
+    if (module != nullptr && selection.operator_expr) {
+        if (const std::optional<Symbol> op = dudu_operator_symbol_for_expr(
+                *module, *selection.operator_expr, lsp_position(params).line + 1)) {
+            return op->name;
+        }
     }
     const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;

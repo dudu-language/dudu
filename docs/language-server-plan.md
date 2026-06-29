@@ -656,7 +656,10 @@ qualified enum-member identity is used.
 Go-to-definition on Dudu operator use sites is covered in the JSON-RPC matrix:
 the server selects the operator token from AST source locations, infers the
 left/right operand types using the LSP module view, and jumps to the matching
-`@operator(...)` method declaration.
+`@operator(...)` method declaration. Hover and references now share that
+operator identity: hovering the operator token shows the method signature/docs,
+and references from the operator token include the method declaration plus typed
+operator uses.
 Semantic-token coverage now decodes token deltas back to source text and checks
 token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
 static fields, module constants, methods, parameters, implicit local bindings,

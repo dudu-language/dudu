@@ -6,6 +6,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_operator.hpp"
 
 #include <algorithm>
 #include <map>
@@ -101,6 +102,14 @@ struct ReferenceCollector {
                        member_receiver_matches_query_type(path->segments[0].text,
                                                           expr_name_location(expr))) {
                 add_matched(expr.name, expr_name_location(expr));
+            }
+        } else if (expr.kind == ExprKind::Binary) {
+            if (dudu_operator_query_exists(module, query)) {
+                if (const std::optional<Symbol> op =
+                        dudu_operator_symbol_for_expr(module, expr, expr.op_location.line);
+                    op && op->name == query) {
+                    add_matched(std::string(expr.op), expr.op_location);
+                }
             }
         }
     }

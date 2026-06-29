@@ -3,20 +3,17 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/core/decorators.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_operator.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/project/module_names.hpp"
-#include "dudu/sema/sema_expr.hpp"
-#include "dudu/sema/sema_scope.hpp"
-#include "dudu/sema/type_compat.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -307,61 +304,19 @@ std::optional<std::string> constructor_definition_json(const Document& doc, cons
     return find_constructor(module.classes);
 }
 
-std::optional<std::string> operator_name_for_method(const FunctionDecl& method) {
-    for (const Decorator& decorator : method.decorators) {
-        if (const std::optional<std::string> op =
-                decorator_first_string_arg(decorator, "operator")) {
-            return op;
-        }
-    }
-    return std::nullopt;
-}
-
-bool operator_method_accepts_rhs(const FunctionDecl& method, const Expr& right_expr,
-                                 const TypeRef& right_type) {
-    const size_t first_param =
-        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    if (method.params.size() <= first_param) {
-        return true;
-    }
-    return assignment_type_allowed(method.params[first_param].type_ref, right_expr, right_type);
-}
-
 std::optional<std::string> binary_operator_definition_json(const Document& doc,
                                                            const ModuleAst& module,
                                                            const AstSelection& selection,
                                                            const Json* params) {
-    if (!selection.operator_expr || selection.operator_expr->kind != ExprKind::Binary ||
-        selection.operator_expr->children.size() != 2) {
+    if (!selection.operator_expr) {
         return std::nullopt;
     }
-    const Expr& binary = *selection.operator_expr;
-    Symbols symbols = collect_symbols(module);
-    FunctionScope scope(symbols);
-    scope.local_type_refs = local_type_refs_before_cursor(module, params);
-    const TypeRef left_type = infer_expr_type_ast(scope, binary.children[0], nullptr);
-    const TypeRef right_type = infer_expr_type_ast(scope, binary.children[1], nullptr);
-    if (!has_type_ref(left_type) || !has_type_ref(right_type)) {
+    const std::optional<Symbol> symbol = dudu_operator_symbol_for_expr(
+        module, *selection.operator_expr, lsp_position(params).line + 1);
+    if (!symbol) {
         return std::nullopt;
     }
-    const std::set<std::string> candidate_types = member_candidate_types(module, left_type);
-    for (const ClassDecl& klass : module.classes) {
-        if (!candidate_types.contains(klass.name)) {
-            continue;
-        }
-        for (const FunctionDecl& method : klass.methods) {
-            const std::optional<std::string> op = operator_name_for_method(method);
-            if (!op || *op != std::string(binary.op)) {
-                continue;
-            }
-            if (!operator_method_accepts_rhs(method, binary.children[1], right_type)) {
-                continue;
-            }
-            return location_json(uri_for_location(method.location, doc),
-                                 range_json(method.location));
-        }
-    }
-    return std::nullopt;
+    return location_json(uri_for_location(symbol->location, doc), range_json(symbol->location));
 }
 
 int function_end_line(const FunctionDecl& function) {
