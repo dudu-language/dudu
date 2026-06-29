@@ -2,6 +2,7 @@
 
 #include "dudu/ast.hpp"
 #include "dudu/language_server_types.hpp"
+#include "dudu/project_index.hpp"
 #include "dudu/project_config.hpp"
 
 #include <filesystem>
@@ -13,6 +14,7 @@ namespace dudu {
 std::string file_uri_to_path(std::string uri);
 std::filesystem::path project_config_path(const std::filesystem::path& file);
 ProjectConfig config_for_file(const std::filesystem::path& file);
+const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers);
 ModuleAst module_for_document(const Document& doc, bool include_native_headers);
 void clear_language_server_module_cache();
 const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesystem::path& path);

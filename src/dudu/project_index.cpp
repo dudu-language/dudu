@@ -51,6 +51,9 @@ void merge_native_headers_for_tree(ModuleAst& module, const ProjectIndexOptions&
         merge_native_header_types(module, native_options);
         return;
     }
+    if (options.include_native_headers_in_merged_module) {
+        merge_native_header_types(module, native_options);
+    }
     for (ModuleAst& unit : module.module_units) {
         merge_native_header_types(unit, native_options);
     }

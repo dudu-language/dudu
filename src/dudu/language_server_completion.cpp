@@ -7,10 +7,8 @@
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/lexer.hpp"
-#include "dudu/module_loader.hpp"
 #include "dudu/module_names.hpp"
 #include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -78,7 +76,7 @@ std::string completion_items_json(const std::vector<Symbol>& symbols) {
     return out.str();
 }
 
-std::optional<std::string> module_completion_json(const Document& doc, const ModuleAst& module,
+std::optional<std::string> module_completion_json(const ProjectIndex& index,
                                                   const ModuleAst& current,
                                                   const std::string& target) {
     for (const ImportDecl& import : current.imports) {
@@ -92,35 +90,27 @@ std::optional<std::string> module_completion_json(const Document& doc, const Mod
         if (!matches) {
             continue;
         }
-        const ModuleAst* imported = imported_module_unit(module, current, import);
+        const ModuleAst* imported = index.imported_unit(current, import);
         if (imported != nullptr) {
             return completion_items_json(symbols_for_module(*imported, true));
         }
-        const std::filesystem::path file =
-            module_path_to_file(doc.path.parent_path(), import.module_path);
-        if (!std::filesystem::exists(file)) {
-            return "[]";
-        }
-        const ModuleAst imported_tree = load_source_tree(file);
-        return completion_items_json(
-            symbols_for_module(visible_module_unit(imported_tree, file), true));
+        return "[]";
     }
     return std::nullopt;
 }
 
-std::optional<ModuleAst> completion_module(const Document& doc) {
+const ProjectIndex* completion_index(const Document& doc) {
     try {
-        return module_for_document(doc, true);
+        return &project_index_for_document(doc, true);
     } catch (const std::exception&) {
     }
-    return std::nullopt;
+    return nullptr;
 }
 
-std::string member_completion_json(const Document& doc, const ModuleAst& module,
-                                   const ModuleAst& current, const std::string& target,
-                                   const Json* params) {
+std::string member_completion_json(const ProjectIndex& index, const ModuleAst& current,
+                                   const std::string& target, const Json* params) {
     if (const std::optional<std::string> module_result =
-            module_completion_json(doc, module, current, target)) {
+            module_completion_json(index, current, target)) {
         return *module_result;
     }
     const std::string prefix = target + ".";
@@ -139,6 +129,7 @@ std::string member_completion_json(const Document& doc, const ModuleAst& module,
     if (!has_type_ref(type_ref)) {
         return "[]";
     }
+    const ModuleAst& module = index.merged_module();
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -261,19 +252,19 @@ CallSite call_site_at(const Document& doc, const Json* params) {
 } // namespace
 
 std::string completion_json(const Document* doc, const Json* params) {
-    std::optional<ModuleAst> module;
+    const ProjectIndex* index = nullptr;
     const ModuleAst* current = nullptr;
     if (doc != nullptr) {
-        module = completion_module(*doc);
-        if (module.has_value()) {
-            current = &visible_module_unit(*module, doc->path);
+        index = completion_index(*doc);
+        if (index != nullptr) {
+            current = &index->visible_unit_for_path(doc->path);
         }
     }
     if (doc != nullptr) {
         if (const std::optional<std::string> member_target =
                 member_completion_target(*doc, params)) {
-            if (module.has_value() && current != nullptr) {
-                return member_completion_json(*doc, *module, *current, *member_target, params);
+            if (index != nullptr && current != nullptr) {
+                return member_completion_json(*index, *current, *member_target, params);
             }
             return "[]";
         }
@@ -365,8 +356,8 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
     }
     std::vector<std::string> signatures;
-    if (const std::optional<ModuleAst> module = completion_module(*doc)) {
-        const ModuleAst& current = visible_module_unit(*module, doc->path);
+    if (const ProjectIndex* index = completion_index(*doc)) {
+        const ModuleAst& current = index->visible_unit_for_path(doc->path);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
             if (symbol_matches(symbol.name, call.name) &&
                 (symbol.kind == lsp_symbol_kind::Function ||

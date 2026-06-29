@@ -9,10 +9,8 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
-#include "dudu/module_loader.hpp"
 #include "dudu/module_names.hpp"
 #include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -48,7 +46,8 @@ std::string doc_comment_before(const Document& doc, int one_based_line) {
     return out.str();
 }
 
-std::optional<std::string> imported_symbol_hover_json(const Document& doc, const ModuleAst& module,
+std::optional<std::string> imported_symbol_hover_json(const Document& doc,
+                                                      const ProjectIndex& index,
                                                       const ModuleAst& current,
                                                       const std::string& word) {
     if (word.empty()) {
@@ -81,11 +80,9 @@ std::optional<std::string> imported_symbol_hover_json(const Document& doc, const
         if (!std::filesystem::exists(file, error) || error) {
             continue;
         }
-        const ModuleAst* imported = imported_module_unit(module, current, import);
-        ModuleAst loaded_imported;
+        const ModuleAst* imported = index.imported_unit(current, import);
         if (imported == nullptr) {
-            loaded_imported = load_source_tree(file);
-            imported = &visible_module_unit(loaded_imported, file);
+            continue;
         }
         for (const Symbol& symbol : symbols_for_module(*imported, false)) {
             if (symbol.name != target) {
@@ -213,13 +210,13 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
 
 std::string hover_json(const Document& doc, const std::string& word, const std::string& local_type,
                        const Json* params, std::optional<ExprPath> selected_path) {
-    ModuleAst module;
+    const ProjectIndex* index = nullptr;
     try {
-        module = module_for_document(doc, false);
+        index = &project_index_for_document(doc, false);
     } catch (const std::exception&) {
         return "null";
     }
-    const ModuleAst& current = visible_module_unit(module, doc.path);
+    const ModuleAst& current = index->visible_unit_for_path(doc.path);
     std::string query = word;
     if ((query.empty() || !selected_path.has_value()) && params != nullptr) {
         const AstSelection selection = ast_selection_at(current, params);
@@ -235,24 +232,24 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
         return symbol_hover_json(doc, *exact);
     }
     if (const std::optional<std::string> imported =
-            imported_symbol_hover_json(doc, module, current, query)) {
+            imported_symbol_hover_json(doc, *index, current, query)) {
         return *imported;
     }
-    std::optional<ModuleAst> native_module;
-    const auto load_native_module = [&]() -> const ModuleAst* {
-        if (!native_module.has_value()) {
-            native_module = module_for_document(doc, true);
+    const ProjectIndex* native_index = nullptr;
+    const auto load_native_index = [&]() -> const ProjectIndex* {
+        if (native_index == nullptr) {
+            native_index = &project_index_for_document(doc, true);
         }
-        return &*native_module;
+        return native_index;
     };
     try {
-        const ModuleAst* native = load_native_module();
+        const ProjectIndex* native = load_native_index();
         if (const std::optional<std::string> native_alias =
-                native_alias_hover_json(query, *native)) {
+                native_alias_hover_json(query, native->merged_module())) {
             return *native_alias;
         }
-        const std::vector<Symbol> native_symbols =
-            visible_symbols_for_document(visible_module_unit(*native, doc.path), doc, true);
+        const std::vector<Symbol> native_symbols = visible_symbols_for_document(
+            native->visible_unit_for_path(doc.path), doc, true);
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
             return symbol_hover_json(doc, *exact);
         }
@@ -264,9 +261,9 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
     }
     if (selected_path.has_value()) {
         try {
-            const ModuleAst* native = load_native_module();
+            const ProjectIndex* native = load_native_index();
             if (const std::optional<std::string> member_hover =
-                    member_hover_json(doc, *selected_path, params, *native)) {
+                    member_hover_json(doc, *selected_path, params, native->merged_module())) {
                 return *member_hover;
             }
         } catch (const std::exception&) {

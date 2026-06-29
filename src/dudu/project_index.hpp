@@ -23,6 +23,7 @@ struct ProjectIndexOptions {
     bool force_module_tree = false;
     bool allow_module_tree = true;
     bool include_native_headers = true;
+    bool include_native_headers_in_merged_module = false;
     bool check_semantics = true;
     SemanticOptions semantic_options{};
 };

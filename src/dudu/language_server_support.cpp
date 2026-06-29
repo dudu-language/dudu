@@ -80,12 +80,12 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
     return parsed;
 }
 
-ModuleAst module_for_document(const Document& doc, bool include_native_headers) {
+const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers) {
     const ModuleCacheKey key{.path = doc.path.lexically_normal().string(),
                              .text_hash = std::hash<std::string>{}(doc.text),
                              .include_native_headers = include_native_headers};
     if (const auto found = project_index_cache.find(key); found != project_index_cache.end()) {
-        return found->second.merged_module();
+        return found->second;
     }
     const ProjectConfig config = config_for_file(doc.path);
     ProjectIndexOptions options;
@@ -93,13 +93,18 @@ ModuleAst module_for_document(const Document& doc, bool include_native_headers) 
     options.entry_source = doc.text;
     options.config = config;
     options.source_dir = doc.path.parent_path();
-    options.allow_module_tree = std::filesystem::exists(doc.path);
+    options.allow_module_tree = doc.path.has_parent_path() &&
+                                std::filesystem::exists(doc.path.parent_path());
     options.include_native_headers = include_native_headers;
+    options.include_native_headers_in_merged_module = include_native_headers;
     options.check_semantics = false;
     ProjectIndex index = ProjectIndex::load(options);
-    const ModuleAst module = index.merged_module();
-    project_index_cache.emplace(key, std::move(index));
-    return module;
+    auto result = project_index_cache.emplace(key, std::move(index));
+    return result.first->second;
+}
+
+ModuleAst module_for_document(const Document& doc, bool include_native_headers) {
+    return project_index_for_document(doc, include_native_headers).merged_module();
 }
 
 void clear_language_server_module_cache() {
