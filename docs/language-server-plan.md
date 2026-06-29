@@ -547,6 +547,11 @@ reference collector and the public references request path.
 Aliased native function references such as `dudu_native.dudu_native_add` now
 keep the full native path during reference lookup instead of collapsing to the
 member name.
+Imported Dudu function and constant references now keep module and
+selective-import identity in the JSON-RPC matrix. The fixture includes
+same-named functions/constants in unrelated modules and same-file member
+expressions such as `other_entities.MAX_HP`, and those unrelated symbols are
+filtered out of `math.mix` / `MAX_HP` reference results.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

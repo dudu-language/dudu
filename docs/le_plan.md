@@ -2364,7 +2364,10 @@ push. They are not release packaging work.
    Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported
-   symbol identities.
+   symbol identities. Imported Dudu function and constant references are also
+   covered in the matrix with same-named symbols in unrelated modules filtered
+   out, including same-file member expressions like `other_entities.MAX_HP`
+   that should not count as bare `MAX_HP` references.
    Native function hover/detail includes both the lowered Dudu signature and a
    compact scanner-derived native signature suffix when concrete
    return/parameter spelling is available.

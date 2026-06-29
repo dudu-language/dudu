@@ -83,20 +83,19 @@ struct ReferenceCollector {
     }
 
     void visit_expr(const Expr& expr) {
-        if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
+        if (expr.kind == ExprKind::Name) {
             add(expr.name, expr_name_location(expr));
-            if (expr.kind == ExprKind::Member) {
-                if (const std::optional<ExprPath> path = expr_path_from_expr(expr);
-                    path.has_value() && render_expr_path(*path) == query) {
-                    add_matched(expr.name, expr_name_location(expr));
-                } else if (path.has_value() && path->segments.size() == 2 &&
-                           path->segments[0].kind == ExprPathSegmentKind::Name &&
-                           path->segments[1].kind == ExprPathSegmentKind::Name &&
-                           path->segments[1].text == query_member_tail() &&
-                           member_receiver_matches_query_type(path->segments[0].text,
-                                                              expr_name_location(expr))) {
-                    add_matched(expr.name, expr_name_location(expr));
-                }
+        } else if (expr.kind == ExprKind::Member) {
+            if (const std::optional<ExprPath> path = expr_path_from_expr(expr);
+                path.has_value() && render_expr_path(*path) == query) {
+                add_matched(expr.name, expr_name_location(expr));
+            } else if (path.has_value() && path->segments.size() == 2 &&
+                       path->segments[0].kind == ExprPathSegmentKind::Name &&
+                       path->segments[1].kind == ExprPathSegmentKind::Name &&
+                       path->segments[1].text == query_member_tail() &&
+                       member_receiver_matches_query_type(path->segments[0].text,
+                                                          expr_name_location(expr))) {
+                add_matched(expr.name, expr_name_location(expr));
             }
         }
     }

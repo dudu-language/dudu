@@ -184,6 +184,13 @@ def mix(left: i32, right: i32) -> i32:
     return left + right + MAGIC
 """
     )
+    (tmp / "other_math_utils.dd").write_text(
+        """MAGIC: i32 = 99
+
+def mix(left: i32, right: i32) -> i32:
+    return left - right + MAGIC
+"""
+    )
     (tmp / "transitive.dd").write_text(
         """def transitive_value() -> i32:
     return 5
@@ -251,8 +258,14 @@ class Enemy:
         return self.hp
 """
     )
+    (tmp / "other_entities.dd").write_text(
+        """MAX_HP: i32 = 9001
+"""
+    )
     main_source = """import math_utils as math
+import other_math_utils as other_math
 import entities
+import other_entities
 import transitive
 from entities import Player
 from entities import MAX_HP
@@ -270,10 +283,11 @@ def main() -> i32:
     mode: Mode = Mode.Play
     token: Token = Token.IntLit(i64(41))
     score = math.mix(current, identity[i32](1))
+    other_score = other_math.mix(other_entities.MAX_HP, other_math.MAGIC)
     box: Box[i32] = Box[i32](score)
     same = player == Player(MAX_HP)
     if same:
-        return box.get() + transitive.transitive_value()
+        return box.get() + transitive.transitive_value() + other_score
     return math.MAGIC
 """
     (tmp / "main.dd").write_text(main_source)
@@ -434,7 +448,9 @@ def main() -> i32:
         request(30, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "current", occurrence=1)}),
         request(31, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player: Player", add=1)}),
         request(32, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "current =")}),
-        request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "math.MAGIC", add=len("math."))}),
+        request(66, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math."))}),
+        request(67, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
+        request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
@@ -499,6 +515,38 @@ def main() -> i32:
         hover = response(messages, request_id)
         assert_nonempty(hover and hover.get("contents"), f"hover {request_id}")
     assert_nonempty(response(messages, 32), "local references")
+    imported_function_refs = response(messages, 66)
+    assert_nonempty(imported_function_refs, "imported Dudu function references")
+    math_source = (tmp / "math_utils.dd").read_text()
+    other_math_source = (tmp / "other_math_utils.dd").read_text()
+    math_mix_decl = position(math_source, "mix(left")
+    other_math_mix_decl = position(other_math_source, "mix(left")
+    main_math_mix = position(main_source, "math.mix", add=len("math."))
+    main_other_math_mix = position(main_source, "other_math.mix", add=len("other_math."))
+    if not has_start(imported_function_refs, (tmp / "math_utils.dd").as_uri(), math_mix_decl["line"], math_mix_decl["character"]):
+        raise AssertionError(f"missing math.mix declaration reference: {imported_function_refs!r}")
+    if not has_start(imported_function_refs, main.as_uri(), main_math_mix["line"], main_math_mix["character"]):
+        raise AssertionError(f"missing math.mix use reference: {imported_function_refs!r}")
+    if has_start(imported_function_refs, (tmp / "other_math_utils.dd").as_uri(), other_math_mix_decl["line"], other_math_mix_decl["character"]):
+        raise AssertionError(f"other_math.mix declaration leaked into math.mix refs: {imported_function_refs!r}")
+    if has_start(imported_function_refs, main.as_uri(), main_other_math_mix["line"], main_other_math_mix["character"]):
+        raise AssertionError(f"other_math.mix use leaked into math.mix refs: {imported_function_refs!r}")
+
+    imported_constant_refs = response(messages, 67)
+    assert_nonempty(imported_constant_refs, "imported Dudu constant references")
+    other_entities_source = (tmp / "other_entities.dd").read_text()
+    entities_max_hp_decl = position(entities_source, "MAX_HP")
+    other_entities_max_hp_decl = position(other_entities_source, "MAX_HP")
+    main_max_hp = position(main_source, "Player(MAX_HP)", add=len("Player("))
+    main_other_max_hp = position(main_source, "other_entities.MAX_HP", add=len("other_entities."))
+    if not has_start(imported_constant_refs, entities.as_uri(), entities_max_hp_decl["line"], entities_max_hp_decl["character"]):
+        raise AssertionError(f"missing MAX_HP declaration reference: {imported_constant_refs!r}")
+    if not has_start(imported_constant_refs, main.as_uri(), main_max_hp["line"], main_max_hp["character"]):
+        raise AssertionError(f"missing MAX_HP use reference: {imported_constant_refs!r}")
+    if has_start(imported_constant_refs, (tmp / "other_entities.dd").as_uri(), other_entities_max_hp_decl["line"], other_entities_max_hp_decl["character"]):
+        raise AssertionError(f"other_entities.MAX_HP declaration leaked into MAX_HP refs: {imported_constant_refs!r}")
+    if has_start(imported_constant_refs, main.as_uri(), main_other_max_hp["line"], main_other_max_hp["character"]):
+        raise AssertionError(f"other_entities.MAX_HP use leaked into MAX_HP refs: {imported_constant_refs!r}")
     assert_completion_labels(response(messages, 33), ["MAGIC", "mix"])
     assert_documentation_contains(item_named(response(messages, 33), "mix"), "Mixes two numbers")
     assert_completion_labels(response(messages, 34), ["transitive_value"])

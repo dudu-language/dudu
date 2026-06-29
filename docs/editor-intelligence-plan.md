@@ -47,6 +47,11 @@ view.
 Find-references for local variables now scopes same-named bindings to the
 selected function/method body in direct LSP tests, so unrelated locals with the
 same spelling are not reported together.
+Find-references for imported Dudu functions and constants now keeps module and
+selective-import identity in the JSON-RPC matrix: `math.mix` and `MAX_HP`
+references do not leak to unrelated `other_math.mix` or
+`other_entities.MAX_HP`, even when those same-named member expressions appear in
+the requesting file.
 Find-references for Dudu member declarations now uses a class-qualified
 `Class.member` query internally and filters member expressions by receiver
 type, so same-named fields or methods on unrelated classes are not reported
