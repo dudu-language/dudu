@@ -2,6 +2,7 @@
 
 #include "dudu/source.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -163,6 +164,47 @@ enum class ExprKind {
     CppEscape,
 };
 
+enum class ExprOpCode : uint8_t {
+    None,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    BitAnd,
+    BitOr,
+    BitXor,
+    ShiftLeft,
+    ShiftRight,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    And,
+    Or,
+    Not,
+    BitNot,
+};
+
+struct ExprOp {
+    ExprOpCode code = ExprOpCode::None;
+
+    ExprOp() = default;
+    ExprOp(std::string_view text);
+
+    ExprOp& operator=(std::string_view text);
+    operator std::string_view() const;
+};
+
+std::string_view expr_op_text(ExprOp op);
+ExprOp expr_op_from_text(std::string_view text);
+bool operator==(ExprOp left, std::string_view right);
+bool operator==(std::string_view left, ExprOp right);
+bool operator!=(ExprOp left, std::string_view right);
+bool operator!=(std::string_view left, ExprOp right);
+
 struct Expr {
     Expr() = default;
     Expr(const Expr& other);
@@ -173,7 +215,7 @@ struct Expr {
     ExprKind kind = ExprKind::Missing;
     std::string name;
     std::string value;
-    std::string_view op;
+    ExprOp op;
     std::unique_ptr<std::vector<Expr>> callee;
     std::unique_ptr<std::vector<Expr>> template_args;
     std::unique_ptr<std::vector<TypeRef>> template_type_args;

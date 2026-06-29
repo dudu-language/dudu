@@ -1849,6 +1849,18 @@ push. They are not release packaging work.
    representation change against diverse generated shapes; the win is broad
    memory reduction plus a real expression-heavy improvement, not a one-shape
    trick.
+   Expression operators then moved from a raw `string_view` to a compact
+   one-byte operator code with text conversion at API/native boundaries. This
+   shrinks `Expr` again from 184 bytes to 176 bytes and `Stmt` from 616 bytes
+   to 600 bytes. A five-sample focused Release run measured expression-heavy
+   50k at about 212ms and 232MB RSS, calls at about 57ms and 49MB RSS,
+   control at about 72ms and 59MB RSS, and mixed at about 104ms and 97MB RSS.
+   A three-sample broad Release run measured expressions about 211ms and
+   232MB RSS, calls about 57ms and 49MB RSS, modules about 75ms and 98MB RSS,
+   arrays about 79ms and 50MB RSS, generics about 88ms and 41MB RSS, and
+   mixed about 107ms and 97MB RSS. Treat this as a memory/layout cleanup with
+   neutral-to-noisy timing, not a speed breakthrough; keep it only while full
+   validation and future diverse sweeps stay clean.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

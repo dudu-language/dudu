@@ -5,6 +5,128 @@
 #include <vector>
 
 namespace dudu {
+ExprOp::ExprOp(std::string_view text) : code(expr_op_from_text(text).code) {
+}
+
+ExprOp& ExprOp::operator=(std::string_view text) {
+    code = expr_op_from_text(text).code;
+    return *this;
+}
+
+ExprOp::operator std::string_view() const {
+    return expr_op_text(*this);
+}
+
+std::string_view expr_op_text(ExprOp op) {
+    switch (op.code) {
+    case ExprOpCode::None:
+        return {};
+    case ExprOpCode::Add:
+        return "+";
+    case ExprOpCode::Sub:
+        return "-";
+    case ExprOpCode::Mul:
+        return "*";
+    case ExprOpCode::Div:
+        return "/";
+    case ExprOpCode::Mod:
+        return "%";
+    case ExprOpCode::BitAnd:
+        return "&";
+    case ExprOpCode::BitOr:
+        return "|";
+    case ExprOpCode::BitXor:
+        return "^";
+    case ExprOpCode::ShiftLeft:
+        return "<<";
+    case ExprOpCode::ShiftRight:
+        return ">>";
+    case ExprOpCode::Equal:
+        return "==";
+    case ExprOpCode::NotEqual:
+        return "!=";
+    case ExprOpCode::Less:
+        return "<";
+    case ExprOpCode::LessEqual:
+        return "<=";
+    case ExprOpCode::Greater:
+        return ">";
+    case ExprOpCode::GreaterEqual:
+        return ">=";
+    case ExprOpCode::And:
+        return "and";
+    case ExprOpCode::Or:
+        return "or";
+    case ExprOpCode::Not:
+        return "not";
+    case ExprOpCode::BitNot:
+        return "~";
+    }
+    return {};
+}
+
+ExprOp expr_op_from_text(std::string_view text) {
+    ExprOp op;
+    if (text == "+") {
+        op.code = ExprOpCode::Add;
+    } else if (text == "-") {
+        op.code = ExprOpCode::Sub;
+    } else if (text == "*") {
+        op.code = ExprOpCode::Mul;
+    } else if (text == "/") {
+        op.code = ExprOpCode::Div;
+    } else if (text == "%") {
+        op.code = ExprOpCode::Mod;
+    } else if (text == "&") {
+        op.code = ExprOpCode::BitAnd;
+    } else if (text == "|") {
+        op.code = ExprOpCode::BitOr;
+    } else if (text == "^") {
+        op.code = ExprOpCode::BitXor;
+    } else if (text == "<<") {
+        op.code = ExprOpCode::ShiftLeft;
+    } else if (text == ">>") {
+        op.code = ExprOpCode::ShiftRight;
+    } else if (text == "==") {
+        op.code = ExprOpCode::Equal;
+    } else if (text == "!=") {
+        op.code = ExprOpCode::NotEqual;
+    } else if (text == "<") {
+        op.code = ExprOpCode::Less;
+    } else if (text == "<=") {
+        op.code = ExprOpCode::LessEqual;
+    } else if (text == ">") {
+        op.code = ExprOpCode::Greater;
+    } else if (text == ">=") {
+        op.code = ExprOpCode::GreaterEqual;
+    } else if (text == "and") {
+        op.code = ExprOpCode::And;
+    } else if (text == "or") {
+        op.code = ExprOpCode::Or;
+    } else if (text == "not") {
+        op.code = ExprOpCode::Not;
+    } else if (text == "~") {
+        op.code = ExprOpCode::BitNot;
+    }
+    return op;
+}
+
+bool operator==(ExprOp left, std::string_view right) {
+    return expr_op_text(left) == right;
+}
+
+bool operator==(std::string_view left, ExprOp right) {
+    return left == expr_op_text(right);
+}
+
+bool operator!=(ExprOp left, std::string_view right) {
+    return !(left == right);
+}
+
+bool operator!=(std::string_view left, ExprOp right) {
+    return !(left == right);
+}
+
 Expr::Expr(const Expr& other)
     : kind(other.kind), name(other.name), value(other.value), op(other.op),
       callee(other.callee == nullptr ? nullptr
