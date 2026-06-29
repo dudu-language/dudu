@@ -31,6 +31,7 @@ struct ProjectIndexOptions {
 struct ProjectModuleSummary {
     std::filesystem::path source_path;
     std::string module_path;
+    std::optional<std::filesystem::file_time_type> source_mtime;
     std::set<std::string> exports;
     std::vector<ModuleDependency> dependencies;
     std::vector<std::string> reverse_dependencies;
@@ -44,6 +45,7 @@ class ProjectIndex {
     const std::vector<ProjectModuleSummary>& modules() const { return modules_; }
     const ProjectModuleSummary* summary_for_path(const std::filesystem::path& path) const;
     const ProjectModuleSummary* summary_for_module(std::string_view module_path) const;
+    bool source_stamps_current() const;
     const ModuleAst* unit_for_path(const std::filesystem::path& path) const;
     const ModuleAst* unit_for_module(std::string_view module_path) const;
     const ModuleAst& visible_unit_for_path(const std::filesystem::path& path) const;

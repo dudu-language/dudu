@@ -245,6 +245,7 @@ void test_project_index_records_module_graph() {
     assert(main != nullptr);
     assert(camera->exports.contains("Camera"));
     assert(camera->exports.contains("build_camera"));
+    assert(camera->source_mtime.has_value());
     assert(renderer->dependencies.size() == 1);
     assert(renderer->dependencies[0].resolved_module_path == "camera");
     assert(std::find(camera->reverse_dependencies.begin(), camera->reverse_dependencies.end(),
@@ -253,6 +254,44 @@ void test_project_index_records_module_graph() {
                      "main") != camera->reverse_dependencies.end());
     assert(index.unit_for_path(root / "camera.dd") == index.unit_for_module("camera"));
     assert(&index.visible_unit_for_path(root / "main.dd") == index.unit_for_module("main"));
+    assert(index.source_stamps_current());
+}
+
+void test_project_index_source_stamps_detect_changed_modules() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_project_index_stamps_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path dependency = dir / "dep.dd";
+    const std::filesystem::path entry = dir / "main.dd";
+    write_file(dependency, "def value() -> i32:\n"
+                           "    return 1\n");
+    write_file(entry, "import dep\n"
+                      "\n"
+                      "def main() -> i32:\n"
+                      "    return dep.value()\n");
+
+    dudu::ProjectIndexOptions options;
+    options.entry_path = entry;
+    const std::string source = read_file(entry);
+    options.entry_source = source;
+    options.source_dir = dir;
+    options.force_module_tree = true;
+    options.include_native_headers = false;
+    options.check_semantics = true;
+    options.semantic_options = {.check_bodies = true};
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.source_stamps_current());
+
+    write_file(dependency, "def value() -> i32:\n"
+                           "    return 2\n");
+    std::error_code error;
+    std::filesystem::last_write_time(dependency,
+                                     std::filesystem::file_time_type::clock::now() +
+                                         std::chrono::seconds(5),
+                                     error);
+    assert(!error);
+    assert(!index.source_stamps_current());
 }
 
 void test_merged_output_rejects_same_named_module_declarations() {
@@ -1959,6 +1998,7 @@ int main() {
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
         test_project_index_records_module_graph();
+        test_project_index_source_stamps_detect_changed_modules();
         test_merged_output_rejects_same_named_module_declarations();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();

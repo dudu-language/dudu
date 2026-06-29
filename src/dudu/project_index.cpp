@@ -21,6 +21,17 @@ std::string path_key(const std::filesystem::path& path) {
     return canonical_key_path(path).string();
 }
 
+std::optional<std::filesystem::file_time_type>
+file_mtime(const std::filesystem::path& path) {
+    if (path.empty()) {
+        return std::nullopt;
+    }
+    std::error_code error;
+    const std::filesystem::file_time_type mtime =
+        std::filesystem::last_write_time(path, error);
+    return error ? std::nullopt : std::optional<std::filesystem::file_time_type>{mtime};
+}
+
 bool has_dudu_module_imports(const ModuleAst& module) {
     return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
         return import.kind == ImportKind::Module || import.kind == ImportKind::From;
@@ -140,6 +151,7 @@ ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
         ProjectModuleSummary summary;
         summary.source_path = unit->source_path;
         summary.module_path = unit->module_path;
+        summary.source_mtime = file_mtime(unit->source_path);
         summary.dependencies = unit->dependencies;
         add_export_names(summary, *unit);
         const size_t index_id = index.modules_.size();
@@ -170,6 +182,18 @@ const ProjectModuleSummary*
 ProjectIndex::summary_for_module(std::string_view module_path) const {
     const auto found = module_path_to_index_.find(std::string(module_path));
     return found == module_path_to_index_.end() ? nullptr : &modules_[found->second];
+}
+
+bool ProjectIndex::source_stamps_current() const {
+    for (const ProjectModuleSummary& summary : modules_) {
+        if (summary.source_path.empty() || !summary.source_mtime.has_value()) {
+            continue;
+        }
+        if (file_mtime(summary.source_path) != summary.source_mtime) {
+            return false;
+        }
+    }
+    return true;
 }
 
 const ModuleAst* ProjectIndex::unit_for_path(const std::filesystem::path& path) const {
