@@ -8,14 +8,12 @@
 #include "dudu/file_io.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/language_server.hpp"
-#include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
 #include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
-#include "dudu/sema.hpp"
+#include "dudu/project_index.hpp"
 #include "dudu/test_driver.hpp"
 
 #include <algorithm>
@@ -162,12 +160,6 @@ FormatPathOptions format_options_for_project(const CliOptions& options) {
     return out;
 }
 
-bool has_dudu_module_imports(const ModuleAst& module) {
-    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
-        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
-    });
-}
-
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
     const bool detail_output = !options.quiet && options.timings;
     print_project_step(detail_output, "config", options.input);
@@ -177,47 +169,20 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
                                    options.c_header_output.has_value();
     const bool force_module_tree =
         !merged_cpp_output && (options.emit_modules || options.project_driver);
-    ModuleAst module;
-    if (options.input.empty()) {
-        module = parse_source(source, options.input);
-    } else if (force_module_tree) {
-        module = load_source_tree(options.input, source);
-    } else {
-        module = parse_source(source, options.input);
-        if (has_dudu_module_imports(module)) {
-            module = load_source_tree(options.input, source);
-        }
-    }
-    print_project_step(detail_output, "parsed", options.input);
-    const bool per_module_output = force_module_tree || !module.module_units.empty();
-    module.build_values = config.build_values;
-    module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
-    module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
-    module.target_mode_explicit = config.target_mode_explicit;
-    for (const auto& [name, value] : options.build_values) {
-        module.build_values[name] = value;
-    }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    const NativeHeaderOptions native_header_options{.config = config, .source_dir = source_dir};
-    if (!per_module_output) {
-        print_project_step(detail_output, "native-merge", module.source_path);
-        merge_native_header_types(module, native_header_options);
-    }
-    for (ModuleAst& unit : module.module_units) {
-        unit.build_values = module.build_values;
-        unit.target_mode_explicit = module.target_mode_explicit;
-        print_project_step(detail_output, "native-merge", unit.source_path);
-        merge_native_header_types(unit, native_header_options);
-    }
-    print_project_step(detail_output, "sema", options.input);
-    if (per_module_output) {
-        analyze_module_tree(module, {.check_bodies = check_bodies});
-    } else {
-        reject_merged_output_module_conflicts(module);
-        analyze_module(module, {.check_bodies = check_bodies});
-    }
+    ProjectIndex checked = ProjectIndex::load({.entry_path = options.input,
+                                               .entry_source = source,
+                                               .config = config,
+                                               .source_dir = source_dir,
+                                               .build_values = options.build_values,
+                                               .force_module_tree = force_module_tree,
+                                               .include_native_headers = true,
+                                               .check_semantics = true,
+                                               .semantic_options = {.check_bodies =
+                                                                        check_bodies}});
+    print_project_step(detail_output, "indexed", options.input);
     print_project_step(detail_output, "checked", options.input);
-    return module;
+    return checked.merged_module();
 }
 
 void check_source_file(CliOptions options, const std::filesystem::path& path) {

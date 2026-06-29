@@ -1,8 +1,6 @@
 #include "dudu/language_server_support.hpp"
 
-#include "dudu/module_loader.hpp"
-#include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
+#include "dudu/project_index.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -30,7 +28,7 @@ struct ModuleCacheKey {
     }
 };
 
-std::map<ModuleCacheKey, ModuleAst> module_cache;
+std::map<ModuleCacheKey, ProjectIndex> project_index_cache;
 
 } // namespace
 
@@ -82,50 +80,30 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
     return parsed;
 }
 
-bool module_has_dudu_imports(const ModuleAst& module) {
-    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
-        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
-    });
-}
-
-void apply_project_context(ModuleAst& module, const ProjectConfig& config) {
-    module.build_values = config.build_values;
-    module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
-    module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
-    module.target_mode_explicit = config.target_mode_explicit;
-}
-
 ModuleAst module_for_document(const Document& doc, bool include_native_headers) {
     const ModuleCacheKey key{.path = doc.path.lexically_normal().string(),
                              .text_hash = std::hash<std::string>{}(doc.text),
                              .include_native_headers = include_native_headers};
-    if (const auto found = module_cache.find(key); found != module_cache.end()) {
-        return found->second;
+    if (const auto found = project_index_cache.find(key); found != project_index_cache.end()) {
+        return found->second.merged_module();
     }
     const ProjectConfig config = config_for_file(doc.path);
-    ModuleAst parsed = parse_source(doc.text, doc.path);
-    const bool saved_tree =
-        std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
-    const bool project_tree = saved_tree || module_has_dudu_imports(parsed);
-    ModuleAst module = project_tree && std::filesystem::exists(doc.path)
-                           ? load_source_tree(doc.path, doc.text)
-                           : std::move(parsed);
-    apply_project_context(module, config);
-    if (include_native_headers) {
-        const NativeHeaderOptions native_options{.config = config,
-                                                 .source_dir = doc.path.parent_path()};
-        merge_native_header_types(module, native_options);
-        for (ModuleAst& unit : module.module_units) {
-            apply_project_context(unit, config);
-            merge_native_header_types(unit, native_options);
-        }
-    }
-    module_cache.emplace(key, module);
+    ProjectIndexOptions options;
+    options.entry_path = doc.path;
+    options.entry_source = doc.text;
+    options.config = config;
+    options.source_dir = doc.path.parent_path();
+    options.allow_module_tree = std::filesystem::exists(doc.path);
+    options.include_native_headers = include_native_headers;
+    options.check_semantics = false;
+    ProjectIndex index = ProjectIndex::load(options);
+    const ModuleAst module = index.merged_module();
+    project_index_cache.emplace(key, std::move(index));
     return module;
 }
 
 void clear_language_server_module_cache() {
-    module_cache.clear();
+    project_index_cache.clear();
 }
 
 const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesystem::path& path) {

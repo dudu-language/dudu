@@ -19,6 +19,7 @@
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
+#include "dudu/project_index.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_alloc.hpp"
 #include "dudu/sema_expr_cpp_escape_calls.hpp"
@@ -215,6 +216,41 @@ void test_module_loader_rejects_duplicate_from_aliases() {
             std::string(error.what()).find("import name 'Thing' collides") != std::string::npos;
     }
     assert(failed);
+}
+
+void test_project_index_records_module_graph() {
+    const std::filesystem::path root = std::filesystem::path(DUDU_REPO_ROOT) / "tests" /
+                                       "fixtures" / "project_import_metadata";
+    const std::filesystem::path entry = root / "main.dd";
+    dudu::ProjectIndexOptions options;
+    options.entry_path = entry;
+    const std::string source = read_file(entry);
+    options.entry_source = source;
+    options.config = dudu::parse_project_config(root / "dudu.toml");
+    options.source_dir = root;
+    options.force_module_tree = true;
+    options.include_native_headers = false;
+    options.check_semantics = true;
+    options.semantic_options = {.check_bodies = true};
+
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.modules().size() == 5);
+    const dudu::ProjectModuleSummary* camera = index.summary_for_module("camera");
+    const dudu::ProjectModuleSummary* renderer = index.summary_for_module("renderer");
+    const dudu::ProjectModuleSummary* main = index.summary_for_module("main");
+    assert(camera != nullptr);
+    assert(renderer != nullptr);
+    assert(main != nullptr);
+    assert(camera->exports.contains("Camera"));
+    assert(camera->exports.contains("build_camera"));
+    assert(renderer->dependencies.size() == 1);
+    assert(renderer->dependencies[0].resolved_module_path == "camera");
+    assert(std::find(camera->reverse_dependencies.begin(), camera->reverse_dependencies.end(),
+                     "renderer") != camera->reverse_dependencies.end());
+    assert(std::find(camera->reverse_dependencies.begin(), camera->reverse_dependencies.end(),
+                     "main") != camera->reverse_dependencies.end());
+    assert(index.unit_for_path(root / "camera.dd") == index.unit_for_module("camera"));
+    assert(&index.visible_unit_for_path(root / "main.dd") == index.unit_for_module("main"));
 }
 
 void test_merged_output_rejects_same_named_module_declarations() {
@@ -1881,6 +1917,7 @@ int main() {
         test_import_bindings();
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
+        test_project_index_records_module_graph();
         test_merged_output_rejects_same_named_module_declarations();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();

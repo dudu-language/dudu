@@ -191,8 +191,8 @@ emit_timing_output="$("$repo_root/build/duc" emit-modules \
     "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
     -o "$emit_timing_dir" --timings 2>&1)"
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parse '
-printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parsed '
-printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] sema '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] indexed '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] checked '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
 rejected_direct_backend="$repo_root/build/rejected_direct_backend_smoke"
 rm -rf "$rejected_direct_backend"
