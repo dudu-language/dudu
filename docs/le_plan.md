@@ -2024,6 +2024,14 @@ push. They are not release packaging work.
    69ms, indexing around 129ms, generics around 79ms, matches around 62ms,
    operators around 92ms, and mixed around 86ms. The current by-value API may
    still be inelegant, but this local signature change is not a throughput win.
+   Compacting the remaining AST enum tags to one-byte underlying types was
+   tried and rejected. It matched the successful token-storage idea on paper,
+   but the focused five-sample Release shape run did not justify it:
+   expressions moved from the current baseline around 199ms to about 202ms,
+   indexing from about 129ms to about 130ms, generics from about 79ms to about
+   83ms, native from about 240ms to about 244ms, and mixed from about 90ms to
+   about 89ms. Some native cached RSS moved down, but the broader shape matrix
+   did not prove a compiler-speed win.
    Removing the statement-block capacity pre-scan was tried and rejected. It
    looked attractive because huge generated functions were walking the same
    block once to reserve and once to parse, but vector growth cost was worse
@@ -2045,6 +2053,16 @@ push. They are not release packaging work.
    project-shaped RSS to about 118MB. The deep-copy behavior is the wrong
    ownership shape for the current AST; revisit only as part of a broader
    compact/arena AST design where statement copies are controlled explicitly.
+   Compact expression-child storage was investigated and deferred to the real
+   AST representation milestone instead of being patched locally. `Expr` owns
+   `std::vector<Expr> children`, and roughly eight hundred current parser,
+   sema, codegen, LSP, and helper uses assume direct vector access. Inline
+   small-child storage cannot be added directly to the recursive `Expr` type,
+   while a wrapper/vector compatibility layer would become exactly the kind of
+   temporary AST shim this plan is trying to remove. The right fix is a
+   structured expression representation or arena/node-id AST as part of the
+   full parser/AST cleanup, validated against the diverse compiler benchmark
+   shapes.
    A narrower variant that changed only `Stmt::type_ref` from `shared_ptr` to
    `unique_ptr` was also tried and rejected. It shrank `Stmt` from 448 bytes
    to 440 bytes after text interning, but same-session A/B benchmarks across
