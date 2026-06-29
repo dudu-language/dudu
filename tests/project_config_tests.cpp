@@ -1,6 +1,6 @@
-#include "dudu/cli_options.hpp"
-#include "dudu/cmake_emit.hpp"
-#include "dudu/project_config.hpp"
+#include "dudu/frontend/cli_options.hpp"
+#include "dudu/project/cmake_emit.hpp"
+#include "dudu/project/project_config.hpp"
 
 #include <cassert>
 #include <exception>

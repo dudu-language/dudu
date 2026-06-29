@@ -1,6 +1,6 @@
-#include "dudu/ast_expr.hpp"
-#include "dudu/ast_type.hpp"
-#include "dudu/parser.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/parser/parser.hpp"
 
 #include <cassert>
 #include <exception>

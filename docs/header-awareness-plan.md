@@ -148,10 +148,10 @@ The first implementation should be a separate component, not mixed into parser
 or emitter code:
 
 ```text
-src/dudu/native_headers.hpp
-src/dudu/native_headers.cpp
-src/dudu/native_header_cache.hpp
-src/dudu/native_header_cache.cpp
+src/dudu/native/native_headers.hpp
+src/dudu/native/native_headers.cpp
+src/dudu/native/native_header_cache.hpp
+src/dudu/native/native_header_cache.cpp
 ```
 
 The scanner input should include:

@@ -1,13 +1,13 @@
-#include "dudu/ast_type.hpp"
-#include "dudu/cpp_emit.hpp"
-#include "dudu/language_server_symbols.hpp"
-#include "dudu/native_header_cache_deps.hpp"
-#include "dudu/native_header_parse.hpp"
-#include "dudu/native_header_types.hpp"
-#include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
-#include "dudu/sema.hpp"
-#include "dudu/type_compat.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/codegen/cpp_emit.hpp"
+#include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/native/native_header_cache_deps.hpp"
+#include "dudu/native/native_header_parse.hpp"
+#include "dudu/native/native_header_types.hpp"
+#include "dudu/native/native_headers.hpp"
+#include "dudu/parser/parser.hpp"
+#include "dudu/sema/sema.hpp"
+#include "dudu/sema/type_compat.hpp"
 
 #include <cassert>
 #include <exception>

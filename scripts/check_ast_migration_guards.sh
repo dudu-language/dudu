@@ -99,17 +99,17 @@ if rg -n "type\\.text|left\\.text|right\\.text" "$repo_root/src/dudu"; then
 fi
 
 if rg -n "ends_with\\(\"\\.(reference|const_reference|iterator|const_iterator)\"\\)" \
-    "$repo_root/src/dudu/sema_ops.cpp"; then
+    "$repo_root/src/dudu/sema/sema_ops.cpp"; then
     echo "native associated operator suffix checks belong in type_compat_native" >&2
     exit 1
 fi
 
-if rg -n "std::isupper" "$repo_root/src/dudu/cpp_expr_emit.cpp"; then
+if rg -n "std::isupper" "$repo_root/src/dudu/codegen/cpp_expr_emit.cpp"; then
     echo "member emission must use symbol metadata, not uppercase spelling heuristics" >&2
     exit 1
 fi
 
-if rg -n "std::isupper" "$repo_root/src/dudu/cpp_expr_call_emit.cpp"; then
+if rg -n "std::isupper" "$repo_root/src/dudu/codegen/cpp_expr_call_emit.cpp"; then
     echo "call emission must use symbol/type metadata, not uppercase spelling heuristics" >&2
     exit 1
 fi
@@ -119,26 +119,26 @@ if rg -n "\\bfallback_uri\\b" "$repo_root/src/dudu"; then
     exit 1
 fi
 
-if rg -n "std::regex|#include <regex>" "$repo_root/src/dudu"/language_server_lint_*.cpp \
-    "$repo_root/src/dudu/language_server_ast_lints.cpp"; then
+if rg -n "std::regex|#include <regex>" "$repo_root/src/dudu/lsp"/language_server_lint_*.cpp \
+    "$repo_root/src/dudu/lsp/language_server_ast_lints.cpp"; then
     echo "LSP lint rules must use AST/sema facts, not regex over source text" >&2
     exit 1
 fi
 
-if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
+if rg -n "std::string text;" "$repo_root/src/dudu/core/ast.hpp"; then
     echo "raw text payload fields do not belong in the core Dudu AST" >&2
     exit 1
 fi
 
-if rg -n "std::function|#include <functional>" "$repo_root/src/dudu/ast.hpp" \
-    "$repo_root/src/dudu/ast.cpp"; then
+if rg -n "std::function|#include <functional>" "$repo_root/src/dudu/core/ast.hpp" \
+    "$repo_root/src/dudu/core/ast.cpp"; then
     echo "core AST traversal must use template visitors, not std::function callback wrappers" >&2
     exit 1
 fi
 
 if rg -n "\\braw_type\\b|\\braw_receiver_type\\b|\\braw_native_alias\\b" \
-    "$repo_root/src/dudu/sema_index.cpp" "$repo_root/src/dudu/sema_index_type_ref.cpp" \
-    "$repo_root/src/dudu/sema_index_type_ref.hpp"; then
+    "$repo_root/src/dudu/sema/sema_index.cpp" "$repo_root/src/dudu/sema/sema_index_type_ref.cpp" \
+    "$repo_root/src/dudu/sema/sema_index_type_ref.hpp"; then
     echo "index sema uses structured TypeRef receiver metadata; raw names belong only at raw/native boundaries" >&2
     exit 1
 fi
@@ -159,7 +159,7 @@ awk '
     }
     in_native && /^};/ { in_native = 0 }
     END { exit bad ? 1 : 0 }
-' "$repo_root/src/dudu/ast.hpp"
+' "$repo_root/src/dudu/core/ast.hpp"
 
 awk '
     /struct Native(Type|Value|Function|Macro|Namespace)Decl/ {
@@ -177,7 +177,7 @@ awk '
         in_native = 0
     }
     END { exit bad ? 1 : 0 }
-' "$repo_root/src/dudu/ast.hpp"
+' "$repo_root/src/dudu/core/ast.hpp"
 
 awk '
     /struct ClassDecl/ {
@@ -193,9 +193,9 @@ awk '
         in_class = 0
     }
     END { exit bad ? 1 : 0 }
-' "$repo_root/src/dudu/ast.hpp"
+' "$repo_root/src/dudu/core/ast.hpp"
 
-allowed_lower_cpp_type_spelling='src/dudu/cpp_expr_builtins.cpp|src/dudu/cpp_lower.cpp|src/dudu/cpp_raw_escape_templates.cpp|src/dudu/cpp_type.cpp|src/dudu/cpp_lower.hpp'
+allowed_lower_cpp_type_spelling='src/dudu/codegen/cpp_expr_builtins.cpp|src/dudu/codegen/cpp_lower.cpp|src/dudu/codegen/cpp_raw_escape_templates.cpp|src/dudu/codegen/cpp_type.cpp|src/dudu/codegen/cpp_lower.hpp'
 if rg -n "lower_cpp_type_spelling" "$repo_root/src/dudu" |
     grep -Ev "$allowed_lower_cpp_type_spelling"; then
     echo "lower_cpp_type_spelling is only allowed at explicit raw C++ escape/native spelling boundaries" >&2
@@ -210,4 +210,4 @@ awk '
     }
     in_local && /^};/ { in_local = 0 }
     END { exit bad ? 1 : 0 }
-' "$repo_root/src/dudu/language_server_ast_lints.cpp"
+' "$repo_root/src/dudu/lsp/language_server_ast_lints.cpp"

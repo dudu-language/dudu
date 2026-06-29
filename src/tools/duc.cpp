@@ -1,4 +1,4 @@
-#include "dudu/cli_command.hpp"
+#include "dudu/frontend/cli_command.hpp"
 
 #include <exception>
 #include <iostream>

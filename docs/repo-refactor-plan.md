@@ -10,14 +10,26 @@ deliverables:
 - public C/C++ headers
 - examples, tests, benchmarks, and docs
 
-The current implementation mostly lives as one flat `src/dudu/` pile plus a
+The bootstrap implementation mostly lived as one flat `src/dudu/` pile plus a
 single `src/main.cpp` used by both binaries. That was acceptable while
-bootstrapping, but it now hides subsystem boundaries and makes future compiler
-work harder to navigate.
+bootstrapping, but it hid subsystem boundaries and made future compiler work
+harder to navigate.
 
 The refactor should be disruptive enough to make the repository clean, but not
 behaviorally disruptive. Move files by subsystem, keep namespaces stable, and
 validate after each mechanical step.
+
+## Current Status
+
+- `duc`, `dudu`, and `dudu-lsp` have separate tiny entry points under
+  `src/tools/`.
+- `duc lsp` has been removed from the CLI, editor config, and active scripts.
+- Compiler implementation files have been moved under subsystem directories.
+- The top-level CMake source list now discovers subsystem `.cpp` files by
+  directory instead of listing every source file inline.
+- The first pass still links one shared `dudu_frontend` library. Splitting that
+  into explicit subsystem libraries remains future cleanup after the file
+  ownership boundary is stable.
 
 ## Target Layout
 
@@ -328,23 +340,24 @@ minimal compiler frontend unless it is intentionally shared.
 
 ## Migration Sequence
 
-1. Add tiny separate tool entry points.
+1. Add tiny separate tool entry points. Completed.
    - Create `src/tools/duc.cpp`, `src/tools/dudu.cpp`, and
      `src/tools/dudu_lsp.cpp`.
    - Add an explicit `run_lsp_cli()` or equivalent library entry point.
    - Remove `duc lsp` from CLI parsing and usage.
    - Install `dudu-lsp`.
 
-2. Move files mechanically by subsystem.
+2. Move files mechanically by subsystem. Completed.
    - Use `git mv`.
-   - Keep header include paths as `#include "dudu/..."` at first by making the
-     include root continue to expose moved headers.
+   - Keep header include paths rooted at `#include "dudu/..."`, with subsystem
+     paths such as `#include "dudu/parser/parser.hpp"`.
    - Update CMake source lists.
    - Build after each bucket.
 
-3. Split CMake source ownership.
+3. Split CMake source ownership. First pass completed.
    - Replace the single huge `add_library(dudu_frontend ...)` source list with
-     subsystem variables or subsystem libraries.
+     subsystem variables or subsystem libraries. The current first pass uses
+     subsystem directory discovery in one frontend library.
    - Keep public include behavior stable.
 
 4. Split internal headers if useful.
@@ -352,7 +365,8 @@ minimal compiler frontend unless it is intentionally shared.
    - Keep private implementation headers under subsystem directories.
    - Do not expose private LSP/native/codegen headers as public API.
 
-5. Update scripts and docs.
+5. Update scripts and docs. Completed for `dudu-lsp`; continue updating docs as
+   paths are referenced.
    - `install-local.sh` should install/symlink `dudu-lsp`.
    - VS Code extension should use `dudu-lsp`.
    - LSP scripts should call `dudu-lsp` directly.

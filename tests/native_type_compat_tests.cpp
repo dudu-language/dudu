@@ -1,7 +1,7 @@
-#include "dudu/cpp_emit.hpp"
-#include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
-#include "dudu/sema.hpp"
+#include "dudu/codegen/cpp_emit.hpp"
+#include "dudu/native/native_headers.hpp"
+#include "dudu/parser/parser.hpp"
+#include "dudu/sema/sema.hpp"
 
 #include <cassert>
 #include <exception>
