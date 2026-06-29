@@ -67,6 +67,9 @@ when available. The LSP matrix fixture now exercises doc propagation for
 classes, fields, methods, imported completions, signature help, and document
 symbols through actual JSON-RPC requests, including docstring-backed module,
 class, enum, method, and function symbols.
+Native hover now surfaces the scanner's canonical native identity key when the
+symbol has one, so hover shows both the Dudu-shaped signature/type and the
+identity used by native references.
 
 ## Target Behavior
 

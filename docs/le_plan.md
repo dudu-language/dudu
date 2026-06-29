@@ -2252,11 +2252,12 @@ push. They are not release packaging work.
    from plain name matching. Find-references uses those native identity keys to
    filter same-spelled native references across workspace documents when
    identity metadata is available, so two headers imported under the same alias
-   with the same function name are not conflated. Definition and hover symbol
-   lookup now prefer exact symbols and only use suffix matches when
-   unambiguous; receiver-aware member definition and hover run before suffix
-   fallback, so same-named native methods resolve through the expression
-   receiver type instead of scan order.
+   with the same function name are not conflated. Native hover now also shows
+   the canonical native identity key beside the Dudu-shaped signature/type when
+   scanner metadata provides one. Definition and hover symbol lookup now prefer
+   exact symbols and only use suffix matches when unambiguous; receiver-aware
+   member definition and hover run before suffix fallback, so same-named native
+   methods resolve through the expression receiver type instead of scan order.
    Cursor selection for definition and reference queries now runs through a
    shared AST-backed selection pass that records the simple symbol, dotted
    symbol path, and expression path together. This removes duplicated parse/walk

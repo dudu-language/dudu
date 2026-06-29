@@ -9,6 +9,7 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/project/module_names.hpp"
 
@@ -24,6 +25,9 @@ namespace {
 
 std::string hover_markdown(const Symbol& symbol) {
     std::string markdown = "`" + symbol.detail + "`";
+    if (symbol.native_identity_key.has_value()) {
+        markdown += "\n\nNative identity: `" + *symbol.native_identity_key + "`";
+    }
     if (!symbol.doc_comment.empty()) {
         markdown += "\n\n" + symbol.doc_comment;
     }
@@ -110,8 +114,11 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
         }
         const std::string markdown = "`native type = " + native_type_alias_type_text(type) +
                                      "`\n\nresolves to `" + "native class " + target->name + "`";
+        const std::string identity = native_symbol_identity_key(type.identity);
+        const std::string identity_text =
+            identity.empty() ? std::string{} : "\n\nNative identity: `" + identity + "`";
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-               "\"},\"range\":" + range_json(type.location) + "}";
+               json_escape(identity_text) + "\"},\"range\":" + range_json(type.location) + "}";
     };
     for (const NativeTypeDecl& type : module.native_types) {
         if (type.name == word) {

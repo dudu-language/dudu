@@ -114,6 +114,8 @@ LSP `Symbol` entries now carry native identity keys for scanned native types,
 values, functions, macros, classes, and C++ class methods when Clang metadata
 provides them. That keeps identity available at the editor boundary and is the
 next step toward replacing native reference matching by plain source spelling.
+Native hover now shows that canonical identity key beside the Dudu-shaped
+signature/type when it is available.
 Find-references now uses those native identity keys to filter same-spelled
 native references across workspace documents when identity metadata is
 available, so two headers imported under the same alias with the same function

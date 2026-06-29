@@ -355,6 +355,12 @@ def main() -> i32:
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
     for request_id in (51, 52, 53):
         assert_nonempty(response(messages, request_id), f"native request {request_id}")
+    native_type_hover = response(messages, 51)["contents"]["value"]
+    if "Native identity:" not in native_type_hover or "MatrixNativePoint" not in native_type_hover:
+        raise AssertionError(f"missing native type identity: {native_type_hover!r}")
+    native_macro_hover = response(messages, 53)["contents"]["value"]
+    if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
+        raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")
