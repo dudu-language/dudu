@@ -292,6 +292,9 @@ void test_project_index_source_stamps_detect_changed_modules() {
     options.semantic_options = {.check_bodies = true};
     const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
     assert(index.source_stamps_current());
+    const std::filesystem::path stamp_file = dir / ".dudu_sources.stamp";
+    index.write_source_stamp_file(stamp_file);
+    assert(index.changed_sources_since_stamp_file(stamp_file).empty());
 
     write_file(dependency, "def value() -> i32:\n"
                            "    return 2\n");
@@ -302,6 +305,16 @@ void test_project_index_source_stamps_detect_changed_modules() {
                                      error);
     assert(!error);
     assert(!index.source_stamps_current());
+
+    const dudu::ProjectIndex changed_index = dudu::ProjectIndex::load(options);
+    const std::vector<std::filesystem::path> changed_sources =
+        changed_index.changed_sources_since_stamp_file(stamp_file);
+    assert(changed_sources.size() == 1);
+    assert(std::filesystem::weakly_canonical(changed_sources[0]) ==
+           std::filesystem::weakly_canonical(dependency));
+    const std::vector<std::string> affected =
+        changed_index.affected_modules_for_sources(changed_sources);
+    assert((affected == std::vector<std::string>{"dep", "main"}));
 }
 
 void test_merged_output_rejects_same_named_module_declarations() {

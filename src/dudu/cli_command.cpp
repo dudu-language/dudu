@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -356,8 +357,16 @@ int run_cli(int argc, char** argv) {
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
         const ProjectIndex index = checked_index(options, source, true);
+        const std::filesystem::path stamp_file = *options.output / ".dudu_sources.stamp";
+        const std::vector<std::filesystem::path> changed_sources =
+            index.changed_sources_since_stamp_file(stamp_file);
+        const std::vector<std::string> affected_modules =
+            index.affected_modules_for_sources(changed_sources);
+        print_project_step(project_output, "dirty",
+                           std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "emit", *options.output);
         write_cpp_module_artifacts(*options.output, index.merged_module());
+        index.write_source_stamp_file(stamp_file);
         return 0;
     }
     if (options.emit_test_modules) {
@@ -367,10 +376,18 @@ int run_cli(int argc, char** argv) {
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
         const ProjectIndex index = checked_index(options, source, true);
+        const std::filesystem::path stamp_file = *options.output / ".dudu_test_sources.stamp";
+        const std::vector<std::filesystem::path> changed_sources =
+            index.changed_sources_since_stamp_file(stamp_file);
+        const std::vector<std::string> affected_modules =
+            index.affected_modules_for_sources(changed_sources);
+        print_project_step(project_output, "dirty",
+                           std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
                                                  index.merged_module(), options.test_filter,
                                                  !options.no_capture));
+        index.write_source_stamp_file(stamp_file);
         return 0;
     }
     if (options.emit_cpp) {

@@ -2174,12 +2174,15 @@ push. They are not release packaging work.
    analyzes the selected entry's full module graph in a fresh process.
    ProjectIndex now exposes reverse-dependency dirty propagation, so the
    compiler can ask which modules are affected by one or more changed source
-   files without re-deriving that relationship in command-specific code. Native
-   header raw and scan caches are dependency-stamped before disk or process
-   cache hits are trusted, and scanner-generated source files must not
-   participate in those stamps. Real compiler-speed work still needs persistent
-   module-level invalidation, selective analysis/emission based on the affected
-   module set, and broader structured native-header metadata reuse.
+   files without re-deriving that relationship in command-specific code.
+   `duc emit-modules` and `duc emit-test-modules` persist source stamp files
+   beside generated artifacts, compare the current graph with the last emitted
+   graph, and report the affected module count in timing output. Native header
+   raw and scan caches are dependency-stamped before disk or process cache hits
+   are trusted, and scanner-generated source files must not participate in those
+   stamps. Real compiler-speed work still needs selective analysis/emission
+   based on the affected module set and broader structured native-header
+   metadata reuse.
    `duc emit-modules --timings` and `duc emit-test-modules --timings` now print
    detailed analyze/load/config/native-merge/sema/emit progress, which also
    makes generated-CMake custom command stalls visible when `dudu build

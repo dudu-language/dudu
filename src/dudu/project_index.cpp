@@ -1,11 +1,15 @@
 #include "dudu/project_index.hpp"
 
+#include "dudu/file_io.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
+#include <fstream>
 #include <set>
+#include <sstream>
+#include <stdexcept>
 #include <system_error>
 #include <utility>
 
@@ -31,6 +35,13 @@ file_mtime(const std::filesystem::path& path) {
     const std::filesystem::file_time_type mtime =
         std::filesystem::last_write_time(path, error);
     return error ? std::nullopt : std::optional<std::filesystem::file_time_type>{mtime};
+}
+
+std::string mtime_stamp(std::optional<std::filesystem::file_time_type> mtime) {
+    if (!mtime.has_value()) {
+        return {};
+    }
+    return std::to_string(mtime->time_since_epoch().count());
 }
 
 bool has_dudu_module_imports(const ModuleAst& module) {
@@ -136,6 +147,36 @@ std::vector<const ModuleAst*> indexed_units(const ModuleAst& module) {
     return out;
 }
 
+struct SourceStamp {
+    std::string module_path;
+    std::string mtime;
+    std::string source_key;
+};
+
+std::vector<SourceStamp> parse_source_stamp_file(const std::filesystem::path& path) {
+    std::optional<std::string> text = try_read_text_file(path);
+    if (!text.has_value()) {
+        return {};
+    }
+    std::vector<SourceStamp> out;
+    std::istringstream lines(*text);
+    std::string line;
+    while (std::getline(lines, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        const size_t first = line.find('\t');
+        const size_t second = first == std::string::npos ? std::string::npos : line.find('\t', first + 1);
+        if (first == std::string::npos || second == std::string::npos) {
+            continue;
+        }
+        out.push_back({.module_path = line.substr(0, first),
+                       .mtime = line.substr(first + 1, second - first - 1),
+                       .source_key = line.substr(second + 1)});
+    }
+    return out;
+}
+
 } // namespace
 
 ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
@@ -231,6 +272,47 @@ std::vector<std::string> ProjectIndex::affected_modules_for_sources(
         }
     }
     return out;
+}
+
+std::vector<std::filesystem::path>
+ProjectIndex::changed_sources_since_stamp_file(const std::filesystem::path& path) const {
+    const std::vector<SourceStamp> previous_stamps = parse_source_stamp_file(path);
+    std::map<std::string, SourceStamp> previous_by_module;
+    for (const SourceStamp& stamp : previous_stamps) {
+        previous_by_module[stamp.module_path] = stamp;
+    }
+
+    std::vector<std::filesystem::path> changed;
+    for (const ProjectModuleSummary& summary : modules_) {
+        if (summary.source_path.empty()) {
+            continue;
+        }
+        const auto previous = previous_by_module.find(summary.module_path);
+        if (previous == previous_by_module.end() ||
+            previous->second.source_key != path_key(summary.source_path) ||
+            previous->second.mtime != mtime_stamp(summary.source_mtime)) {
+            changed.push_back(summary.source_path);
+        }
+    }
+    return changed;
+}
+
+void ProjectIndex::write_source_stamp_file(const std::filesystem::path& path) const {
+    if (path.empty()) {
+        return;
+    }
+    std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
+    std::ofstream out(path, std::ios::binary);
+    if (!out) {
+        throw std::runtime_error("could not open source stamp file " + path.string());
+    }
+    for (const ProjectModuleSummary& summary : modules_) {
+        if (summary.source_path.empty()) {
+            continue;
+        }
+        out << summary.module_path << '\t' << mtime_stamp(summary.source_mtime) << '\t'
+            << path_key(summary.source_path) << '\n';
+    }
 }
 
 bool ProjectIndex::source_stamps_current() const {

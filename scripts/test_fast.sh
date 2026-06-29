@@ -193,6 +193,7 @@ emit_timing_output="$("$repo_root/build/duc" emit-modules \
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parse '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] indexed '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] checked '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] dirty '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
 rejected_direct_backend="$repo_root/build/rejected_direct_backend_smoke"
 rm -rf "$rejected_direct_backend"
