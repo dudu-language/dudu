@@ -182,10 +182,10 @@ Editor files live in:
 The VS Code folder is a local extension with `.dd` highlighting and command
 palette actions for formatting, checking, building, and running Dudu files.
 
-The language server currently starts with:
+The language server starts with:
 
 ```sh
-duc lsp
+dudu-lsp
 ```
 
 ## Roadmap

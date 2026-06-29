@@ -11,7 +11,7 @@ must wire those facts through standard LSP features.
 
 ## Current Gap
 
-The current `duc lsp` bootstrap server advertises semantic tokens and already
+The current `dudu-lsp` server advertises semantic tokens and already
 implements many hover, definition, references, completion, and diagnostic
 requests. The local VS Code extension, however, still uses a small hand-written
 JSON-RPC client. That client wires several requests manually, but it does not

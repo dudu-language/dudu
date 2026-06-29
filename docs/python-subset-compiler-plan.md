@@ -870,7 +870,7 @@ Vim/Neovim flow:
 
 Language server:
 
-- `duc lsp` should provide diagnostics and navigation after parser/typechecker
+- `dudu-lsp` should provide diagnostics and navigation after parser/typechecker
   APIs are stable
 - syntax highlighting does not wait for LSP
 

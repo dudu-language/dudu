@@ -276,7 +276,7 @@ def main() -> i32:
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
-        [str(duc), "lsp"],
+        [str(duc.parent / "dudu-lsp")],
         input="".join(messages).encode(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

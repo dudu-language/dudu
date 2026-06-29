@@ -68,9 +68,6 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
         first_arg = 2;
-    } else if (argc > 1 && std::string(argv[1]) == "lsp") {
-        options.lsp = true;
-        first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "run") {
         options.run = true;
         first_arg = 2;
@@ -223,7 +220,7 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     const bool project_format_default = options.project_driver && options.format;
     if (options.input.empty() && !project_format_default && !options.bench && !options.build &&
         !options.check && !options.clean && !options.clean_cache && !options.cmake &&
-        !options.emit_cpp && !options.emit_modules && !options.init_project && !options.lsp &&
+        !options.emit_cpp && !options.emit_modules && !options.init_project &&
         !options.new_project && !options.run && !options.test) {
         fail("missing input file");
     }
@@ -232,7 +229,7 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
 
 CliOptions resolve_project_input(CliOptions options) {
     if (options.bench || options.clean || options.clean_cache || options.init_project ||
-        options.lsp || options.new_project || options.test) {
+        options.new_project || options.test) {
         return options;
     }
     if (options.project_driver && options.format && options.input.empty()) {

@@ -228,8 +228,7 @@ semantic tokens easy to miss. The serious path is to use VS Code's
 tokens, are wired by normal client plumbing while `dudu-lsp` remains the owner of
 compiler intelligence.
 
-Status: the local VS Code extension currently starts the bootstrap `duc lsp`,
-forwards document
+Status: the local VS Code extension currently starts `dudu-lsp`, forwards document
 open/change/save events, debounces rapid change notifications, displays LSP
 diagnostics, uses the LSP formatting provider for `Dudu: Format Current File`
 and format-on-save, and shows a status bar item with LSP process state,

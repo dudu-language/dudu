@@ -1,5 +1,5 @@
 proc = subprocess.run(
-    [f"{repo_root}/build/duc", "lsp"],
+    [f"{repo_root}/build/dudu-lsp"],
     input="".join(messages).encode(),
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,

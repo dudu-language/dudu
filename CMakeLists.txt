@@ -171,15 +171,19 @@ add_library(dudu_frontend
 target_include_directories(dudu_frontend PUBLIC src)
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
 
-add_executable(dudu src/main.cpp)
+add_executable(dudu src/tools/dudu.cpp)
 target_link_libraries(dudu PRIVATE dudu_frontend)
 target_compile_features(dudu PRIVATE cxx_std_20)
 
-add_executable(duc src/main.cpp)
+add_executable(duc src/tools/duc.cpp)
 target_link_libraries(duc PRIVATE dudu_frontend)
 target_compile_features(duc PRIVATE cxx_std_20)
 
-install(TARGETS dudu duc
+add_executable(dudu-lsp src/tools/dudu_lsp.cpp)
+target_link_libraries(dudu-lsp PRIVATE dudu_frontend)
+target_compile_features(dudu-lsp PRIVATE cxx_std_20)
+
+install(TARGETS dudu duc dudu-lsp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -271,6 +275,7 @@ endif()
 if(DUDU_STRICT)
     target_compile_options(dudu PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(duc PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(dudu-lsp PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(dudu_frontend PRIVATE -Wall -Wextra -Wpedantic)
     if(DUDU_BUILD_TESTS)
         target_compile_options(dudu_frontend_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -291,6 +296,7 @@ if(DUDU_STRICT)
     if(DUDU_WARN_AS_ERROR)
         target_compile_options(dudu PRIVATE -Werror)
         target_compile_options(duc PRIVATE -Werror)
+        target_compile_options(dudu-lsp PRIVATE -Werror)
         target_compile_options(dudu_frontend PRIVATE -Werror)
         if(DUDU_BUILD_TESTS)
             target_compile_options(dudu_frontend_tests PRIVATE -Werror)

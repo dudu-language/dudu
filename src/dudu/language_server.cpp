@@ -52,7 +52,7 @@ class LanguageServer {
             try {
                 handle_message(*body);
             } catch (const std::exception& error) {
-                err_ << "dudu lsp: " << error.what() << '\n';
+                err_ << "dudu-lsp: " << error.what() << '\n';
             }
             if (exit_) {
                 return 0;
@@ -220,7 +220,7 @@ class LanguageServer {
             if (id != nullptr) {
                 respond_error(*id, -32603, error.what());
             } else {
-                err_ << "dudu lsp: " << method << ": " << error.what() << '\n';
+                err_ << "dudu-lsp: " << method << ": " << error.what() << '\n';
             }
         }
         if (shutdown_ && method == "exit") {
@@ -246,7 +246,7 @@ class LanguageServer {
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
                "\"workspaceSymbolProvider\":true"
-               "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
+               "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"0.1.0\"}}";
     }
 
     void did_open(const Json* params) {

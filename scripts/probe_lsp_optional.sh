@@ -123,7 +123,7 @@ def run_case(case):
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
-        [str(repo_root / "build" / "duc"), "lsp"],
+        [str(repo_root / "build" / "dudu-lsp")],
         input="".join(messages).encode(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

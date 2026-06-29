@@ -11,8 +11,8 @@ usage() {
     cat <<'USAGE'
 usage: scripts/install-local.sh [--prefix path] [--build-dir path] [--debug] [--generator name]
 
-Builds this checkout and installs dudu/duc, docs, and editor support through
-CMake's install rules. Defaults to prefix ~/.local.
+Builds this checkout and installs dudu/duc/dudu-lsp, docs, and editor support
+through CMake's install rules. Defaults to prefix ~/.local.
 USAGE
 }
 
@@ -69,12 +69,13 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DDUDU_BUILD_TESTS=OFF \
     -DDUDU_STRICT=ON
 
-cmake --build "$build_dir" --target dudu duc --parallel "$jobs"
+cmake --build "$build_dir" --target dudu duc dudu-lsp --parallel "$jobs"
 cmake --install "$build_dir"
 
 cat <<EOF
 installed dudu to $prefix/bin/dudu
 installed duc to $prefix/bin/duc
+installed dudu-lsp to $prefix/bin/dudu-lsp
 
 Add this to PATH if needed:
   export PATH="$prefix/bin:\$PATH"

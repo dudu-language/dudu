@@ -19,8 +19,12 @@ function workspaceDirectory() {
   return folder ? folder.uri.fsPath : process.cwd();
 }
 
-function ducPath() {
-  return vscode.workspace.getConfiguration("dudu").get("ducPath", "duc");
+function duduPath() {
+  return vscode.workspace.getConfiguration("dudu").get("path", "dudu");
+}
+
+function duduLspPath() {
+  return vscode.workspace.getConfiguration("dudu").get("lspPath", "dudu-lsp");
 }
 
 function activeDuduFile() {
@@ -81,7 +85,7 @@ function updateStatus() {
   const nativeState = lsp?.hasNativeHeaderProblem() ? "native headers failing" : "native headers ok";
   const target = targetStatus();
   statusItem.text = `$(symbol-method) Dudu: ${state}`;
-  statusItem.tooltip = `duc: ${ducPath()}\ntarget: ${target}\n${nativeState}`;
+  statusItem.tooltip = `dudu: ${duduPath()}\nlsp: ${duduLspPath()}\ntarget: ${target}\n${nativeState}`;
   statusItem.show();
 }
 
@@ -149,7 +153,7 @@ class DuduLspClient {
     if (this.process) {
       return;
     }
-    this.process = childProcess.spawn(ducPath(), ["lsp"], {
+    this.process = childProcess.spawn(duduLspPath(), [], {
       cwd: workspaceDirectory(),
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -158,11 +162,11 @@ class DuduLspClient {
     this.process.stderr.on("data", (chunk) => {
       const text = chunk.toString().trim();
       if (text) {
-        console.error(`dudu lsp: ${text}`);
+        console.error(`dudu-lsp: ${text}`);
       }
     });
     this.process.on("error", (error) => {
-      vscode.window.showErrorMessage(`Could not start duc lsp: ${error.message}`);
+      vscode.window.showErrorMessage(`Could not start dudu-lsp: ${error.message}`);
       for (const { reject } of this.pending.values()) {
         reject(error);
       }
@@ -175,7 +179,7 @@ class DuduLspClient {
     this.process.on("exit", () => {
       this.process = undefined;
       for (const { reject } of this.pending.values()) {
-        reject(new Error("duc lsp exited"));
+        reject(new Error("dudu-lsp exited"));
       }
       for (const { timer } of this.pending.values()) {
         clearTimeout(timer);
@@ -662,20 +666,20 @@ function activate(context) {
     vscode.commands.registerCommand("dudu.checkFile", () => {
       const file = activeDuduFile();
       if (file) {
-        runCommand(`${shellQuote(ducPath())} check ${shellQuote(file)}`);
+        runCommand(`${shellQuote(duduPath())} check ${shellQuote(file)}`);
       }
     }),
     vscode.commands.registerCommand("dudu.buildProject", () => {
-      runCommand(`${shellQuote(ducPath())} build`);
+      runCommand(`${shellQuote(duduPath())} build`);
     }),
     vscode.commands.registerCommand("dudu.runFile", () => {
       const file = activeDuduFile();
       if (file) {
-        runCommand(`${shellQuote(ducPath())} run ${shellQuote(file)}`);
+        runCommand(`${shellQuote(duduPath())} run ${shellQuote(file)}`);
       }
     }),
     vscode.commands.registerCommand("dudu.testProject", () => {
-      runCommand(`${shellQuote(ducPath())} test`);
+      runCommand(`${shellQuote(duduPath())} test`);
     }),
     vscode.commands.registerCommand("dudu.restartLsp", () => {
       lsp.stop();

@@ -28,7 +28,6 @@ struct CliOptions {
     bool emit_test_modules = false;
     bool format = false;
     bool init_project = false;
-    bool lsp = false;
     bool new_project = false;
     bool no_capture = false;
     bool project_driver = false;

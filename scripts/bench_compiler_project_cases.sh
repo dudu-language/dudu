@@ -200,7 +200,7 @@ def run_cold_warm(proc, case_base, phase_base, request_factory, validator):
     timed_request(proc, f"{case_base}_warm", f"{phase_base}_warm", request_factory(), validator)
 
 proc = subprocess.Popen(
-    [duc, "lsp"],
+    [str(pathlib.Path(duc).parent / "dudu-lsp")],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
@@ -308,4 +308,3 @@ finally:
         proc.wait(timeout=5)
 PY
 }
-

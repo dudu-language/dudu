@@ -231,9 +231,8 @@ The VS Code folder is a local extension with `.dd` highlighting and command
 palette actions for formatting, checking, building, and running Dudu files.
 
 The language server is tracked in
-[`language-server-plan.md`](language-server-plan.md). The clean target binary is
-`dudu-lsp`; until that refactor lands, start the current bootstrap server with:
+[`language-server-plan.md`](language-server-plan.md). Start it with:
 
 ```sh
-duc lsp
+dudu-lsp
 ```

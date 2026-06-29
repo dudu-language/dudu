@@ -7,7 +7,6 @@
 #include "dudu/cpp_emit_modules.hpp"
 #include "dudu/file_io.hpp"
 #include "dudu/format_path.hpp"
-#include "dudu/language_server.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
 #include "dudu/native_headers.hpp"
@@ -336,9 +335,6 @@ int run_cli(int argc, char** argv) {
     const bool project_driver = executable == "dudu";
     const CliOptions options = resolve_project_input(parse_cli_options(argc, argv, project_driver));
     set_project_step_timings(options.timings);
-    if (options.lsp) {
-        return run_language_server(std::cin, std::cout, std::cerr);
-    }
     if (options.init_project) {
         init_project(options.input.empty() ? std::filesystem::path(".") : options.input);
         return 0;
