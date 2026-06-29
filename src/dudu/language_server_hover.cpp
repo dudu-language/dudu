@@ -13,7 +13,6 @@
 #include "dudu/native_headers.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -46,8 +45,7 @@ std::string doc_comment_before(const Document& doc, int one_based_line) {
     return out.str();
 }
 
-std::optional<std::string> imported_symbol_hover_json(const Document& doc,
-                                                      const ProjectIndex& index,
+std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
                                                       const ModuleAst& current,
                                                       const std::string& word) {
     if (word.empty()) {
@@ -72,12 +70,6 @@ std::optional<std::string> imported_symbol_hover_json(const Document& doc,
         } else if (import.kind == ImportKind::From && bound_import_name(import) == word) {
             target = import.imported_name;
         } else {
-            continue;
-        }
-        const std::filesystem::path file =
-            module_path_to_file(doc.path.parent_path(), import.module_path);
-        std::error_code error;
-        if (!std::filesystem::exists(file, error) || error) {
             continue;
         }
         const ModuleAst* imported = index.imported_unit(current, import);
@@ -232,7 +224,7 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         return symbol_hover_json(doc, *exact);
     }
     if (const std::optional<std::string> imported =
-            imported_symbol_hover_json(doc, *index, current, query)) {
+            imported_symbol_hover_json(*index, current, query)) {
         return *imported;
     }
     const ProjectIndex* native_index = nullptr;

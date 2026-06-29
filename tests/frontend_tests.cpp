@@ -1045,6 +1045,35 @@ void test_lsp_project_index_uses_open_imported_document_sources() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_hover_uses_open_imported_document_sources() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_hover_open_dep_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path dependency = dir / "maths.dd";
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = "import maths\n"
+                                          "\n"
+                                          "def main() -> i32:\n"
+                                          "    return maths.inc(1)\n"};
+    const dudu::Document dependency_doc{.uri = dudu::file_uri(dependency),
+                                        .path = dependency,
+                                        .text = "def inc(value: i32) -> i32:\n"
+                                                "    return value + 2\n"};
+    dudu::clear_language_server_module_cache();
+    dudu::set_language_server_open_documents({{main_doc.uri, main_doc},
+                                              {dependency_doc.uri, dependency_doc}});
+
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
+    const std::string hover = dudu::hover_json(main_doc, "maths.inc", &params);
+    assert(hover.find("def inc(value: i32) -> i32") != std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_project_index_cache_records_warm_hits() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_project_index_stats_test";
@@ -2140,6 +2169,7 @@ int main() {
         test_lsp_definition_uses_loaded_module_units();
         test_lsp_project_index_cache_invalidates_imported_file_changes();
         test_lsp_project_index_uses_open_imported_document_sources();
+        test_lsp_hover_uses_open_imported_document_sources();
         test_lsp_project_index_cache_records_warm_hits();
         test_lsp_definition_jumps_to_native_header_type();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
