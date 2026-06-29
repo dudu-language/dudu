@@ -1894,6 +1894,16 @@ push. They are not release packaging work.
    87ms and 70MB RSS. This is a real broad win, not just a one-shape memory
    cleanup; keep watching native-heavy and LSP paths because interner lookup
    behavior is now on more hot paths.
+   `SourceTextAtom` equality between two atoms then switched from resolving
+   both interned strings to comparing intern ids directly. This keeps the
+   external string-like API but avoids mutex-backed table reads for atom-to-atom
+   comparisons. A five-sample Release run on indexing/operators/matches plus
+   arrays/generics/mixed measured operators around 94ms, matches around 61ms,
+   generics around 80ms, and mixed around 88ms; indexing remained noisy around
+   134ms, so this is a small representation cleanup, not the indexing fix. A
+   broader static-atom rewrite of `lower_template_type` was tried separately
+   and not kept because it regressed indexing, operators, and mixed despite
+   helping generics and matches.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

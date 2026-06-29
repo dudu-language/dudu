@@ -227,6 +227,10 @@ std::string::const_iterator SourceTextAtom::end() const {
     return str().end();
 }
 
+uint32_t SourceTextAtom::id() const {
+    return text_id_;
+}
+
 SourceTextAtom& SourceTextAtom::operator=(const char* text) {
     text_id_ = text == nullptr || text[0] == '\0' ? 0 : intern_source_text(text);
     return *this;
@@ -274,7 +278,7 @@ bool operator==(std::string_view left, const SourceTextAtom& right) {
 }
 
 bool operator==(const SourceTextAtom& left, const SourceTextAtom& right) {
-    return left.str() == right.str();
+    return left.id() == right.id();
 }
 
 bool operator==(const SourceTextAtom& left, const char* right) {

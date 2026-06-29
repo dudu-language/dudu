@@ -52,6 +52,7 @@ class SourceTextAtom {
     std::string substr(size_t position, size_t count = std::string::npos) const;
     std::string::const_iterator begin() const;
     std::string::const_iterator end() const;
+    uint32_t id() const;
 
     SourceTextAtom& operator=(const char* text);
     SourceTextAtom& operator=(const std::string& text);
