@@ -1,0 +1,97 @@
+#include "dudu/lsp/language_server_reference_query.hpp"
+
+#include "dudu/lsp/language_server_import_references.hpp"
+#include "dudu/lsp/language_server_member_references.hpp"
+#include "dudu/lsp/language_server_native_lookup.hpp"
+#include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_symbols.hpp"
+
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace dudu {
+namespace {
+
+bool document_has_type_symbol(const std::vector<Symbol>& symbols, const std::string& name) {
+    for (const Symbol& symbol : symbols) {
+        if (symbol.name == name &&
+            (symbol.kind == lsp_symbol_kind::Class || symbol.kind == lsp_symbol_kind::Struct)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+std::string reference_query_at(const Document& doc, const Json* params,
+                               const AstSelection& selection, const ModuleAst* module,
+                               const std::vector<Symbol>& symbols_with_native) {
+    if (const std::optional<std::string> member_query =
+            member_declaration_reference_query_at(doc, params, module)) {
+        return *member_query;
+    }
+    if (const std::optional<std::string> enum_value_query =
+            enum_value_declaration_reference_query_at(doc, params, module)) {
+        return *enum_value_query;
+    }
+    const std::string name = selection.symbol.value_or("");
+    std::optional<std::string> expression_path;
+    std::vector<std::string> paths;
+    if (selection.symbol_path.has_value()) {
+        paths.push_back(*selection.symbol_path);
+    }
+    if (selection.expr_path.has_value()) {
+        if (module != nullptr) {
+            if (const std::optional<std::string> member_query =
+                    member_use_reference_query_at(*module, *selection.expr_path, params)) {
+                return *member_query;
+            }
+        }
+        expression_path = render_expr_path(*selection.expr_path);
+        paths.push_back(*expression_path);
+    }
+    if (module != nullptr) {
+        for (const std::string& path : paths) {
+            if (path.empty() || path == name || path.find('.') == std::string::npos) {
+                continue;
+            }
+            if (native_alias_target_class_definition(*module, path).has_value()) {
+                return path;
+            }
+            if (module_import_target_key(doc, path).has_value()) {
+                return path;
+            }
+            for (const ClassDecl& klass : module->native_classes) {
+                if (klass.name == path) {
+                    return path;
+                }
+            }
+            for (const NativeFunctionDecl& fn : module->native_functions) {
+                if (fn.name == path) {
+                    return path;
+                }
+            }
+            for (const NativeValueDecl& value : module->native_values) {
+                if (value.name == path) {
+                    return path;
+                }
+            }
+            for (const NativeMacroDecl& macro : module->native_macros) {
+                if (macro.name == path) {
+                    return path;
+                }
+            }
+            if (document_has_type_symbol(symbols_with_native, path)) {
+                return path;
+            }
+        }
+    }
+    if (expression_path.has_value() && expression_path->find('.') != std::string::npos) {
+        return *expression_path;
+    }
+    return name;
+}
+
+} // namespace dudu

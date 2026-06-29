@@ -50,9 +50,9 @@ same spelling are not reported together.
 Find-references for Dudu member declarations now uses a class-qualified
 `Class.member` query internally and filters member expressions by receiver
 type, so same-named fields or methods on unrelated classes are not reported
-together. Member use sites such as `player.hp` now resolve through the
-receiver's structured type to that same `Player.hp` identity, including when
-the class was imported from another Dudu module.
+together. Member use sites such as `player.hp` and `player.move(...)` now
+resolve through the receiver's structured type to the same qualified member
+identity, including when the class was imported from another Dudu module.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,

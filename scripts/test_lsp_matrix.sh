@@ -204,6 +204,10 @@ class Player:
 class Enemy:
     hp: i32
 
+    def move(self, dx: i32, dy: i32) -> i32:
+        self.hp -= dx + dy
+        return self.hp
+
     def hurt(self) -> i32:
         return self.hp
 """
@@ -321,6 +325,7 @@ def main() -> i32:
         request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
         request(39, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "Play", add=1)}),
         request(42, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
+        request(43, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -399,6 +404,17 @@ def main() -> i32:
         raise AssertionError(f"missing Player.self hp through use-site refs: {member_use_refs!r}")
     if has_start(member_use_refs, entities.as_uri(), enemy_self_hp["line"], enemy_self_hp["character"]):
         raise AssertionError(f"Enemy.self hp leaked into use-site refs: {member_use_refs!r}")
+    method_use_refs = response(messages, 43)
+    assert_nonempty(method_use_refs, "method use identity references")
+    main_player_move = position(main_source, "player.move", add=len("player."))
+    player_move_decl = position(entities_source, "move(self")
+    enemy_move_decl = position(entities_source, "move(self", occurrence=1)
+    if not has_start(method_use_refs, main.as_uri(), main_player_move["line"], main_player_move["character"]):
+        raise AssertionError(f"missing main player.move use reference: {method_use_refs!r}")
+    if not has_start(method_use_refs, entities.as_uri(), player_move_decl["line"], player_move_decl["character"]):
+        raise AssertionError(f"missing Player.move declaration through use-site refs: {method_use_refs!r}")
+    if has_start(method_use_refs, entities.as_uri(), enemy_move_decl["line"], enemy_move_decl["character"]):
+        raise AssertionError(f"Enemy.move leaked into Player.move refs: {method_use_refs!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
