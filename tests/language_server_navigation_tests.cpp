@@ -145,6 +145,32 @@ void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
     assert(definition.find("\"line\":10") != std::string::npos);
 }
 
+void test_lsp_definition_jumps_to_native_member_field() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_field_definition_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_widget.hpp", "class NativeWidget {\n"
+                                          "  public:\n"
+                                          "    int scaled(int factor) const {\n"
+                                          "        return value * factor;\n"
+                                          "    }\n"
+                                          "    int value = 0;\n"
+                                          "};\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"./native_widget.hpp\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    widget: NativeWidget\n"
+                                     "    return widget.value\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":18}}").parse();
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find(dudu::file_uri(dir / "native_widget.hpp")) != std::string::npos);
+    assert(definition.find("\"line\":5") != std::string::npos);
+}
+
 void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_method_hover_test";
@@ -838,6 +864,7 @@ int main() {
         test_lsp_definition_jumps_to_loop_binding();
         test_lsp_definition_jumps_to_destructured_binding();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
+        test_lsp_definition_jumps_to_native_member_field();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_infers_local_from_native_call();
         test_lsp_references_keep_unbound_member_query_dotted();

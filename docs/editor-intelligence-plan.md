@@ -98,6 +98,9 @@ Native find-references now consults `ProjectIndex`'s per-module native identity
 table instead of rebuilding LSP symbol lists for every candidate document. Open
 single-file editor overlays are indexed with their entry path, so unsaved or
 not-yet-written files can still take part in native identity filtering.
+Native C++ member field go-to-definition is covered through direct LSP tests and
+the JSON-RPC matrix, so receiver-typed uses like `widget.value` jump to the
+scanned header field declaration when Clang provides a source location.
 
 ## Target Behavior
 
