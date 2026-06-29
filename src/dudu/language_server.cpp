@@ -312,10 +312,10 @@ class LanguageServer {
             return "{\"data\":[]}";
         }
         try {
-            const ModuleAst module = module_for_document(found->second, false);
-            const ModuleAst native_symbols = module_for_document(found->second, true);
-            return semantic_tokens_json(visible_module_unit(module, found->second.path),
-                                        visible_module_unit(native_symbols, found->second.path));
+            const ProjectIndex& index = project_index_for_document(found->second, false);
+            const ProjectIndex& native_index = project_index_for_document(found->second, true);
+            return semantic_tokens_json(index.visible_unit_for_path(found->second.path),
+                                        native_index.visible_unit_for_path(found->second.path));
         } catch (const std::exception&) {
             return "{\"data\":[]}";
         }
