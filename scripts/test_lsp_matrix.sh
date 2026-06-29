@@ -195,6 +195,7 @@ MAX_HP: i32 = 42
 
 enum Mode:
     '''Mode enum docs.'''
+    # Mode play docs.
     Play
     Pause
 
@@ -356,6 +357,7 @@ def main() -> i32:
         request(44, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "move(self")}),
         request(45, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
         request(46, "textDocument/semanticTokens/full", {"textDocument": text_document(main)}),
+        request(47, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Mode.Play", add=len("Mode."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -457,6 +459,10 @@ def main() -> i32:
     member_hover_value = member_hover["contents"]["value"]
     if "hp: i32" not in member_hover_value or "Current hit points docs." not in member_hover_value:
         raise AssertionError(f"missing member hover field docs: {member_hover!r}")
+    enum_value_hover = response(messages, 47)
+    enum_value_hover_value = enum_value_hover["contents"]["value"]
+    if "enum variant Mode.Play" not in enum_value_hover_value or "Mode play docs." not in enum_value_hover_value:
+        raise AssertionError(f"missing imported enum value hover docs: {enum_value_hover!r}")
     initialize = response(messages, 1)
     legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"]
     decoded_tokens = decode_semantic_tokens(main_source, response(messages, 46)["data"], legend)

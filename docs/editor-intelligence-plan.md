@@ -79,7 +79,10 @@ Dudu functions from the visible symbol index. Document symbols now use LSP
 when available. The LSP matrix fixture now exercises doc propagation for
 classes, fields, field member hover, methods, imported completions, signature
 help, and document symbols through actual JSON-RPC requests, including
-docstring-backed module, class, enum, method, and function symbols.
+docstring-backed module, class, enum, enum-value, method, and function symbols.
+Hover for selective imports now preserves suffix identity, so `Mode.Play`
+resolves to the imported enum variant docs instead of falling back to spelling
+or only handling the imported `Mode` name.
 Native hover now surfaces the scanner's canonical native identity key when the
 symbol has one, so hover shows both the Dudu-shaped signature/type and the
 identity used by native references.

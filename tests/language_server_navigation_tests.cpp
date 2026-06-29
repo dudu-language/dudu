@@ -292,6 +292,33 @@ void test_lsp_hover_uses_imported_ast_doc_comments() {
     assert(hover.find("Imported increment helper.") != std::string::npos);
 }
 
+void test_lsp_hover_uses_imported_enum_value_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_enum_hover_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "entities.dd", "enum Mode:\n"
+                                    "    # Player mode docs.\n"
+                                    "    Play\n"
+                                    "\n"
+                                    "enum OtherMode:\n"
+                                    "    # Other mode docs.\n"
+                                    "    Play\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from entities import Mode\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    mode: Mode = Mode.Play\n"
+                                     "    return 0\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":22}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("enum variant Mode.Play") != std::string::npos);
+    assert(hover.find("Player mode docs.") != std::string::npos);
+    assert(hover.find("Other mode docs.") == std::string::npos);
+}
+
 void test_lsp_hover_uses_imported_member_identity_for_field_docs() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_member_hover_test";
@@ -817,6 +844,7 @@ int main() {
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_hover_uses_ast_doc_comments();
         test_lsp_hover_uses_imported_ast_doc_comments();
+        test_lsp_hover_uses_imported_enum_value_identity();
         test_lsp_hover_uses_imported_member_identity_for_field_docs();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();

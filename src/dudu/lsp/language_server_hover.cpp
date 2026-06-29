@@ -80,8 +80,15 @@ std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
             if (target.empty()) {
                 continue;
             }
-        } else if (import.kind == ImportKind::From && bound_import_name(import) == word) {
-            target = import.imported_name;
+        } else if (import.kind == ImportKind::From) {
+            const std::string bound = bound_import_name(import);
+            if (bound == word) {
+                target = import.imported_name;
+            } else if (word.rfind(bound + ".", 0) == 0) {
+                target = import.imported_name + word.substr(bound.size());
+            } else {
+                continue;
+            }
         } else {
             continue;
         }

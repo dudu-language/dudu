@@ -2358,7 +2358,9 @@ push. They are not release packaging work.
    short AST doc summary in their detail text. The JSON-RPC LSP matrix covers
    doc propagation for classes, fields, typed field hover, methods, imported
    completions, signature help, import hover, and document symbols, including
-   docstring-backed module, class, enum, method, and function docs.
+   docstring-backed module, class, enum, enum-value, method, and function docs.
+   Hover for selective imports preserves suffix identity, so `Mode.Play`
+   resolves through the imported `Mode` symbol to enum variant docs.
    Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported

@@ -374,7 +374,9 @@ now use proper LSP `DocumentSymbol` objects and put a short AST doc summary
 into `detail` when a symbol has docs. The JSON-RPC LSP matrix covers class,
 field, typed field hover, method, imported completion, signature help, import
 hover, and document-symbol doc propagation, including docstring-backed module,
-class, enum, method, and function docs.
+class, enum, enum-value, method, and function docs. Hover for selective imports
+preserves suffix identity, so `Mode.Play` resolves through the imported `Mode`
+symbol to the enum variant docs.
 
 Semantic tokens are also ProjectIndex-aware for Dudu imports. Module aliases
 such as `math`, selective imported classes such as `Player`, imported functions
