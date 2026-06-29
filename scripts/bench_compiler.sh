@@ -7,7 +7,7 @@ csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
-shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,mixed"
+shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,mixed"
 
 usage() {
     cat <<'EOF'
@@ -21,11 +21,13 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,stdlib,mixed
+  functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,stdlib,mixed
 
 The stdlib shape is intentionally not in the default set because real C++
 standard-library header scanning is much slower than pure Dudu frontend
-shapes. Select it explicitly when measuring native interop throughput.
+shapes. The native shape uses small local fixture headers and stays in the
+default set to catch native interop frontend regressions without turning every
+run into a libstdc++ scan benchmark.
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
@@ -235,7 +237,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules|calls|control|arrays|indexing|generics|matches|operators|stdlib|mixed)
+            functions|classes|expressions|modules|calls|control|arrays|indexing|generics|matches|operators|native|stdlib|mixed)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -951,6 +953,60 @@ EOF
     printf '%s\n' "$entry"
 }
 
+prepare_scaled_native_case() {
+    local requested_lines="$1"
+    local project="$scale_root/native_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project/native_headers"
+    cp "$repo_root/tests/fixtures/native_headers/simple_cpp.hpp" "$project/native_headers/"
+    cp "$repo_root/tests/fixtures/native_headers/simple_c.h" "$project/native_headers/"
+
+    local funcs=$((requested_lines / 20))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+
+    cat >"$entry" <<'EOF'
+import cpp "./native_headers/simple_cpp.hpp"
+import c "./native_headers/simple_c.h" as c_native
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def native_func_$i(seed: i32) -> i32:
+    widget: Widget = Widget(seed)
+    alias_widget: DuduWidgetAlias = DuduWidgetAlias(seed + 1)
+    derived: dudu_native.DerivedWidget = dudu_native.DerivedWidget(seed + 2)
+    nested: dudu_native.Outer.Inner = dudu_native.Outer.Inner(seed + 3)
+    total = dudu_native.add(widget.scaled(2), dudu_native.overloaded(seed))
+    total += i32(dudu_native.overloaded(f32(seed)))
+    total += dudu_native.overloaded_pair(seed, f32(2.0))
+    total += dudu_native.overloaded_pair(f32(3.0), seed)
+    total += dudu_native.use_base_widget(&derived)
+    total += dudu_native.read_const_ref(widget)
+    total += use_widget(&alias_widget)
+    total += c_native.dudu_native_add(seed, c_native.DUDU_NATIVE_SCALE(2))
+    total += nested.doubled()
+    return total + $i
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += native_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 prepare_scaled_stdlib_case() {
     local requested_lines="$1"
     local project="$scale_root/stdlib_$requested_lines"
@@ -1187,6 +1243,12 @@ for requested_lines in "${requested_line_scales[@]}"; do
     if shape_enabled "operators"; then
         scaled_entry="$(prepare_scaled_operators_case "$requested_lines")"
         run_case "duc_check_operators_${requested_lines}" "frontend_operators" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "native"; then
+        scaled_entry="$(prepare_scaled_native_case "$requested_lines")"
+        scaled_project="$(dirname "$scaled_entry")"
+        run_case "duc_check_native_${requested_lines}" "frontend_native" "$scaled_project" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "stdlib"; then

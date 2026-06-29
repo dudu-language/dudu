@@ -1434,19 +1434,26 @@ push. They are not release packaging work.
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with
-   `--shapes functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,stdlib,mixed`
+   `--shapes functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,stdlib,mixed`
    so profiling can distinguish slow declaration lookup, class/member handling,
    expression parsing/sema, import/module behavior, nested calls, control-flow
    blocks, array basics, matrix/tensor-like indexing and slices, generic
    instantiation, match lowering for enums/sum types, operator overload
-   resolution, standard-library native interop, and mixed project-shaped code
-   that combines imports, classes, methods, generics, arrays, loops, calls, and
-   arithmetic in one generated corpus. The `stdlib` shape is intentionally explicit rather than default
+   resolution, local native-header interop, standard-library native interop,
+   and mixed project-shaped code that combines imports, classes, methods,
+   generics, arrays, loops, calls, and arithmetic in one generated corpus. The
+   `native` shape uses small copied fixture headers and stays in the default
+   corpus; the `stdlib` shape is intentionally explicit rather than default
    because it pulls real C++ standard headers through native scanning and is
-   much slower than pure Dudu frontend shapes; a local 1k Release run measured
+   much slower than the normal frontend shapes; a local 1k Release run measured
    about 2.6s and 101MB RSS cold, then about 114ms and 47MB RSS on cached
    samples. Use it when validating native interop throughput instead of every
-   routine compiler-speed loop. Cached native scan loading then stopped reading
+   routine compiler-speed loop. The local native generated shape was added
+   later to keep overloads, constructors, const refs, pointer arguments, nested
+   native classes, C macros, and C functions in routine compiler-speed
+   coverage; a three-sample 50k Release run measured about 246ms and 70MB RSS
+   for roughly 40k generated Dudu lines after header cache warmup.
+   Cached native scan loading then stopped reading
    raw `.ast` and `.macros` dumps before trying the compact `.scan` cache.
    Direct timings moved the seven-header stdlib cache section from about 66ms
    to about 45ms, and a three-sample harness run moved cached samples to about
