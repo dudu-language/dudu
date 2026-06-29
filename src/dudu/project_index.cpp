@@ -5,6 +5,7 @@
 #include "dudu/parser.hpp"
 
 #include <algorithm>
+#include <set>
 #include <system_error>
 #include <utility>
 
@@ -193,6 +194,43 @@ const ProjectModuleSummary*
 ProjectIndex::summary_for_module(std::string_view module_path) const {
     const auto found = module_path_to_index_.find(std::string(module_path));
     return found == module_path_to_index_.end() ? nullptr : &modules_[found->second];
+}
+
+std::vector<std::string> ProjectIndex::affected_modules_for_sources(
+    const std::vector<std::filesystem::path>& paths) const {
+    std::set<std::string> affected;
+    std::vector<std::string> stack;
+    for (const std::filesystem::path& path : paths) {
+        const ProjectModuleSummary* summary = summary_for_path(path);
+        if (summary == nullptr) {
+            continue;
+        }
+        if (affected.insert(summary->module_path).second) {
+            stack.push_back(summary->module_path);
+        }
+    }
+    while (!stack.empty()) {
+        const std::string module_path = std::move(stack.back());
+        stack.pop_back();
+        const ProjectModuleSummary* summary = summary_for_module(module_path);
+        if (summary == nullptr) {
+            continue;
+        }
+        for (const std::string& dependent : summary->reverse_dependencies) {
+            if (affected.insert(dependent).second) {
+                stack.push_back(dependent);
+            }
+        }
+    }
+
+    std::vector<std::string> out;
+    out.reserve(affected.size());
+    for (const ProjectModuleSummary& summary : modules_) {
+        if (affected.contains(summary.module_path)) {
+            out.push_back(summary.module_path);
+        }
+    }
+    return out;
 }
 
 bool ProjectIndex::source_stamps_current() const {

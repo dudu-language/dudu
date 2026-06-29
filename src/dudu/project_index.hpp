@@ -46,6 +46,8 @@ class ProjectIndex {
     std::vector<std::filesystem::path> source_files() const;
     const ProjectModuleSummary* summary_for_path(const std::filesystem::path& path) const;
     const ProjectModuleSummary* summary_for_module(std::string_view module_path) const;
+    std::vector<std::string>
+    affected_modules_for_sources(const std::vector<std::filesystem::path>& paths) const;
     bool source_stamps_current() const;
     const ModuleAst* unit_for_path(const std::filesystem::path& path) const;
     const ModuleAst* unit_for_module(std::string_view module_path) const;

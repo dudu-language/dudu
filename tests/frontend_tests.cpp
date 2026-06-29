@@ -255,6 +255,16 @@ void test_project_index_records_module_graph() {
     assert(index.unit_for_path(root / "camera.dd") == index.unit_for_module("camera"));
     assert(&index.visible_unit_for_path(root / "main.dd") == index.unit_for_module("main"));
     assert(index.source_stamps_current());
+
+    const std::vector<std::string> camera_affected =
+        index.affected_modules_for_sources({root / "camera.dd"});
+    assert((camera_affected == std::vector<std::string>{"camera", "renderer", "main"}));
+    const std::vector<std::string> renderer_affected =
+        index.affected_modules_for_sources({root / "renderer.dd"});
+    assert((renderer_affected == std::vector<std::string>{"renderer", "main"}));
+    const std::vector<std::string> main_affected =
+        index.affected_modules_for_sources({root / "main.dd"});
+    assert((main_affected == std::vector<std::string>{"main"}));
 }
 
 void test_project_index_source_stamps_detect_changed_modules() {

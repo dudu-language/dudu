@@ -2171,12 +2171,15 @@ push. They are not release packaging work.
    and `dudu run` exercise generated/user-owned CMake for small projects too.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
-   analyzes the selected entry's full module graph in a fresh process. Native
+   analyzes the selected entry's full module graph in a fresh process.
+   ProjectIndex now exposes reverse-dependency dirty propagation, so the
+   compiler can ask which modules are affected by one or more changed source
+   files without re-deriving that relationship in command-specific code. Native
    header raw and scan caches are dependency-stamped before disk or process
    cache hits are trusted, and scanner-generated source files must not
-   participate in those stamps. Real compiler-speed work still needs
-   module-level invalidation and broader structured native-header metadata
-   reuse.
+   participate in those stamps. Real compiler-speed work still needs persistent
+   module-level invalidation, selective analysis/emission based on the affected
+   module set, and broader structured native-header metadata reuse.
    `duc emit-modules --timings` and `duc emit-test-modules --timings` now print
    detailed analyze/load/config/native-merge/sema/emit progress, which also
    makes generated-CMake custom command stalls visible when `dudu build
