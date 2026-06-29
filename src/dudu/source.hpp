@@ -37,10 +37,27 @@ struct SourceLocation {
     int column = 1;
 };
 
+struct SourcePosition {
+    int line = 1;
+    int column = 1;
+
+    SourcePosition() = default;
+    SourcePosition(int line_in, int column_in) : line(line_in), column(column_in) {}
+    SourcePosition(SourceLocation location) : line(location.line), column(location.column) {}
+
+    SourcePosition& operator=(SourceLocation location) {
+        line = location.line;
+        column = location.column;
+        return *this;
+    }
+};
+
 struct SourceRange {
     SourceLocation start;
-    SourceLocation end;
+    SourcePosition end;
 };
+
+SourceLocation range_end_location(const SourceRange& range);
 
 class CompileError : public std::runtime_error {
   public:

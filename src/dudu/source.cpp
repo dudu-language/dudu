@@ -113,6 +113,13 @@ bool operator!=(const SourceFileName& left, std::string_view right) {
     return !(left == right);
 }
 
+SourceLocation range_end_location(const SourceRange& range) {
+    SourceLocation location = range.start;
+    location.line = range.end.line;
+    location.column = range.end.column;
+    return location;
+}
+
 std::string format_location(const SourceLocation& location) {
     std::ostringstream out;
     if (!location.file.empty()) {

@@ -1861,6 +1861,21 @@ push. They are not release packaging work.
    mixed about 107ms and 97MB RSS. Treat this as a memory/layout cleanup with
    neutral-to-noisy timing, not a speed breakthrough; keep it only while full
    validation and future diverse sweeps stay clean.
+   `SourceRange` then stopped storing a second full `SourceLocation` for its
+   end point. The end point is now a fileless line/column `SourcePosition`,
+   and code that genuinely needs a full end location must reconstruct it from
+   the range start. This shrinks `SourceRange` from 24 bytes to 20 bytes,
+   `TypeRef` from 136 bytes to 128 bytes, `Expr` from 176 bytes to 168 bytes,
+   and `Stmt` from 600 bytes to 576 bytes; `Token` remains 40 bytes due to
+   alignment. A five-sample focused Release run measured expression-heavy 50k
+   at about 212ms and 225MB RSS, calls at about 58ms and 47MB RSS, control at
+   about 72ms and 57MB RSS, and mixed at about 100ms and 93MB RSS. A
+   three-sample broad Release run measured expressions about 209ms and 225MB
+   RSS, calls about 57ms and 47MB RSS, functions about 57ms and 44MB RSS,
+   classes about 42ms and 32MB RSS, modules about 74ms and 95MB RSS, arrays
+   about 79ms and 49MB RSS, generics about 85ms and 40MB RSS, and mixed about
+   101ms and 94MB RSS. Keep it as another representation cleanup: it reduces
+   memory broadly, but the throughput effect is still mostly noise.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

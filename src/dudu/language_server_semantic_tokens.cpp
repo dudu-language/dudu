@@ -91,7 +91,7 @@ SourceLocation shifted_location(SourceLocation loc, int columns) {
 SourceLocation member_name_location(const Expr& expr) {
     if (expr.kind == ExprKind::Member && !expr.children.empty() &&
         expr.children.front().range.end.column > 0) {
-        return shifted_location(expr.children.front().range.end, 1);
+        return shifted_location(range_end_location(expr.children.front().range), 1);
     }
     return expr.location;
 }

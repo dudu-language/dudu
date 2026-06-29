@@ -66,7 +66,7 @@ std::string file_uri(const std::filesystem::path& path) {
 SourceLocation expr_name_location(const Expr& expr) {
     if (expr.kind == ExprKind::Member && !expr.children.empty() &&
         expr.children.front().range.end.column > 0) {
-        SourceLocation location = expr.children.front().range.end;
+        SourceLocation location = range_end_location(expr.children.front().range);
         location.column += 1;
         return location;
     }

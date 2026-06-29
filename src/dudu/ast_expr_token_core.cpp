@@ -147,7 +147,7 @@ SourceRange ExprTokenParser::range_between(size_t begin, size_t end) const {
     SourceRange range;
     if (begin >= tokens_.size() || begin >= end) {
         range.start = {};
-        range.end = {};
+        range.end = SourcePosition{};
         return range;
     }
     range.start = tokens_[begin].location;
