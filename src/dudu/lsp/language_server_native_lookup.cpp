@@ -3,16 +3,9 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_header_identity.hpp"
 
-#include <map>
 #include <utility>
 
 namespace dudu {
-namespace {
-
-struct NativeClassDefinitionIndex {
-    std::map<std::string, NativeClassDefinition> by_name;
-    std::map<std::string, NativeClassDefinition> by_identity;
-};
 
 NativeClassDefinitionIndex native_class_definition_index(const ModuleAst& module) {
     NativeClassDefinitionIndex out;
@@ -29,15 +22,13 @@ NativeClassDefinitionIndex native_class_definition_index(const ModuleAst& module
     return out;
 }
 
-} // namespace
-
 std::optional<NativeClassDefinition>
-native_alias_target_class_definition(const ModuleAst& module, const NativeTypeDecl& alias) {
+native_alias_target_class_definition(const NativeClassDefinitionIndex& class_index,
+                                     const NativeTypeDecl& alias) {
     if (!has_type_ref(alias.type_ref)) {
         return std::nullopt;
     }
 
-    const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
     const std::string identity = native_symbol_identity_key(alias.identity);
     if (!identity.empty()) {
         if (const auto found = class_index.by_identity.find(identity);
@@ -58,10 +49,16 @@ native_alias_target_class_definition(const ModuleAst& module, const NativeTypeDe
 }
 
 std::optional<NativeClassDefinition>
+native_alias_target_class_definition(const ModuleAst& module, const NativeTypeDecl& alias) {
+    return native_alias_target_class_definition(native_class_definition_index(module), alias);
+}
+
+std::optional<NativeClassDefinition>
 native_alias_target_class_definition(const ModuleAst& module, const std::string& alias_name) {
+    const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
     for (const NativeTypeDecl& type : module.native_types) {
         if (type.name == alias_name) {
-            return native_alias_target_class_definition(module, type);
+            return native_alias_target_class_definition(class_index, type);
         }
     }
     return std::nullopt;

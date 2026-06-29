@@ -102,9 +102,10 @@ void add_native_name(std::set<std::string>& values, const std::string& name) {
 
 NativeSemanticIndex native_semantic_index(const ModuleAst& module) {
     NativeSemanticIndex out;
+    const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
     for (const NativeTypeDecl& type : module.native_types) {
         add_native_name(out.types, type.name);
-        if (native_alias_target_class_definition(module, type).has_value()) {
+        if (native_alias_target_class_definition(class_index, type).has_value()) {
             add_native_name(out.class_aliases, type.name);
         }
     }

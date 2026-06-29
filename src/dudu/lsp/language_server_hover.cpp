@@ -92,9 +92,10 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
     if (word.empty()) {
         return std::nullopt;
     }
+    const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
     const auto build_hover = [&](const NativeTypeDecl& type) -> std::optional<std::string> {
         const std::optional<NativeClassDefinition> target =
-            native_alias_target_class_definition(module, type);
+            native_alias_target_class_definition(class_index, type);
         if (!target) {
             return std::nullopt;
         }

@@ -21,7 +21,6 @@ tooling.
 
 Some intelligence also remains incomplete server-side:
 
-- go-to-definition should work for local variables and parameters
 - go-to-definition should work for functions, constants, fields, methods, enum
   values, sum-type variants, module aliases, selective imports, and imported
   Dudu library symbols
@@ -34,6 +33,14 @@ Some intelligence also remains incomplete server-side:
 - semantic highlighting should distinguish declarations, locals, parameters,
   fields, methods, types, functions, constants, macros, native symbols, and
   unresolved symbols
+
+Recent status: go-to-definition for parameters, inferred assignment locals,
+loop bindings, and destructured bindings is now covered in direct LSP tests and
+JSON-RPC smoke fixtures. Dogfood latency probing exists in
+`scripts/probe_lsp_dogfood_latency.py`; after sharing the native class-alias
+index across hover/symbol/semantic-token paths, warm editor requests in
+`raymarch-dd` and `dudu-webserver` are in the single-digit/tens-of-ms range on
+the current machine, while cold indexing remains the larger cost.
 
 ## Target Behavior
 

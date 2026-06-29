@@ -357,6 +357,39 @@ void test_lsp_project_index_cache_records_warm_hits() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_project_index_cache_records_native_warm_hits() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_project_index_stats_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native.h", "typedef struct NativeThing { int value; } NativeThing;\n"
+                                 "int native_add(int left, int right);\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import c \"native.h\" as native\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    thing: native.NativeThing\n"
+                                     "    return native.native_add(thing.value, 1)\n"};
+    dudu::clear_language_server_module_cache();
+    (void)dudu::project_index_for_document(doc, true);
+    dudu::ProjectIndexCacheStats stats = dudu::language_server_project_index_cache_stats();
+    assert(stats.entries == 1);
+    assert(stats.misses == 1);
+    assert(stats.loads == 1);
+
+    (void)dudu::project_index_for_document(doc, true);
+    stats = dudu::language_server_project_index_cache_stats();
+    assert(stats.entries == 1);
+    assert(stats.hits == 1);
+    assert(stats.misses == 1);
+    assert(stats.loads == 1);
+    dudu::clear_language_server_module_cache();
+}
+
 } // namespace
 
 int main() {
@@ -373,6 +406,7 @@ int main() {
         test_lsp_project_index_uses_open_imported_document_sources();
         test_lsp_hover_uses_open_imported_document_sources();
         test_lsp_project_index_cache_records_warm_hits();
+        test_lsp_project_index_cache_records_native_warm_hits();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

@@ -532,6 +532,9 @@ Go-to-definition for imported C/C++ headers respects manifest-relative
 `[include] paths`, matching the project-driver path contract.
 Native overloaded function signature help is covered with a local fixture
 header.
+Go-to-definition for parameters, inferred assignment locals, loop bindings,
+and destructured bindings is covered in both direct frontend tests and
+JSON-RPC smoke fixtures.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and
@@ -545,6 +548,13 @@ open-document text and native-header mode, invalidating them on document
 changes and saves. Repeated hover, definition, references, completion, and
 diagnostic requests for the same buffer should reuse the warm module view
 instead of reparsing and remerging native headers.
+Native class-alias target lookup now builds one reusable native class index per
+request path instead of rebuilding it for every native type. This removed the
+header-heavy quadratic behavior that made `dudu-webserver` warm hover,
+references, completion, and semantic tokens take roughly one second each.
+`scripts/probe_lsp_dogfood_latency.py` measures cold document-symbol indexing
+and warm definition, hover, references, completion, and semantic-token latency
+for `raymarch-dd` and `dudu-webserver`.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
 completion, signature help, definition, and hover. They are part of

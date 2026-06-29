@@ -67,14 +67,15 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
     return out.str();
 }
 
-std::string native_type_detail(const ModuleAst& module, const NativeTypeDecl& type) {
+std::string native_type_detail(const NativeClassDefinitionIndex& class_index,
+                               const NativeTypeDecl& type) {
     const bool alias_type = has_type_ref(type.type_ref) || !type.native_spelling.empty();
     if (!alias_type) {
         return "native type";
     }
     std::string detail = "native type = " + native_type_alias_type_text(type);
     if (const std::optional<NativeClassDefinition> target =
-            native_alias_target_class_definition(module, type)) {
+            native_alias_target_class_definition(class_index, type)) {
         detail += " resolves to native class " + target->name;
     }
     return detail;
@@ -165,9 +166,10 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
     if (!include_native) {
         return out;
     }
+    const NativeClassDefinitionIndex native_class_index = native_class_definition_index(module);
     for (const NativeTypeDecl& type : module.native_types) {
         out.push_back({.name = type.name,
-                       .detail = native_type_detail(module, type),
+                       .detail = native_type_detail(native_class_index, type),
                        .location = type.location,
                        .kind = lsp_symbol_kind::Struct,
                        .native_identity_key = native_identity_key(type.identity)});
