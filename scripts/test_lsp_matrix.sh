@@ -169,6 +169,10 @@ def has_semantic(decoded, text, token_type, modifiers):
     )
 
 
+def modifier_mask(modifiers, name):
+    return 1 << modifiers.index(name)
+
+
 tmp = pathlib.Path(tempfile.mkdtemp(prefix="dudu_lsp_matrix_"))
 try:
     (tmp / "math_utils.dd").write_text(
@@ -301,6 +305,22 @@ def main() -> i32:
     return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2))
 """
     (tmp / "native_user.dd").write_text(native_source)
+    unresolved_source = """class Player:
+    hp: i32
+
+    def move(self) -> i32:
+        return self.hp
+
+def main() -> i32:
+    local_value = 1
+    local_value
+    player: Player = Player(3)
+    player.move()
+    missing_obj.field
+    missing_call()
+    return missing_value
+"""
+    (tmp / "unresolved_tokens.dd").write_text(unresolved_source)
     missing_source = """import definitely_missing
 
 def main() -> i32:
@@ -313,6 +333,7 @@ def main() -> i32:
     entities_source = entities.read_text()
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
+    unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
     messages = [
         lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
@@ -321,6 +342,7 @@ def main() -> i32:
         open_message(entities),
         open_message(ops),
         open_message(native),
+        open_message(unresolved),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
         request(10, "textDocument/documentSymbol", {"textDocument": text_document(main)}),
@@ -365,6 +387,7 @@ def main() -> i32:
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
+        request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
@@ -464,7 +487,11 @@ def main() -> i32:
     if "enum variant Mode.Play" not in enum_value_hover_value or "Mode play docs." not in enum_value_hover_value:
         raise AssertionError(f"missing imported enum value hover docs: {enum_value_hover!r}")
     initialize = response(messages, 1)
-    legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"]
+    semantic_legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]
+    legend = semantic_legend["tokenTypes"]
+    token_modifiers = semantic_legend["tokenModifiers"]
+    readonly = modifier_mask(token_modifiers, "readonly")
+    unresolved_modifier = modifier_mask(token_modifiers, "unresolved")
     decoded_tokens = decode_semantic_tokens(main_source, response(messages, 46)["data"], legend)
     if not has_semantic(decoded_tokens, "math", "namespace", 0):
         raise AssertionError(f"missing imported module namespace semantic token: {decoded_tokens!r}")
@@ -472,8 +499,21 @@ def main() -> i32:
         raise AssertionError(f"missing imported class semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "mix", "function", 0):
         raise AssertionError(f"missing imported function semantic token: {decoded_tokens!r}")
-    if not has_semantic(decoded_tokens, "MAGIC", "variable", 4):
+    if not has_semantic(decoded_tokens, "MAGIC", "variable", readonly):
         raise AssertionError(f"missing imported const semantic token: {decoded_tokens!r}")
+    unresolved_tokens = decode_semantic_tokens(unresolved_source, response(messages, 70)["data"], legend)
+    if not has_semantic(unresolved_tokens, "local_value", "variable", 0):
+        raise AssertionError(f"known local was marked unresolved: {unresolved_tokens!r}")
+    if not has_semantic(unresolved_tokens, "move", "method", 0):
+        raise AssertionError(f"known method was marked unresolved: {unresolved_tokens!r}")
+    if not has_semantic(unresolved_tokens, "missing_obj", "variable", unresolved_modifier):
+        raise AssertionError(f"missing unresolved root variable token: {unresolved_tokens!r}")
+    if not has_semantic(unresolved_tokens, "field", "property", unresolved_modifier):
+        raise AssertionError(f"missing unresolved member property token: {unresolved_tokens!r}")
+    if not has_semantic(unresolved_tokens, "missing_call", "function", unresolved_modifier):
+        raise AssertionError(f"missing unresolved function token: {unresolved_tokens!r}")
+    if not has_semantic(unresolved_tokens, "missing_value", "variable", unresolved_modifier):
+        raise AssertionError(f"missing unresolved return variable token: {unresolved_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])

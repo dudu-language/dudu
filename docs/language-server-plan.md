@@ -602,10 +602,12 @@ Semantic-token coverage now decodes token deltas back to source text and checks
 token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
 static fields, module constants, methods, parameters, implicit local bindings,
 function declarations, function calls, native type/function/value/macro tokens,
-numbers, and strings. The semantic-token
-collector also indexes Dudu classes/enums/enum members directly, so Dudu class
-return types, enum member expressions, and member calls are no longer colored as
-generic types/properties/functions.
+unresolved symbols, numbers, and strings. The semantic-token collector also
+indexes Dudu classes/enums/enum members directly, so Dudu class return types,
+enum member expressions, and member calls are no longer colored as generic
+types/properties/functions. The LSP matrix decodes semantic-token responses from
+`dudu-lsp`, including unresolved-token modifiers, so transport coverage now
+matches the direct frontend assertions.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and

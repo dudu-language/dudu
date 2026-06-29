@@ -221,8 +221,9 @@ Status: direct frontend coverage now decodes semantic-token deltas back to
 source text and asserts the actual token name, kind, and modifiers for module
 constants, classes, fields, static fields, methods, parameters, implicit locals,
 functions, enums, enum members, unresolved names/callees/member fallbacks,
-numbers, and strings. JSON-RPC smoke tests still cover semantic-token transport
-through `dudu-lsp`.
+numbers, and strings. The JSON-RPC LSP matrix also decodes server semantic-token
+responses and asserts imported symbol identities plus unresolved-token
+modifiers through `dudu-lsp`.
 
 ## Validation
 
