@@ -62,6 +62,9 @@ Class-scoped/static member paths such as `Counter.count`, `Counter.LIMIT`, and
 `Counter.bump()` now share the same identity behavior for definition, hover, and
 references. Direct tests and the JSON-RPC matrix cover same-named members on an
 unrelated `OtherCounter`, so type/member paths do not fall back to tail spelling.
+Completion and signature help now use the same class-member symbol inventory:
+`Counter.` offers `LIMIT`, `count`, and `bump`, and `Counter.bump(` shows the
+method signature plus attached docs through the real `dudu-lsp` JSON-RPC matrix.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant. Payload
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for

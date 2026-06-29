@@ -480,6 +480,8 @@ def main() -> i32:
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
+        request(75, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
+        request(76, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump()", add=len("Counter.bump("))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
         request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
         request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
@@ -580,6 +582,15 @@ def main() -> i32:
     member_completion = response(messages, 35)
     assert_completion_labels(member_completion, ["move", "hp"])
     assert_documentation_contains(item_named(member_completion, "move"), "Moves the player docs.")
+    counter_member_completion = response(messages, 75)
+    assert_completion_labels(counter_member_completion, ["LIMIT", "count", "bump"])
+    assert_documentation_contains(item_named(counter_member_completion, "LIMIT"), "Counter limit docs.")
+    assert_documentation_contains(item_named(counter_member_completion, "count"), "Counter mutable count docs.")
+    assert_documentation_contains(item_named(counter_member_completion, "bump"), "Bumps the counter docs.")
+    counter_signature_help = response(messages, 76)
+    counter_signature_docs = counter_signature_help["signatures"][0]["documentation"]["value"]
+    if "Bumps the counter docs." not in counter_signature_docs:
+        raise AssertionError(f"missing Counter.bump signature docs: {counter_signature_help!r}")
     signature_help = response(messages, 36)
     signature_docs = signature_help["signatures"][0]["documentation"]["value"]
     if "Mixes two numbers for signature docs." not in signature_docs:

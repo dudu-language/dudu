@@ -2371,7 +2371,10 @@ push. They are not release packaging work.
    member paths such as `Counter.count`, `Counter.LIMIT`, and `Counter.bump()`
    now resolve through class member identity for definition, hover, and
    references, with same-named members on an unrelated `OtherCounter` filtered
-   out in direct tests and the JSON-RPC matrix.
+   out in direct tests and the JSON-RPC matrix. Class/static member completion
+   and signature help use that same inventory, so `Counter.` completes
+   constants, static fields, and methods, and `Counter.bump(` shows signature
+   docs over JSON-RPC.
    Native function hover/detail includes both the lowered Dudu signature and a
    compact scanner-derived native signature suffix when concrete
    return/parameter spelling is available.

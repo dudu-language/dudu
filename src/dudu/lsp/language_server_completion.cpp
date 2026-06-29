@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_completion.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
@@ -133,6 +134,10 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
             module_completion_json(index, current, target)) {
         return *module_result;
     }
+    if (std::vector<Symbol> class_members = class_member_symbols_for_owner(current, target);
+        !class_members.empty()) {
+        return completion_items_json(class_members);
+    }
     const std::string prefix = target + ".";
     std::vector<Symbol> prefixed_symbols;
     for (Symbol symbol : symbols_for_module(current, true)) {
@@ -221,6 +226,12 @@ void add_member_signature_candidates(std::vector<SignatureCandidate>& signatures
     }
     const std::string receiver = call.name.substr(0, dot);
     const std::string member = call.name.substr(dot + 1);
+    for (const Symbol& symbol : class_member_symbols_for_owner(current, receiver)) {
+        if (symbol.name == member && (symbol.kind == lsp_symbol_kind::Method ||
+                                      symbol.kind == lsp_symbol_kind::Constructor)) {
+            signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
+        }
+    }
     const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
     if (!has_type_ref(type_ref)) {
         return;

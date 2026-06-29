@@ -555,7 +555,10 @@ filtered out of `math.mix` / `MAX_HP` reference results.
 Class-scoped/static Dudu member paths now resolve as class member identities for
 definition, hover, and references. Direct tests and the JSON-RPC matrix cover
 `Counter.count`, `Counter.LIMIT`, and `Counter.bump()` with same-named members
-on an unrelated `OtherCounter` filtered out.
+on an unrelated `OtherCounter` filtered out. Class/static member completion and
+signature help now share that member inventory too: `Counter.` completes
+constants, static fields, and methods, and `Counter.bump(` surfaces the method
+signature/docs in the JSON-RPC matrix.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

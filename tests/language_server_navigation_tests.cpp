@@ -1024,6 +1024,20 @@ void test_lsp_static_class_member_definition_hover_and_references() {
     const std::string method_refs = dudu::references_json(main_doc, &bump_params, workspace);
     assert(method_refs.find("\"line\":4") != std::string::npos);
     assert(method_refs.find("\"line\":12") == std::string::npos);
+
+    dudu::Json completion_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":19}}").parse();
+    const std::string completions = dudu::completion_json(&main_doc, &completion_params);
+    assert(completions.find("\"label\":\"count\"") != std::string::npos);
+    assert(completions.find("\"label\":\"bump\"") != std::string::npos);
+    assert(completions.find("Count docs.") != std::string::npos);
+    assert(completions.find("Bump docs.") != std::string::npos);
+
+    dudu::Json signature_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":24}}").parse();
+    const std::string signature = dudu::signature_help_json(&main_doc, &signature_params);
+    assert(signature.find("bump() -> i32") != std::string::npos);
+    assert(signature.find("Bump docs.") != std::string::npos);
 }
 
 } // namespace
