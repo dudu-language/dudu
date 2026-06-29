@@ -110,6 +110,12 @@ ModuleAst Parser::parse() {
             continue;
         }
         can_accept_docstring = false;
+        if (at(TokenKind::String)) {
+            throw CompileError(current().location,
+                               "misplaced docstring; module docstrings must be the first "
+                               "statement in the file",
+                               "dudu.parser.misplaced_docstring");
+        }
         if (match(TokenKind::At)) {
             decorators.push_back(parse_decorator(previous()));
             continue;

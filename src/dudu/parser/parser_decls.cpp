@@ -71,6 +71,12 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             continue;
         }
         can_accept_docstring = false;
+        if (at(TokenKind::String)) {
+            throw CompileError(current().location,
+                               "misplaced docstring; class docstrings must be the first "
+                               "statement in the class body",
+                               "dudu.parser.misplaced_docstring");
+        }
         if (match(TokenKind::At)) {
             member_decorators.push_back(parse_decorator(previous()));
             continue;
@@ -161,6 +167,12 @@ EnumDecl Parser::parse_enum(const Token& start) {
             continue;
         }
         can_accept_docstring = false;
+        if (at(TokenKind::String)) {
+            throw CompileError(current().location,
+                               "misplaced docstring; enum docstrings must be the first "
+                               "statement in the enum body",
+                               "dudu.parser.misplaced_docstring");
+        }
         EnumValueDecl value;
         const Token& name = consume_identifier("expected enum value");
         value.name = name.text;

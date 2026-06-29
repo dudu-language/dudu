@@ -5,6 +5,8 @@
 #include <cassert>
 #include <exception>
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -118,6 +120,40 @@ void test_docstrings_attach_and_do_not_emit_as_statements() {
     assert(module.enums.front().doc_comment == "Mode docs.");
 }
 
+void test_misplaced_docstrings_are_rejected() {
+    struct Case {
+        std::string source;
+        std::string expected;
+    };
+    const std::vector<Case> cases = {
+        {"VALUE: i32 = 1\n"
+         "'''Late module docs.'''\n",
+         "module docstrings must be the first statement"},
+        {"class Player:\n"
+         "    hp: i32\n"
+         "    '''Late class docs.'''\n",
+         "class docstrings must be the first statement"},
+        {"enum Mode:\n"
+         "    Play\n"
+         "    '''Late enum docs.'''\n",
+         "enum docstrings must be the first statement"},
+        {"def helper() -> i32:\n"
+         "    value = 1\n"
+         "    '''Late function docs.'''\n"
+         "    return value\n",
+         "function docstrings must be the first statement"},
+    };
+    for (const Case& item : cases) {
+        bool rejected = false;
+        try {
+            (void)dudu::parse_source(item.source, "bad_docstring.dd");
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(item.expected) != std::string::npos;
+        }
+        assert(rejected);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -126,6 +162,7 @@ int main() {
         test_digit_suffixed_member_receiver();
         test_keyword_statements_keep_token_ranges();
         test_docstrings_attach_and_do_not_emit_as_statements();
+        test_misplaced_docstrings_are_rejected();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

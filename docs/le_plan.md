@@ -2342,9 +2342,10 @@ push. They are not release packaging work.
    doc propagation for classes, fields, methods, imported completions,
    signature help, import hover, and document symbols, including
    docstring-backed module, class, enum, method, and function docs.
-   Field/constant/alias docstrings, misplaced-docstring diagnostics, and native
-   C/C++ docs remain planned. The concrete plan and remaining implementation
-   checklist live in
+   Misplaced module/class/enum/function docstrings now produce explicit parser
+   diagnostics instead of generic syntax failures or inert string statements.
+   Field/constant/alias larger-doc syntax and native C/C++ docs remain planned.
+   The concrete plan and remaining implementation checklist live in
    [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
 
 14. Project Driver Polish

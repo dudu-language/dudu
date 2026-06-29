@@ -103,12 +103,20 @@ size_t leading_indent(const std::string& line) {
 }
 
 std::optional<std::string> docstring_from_statements(std::vector<Stmt>& statements) {
-    if (statements.empty() || statements.front().kind != StmtKind::Expr ||
-        statements.front().expr.kind != ExprKind::StringLiteral) {
-        return std::nullopt;
+    std::optional<std::string> docstring;
+    if (!statements.empty() && statements.front().kind == StmtKind::Expr &&
+        statements.front().expr.kind == ExprKind::StringLiteral) {
+        docstring = normalize_docstring_text(statements.front().expr.value);
+        statements.erase(statements.begin());
     }
-    std::string docstring = normalize_docstring_text(statements.front().expr.value);
-    statements.erase(statements.begin());
+    for (const Stmt& statement : statements) {
+        if (statement.kind == StmtKind::Expr && statement.expr.kind == ExprKind::StringLiteral) {
+            throw CompileError(statement.location,
+                               "misplaced docstring; function docstrings must be the first "
+                               "statement in the function body",
+                               "dudu.parser.misplaced_docstring");
+        }
+    }
     return docstring;
 }
 

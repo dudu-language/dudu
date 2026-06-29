@@ -348,21 +348,26 @@ Completion items now carry those AST docs for local, imported, and Dudu member
 symbols, and `completionItem/resolve` preserves that documentation payload
 instead of reconstructing it from display text. Signature help also shows those
 docs for Dudu functions visible through the ProjectIndex. Field/constant/alias
-docstrings, native C/C++ documentation, and malformed docstring diagnostics are
-still planned. Document symbols now use proper LSP
-`DocumentSymbol` objects and put a short AST doc summary into `detail` when a
-symbol has docs. The JSON-RPC LSP matrix covers class, field, method, imported
+docstrings and native C/C++ documentation are still planned. Misplaced
+module/class/enum/function docstrings now produce explicit parser diagnostics
+instead of generic syntax failures or inert string statements. Document symbols
+now use proper LSP `DocumentSymbol` objects and put a short AST doc summary
+into `detail` when a symbol has docs. The JSON-RPC LSP matrix covers class,
+field, method, imported
 completion, signature help, import hover, and document-symbol doc propagation,
 including docstring-backed module, class, enum, method, and function docs.
 
 Remaining work:
 
-1. Support leading `''' ... '''` docstrings for fields, constants, and aliases.
+1. Decide and implement a Python-shaped larger-doc form for fields, constants,
+   and aliases; leading `#` docs already work for these one-line declarations.
 2. Add direct native C/C++ documentation fixtures once scanner support exists.
 3. Extend formatting rules and formatter behavior for docstrings, including
    indentation trimming and blank-line preservation.
-4. Add parser diagnostics for malformed or misplaced docstrings.
-5. Add more LSP fixtures for module, enum, and misplaced docstrings.
+4. Extend parser diagnostics for malformed docstrings if new malformed cases
+   appear beyond unterminated triple strings and misplaced docstrings.
+5. Add more LSP fixtures for field/constant/alias documentation once their
+   larger-doc syntax is decided.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when
