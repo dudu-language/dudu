@@ -392,6 +392,23 @@ emit_cpp_test_module_artifacts(const ModuleAst& module,
     return out;
 }
 
+std::vector<std::filesystem::path> cpp_module_source_paths(const ModuleAst& module) {
+    std::vector<std::filesystem::path> out;
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    out.reserve(units.size());
+    for (const ModuleAst& unit : units) {
+        out.push_back(module_artifact_base(unit).string() + ".cpp");
+    }
+    return out;
+}
+
+std::vector<std::filesystem::path> cpp_test_module_source_paths(const ModuleAst& module) {
+    std::vector<std::filesystem::path> out = cpp_module_source_paths(module);
+    out.push_back("test_harness.cpp");
+    return out;
+}
+
 bool file_content_matches(const std::filesystem::path& path, const std::string& content) {
     std::optional<std::string> existing = try_read_text_file(path);
     if (!existing) {

@@ -104,15 +104,7 @@ void emit_cmake_target(std::ostringstream& out, const ProjectConfig& config,
 
 std::vector<std::filesystem::path> generated_module_sources(const ModuleAst& module,
                                                             bool test_source = false) {
-    std::vector<std::filesystem::path> sources;
-    const std::vector<CppModuleArtifact> artifacts =
-        test_source ? emit_cpp_test_module_artifacts(module) : emit_cpp_module_artifacts(module);
-    for (const CppModuleArtifact& artifact : artifacts) {
-        if (artifact.kind == CppModuleArtifactKind::Source) {
-            sources.push_back(artifact.path);
-        }
-    }
-    return sources;
+    return test_source ? cpp_test_module_source_paths(module) : cpp_module_source_paths(module);
 }
 
 std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& config,

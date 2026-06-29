@@ -524,6 +524,16 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("main.cpp").find("int main()") != std::string::npos);
     assert(by_path.at("main.cpp").find("return dudu_main_main();") != std::string::npos);
 
+    std::vector<std::filesystem::path> source_artifact_paths;
+    for (const dudu::CppModuleArtifact& artifact : artifacts) {
+        if (artifact.kind == dudu::CppModuleArtifactKind::Source) {
+            source_artifact_paths.push_back(artifact.path);
+        }
+    }
+    assert(dudu::cpp_module_source_paths(module) == source_artifact_paths);
+    source_artifact_paths.push_back("test_harness.cpp");
+    assert(dudu::cpp_test_module_source_paths(module) == source_artifact_paths);
+
     by_path.clear();
     const std::vector<dudu::CppModuleArtifact> selected_artifacts =
         dudu::emit_cpp_module_artifacts(module, {"camera"});
