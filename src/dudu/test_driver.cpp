@@ -5,9 +5,9 @@
 #include "dudu/decorators.hpp"
 #include "dudu/file_io.hpp"
 #include "dudu/native_build.hpp"
-#include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
+#include "dudu/project_index.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -68,15 +68,32 @@ bool function_is_test(const FunctionDecl& fn) {
     return false;
 }
 
-bool module_has_tests(const ModuleAst& module) {
+bool unit_has_tests(const ModuleAst& module) {
     return std::any_of(module.functions.begin(), module.functions.end(), function_is_test);
 }
 
-bool file_has_tests(const std::filesystem::path& path) {
-    return module_has_tests(parse_source(read_required_text_file(path), path));
+bool module_has_tests(const ModuleAst& module) {
+    if (unit_has_tests(module)) {
+        return true;
+    }
+    return std::any_of(module.module_units.begin(), module.module_units.end(), unit_has_tests);
 }
 
-std::vector<std::filesystem::path> discover_test_files(const std::filesystem::path& root) {
+bool file_has_tests(const ProjectConfig& config, const std::filesystem::path& path) {
+    const std::string source = read_required_text_file(path);
+    ProjectIndexOptions index_options;
+    index_options.entry_path = path;
+    index_options.entry_source = source;
+    index_options.config = config;
+    index_options.source_dir = config.project_dir.empty() ? path.parent_path() : config.project_dir;
+    index_options.allow_module_tree = false;
+    index_options.include_native_headers = false;
+    index_options.check_semantics = false;
+    return module_has_tests(ProjectIndex::load(index_options).merged_module());
+}
+
+std::vector<std::filesystem::path> discover_test_files(const ProjectConfig& config,
+                                                       const std::filesystem::path& root) {
     std::vector<std::filesystem::path> files;
     std::filesystem::recursive_directory_iterator it(root);
     const std::filesystem::recursive_directory_iterator end;
@@ -88,7 +105,7 @@ std::vector<std::filesystem::path> discover_test_files(const std::filesystem::pa
         if (!it->is_regular_file() || it->path().extension() != ".dd") {
             continue;
         }
-        if (file_has_tests(it->path())) {
+        if (file_has_tests(config, it->path())) {
             files.push_back(it->path());
         }
     }
@@ -190,7 +207,8 @@ int run_one_test_entry(TestDriverOptions options) {
 
 int run_recursive_tests(TestDriverOptions options) {
     const std::filesystem::path root = recursive_test_input(options.input) ? "." : options.input;
-    const std::vector<std::filesystem::path> files = discover_test_files(root);
+    const ProjectConfig config = config_for_options(options);
+    const std::vector<std::filesystem::path> files = discover_test_files(config, root);
     if (files.empty()) {
         std::cout << "running 0 tests\n"
                      "test result: ok. 0 passed; 0 failed; 0 filtered out\n";
