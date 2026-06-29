@@ -2334,9 +2334,10 @@ push. They are not release packaging work.
    same-file and imported Dudu symbols, and completion items preserve them
    across current-document, imported, module, and member completion paths.
    Signature help also surfaces them for Dudu functions from the visible symbol
-   index. Triple-quoted docstrings, document-symbol docs, and native C/C++
-   docs remain planned. The concrete plan and remaining implementation
-   checklist live in
+   index. Document symbols now use LSP `DocumentSymbol` shape and include a
+   short AST doc summary in their detail text. Triple-quoted docstrings and
+   native C/C++ docs remain planned. The concrete plan and remaining
+   implementation checklist live in
    [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
 
 14. Project Driver Polish

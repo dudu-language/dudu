@@ -344,13 +344,15 @@ carry those AST docs for local, imported, and Dudu member symbols, and
 `completionItem/resolve` preserves that documentation payload instead of
 reconstructing it from display text. Signature help also shows those docs for
 Dudu functions visible through the ProjectIndex. Triple-quoted docstrings,
-document-symbol docs, and native C/C++ documentation are still planned.
+native C/C++ documentation, and broader class/member doc fixtures are still
+planned. Document symbols now use proper LSP `DocumentSymbol` objects and put a
+short AST doc summary into `detail` when a symbol has leading `#` docs.
 
 Remaining work:
 
 1. Support leading `''' ... '''` docstrings for modules, classes, methods,
    functions, enums, fields, constants, and aliases.
-2. Preserve docs in document symbols.
+2. Add broader class/member document-symbol doc fixtures.
 3. Define formatting rules for docstrings, including indentation trimming and
    blank-line preservation.
 4. Add parser diagnostics for malformed or misplaced docstrings.

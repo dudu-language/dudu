@@ -59,7 +59,8 @@ module, and member completion paths. Hover no longer recovers declaration
 comments by scanning source lines at request time, and completion resolve
 preserves documentation attached to the item instead of fabricating docs from
 display text. Signature help also surfaces those docs for Dudu functions from
-the visible symbol index.
+the visible symbol index. Document symbols now use LSP `DocumentSymbol` shape
+and include a short AST doc summary in their detail text when available.
 
 ## Target Behavior
 

@@ -14,15 +14,6 @@
 namespace dudu {
 namespace {
 
-std::string symbol_json(const Symbol& symbol, const Document& doc) {
-    std::ostringstream out;
-    out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
-        << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
-        << json_escape(uri_for_location(symbol.location, doc))
-        << "\",\"range\":" << range_json(symbol.location) << "}}";
-    return out.str();
-}
-
 std::string symbol_json(const Symbol& symbol, const std::string& default_uri) {
     const std::string uri = symbol.location.file.empty()
                                 ? default_uri
@@ -31,6 +22,30 @@ std::string symbol_json(const Symbol& symbol, const std::string& default_uri) {
     out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
         << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
         << json_escape(uri) << "\",\"range\":" << range_json(symbol.location) << "}}";
+    return out.str();
+}
+
+std::string first_doc_line(std::string_view doc_comment) {
+    const size_t newline = doc_comment.find('\n');
+    return std::string(doc_comment.substr(0, newline));
+}
+
+std::string symbol_detail_with_doc(const Symbol& symbol) {
+    if (symbol.doc_comment.empty()) {
+        return symbol.detail;
+    }
+    if (symbol.detail.empty()) {
+        return first_doc_line(symbol.doc_comment);
+    }
+    return symbol.detail + " - " + first_doc_line(symbol.doc_comment);
+}
+
+std::string document_symbol_json(const Symbol& symbol) {
+    const std::string range = range_json(symbol.location);
+    std::ostringstream out;
+    out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
+        << ",\"detail\":\"" << json_escape(symbol_detail_with_doc(symbol))
+        << "\",\"range\":" << range << ",\"selectionRange\":" << range << "}";
     return out.str();
 }
 
@@ -44,8 +59,8 @@ std::vector<Symbol> document_symbols(const Document& doc, bool include_native) {
 }
 
 void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std::string>& seen,
-                             const std::string& lowered_query,
-                             const std::vector<Symbol>& symbols, const std::string& default_uri) {
+                             const std::string& lowered_query, const std::vector<Symbol>& symbols,
+                             const std::string& default_uri) {
     for (const Symbol& symbol : symbols) {
         if (!lowered_query.empty() &&
             lower_copy(symbol.name).find(lowered_query) == std::string::npos) {
@@ -76,7 +91,7 @@ std::string document_symbols_json(const Document& doc) {
         if (i > 0) {
             out << ",";
         }
-        out << symbol_json(symbols[i], doc);
+        out << document_symbol_json(symbols[i]);
     }
     out << "]";
     return out.str();

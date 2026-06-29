@@ -7,6 +7,7 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
+#include "dudu/lsp/language_server_symbol_results.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/project/module_loader.hpp"
@@ -102,6 +103,18 @@ void test_lsp_lints_do_not_leak_from_dependency_modules() {
     for (const dudu::Diagnostic& diag : diags) {
         assert(diag.code != "dudu.lint.unused");
     }
+}
+
+void test_lsp_document_symbols_include_ast_doc_summary() {
+    const dudu::Document doc{.uri = "file:///doc_symbols.dd",
+                             .path = "doc_symbols.dd",
+                             .text = "# Player state docs.\n"
+                                     "class Player:\n"
+                                     "    hp: i32\n"};
+    const std::string symbols = dudu::document_symbols_json(doc);
+    assert(symbols.find("\"selectionRange\"") != std::string::npos);
+    assert(symbols.find("\"location\"") == std::string::npos);
+    assert(symbols.find("class Player - Player state docs.") != std::string::npos);
 }
 
 void test_lsp_member_completion_uses_imported_module_shapes() {
@@ -461,6 +474,7 @@ int main() {
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_lints_do_not_leak_from_dependency_modules();
+        test_lsp_document_symbols_include_ast_doc_summary();
         test_lsp_member_completion_uses_imported_module_shapes();
         test_lsp_completion_uses_visible_imported_functions();
         test_lsp_completion_includes_imported_ast_docs();
