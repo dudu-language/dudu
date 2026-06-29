@@ -355,6 +355,9 @@ def main() -> i32:
 /** Matrix widget class docs. */
 class MatrixWidget {
   public:
+    /** Builds a matrix widget from a seed. */
+    explicit MatrixWidget(int seed) : value(seed) {}
+
     /** Scales the matrix widget by a factor. */
     int scaled(int factor) const {
         return value * factor;
@@ -381,8 +384,8 @@ class OtherWidget {
     native_cpp_source = """import cpp "native_widget.hpp"
 
 def main() -> i32:
-    widget: MatrixWidget
-    widget.value = 5
+    widget: MatrixWidget = MatrixWidget(5)
+    widget.value = 6
     return widget.scaled(2)
 """
     (tmp / "native_cpp_user.dd").write_text(native_cpp_source)
@@ -515,6 +518,8 @@ def main() -> i32:
         request(61, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget: MatrixWidget", add=len("widget: "))}),
         request(64, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled", add=len("widget."))}),
         request(65, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled", add=len("widget."))}),
+        request(81, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=len("MatrixWidget("))}),
+        request(82, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "MatrixWidget(5)", add=1)}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -821,7 +826,7 @@ def main() -> i32:
     native_member_definition = response(messages, 59)
     if not native_member_definition["uri"].endswith("/native_widget.hpp"):
         raise AssertionError(f"native member definition did not jump to header: {native_member_definition!r}")
-    if native_member_definition["range"]["start"]["line"] != 11:
+    if native_member_definition["range"]["start"]["line"] != 14:
         raise AssertionError(f"native member definition jumped to wrong line: {native_member_definition!r}")
     native_member_refs = response(messages, 60)
     if not has_start(native_member_refs, native_cpp.as_uri(), 4, len("    widget.")):
@@ -836,7 +841,7 @@ def main() -> i32:
     native_method_definition = response(messages, 64)
     if not native_method_definition["uri"].endswith("/native_widget.hpp"):
         raise AssertionError(f"native method definition did not jump to header: {native_method_definition!r}")
-    if native_method_definition["range"]["start"]["line"] != 6:
+    if native_method_definition["range"]["start"]["line"] != 9:
         raise AssertionError(f"native method definition jumped to wrong line: {native_method_definition!r}")
     native_method_refs = response(messages, 65)
     if not has_start(native_method_refs, native_cpp.as_uri(), 5, len("    return widget.")):
@@ -845,6 +850,18 @@ def main() -> i32:
         raise AssertionError(f"missing native method reference in same-header doc: {native_method_refs!r}")
     if has_start(native_method_refs, native_cpp_other.as_uri(), 4, len("    return widget.")):
         raise AssertionError(f"unrelated native method reference leaked across receiver type: {native_method_refs!r}")
+    native_constructor_signature = response(messages, 81)
+    native_constructor_label = native_constructor_signature["signatures"][0]["label"]
+    native_constructor_docs = native_constructor_signature["signatures"][0]["documentation"]["value"]
+    if "MatrixWidget(arg0: i32)" not in native_constructor_label:
+        raise AssertionError(f"missing native constructor signature: {native_constructor_signature!r}")
+    if "Builds a matrix widget from a seed." not in native_constructor_docs:
+        raise AssertionError(f"missing native constructor docs: {native_constructor_signature!r}")
+    native_constructor_definition = response(messages, 82)
+    if not native_constructor_definition["uri"].endswith("/native_widget.hpp"):
+        raise AssertionError(f"native constructor definition did not jump to header: {native_constructor_definition!r}")
+    if native_constructor_definition["range"]["start"]["line"] != 6:
+        raise AssertionError(f"native constructor definition jumped to wrong line: {native_constructor_definition!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

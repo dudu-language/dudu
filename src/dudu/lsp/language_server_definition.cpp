@@ -1,8 +1,8 @@
 #include "dudu/lsp/language_server_definition.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
@@ -11,8 +11,8 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
-#include "dudu/project/module_names.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/project/module_names.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -262,6 +262,47 @@ std::string symbol_definition_json(const Symbol& symbol, const Document& doc) {
     return location_json(uri_for_location(symbol.location, doc), range_json(symbol.location));
 }
 
+std::optional<std::string> constructor_definition_json(const Document& doc, const ModuleAst& module,
+                                                       const AstSelection& selection) {
+    if (!selection.call_callee) {
+        return std::nullopt;
+    }
+    std::vector<std::string> candidates;
+    if (selection.symbol) {
+        candidates.push_back(*selection.symbol);
+    }
+    if (selection.expr_path) {
+        const ExprPath& path = *selection.expr_path;
+        if (!path.segments.empty()) {
+            candidates.push_back(path.segments.back().text);
+        }
+    }
+    if (selection.symbol_path) {
+        candidates.push_back(*selection.symbol_path);
+    }
+    std::ranges::sort(candidates);
+    candidates.erase(std::ranges::unique(candidates).begin(), candidates.end());
+    const auto find_constructor =
+        [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+        for (const ClassDecl& klass : classes) {
+            if (std::ranges::find(candidates, klass.name) == candidates.end()) {
+                continue;
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                if (is_constructor_method_name(method.name)) {
+                    return location_json(uri_for_location(method.location, doc),
+                                         range_json(method.location));
+                }
+            }
+        }
+        return std::nullopt;
+    };
+    if (const std::optional<std::string> native = find_constructor(module.native_classes)) {
+        return native;
+    }
+    return find_constructor(module.classes);
+}
+
 int function_end_line(const FunctionDecl& function) {
     int line = function.location.line;
     for (const Stmt& stmt : function.statements) {
@@ -286,8 +327,7 @@ bool location_before_cursor(SourceLocation location, const LspPosition& position
 }
 
 void collect_binding_locations_before_cursor(const std::vector<Stmt>& statements,
-                                             const LspPosition& position,
-                                             const std::string& query,
+                                             const LspPosition& position, const std::string& query,
                                              std::optional<SourceLocation>& result) {
     for (const Stmt& stmt : statements) {
         if (stmt.location.line > position.line + 1) {
@@ -303,8 +343,7 @@ void collect_binding_locations_before_cursor(const std::vector<Stmt>& statements
 }
 
 std::optional<std::string> local_definition_json(const Document& doc, const ModuleAst& current,
-                                                 const Json* params,
-                                                 const std::string& word) {
+                                                 const Json* params, const std::string& word) {
     if (word.empty() || word.find('.') != std::string::npos) {
         return std::nullopt;
     }
@@ -355,8 +394,13 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (word.empty()) {
         return "null";
     }
-    if (const std::optional<std::string> local = local_definition_json(doc, current, params, word)) {
+    if (const std::optional<std::string> local =
+            local_definition_json(doc, current, params, word)) {
         return *local;
+    }
+    if (const std::optional<std::string> constructor =
+            constructor_definition_json(doc, current, selection)) {
+        return *constructor;
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
@@ -377,8 +421,8 @@ std::string definition_json(const Document& doc, const Json* params) {
         }
         try {
             const ProjectIndex* native = load_native_index();
-            if (const std::optional<Symbol> class_member = class_member_symbol_for_path(
-                    native->visible_unit_for_path(doc.path), *path)) {
+            if (const std::optional<Symbol> class_member =
+                    class_member_symbol_for_path(native->visible_unit_for_path(doc.path), *path)) {
                 return symbol_definition_json(*class_member, doc);
             }
             if (const std::optional<std::string> member_definition =
@@ -406,6 +450,10 @@ std::string definition_json(const Document& doc, const Json* params) {
         native = load_native_index();
     } catch (const std::exception&) {
         return "null";
+    }
+    if (const std::optional<std::string> constructor =
+            constructor_definition_json(doc, native->visible_unit_for_path(doc.path), selection)) {
+        return *constructor;
     }
     if (const std::optional<std::string> native_type_target =
             native_type_target_definition_json(doc, word, native->merged_module())) {

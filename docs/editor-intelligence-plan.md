@@ -68,6 +68,11 @@ method signature plus attached docs through the real `dudu-lsp` JSON-RPC matrix.
 Constructor calls now participate in signature help too: `Player(` reports the
 field/init-derived constructor signature and declaration docs from the indexed
 class shape.
+Native C++ constructor calls now use the same indexed constructor shape:
+`MatrixWidget(` surfaces scanned header constructor docs/signatures, and
+go-to-definition on `MatrixWidget(5)` jumps to the constructor declaration
+instead of stopping at the class declaration when the scanner has that source
+location.
 Workspace-symbol results now include class/static member symbols such as
 `Counter.count` and use the same first-doc-line detail summaries as document
 symbols, so quick-open style searches carry useful context.

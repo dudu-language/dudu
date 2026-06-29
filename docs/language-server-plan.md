@@ -459,7 +459,10 @@ class docs through hover, plus native C++ member field/method docs through
 member completion, receiver-aware field go-to-definition, and receiver-aware
 method signature help. The matrix also covers native C++ member method
 go-to-definition and find-references with a same-named method on an unrelated
-native receiver type filtered out.
+native receiver type filtered out. Native C++ constructor calls are covered as
+well: signature help surfaces scanned constructor docs/signatures, and
+go-to-definition on a constructor call targets the scanned constructor
+declaration instead of the containing class when that location is available.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
@@ -567,6 +570,9 @@ signature/docs in the JSON-RPC matrix. Constructor signature help now uses the
 indexed class shape as well, so class calls such as `Player(` show field/init
 parameters and docs. Workspace-symbol results include class/static member
 symbols such as `Counter.count` and carry first-doc-line detail summaries.
+Native C++ constructor signatures and go-to-definition are also covered in the
+matrix with a local fixture header: `MatrixWidget(` shows the scanned
+constructor docs and definition jumps to the constructor declaration.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.
