@@ -282,6 +282,11 @@ receivers.
 The language should define indexing and slicing syntax, but libraries should be
 able to own the semantics for their types.
 
+The concrete numeric-stack follow-up is tracked in
+[Tensor Backend And Numeric Stack Plan](tensor-backend-plan.md). That plan
+keeps BLAS/GPU/autograd work in libraries and optional probes rather than
+special-casing numeric backends in the compiler.
+
 For Dudu-native arrays:
 
 ```python

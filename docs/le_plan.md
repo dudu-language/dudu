@@ -1093,7 +1093,8 @@ push. They are not release packaging work.
 
 4. Arrays, Matrices, Tensors, And Slicing
 
-   Primary plan: [Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md).
+   Primary plans: [Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md)
+   and [Tensor Backend And Numeric Stack Plan](tensor-backend-plan.md).
 
    Migrate current fixed-array syntax to canonical `array[T][shape]`, add
    initializer-based shape inference for `array[T] = literal`, then add
@@ -1143,6 +1144,12 @@ push. They are not release packaging work.
    rectangles beyond rank-2, advanced gather/scatter indexing, broadcasting
    rules, shape metadata for library tensors, and GPU-backed tensor-library
    hooks remain.
+   The next serious item-6 slice is not compiler built-in tensors. It is a
+   library-backed numeric stack that proves `@operator("[]")`, slices, BLAS,
+   OpenCL/AMD-friendly GPU execution, and autograd-style graph code can be
+   written as normal Dudu and C/C++ interop. That work should follow
+   `docs/tensor-backend-plan.md`, start with CPU/OpenBLAS, and only then add
+   OpenCL or ROCm probes when local tooling is available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
