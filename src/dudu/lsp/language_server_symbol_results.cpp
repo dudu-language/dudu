@@ -87,7 +87,7 @@ void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std:
 std::string document_symbols_json(const Document& doc) {
     std::ostringstream out;
     out << "[";
-    const std::vector<Symbol> symbols = document_symbols(doc, true);
+    const std::vector<Symbol> symbols = document_symbols(doc, false);
     for (size_t i = 0; i < symbols.size(); ++i) {
         if (i > 0) {
             out << ",";

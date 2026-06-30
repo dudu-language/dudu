@@ -941,6 +941,10 @@ push. They are not release packaging work.
    Dudu-owned declaration and unique-reference scope checks now use Dudu-only
    document symbols, keeping ordinary references off the native-header scanner
    path unless the selected symbol is explicitly native.
+   Document symbols also use the Dudu-only symbol view, so outline population
+   does not force native-header scanning for import-heavy files. Native imported
+   symbols remain exposed through explicit native-aware hover, definition,
+   completion, signature help, references, and workspace-symbol requests.
    AST traversal helpers now own expression-tree and statement-expression
    walking, and the AST lint, unsupported-feature, build-flag, and navigation
    passes use those helpers instead of maintaining hand-written expression-slot
@@ -2404,6 +2408,9 @@ push. They are not release packaging work.
    `std.` completion, `std.vector` hover/definition, and
    `std.vector[i32].push_back(...)` signature help, so standard library symbols
    are exercised as editor symbols rather than only as compile fixtures. Native
+   dogfood latency probing reports cold document-symbol indexing and first
+   native-aware hover separately from genuinely warm definition, hover,
+   references, completion, and semantic-token requests. Native
    C++ member method definition and references are also covered in the
    JSON-RPC matrix with an unrelated receiver type containing the same method
    name filtered out. Native macro go-to-definition now attaches local imported

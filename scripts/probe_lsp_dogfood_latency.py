@@ -186,6 +186,10 @@ def probe_workspace(lsp_bin, name, root, entry, needles):
 
         hover_pos = position_of(entry_text, needles["hover"], offset=1)
         response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
+        require_nonempty_result(response, f"{name} cold native hover")
+        rows.append((name, "cold_native_hover", elapsed))
+
+        response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
         require_nonempty_result(response, f"{name} hover")
         rows.append((name, "warm_hover", elapsed))
 

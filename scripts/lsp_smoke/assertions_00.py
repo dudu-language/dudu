@@ -338,14 +338,7 @@ assert "add" in workspace_symbol_names
 
 native_symbols = next(item for item in responses if item.get("id") == 8)
 native_symbol_names = [item["name"] for item in native_symbols["result"]]
-assert "dudu_native.dudu_native_add" in native_symbol_names
-assert "dudu_native.DUDU_NATIVE_MAGIC" in native_symbol_names
-assert "dudu_native.DUDU_NATIVE_SCALE" in native_symbol_names
-assert "dudu_native.dudu_native_kind_ok" in native_symbol_names
-native_widget_symbol = next(
-    item for item in native_symbols["result"] if item["name"] == "native_cpp.Widget"
-)
-assert "resolves to native class dudu_native.Widget" in native_widget_symbol["detail"]
+assert native_symbol_names == ["main"]
 
 native_hover = next(item for item in responses if item.get("id") == 9)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]

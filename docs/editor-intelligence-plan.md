@@ -40,8 +40,9 @@ JSON-RPC smoke fixtures. Dogfood latency probing exists in
 `scripts/probe_lsp_dogfood_latency.py`; after sharing the native class-alias
 index across hover/symbol/semantic-token paths, warm editor requests in
 `raymarch-dd` and `dudu-webserver` are in the single-digit/tens-of-ms range on
-the current machine, while cold indexing remains the larger cost. The dogfood
-probe asserts that project go-to-definition lands in expected source files, not
+the current machine, while cold indexing and the first native-aware hover remain
+larger measured costs. The dogfood probe asserts that project go-to-definition
+lands in expected source files, not
 only that it returns a nonempty result. It also covers same-file local
 references, and hover can now infer locals assigned from native C/C++ function
 calls through the native-enriched module view.
@@ -127,6 +128,10 @@ classes, fields, field member hover, methods, imported completions, signature
 help, constant hover, alias hover, and document symbols through actual JSON-RPC
 requests, including docstring-backed module, class, enum, enum-value, method,
 and function symbols.
+Document symbols intentionally stay on the Dudu-owned symbol view so opening an
+import-heavy file does not force a native-header scan just to populate the
+outline; native imported symbols remain available through hover, definition,
+completion, signature help, references, and workspace symbols.
 Hover for selective imports now preserves suffix identity, so `Mode.Play`
 resolves to the imported enum variant docs instead of falling back to spelling
 or only handling the imported `Mode` name.

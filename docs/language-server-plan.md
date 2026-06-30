@@ -101,7 +101,7 @@ Native jumps should prefer real header locations. If a symbol is synthesized or
 only available through macro expansion, the server should say that clearly in
 hover/diagnostics instead of jumping to generated C++.
 
-Status: native type-definition, hover, completion, document-symbol detail, and
+Status: native type-definition, hover, completion, workspace-symbol detail, and
 semantic token classification now index scanned native classes by Dudu binding
 name and `NativeSymbolId`. Imported type aliases use identity when the scanner
 provides enough metadata and otherwise follow their structured alias target
@@ -729,13 +729,17 @@ open-document text and native-header mode, invalidating them on document
 changes and saves. Repeated hover, definition, references, completion, and
 diagnostic requests for the same buffer should reuse the warm module view
 instead of reparsing and remerging native headers.
+Document symbols intentionally use the Dudu-owned symbol view and do not force a
+native-header scan; native imported symbols remain available through explicit
+native-aware requests such as hover, definition, completion, signature help,
+references, and workspace symbols.
 Native class-alias target lookup now builds one reusable native class index per
 request path instead of rebuilding it for every native type. This removed the
 header-heavy quadratic behavior that made `dudu-webserver` warm hover,
 references, completion, and semantic tokens take roughly one second each.
 `scripts/probe_lsp_dogfood_latency.py` measures cold document-symbol indexing
-and warm definition, hover, references, completion, and semantic-token latency
-for `raymarch-dd` and `dudu-webserver`.
+and first native-aware hover separately from warm definition, hover, references,
+completion, and semantic-token latency for `raymarch-dd` and `dudu-webserver`.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
 completion, signature help, definition, and hover. The same optional probe now
