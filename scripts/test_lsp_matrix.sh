@@ -680,6 +680,12 @@ def main() -> i32:
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(143, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "@operator", add=1)}),
         request(144, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "@operator", add=1)}),
+        request(146, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "self.x + other.x", add=1)}),
+        request(147, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "self.x + other.x", add=len("self."))}),
+        request(148, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=1)}),
+        request(149, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=len("other."))}),
+        request(150, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "self.x + other.x", add=1)}),
+        request(151, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=1)}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1125,6 +1131,35 @@ def main() -> i32:
         raise AssertionError(f"missing @operator decorator hover: {operator_decorator_hover!r}")
     if response(messages, 144) is not None:
         raise AssertionError(f"built-in @operator decorator should not jump to compiler internals: {response(messages, 144)!r}")
+    self_param = position(ops_source, "add(self", add=len("add("))
+    other_param = position(ops_source, "other: Vec2", add=0)
+    vec2_x_field = position(ops_source, "x: i32", add=0)
+    self_root_definition = response(messages, 146)
+    if self_root_definition["uri"] != ops.as_uri():
+        raise AssertionError(f"self root definition did not jump to source file: {self_root_definition!r}")
+    if self_root_definition["range"]["start"]["line"] != self_param["line"]:
+        raise AssertionError(f"self root definition jumped to wrong line: {self_root_definition!r}")
+    self_x_definition = response(messages, 147)
+    if self_x_definition["uri"] != ops.as_uri():
+        raise AssertionError(f"self.x member definition did not jump to source file: {self_x_definition!r}")
+    if self_x_definition["range"]["start"]["line"] != vec2_x_field["line"]:
+        raise AssertionError(f"self.x member definition jumped to wrong line: {self_x_definition!r}")
+    other_root_definition = response(messages, 148)
+    if other_root_definition["uri"] != ops.as_uri():
+        raise AssertionError(f"other root definition did not jump to source file: {other_root_definition!r}")
+    if other_root_definition["range"]["start"]["line"] != other_param["line"]:
+        raise AssertionError(f"other root definition jumped to wrong line: {other_root_definition!r}")
+    other_x_definition = response(messages, 149)
+    if other_x_definition["uri"] != ops.as_uri():
+        raise AssertionError(f"other.x member definition did not jump to source file: {other_x_definition!r}")
+    if other_x_definition["range"]["start"]["line"] != vec2_x_field["line"]:
+        raise AssertionError(f"other.x member definition jumped to wrong line: {other_x_definition!r}")
+    self_root_hover = response(messages, 150)["contents"]["value"]
+    if "self: Vec2" not in self_root_hover:
+        raise AssertionError(f"self root hover did not show local type: {self_root_hover!r}")
+    other_root_hover = response(messages, 151)["contents"]["value"]
+    if "other: Vec2" not in other_root_hover:
+        raise AssertionError(f"other root hover did not show local type: {other_root_hover!r}")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)
     if operator_use_definition["uri"] != ops.as_uri():

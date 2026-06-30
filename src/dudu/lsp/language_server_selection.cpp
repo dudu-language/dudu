@@ -4,6 +4,9 @@
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 
+#include <algorithm>
+#include <cstddef>
+
 namespace dudu {
 namespace {
 
@@ -25,6 +28,16 @@ bool contains_operator(const Expr& expr, const LspPosition& position) {
     return contains_name(expr.op_location, std::string(expr.op), position);
 }
 
+ExprPath expr_path_prefix(const ExprPath& path, std::size_t last_segment_index) {
+    ExprPath prefix;
+    if (path.segments.empty()) {
+        return prefix;
+    }
+    const std::size_t end = std::min(last_segment_index + 1, path.segments.size());
+    prefix.segments.assign(path.segments.begin(), path.segments.begin() + end);
+    return prefix;
+}
+
 void collect_call_callee_selection(const Expr& expr, const LspPosition& position,
                                    AstSelection& selection) {
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
@@ -34,15 +47,16 @@ void collect_call_callee_selection(const Expr& expr, const LspPosition& position
     if (!path.has_value()) {
         return;
     }
-    const std::string rendered_path = render_expr_path(*path);
-    for (const ExprPathSegment& segment : path->segments) {
+    for (std::size_t index = 0; index < path->segments.size(); ++index) {
+        const ExprPathSegment& segment = path->segments[index];
         if (!contains_name(segment.location, segment.text, position)) {
             continue;
         }
-        selection.call_callee = true;
+        const ExprPath selected_path = expr_path_prefix(*path, index);
+        selection.call_callee = index + 1 == path->segments.size();
         selection.symbol = segment.text;
-        selection.symbol_path = rendered_path;
-        selection.expr_path = path;
+        selection.symbol_path = render_expr_path(selected_path);
+        selection.expr_path = selected_path;
         return;
     }
 }
@@ -53,14 +67,15 @@ bool collect_expr_path_selection(const Expr& expr, const LspPosition& position,
     if (!path.has_value()) {
         return false;
     }
-    const std::string rendered_path = render_expr_path(*path);
-    for (const ExprPathSegment& segment : path->segments) {
+    for (std::size_t index = 0; index < path->segments.size(); ++index) {
+        const ExprPathSegment& segment = path->segments[index];
         if (!contains_name(segment.location, segment.text, position)) {
             continue;
         }
+        const ExprPath selected_path = expr_path_prefix(*path, index);
         selection.symbol = segment.text;
-        selection.symbol_path = rendered_path;
-        selection.expr_path = path;
+        selection.symbol_path = render_expr_path(selected_path);
+        selection.expr_path = selected_path;
         return true;
     }
     return false;
