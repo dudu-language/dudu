@@ -387,10 +387,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     } else if ((line.find("TypedefDecl") != std::string::npos ||
                 line.find("TypeAliasDecl") != std::string::npos) &&
                std::regex_search(line, match, typedef_decl)) {
-        const std::string name = match[2].str();
-        const std::string lowered_type = dudu_type(match[3].str());
-        const bool useful_alias = lowered_type != name;
-        if (!starts_with(name, "__") || useful_alias) {
+        const std::string raw_name = match[2].str();
+        const std::string name = join_scope(namespaces, raw_name);
+        const std::string lowered_type =
+            qualify_scoped_type(scan, namespaces, dudu_type(match[3].str()));
+        const bool useful_alias = lowered_type != raw_name && lowered_type != name;
+        if (!starts_with(raw_name, "__") || useful_alias) {
             const TypeRef type_ref =
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
             scan.types.push_back({.name = name,

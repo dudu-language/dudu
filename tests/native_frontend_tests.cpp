@@ -253,6 +253,91 @@ void test_native_header_alias_preserves_identity(const std::filesystem::path& ro
     assert(saw_prefixed_function);
 }
 
+void test_direct_cpp_import_preserves_namespace_type_aliases(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-direct-namespace-alias";
+    const std::filesystem::path header = source_dir / "namespaced_alias.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "namespace dudu_ns {\n"
+               "struct Box { int value; int get() const { return value; } };\n"
+               "using BoxAlias = Box;\n"
+               "using Count = int;\n"
+               "inline Count add(Count lhs, Count rhs) { return lhs + rhs; }\n"
+               "inline BoxAlias make_box(int value) { return BoxAlias{value}; }\n"
+               "}\n";
+    }
+
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"./namespaced_alias.hpp\"\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    value: dudu_ns.Count = 20\n"
+                                                "    box: dudu_ns.BoxAlias = dudu_ns.make_box(5)\n"
+                                                "    return dudu_ns.add(value, 22) + box.get()\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    bool saw_alias = false;
+    for (const dudu::NativeTypeDecl& type : module.native_types) {
+        if (type.name == "dudu_ns.Count") {
+            assert(type.identity.canonical_path == "dudu_ns.Count");
+            saw_alias = true;
+        }
+    }
+    assert(saw_alias);
+
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("dudu_ns::Count value = 20;") != std::string::npos);
+    assert(cpp.find("dudu_ns::BoxAlias box = dudu_ns::make_box(5);") != std::string::npos);
+    assert(cpp.find("dudu_ns::add(value, 22)") != std::string::npos);
+    assert(cpp.find("box.get()") != std::string::npos);
+}
+
+void test_native_operator_does_not_hijack_dudu_class_operator(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-operator-hijack";
+    const std::filesystem::path header = source_dir / "native_operator.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "template <typename T> struct NativeIter { T value; };\n"
+               "template <typename T> NativeIter<T> operator*(T value, float scale) { "
+               "return NativeIter<T>{value}; }\n";
+    }
+
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"./native_operator.hpp\"\n"
+                                                "\n"
+                                                "class Vec:\n"
+                                                "    x: f32\n"
+                                                "\n"
+                                                "    @operator(\"*\")\n"
+                                                "    def mul(self, scale: f32) -> Vec:\n"
+                                                "        return Vec(self.x * scale)\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    left = Vec(2.0)\n"
+                                                "    value: Vec = left * 3.0\n"
+                                                "    return i32(value.x)\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("left * 3.0") != std::string::npos);
+    assert(cpp.find("NativeIter") == std::string::npos);
+}
+
 void test_native_identity_edge_cases(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-identity-edge-cases";
     const std::filesystem::path header = source_dir / "native_identity_cases.hpp";
@@ -785,6 +870,8 @@ int main() {
         test_native_header_type_scan(root);
         test_cxx_import_scans_c_globals_but_emits_plain_include(root);
         test_native_header_alias_preserves_identity(root);
+        test_direct_cpp_import_preserves_namespace_type_aliases(root);
+        test_native_operator_does_not_hijack_dudu_class_operator(root);
         test_native_identity_edge_cases(root);
         test_native_identity_name_collision_is_rejected(root);
         test_native_scan_dedupe_allows_opaque_redeclarations();

@@ -134,6 +134,10 @@ std::optional<FunctionSignature>
 native_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left,
                           const Expr* right_expr, const TypeRef& right) {
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
+    const std::string left_class = receiver_class_name(symbols, value_left_ref);
+    if (symbols.classes.contains(left_class) && !symbols.native_classes.contains(left_class)) {
+        return std::nullopt;
+    }
     const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
     for (const std::string& name : native_operator_names_for_type(value_left_ref, op)) {
         const auto found = symbols.native_function_signatures.find(name);
