@@ -40,12 +40,15 @@ std::optional<Token> token_at_cursor(const Document& doc, const Json* params) {
 std::optional<std::string> keyword_description(std::string_view keyword) {
     static const std::map<std::string, std::string> keywords = {
         {"as", "Binds an imported module or native header to a local alias."},
+        {"assert", "Checks a condition and fails the current test or program when it is false."},
         {"break", "Leaves the nearest enclosing loop."},
+        {"case", "Declares one branch inside a `match` statement."},
         {"class", "Declares a Dudu class, lowered to a C++ struct/class-shaped type."},
         {"const", "Declares a compile-time constant binding."},
         {"continue", "Skips to the next iteration of the nearest enclosing loop."},
         {"def", "Declares a function or method."},
         {"debug_assert", "Checks a condition in debug builds only."},
+        {"delete", "Destroys and frees a heap object created with `new[T](...)`."},
         {"elif", "Adds another branch to an `if` statement."},
         {"else", "Fallback branch for `if`, `match`, or exception handling."},
         {"enum", "Declares an enum or sum type."},
@@ -57,8 +60,13 @@ std::optional<std::string> keyword_description(std::string_view keyword) {
         {"in", "Separates the loop binding from the iterable in a `for` statement."},
         {"match", "Selects a branch by value or pattern."},
         {"pass", "Explicit empty statement."},
+        {"private", "Restricts a declaration to its module or owning type."},
+        {"pub", "Exports a declaration from its module."},
+        {"public", "Exports a declaration from its module."},
+        {"raise", "Throws a C++ exception value."},
         {"return", "Returns from the current function."},
         {"static", "Declares class-owned data or behavior."},
+        {"static_assert", "Checks a compile-time condition."},
         {"try", "Starts a C++ exception handling block."},
         {"while", "Repeats a block while a condition stays true."},
     };
@@ -81,8 +89,7 @@ std::optional<std::string> keyword_hover_json(const Document& doc, const Json* p
         return std::nullopt;
     }
     const std::string keyword(token->text);
-    const std::string markdown =
-        fenced_code("dudu", "keyword " + keyword) + "\n\n" + *description;
+    const std::string markdown = fenced_code("dudu", "keyword " + keyword) + "\n\n" + *description;
     return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
            "\"},\"range\":" +
            range_json(token->location.line - 1, token->location.column - 1,

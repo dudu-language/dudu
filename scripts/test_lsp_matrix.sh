@@ -351,7 +351,15 @@ def main() -> i32:
     left: Vec2 = Vec2(1, 2)
     right: Vec2 = Vec2(3, 4)
     total = left + right
+    numbers: list[i32] = []
+    numbers.append(1)
+    if len(numbers) > 0:
+        total = total + Vec2(numbers.back(), numbers.front())
+    j = 0
+    while j < 1:
+        j += 1
     for i in range(2):
+        numbers.append(i)
         total = total + Vec2(i, i)
     return total.x
 """
@@ -689,6 +697,12 @@ def main() -> i32:
         request(150, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "self.x + other.x", add=1)}),
         request(151, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=1)}),
         request(152, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "for i in range", add=len("for "))}),
+        request(153, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "range(2)", add=1)}),
+        request(154, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "numbers.append(1)", add=len("numbers."))}),
+        request(155, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "if len", add=1)}),
+        request(156, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "while j", add=1)}),
+        request(157, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "len(numbers)", add=1)}),
+        request(158, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "numbers.back()", add=len("numbers."))}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1166,6 +1180,24 @@ def main() -> i32:
     loop_binding_hover = response(messages, 152)["contents"]["value"]
     if "i: i32" not in loop_binding_hover:
         raise AssertionError(f"for binding hover did not show inferred type: {loop_binding_hover!r}")
+    range_hover = response(messages, 153)["contents"]["value"]
+    if "range(stop: i32)" not in range_hover or "integer range iterable" not in range_hover:
+        raise AssertionError(f"missing range builtin hover: {range_hover!r}")
+    append_hover = response(messages, 154)["contents"]["value"]
+    if "append(value: i32) -> void" not in append_hover or "push_back" not in append_hover:
+        raise AssertionError(f"missing append builtin method hover: {append_hover!r}")
+    if_hover = response(messages, 155)["contents"]["value"]
+    if "keyword if" not in if_hover or "condition is true" not in if_hover:
+        raise AssertionError(f"missing if keyword hover: {if_hover!r}")
+    while_hover = response(messages, 156)["contents"]["value"]
+    if "keyword while" not in while_hover or "condition stays true" not in while_hover:
+        raise AssertionError(f"missing while keyword hover: {while_hover!r}")
+    len_hover = response(messages, 157)["contents"]["value"]
+    if "len(value) -> usize" not in len_hover or "Returns the length" not in len_hover:
+        raise AssertionError(f"missing len builtin hover: {len_hover!r}")
+    back_hover = response(messages, 158)["contents"]["value"]
+    if "back() -> i32" not in back_hover or "Returns an element" not in back_hover:
+        raise AssertionError(f"missing list back builtin method hover: {back_hover!r}")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)
     if operator_use_definition["uri"] != ops.as_uri():

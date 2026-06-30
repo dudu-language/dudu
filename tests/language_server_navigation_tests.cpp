@@ -687,7 +687,7 @@ void test_lsp_references_use_imported_member_identity_from_use_site() {
     const dudu::AstSelection selection = dudu::ast_selection_at(main_unit, &params);
     assert(selection.expr_path.has_value());
     const std::optional<std::string> member_query =
-        dudu::member_use_reference_query_at(main_unit, *selection.expr_path, &params);
+        dudu::member_use_reference_query_at(main_unit, main_doc, *selection.expr_path, &params);
     assert(member_query == "Player.hp");
     const std::string refs = dudu::references_json(main_doc, &params, workspace);
     assert(refs.find(dudu::file_uri(main_path)) != std::string::npos);
@@ -744,7 +744,7 @@ void test_lsp_references_use_imported_method_identity_from_use_site() {
     const dudu::AstSelection selection = dudu::ast_selection_at(main_unit, &params);
     assert(selection.expr_path.has_value());
     const std::optional<std::string> member_query =
-        dudu::member_use_reference_query_at(main_unit, *selection.expr_path, &params);
+        dudu::member_use_reference_query_at(main_unit, main_doc, *selection.expr_path, &params);
     assert(member_query == "Player.move");
     const std::string refs = dudu::references_json(main_doc, &params, workspace);
     assert(refs.find(dudu::file_uri(main_path)) != std::string::npos);

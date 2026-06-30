@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_builtin_hover.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_decorators.hpp"
 #include "dudu/lsp/language_server_hover_keywords.hpp"
@@ -407,6 +408,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         return *primitive;
     }
     if (has_selection) {
+        if (const std::optional<std::string> builtin =
+                builtin_function_hover_json(selection, query)) {
+            return *builtin;
+        }
+    }
+    if (has_selection) {
         if (selection.operator_expr) {
             if (const std::optional<Symbol> op = dudu_operator_symbol_for_expr(
                     current, *selection.operator_expr, lsp_position(params).line + 1)) {
@@ -445,6 +452,10 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         return native_index;
     };
     if (selected_path.has_value()) {
+        if (const std::optional<std::string> builtin_member =
+                builtin_member_hover_json(*selected_path, params, current)) {
+            return *builtin_member;
+        }
         if (const std::optional<Symbol> class_member =
                 class_member_symbol_for_path(current, *selected_path)) {
             return symbol_hover_json(*class_member);
