@@ -31,6 +31,7 @@ struct Symbols {
     std::set<std::string> module_import_prefixes;
     std::set<std::string> native_explicit_template_prefixes;
     std::set<std::string> native_types;
+    std::map<std::string, const NativeTypeDecl*> native_type_decls;
     std::map<std::string, TypeRef> native_value_type_refs;
     std::set<std::string> native_enum_values;
     std::map<std::string, const EnumDecl*> enums;

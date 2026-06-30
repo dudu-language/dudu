@@ -332,6 +332,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
+        symbols.native_type_decls[type.name] = &type;
         add_native_path_prefix(symbols, type.name);
         if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&
             !symbols.alias_type_refs.contains(type.name)) {

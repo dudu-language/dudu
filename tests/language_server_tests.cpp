@@ -383,6 +383,10 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
                                           "};\n"
                                           "inline int native_add(int left, int right) {\n"
                                           "    return left + right;\n"
+                                          "}\n"
+                                          "typedef struct NativeOpaque NativeOpaque;\n"
+                                          "inline NativeOpaque* native_make() {\n"
+                                          "    return nullptr;\n"
                                           "}\n");
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
@@ -392,12 +396,15 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
                                      "    widget.set_position(3, 4)\n"
+                                     "    made = native_make()\n"
                                      "    return native_add(1, 2)\n"};
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"label\":\"x:\"") != std::string::npos);
     assert(hints.find("\"label\":\"y:\"") != std::string::npos);
     assert(hints.find("\"label\":\"left:\"") != std::string::npos);
     assert(hints.find("\"label\":\"right:\"") != std::string::npos);
+    assert(hints.find("\"value\":\"NativeOpaque\"") != std::string::npos);
+    assert(hints.find("native type NativeOpaque") != std::string::npos);
     assert(hints.find("\"label\":\"arg0:\"") == std::string::npos);
 }
 

@@ -141,10 +141,28 @@ const ClassDecl* class_for_type_name(const Symbols& symbols, const std::string& 
     return nullptr;
 }
 
+const NativeTypeDecl* native_type_for_name(const Symbols& symbols, const std::string& name) {
+    if (const auto found = symbols.native_type_decls.find(name);
+        found != symbols.native_type_decls.end()) {
+        return found->second;
+    }
+    return nullptr;
+}
+
 std::string type_token_tooltip(const Symbols& symbols, const std::string& name) {
     bool native = false;
     const ClassDecl* klass = class_for_type_name(symbols, name, native);
     if (klass == nullptr) {
+        if (const NativeTypeDecl* type = native_type_for_name(symbols, name)) {
+            std::string markdown = fenced_code("cpp", type->native_spelling.empty()
+                                                          ? std::string("native type ") + type->name
+                                                          : "native type " + type->name + " = " +
+                                                                native_type_alias_type_text(*type));
+            if (!type->doc_comment.empty()) {
+                markdown += "\n\n" + type->doc_comment;
+            }
+            return markdown;
+        }
         if (const std::optional<LayoutInfo> layout = primitive_layout(name)) {
             return "`" + name + "`\n\nsize = " + std::to_string(layout->size) +
                    " bytes, align = " + std::to_string(layout->align) + " bytes";
@@ -167,7 +185,13 @@ std::string type_token_tooltip(const Symbols& symbols, const std::string& name) 
 SourceLocation type_token_location(const Symbols& symbols, const std::string& name) {
     bool native = false;
     const ClassDecl* klass = class_for_type_name(symbols, name, native);
-    return klass == nullptr ? SourceLocation{} : klass->location;
+    if (klass != nullptr) {
+        return klass->location;
+    }
+    if (const NativeTypeDecl* type = native_type_for_name(symbols, name)) {
+        return type->location;
+    }
+    return {};
 }
 
 bool token_char(char ch) {
