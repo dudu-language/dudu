@@ -1,0 +1,10 @@
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+
+def main() -> i32:
+    value = Tensor[i32](1, 1, 7)
+    checked = assume_shape[Tensor[i32]](value)
+    return checked.rows

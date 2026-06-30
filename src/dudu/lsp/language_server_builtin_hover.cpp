@@ -47,6 +47,10 @@ std::optional<BuiltinFunctionDoc> builtin_function_doc(const std::string& name) 
         {"range",
          {"range(stop: i32) -> range\nrange(start: i32, stop: i32, step: i32 = 1) -> range",
           "Builds an integer range iterable for `for` loops."}},
+        {"assume_shape",
+         {"assume_shape[T](value) -> T",
+          "Narrows runtime-known shaped metadata after user or library code has checked the "
+          "value's dimensions. `T` must include shape metadata."}},
     };
     const auto found = docs.find(name);
     if (found == docs.end()) {

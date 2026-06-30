@@ -1,20 +1,20 @@
 #include "dudu/codegen/cpp_expr_emit.hpp"
 
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_index.hpp"
 #include "dudu/codegen/cpp_expr_slices.hpp"
 #include "dudu/codegen/cpp_expr_swizzles.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -316,6 +316,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             const std::string type =
                 lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
+        }
+        if (callee == "assume_shape" && expr.children.size() == 1) {
+            return lowered_call_args;
         }
         if (is_builtin_template_constructor(callee)) {
             const std::string type =

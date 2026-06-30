@@ -1,7 +1,7 @@
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_signature_match.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -65,6 +65,55 @@ std::optional<TypeRef> type_shape_builtin_type_ref(const FunctionScope& scope, c
         }
     }
     return named_type_ref("usize", expr.location);
+}
+
+std::optional<TypeRef> assume_shape_type_ref(const FunctionScope& scope, const Expr& expr,
+                                             const SourceLocation* location) {
+    if (direct_callee_name(expr) != "assume_shape") {
+        return std::nullopt;
+    }
+    const std::vector<TypeRef> type_args = template_type_refs(expr);
+    if (location != nullptr && type_args.size() != 1) {
+        sema_expr_fail(*location, "assume_shape expects 1 type argument, got " +
+                                      std::to_string(type_args.size()));
+    }
+    if (location != nullptr && expr.children.size() != 1) {
+        sema_expr_fail(*location, "assume_shape expects 1 value argument, got " +
+                                      std::to_string(expr.children.size()));
+    }
+    if (type_args.empty()) {
+        return std::nullopt;
+    }
+    const TypeRef& target = type_args.front();
+    if (location != nullptr && target.kind != TypeKind::Shaped) {
+        sema_expr_fail(target.location.line > 0 ? target.location : *location,
+                       "assume_shape target must include shape metadata");
+    }
+    if (const auto unknown = unknown_type_ref(scope.symbols, target)) {
+        if (location != nullptr) {
+            const SourceLocation type_location =
+                unknown->second.line > 0 ? unknown->second : target.location;
+            sema_expr_fail(type_location, "unknown assume_shape type: " + unknown->first);
+        }
+        return std::nullopt;
+    }
+    if (expr.children.size() == 1 && target.kind == TypeKind::Shaped && !target.children.empty()) {
+        const Expr& value = expr.children.front();
+        const TypeRef got = infer_expr_type_ast(scope, value, location);
+        TypeRef got_base = got;
+        if (got.kind == TypeKind::Shaped && !got.children.empty()) {
+            got_base = got.children.front();
+        }
+        if (location != nullptr &&
+            !can_assign_ast(scope, target.children.front(), value, got_base)) {
+            const std::string expected_display =
+                substitute_type_ref_text(target.children.front(), {});
+            const std::string got_display = substitute_type_ref_text(got, {});
+            sema_expr_fail(*location, "assume_shape value expects " + expected_display + ", got " +
+                                          got_display);
+        }
+    }
+    return target;
 }
 
 bool call_arity_between(const Expr& expr, const SourceLocation* location, std::string_view callee,
@@ -300,6 +349,9 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
     }
     if (const auto builtin_type = type_shape_builtin_type_ref(scope, expr, location)) {
         return *builtin_type;
+    }
+    if (const auto assumed = assume_shape_type_ref(scope, expr, location)) {
+        return *assumed;
     }
     const std::string callee = template_call_callee(scope, expr, location);
     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);

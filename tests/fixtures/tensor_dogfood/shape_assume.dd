@@ -1,0 +1,24 @@
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+
+def filled[T](rows: i32, cols: i32, value: T) -> Tensor[T]:
+    return Tensor[T](rows, cols, value)
+
+
+def expect_static_shape(value: Tensor[f32][2, 2]) -> i32:
+    return value.rows + value.cols
+
+
+def require_2_by_2(value: Tensor[f32][dyn, 2]) -> Tensor[f32][2, 2]:
+    assert value.rows == 2
+    assert value.cols == 2
+    return assume_shape[Tensor[f32][2, 2]](value)
+
+
+def main() -> i32:
+    shaped: Tensor[f32][dyn, 2] = filled[f32](2, 2, 1.0)
+    checked = require_2_by_2(shaped)
+    return expect_static_shape(checked) + 38

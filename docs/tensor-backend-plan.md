@@ -438,10 +438,14 @@ Status:
   selected value type. For example, `tensor[mask, :] += 1` does not silently
   lower through a scalar-fill scatter hook; users must spell the read/modify
   value and `[]=` assignment explicitly so the library policy is visible.
+- Done: `assume_shape[T](value)` lets library/user code narrow a runtime-known
+  `dyn` shaped value to a concrete shaped type after explicit runtime checks.
+  The builtin is restricted to shaped target types and lowers to the value
+  expression, so it carries only type metadata and does not add hidden tensor
+  copies or backend behavior.
 - Remaining: advanced mask semantics, repeated-index scatter policy, richer
-  view objects, propagation of shape facts through composed tensor expressions,
-  and diagnostics/conversions for proving runtime-known `dyn` values satisfy
-  concrete shape assertions.
+  view objects and propagation of shape facts through composed tensor
+  expressions.
 
 ### 2. CPU Tensor Library
 

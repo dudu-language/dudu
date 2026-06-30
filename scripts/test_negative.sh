@@ -144,6 +144,8 @@ expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[
 expect_fail bad_tensor_index_set_return --check "indexed assignment operator methods must return void"
 expect_fail bad_tensor_shape_dyn_to_concrete --emit-cpp "argument 1 for expect_static_shape expects Tensor\\[f32\\]\\[2, 2\\], got Tensor\\[f32\\]\\[dyn, 2\\]"
 expect_fail bad_tensor_mask_compound_scatter --emit-cpp "compound indexed assignment requires @operator(\"\\[\\]=\") accepting the indexed value type"
+expect_fail bad_assume_shape_unshaped --emit-cpp "assume_shape target must include shape metadata"
+expect_fail bad_assume_shape_base_type --emit-cpp "assume_shape value expects Tensor\\[f32\\], got Tensor\\[i32\\]\\[dyn, 2\\]"
 expect_fail bad_generic_duplicate_param --check "duplicate generic parameter: T"
 expect_fail bad_generic_function_arg_type --check "argument 1 for identity\\[i32\\] expects i32, got bool"
 expect_fail bad_generic_inferred_conflict --check "conflicting inferred type argument T: i32 vs f64 for choose"
