@@ -351,8 +351,9 @@ def main() -> i32:
     (tmp / "native_bridge.h").write_text(
         """#pragma once
 
-#define DUDU_MATRIX_NATIVE_MAGIC 12
+/** Native scale macro docs. */
 #define DUDU_MATRIX_NATIVE_SCALE(value) ((value) * 3)
+#define DUDU_MATRIX_NATIVE_MAGIC 12
 
 typedef struct MatrixNativePoint {
     /** Native point x coordinate docs. */
@@ -1115,6 +1116,7 @@ def main() -> i32:
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
+    assert_documentation_contains(item_named(native_completion, "DUDU_MATRIX_NATIVE_SCALE"), "Native scale macro docs.")
     assert_documentation_contains(item_named(native_completion, "MATRIX_MODE_FAST"), "Native mode fast docs.")
     for request_id in (51, 52, 53):
         assert_nonempty(response(messages, request_id), f"native request {request_id}")
@@ -1124,6 +1126,8 @@ def main() -> i32:
     native_macro_hover = response(messages, 53)["contents"]["value"]
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
+    if "Native scale macro docs." not in native_macro_hover:
+        raise AssertionError(f"missing native macro docs: {native_macro_hover!r}")
     native_macro_definition = response(messages, 121)
     if not native_macro_definition["uri"].endswith("/native_bridge.h"):
         raise AssertionError(f"native macro definition did not jump to header: {native_macro_definition!r}")

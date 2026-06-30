@@ -151,8 +151,10 @@ the native property modifier.
 Native macros are covered beyond coloring/completion now: local imported headers
 are searched for the matching `#define` line after macro dump parsing, so
 go-to-definition on `nb.DUDU_MATRIX_NATIVE_SCALE(...)` jumps into the header when
-that file is readable. The JSON-RPC matrix also asserts references for the native
-macro use site.
+that file is readable. Leading `//` / `///` / block comments immediately above a
+local `#define` are preserved as native macro docs, and the JSON-RPC matrix
+asserts those docs through completion and hover along with references for the
+native macro use site.
 Native find-references now consults `ProjectIndex`'s per-module native identity
 table instead of rebuilding LSP symbol lists for every candidate document. Open
 single-file editor overlays are indexed with their entry path, so unsaved or

@@ -18,6 +18,7 @@
 #include <optional>
 #include <regex>
 #include <set>
+#include <vector>
 namespace dudu {
 namespace {
 bool is_foreign(const ImportDecl& import) {
@@ -90,25 +91,96 @@ std::string macro_raw_name(const std::string& name) {
     return dot == std::string::npos ? name : name.substr(dot + 1);
 }
 
-std::optional<SourceLocation> macro_definition_location(const std::filesystem::path& header,
-                                                        const std::string& name) {
-    std::ifstream in(header);
-    if (!in) {
-        return std::nullopt;
-    }
-    const std::regex define_pattern("^\\s*#\\s*define\\s+" + name + "(\\b|\\()");
+std::vector<std::string> read_lines(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    std::vector<std::string> lines;
     std::string line;
-    int line_number = 1;
     while (std::getline(in, line)) {
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+std::string trim_macro_doc_line(std::string text) {
+    text = trim_copy(std::move(text));
+    if (text.starts_with("///")) {
+        return trim_copy(text.substr(3));
+    }
+    if (text.starts_with("//")) {
+        return trim_copy(text.substr(2));
+    }
+    if (text.starts_with("/**")) {
+        text = trim_copy(text.substr(3));
+    } else if (text.starts_with("/*")) {
+        text = trim_copy(text.substr(2));
+    }
+    if (text.ends_with("*/")) {
+        text = trim_copy(text.substr(0, text.size() - 2));
+    }
+    if (text.starts_with("*")) {
+        text = trim_copy(text.substr(1));
+    }
+    return text;
+}
+
+std::string macro_doc_before_line(const std::vector<std::string>& lines, size_t define_index) {
+    std::vector<std::string> pending;
+    bool in_block = false;
+    for (size_t cursor = define_index; cursor > 0;) {
+        --cursor;
+        std::string line = trim_copy(lines[cursor]);
+        if (line.empty()) {
+            break;
+        }
+        if (in_block) {
+            pending.push_back(trim_macro_doc_line(line));
+            if (line.find("/*") != std::string::npos) {
+                break;
+            }
+            continue;
+        }
+        if (line.starts_with("//")) {
+            pending.push_back(trim_macro_doc_line(line));
+            continue;
+        }
+        if (line.find("*/") != std::string::npos) {
+            pending.push_back(trim_macro_doc_line(line));
+            if (line.find("/*") != std::string::npos) {
+                break;
+            }
+            in_block = true;
+            continue;
+        }
+        break;
+    }
+    std::reverse(pending.begin(), pending.end());
+    std::string out;
+    for (const std::string& line : pending) {
+        if (line.empty()) {
+            continue;
+        }
+        if (!out.empty()) {
+            out += "\n";
+        }
+        out += line;
+    }
+    return out;
+}
+
+std::optional<SourceLocation> macro_definition_location(const std::filesystem::path& header,
+                                                        const std::vector<std::string>& lines,
+                                                        const std::string& name) {
+    const std::regex define_pattern("^\\s*#\\s*define\\s+" + name + "(\\b|\\()");
+    for (size_t index = 0; index < lines.size(); ++index) {
+        const std::string& line = lines[index];
         if (std::regex_search(line, define_pattern)) {
             const size_t column = line.find(name);
             return SourceLocation{
                 .file = SourceFileName(header.string()),
-                .line = line_number,
+                .line = static_cast<int>(index + 1),
                 .column = column == std::string::npos ? 1 : static_cast<int>(column + 1),
             };
         }
-        ++line_number;
     }
     return std::nullopt;
 }
@@ -121,17 +193,26 @@ void attach_macro_definition_locations(std::vector<NativeMacroDecl>& macros,
     if (!header.has_value()) {
         return;
     }
+    const std::vector<std::string> lines = read_lines(*header);
     std::map<std::string, SourceLocation> locations;
+    std::map<std::string, std::string> docs;
     for (NativeMacroDecl& macro : macros) {
         const std::string raw_name = macro_raw_name(macro.name);
         if (const auto found = locations.find(raw_name); found != locations.end()) {
             macro.location = found->second;
+            if (const auto doc = docs.find(raw_name); doc != docs.end()) {
+                macro.doc_comment = doc->second;
+            }
             continue;
         }
         if (const std::optional<SourceLocation> location =
-                macro_definition_location(*header, raw_name)) {
+                macro_definition_location(*header, lines, raw_name)) {
             locations.emplace(raw_name, *location);
             macro.location = *location;
+            const std::string doc =
+                macro_doc_before_line(lines, static_cast<size_t>(location->line - 1));
+            docs.emplace(raw_name, doc);
+            macro.doc_comment = doc;
         }
     }
 }

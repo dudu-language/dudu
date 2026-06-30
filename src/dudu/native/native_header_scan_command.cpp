@@ -126,7 +126,7 @@ std::filesystem::path native_header_temp_base(const std::filesystem::path& sourc
 
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags) {
-    return "v5|" + native_header_unquoted(import.module_path) + "|" +
+    return "v6|" + native_header_unquoted(import.module_path) + "|" +
            native_header_clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
            header_stamp(import, options);
 }

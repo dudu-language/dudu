@@ -317,7 +317,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
              .detail = native_macro_detail(macro),
              .location = macro.location,
              .kind = macro.function_like ? lsp_symbol_kind::Namespace : lsp_symbol_kind::Constant,
-             .native_identity_key = native_identity_key(macro.identity)});
+             .native_identity_key = native_identity_key(macro.identity),
+             .doc_comment = macro.doc_comment});
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
         out.push_back({.name = fn.name,

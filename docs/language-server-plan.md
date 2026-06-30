@@ -482,8 +482,10 @@ including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Local imported headers now attach macro symbols to
 the matching `#define` line when the scanner can read the header text, so
 go-to-definition on a native macro jumps to the header instead of the Dudu import
-alias. The JSON-RPC matrix covers native macro hover, definition, references, and
-semantic-token classification.
+alias. Leading `//` / `///` / block comments immediately above those local
+`#define`s are preserved as native macro docs. The JSON-RPC matrix covers native
+macro completion docs, hover docs, definition, references, and semantic-token
+classification.
 Initial native C++ member completion is implemented
 for locals annotated with scanned native class types or aliases, and
 go-to-definition for those native C++ members jumps to the scanned header
@@ -566,7 +568,7 @@ navigation behavior in small deterministic projects that are cheap to run.
 
 Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
 formatting, Dudu symbols, references, rename, workspace symbols, native fixture
-imports, native macro hover/definition/references/completion, strict
+imports, native macro hover/definition/references/completion docs, strict
 missing-header diagnostics, and build-configuration diagnostics from a broken
 `dudu.toml`.
 It also covers workspace symbols and references from an unopened sibling `.dd`

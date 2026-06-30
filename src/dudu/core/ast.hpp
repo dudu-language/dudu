@@ -312,6 +312,7 @@ struct NativeMacroDecl {
     bool function_like = false;
     NativeSymbolId identity{};
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct NativeNamespaceDecl {

@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v6";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v7";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -225,13 +225,14 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                  .identity = symbol_id(fields, 8, 9),
                  .location = decl_location,
                  .doc_comment = fields[10]});
-        } else if (tag == "NM" && fields.size() == 8) {
-            const SourceLocation decl_location = cached_location(fields, 5, location);
+        } else if (tag == "NM" && fields.size() == 9) {
+            const SourceLocation decl_location = cached_location(fields, 6, location);
             scan.macros.push_back({.name = fields[0],
                                    .arity = std::stoi(fields[1]),
                                    .function_like = fields[2] == "1",
                                    .identity = symbol_id(fields, 3, 4),
-                                   .location = decl_location});
+                                   .location = decl_location,
+                                   .doc_comment = fields[5]});
         } else if (tag == "NN" && fields.size() == 7) {
             scan.namespaces.push_back({.name = fields[0],
                                        .identity = symbol_id(fields, 1, 2),
@@ -314,9 +315,9 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
         write_record(out, "NF", fields);
     }
     for (const NativeMacroDecl& item : scan.macros) {
-        std::vector<std::string> fields = {item.name, std::to_string(item.arity),
-                                           item.function_like ? "1" : "0", item.identity.usr,
-                                           item.identity.canonical_path};
+        std::vector<std::string> fields = {
+            item.name,         std::to_string(item.arity),   item.function_like ? "1" : "0",
+            item.identity.usr, item.identity.canonical_path, item.doc_comment};
         append_location_fields(fields, item.location);
         write_record(out, "NM", fields);
     }
