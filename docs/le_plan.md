@@ -2406,7 +2406,10 @@ push. They are not release packaging work.
    are exercised as editor symbols rather than only as compile fixtures. Native
    C++ member method definition and references are also covered in the
    JSON-RPC matrix with an unrelated receiver type containing the same method
-   name filtered out.
+   name filtered out. Native macro go-to-definition now attaches local imported
+   headers to the matching `#define` line when the header text is readable, and
+   the JSON-RPC matrix covers native macro hover, definition, references, and
+   semantic-token classification.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
    Field/constant/alias larger-doc syntax and broader native C/C++ declaration
@@ -3825,3 +3828,7 @@ push. They are not release packaging work.
    resolution instead of prefix spelling alone. The LSP matrix covers
    `Mode.` and `Token.` completions, enum-member completion kinds, and docs
    attached to variants such as `Mode.Play` and `Token.IntLit`.
+   Native macro definition now resolves through scanner-provided header
+   locations instead of stopping at the Dudu import alias. Local imported headers
+   are searched for the matching `#define` line after macro dump parsing, and
+   native macro references are asserted in the JSON-RPC matrix.

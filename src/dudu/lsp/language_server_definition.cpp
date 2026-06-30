@@ -5,6 +5,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
+#include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -422,9 +423,11 @@ std::string definition_json(const Document& doc, const Json* params) {
             constructor_definition_json(doc, current, selection)) {
         return *constructor;
     }
-    const std::vector<Symbol> symbols = symbols_for_module(current, false);
-    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
-        return symbol_definition_json(*exact, doc);
+    if (word.find('.') != std::string::npos && module_import_target_key(doc, word).has_value()) {
+        if (const std::optional<std::string> import_definition =
+                import_definition_json(doc, index, current, word)) {
+            return *import_definition;
+        }
     }
     const ProjectIndex* native_index = nullptr;
     const auto load_native_index = [&]() -> const ProjectIndex* {
@@ -435,16 +438,41 @@ std::string definition_json(const Document& doc, const Json* params) {
     };
     const std::optional<ExprPath>& path = selection.expr_path;
     if (path && path->segments.size() >= 2) {
+        try {
+            const ProjectIndex* native = load_native_index();
+            const ModuleAst& visible = native->visible_unit_for_path(doc.path);
+            const std::vector<Symbol> native_symbols = symbols_for_module(visible, true);
+            if (const std::optional<Symbol> native_namespace =
+                    native_namespace_segment_symbol(native_symbols, selection.symbol, word)) {
+                return symbol_definition_json(*native_namespace, doc);
+            }
+            if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
+                if (exact->native_identity_key.has_value()) {
+                    return symbol_definition_json(*exact, doc);
+                }
+            }
+            if (const std::optional<Symbol> class_member =
+                    class_member_symbol_for_path(visible, *path)) {
+                return symbol_definition_json(*class_member, doc);
+            }
+            if (const std::optional<std::string> member_definition =
+                    member_definition_json(doc, *path, params, current, native->merged_module())) {
+                return *member_definition;
+            }
+        } catch (const std::exception&) {
+        }
+    }
+    const std::vector<Symbol> symbols = symbols_for_module(current, false);
+    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
+        return symbol_definition_json(*exact, doc);
+    }
+    if (path && path->segments.size() >= 2) {
         if (const std::optional<Symbol> class_member =
                 class_member_symbol_for_path(current, *path)) {
             return symbol_definition_json(*class_member, doc);
         }
         try {
             const ProjectIndex* native = load_native_index();
-            if (const std::optional<Symbol> class_member =
-                    class_member_symbol_for_path(native->visible_unit_for_path(doc.path), *path)) {
-                return symbol_definition_json(*class_member, doc);
-            }
             if (const std::optional<std::string> member_definition =
                     member_definition_json(doc, *path, params, current, native->merged_module())) {
                 return *member_definition;

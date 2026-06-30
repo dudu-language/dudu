@@ -675,6 +675,8 @@ def main() -> i32:
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
+        request(121, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
+        request(122, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
         request(112, "textDocument/prepareRename", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
@@ -1122,6 +1124,16 @@ def main() -> i32:
     native_macro_hover = response(messages, 53)["contents"]["value"]
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
+    native_macro_definition = response(messages, 121)
+    if not native_macro_definition["uri"].endswith("/native_bridge.h"):
+        raise AssertionError(f"native macro definition did not jump to header: {native_macro_definition!r}")
+    native_macro_decl = position((tmp / "native_bridge.h").read_text(), "DUDU_MATRIX_NATIVE_SCALE")
+    if native_macro_definition["range"]["start"]["line"] != native_macro_decl["line"]:
+        raise AssertionError(f"native macro definition jumped to wrong line: {native_macro_definition!r}")
+    native_macro_refs = response(messages, 122)
+    native_macro_use = position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))
+    if not has_start(native_macro_refs, native.as_uri(), native_macro_use["line"], native_macro_use["character"]):
+        raise AssertionError(f"missing native macro reference: {native_macro_refs!r}")
     assert_nonempty(response(messages, 54), "native function references")
     native_value_hover = response(messages, 91)["contents"]["value"]
     if "MATRIX_MODE_FAST:" not in native_value_hover or "Native mode fast docs." not in native_value_hover:

@@ -47,6 +47,25 @@ void collect_call_callee_selection(const Expr& expr, const LspPosition& position
     }
 }
 
+bool collect_expr_path_selection(const Expr& expr, const LspPosition& position,
+                                 AstSelection& selection) {
+    const std::optional<ExprPath> path = expr_path_from_expr(expr);
+    if (!path.has_value()) {
+        return false;
+    }
+    const std::string rendered_path = render_expr_path(*path);
+    for (const ExprPathSegment& segment : path->segments) {
+        if (!contains_name(segment.location, segment.text, position)) {
+            continue;
+        }
+        selection.symbol = segment.text;
+        selection.symbol_path = rendered_path;
+        selection.expr_path = path;
+        return true;
+    }
+    return false;
+}
+
 void collect_selection_from_statements(const std::vector<Stmt>& statements,
                                        const LspPosition& position, AstSelection& selection) {
     const auto set_symbol = [&](const std::string& name, const SourceLocation& location) {
@@ -86,6 +105,10 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
             selection.call_callee = true;
         }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {
+            return;
+        }
+        if (expr.kind == ExprKind::Member &&
+            collect_expr_path_selection(expr, position, selection)) {
             return;
         }
         const SourceLocation name_location = expr_name_location(expr);
@@ -149,6 +172,10 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
             selection.call_callee = true;
         }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {
+            return;
+        }
+        if (expr.kind == ExprKind::Member &&
+            collect_expr_path_selection(expr, position, selection)) {
             return;
         }
         const SourceLocation name_location = expr_name_location(expr);

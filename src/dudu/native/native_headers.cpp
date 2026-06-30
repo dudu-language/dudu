@@ -1,7 +1,7 @@
 #include "dudu/native/native_headers.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/native/native_header_cache.hpp"
 #include "dudu/native/native_header_merge.hpp"
@@ -13,8 +13,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 #include <map>
 #include <optional>
+#include <regex>
 #include <set>
 namespace dudu {
 namespace {
@@ -81,6 +83,57 @@ bool source_file_matches_header(const SourceLocation& location, const ImportDecl
         return source_path.string().ends_with(imported.lexically_normal().string());
     }
     return source_path.filename() == imported.filename();
+}
+
+std::string macro_raw_name(const std::string& name) {
+    const size_t dot = name.rfind('.');
+    return dot == std::string::npos ? name : name.substr(dot + 1);
+}
+
+std::optional<SourceLocation> macro_definition_location(const std::filesystem::path& header,
+                                                        const std::string& name) {
+    std::ifstream in(header);
+    if (!in) {
+        return std::nullopt;
+    }
+    const std::regex define_pattern("^\\s*#\\s*define\\s+" + name + "(\\b|\\()");
+    std::string line;
+    int line_number = 1;
+    while (std::getline(in, line)) {
+        if (std::regex_search(line, define_pattern)) {
+            const size_t column = line.find(name);
+            return SourceLocation{
+                .file = SourceFileName(header.string()),
+                .line = line_number,
+                .column = column == std::string::npos ? 1 : static_cast<int>(column + 1),
+            };
+        }
+        ++line_number;
+    }
+    return std::nullopt;
+}
+
+void attach_macro_definition_locations(std::vector<NativeMacroDecl>& macros,
+                                       const ImportDecl& import,
+                                       const NativeHeaderOptions& options) {
+    const std::optional<std::filesystem::path> header =
+        normalized_existing_header_path(import, options);
+    if (!header.has_value()) {
+        return;
+    }
+    std::map<std::string, SourceLocation> locations;
+    for (NativeMacroDecl& macro : macros) {
+        const std::string raw_name = macro_raw_name(macro.name);
+        if (const auto found = locations.find(raw_name); found != locations.end()) {
+            macro.location = found->second;
+            continue;
+        }
+        if (const std::optional<SourceLocation> location =
+                macro_definition_location(*header, raw_name)) {
+            locations.emplace(raw_name, *location);
+            macro.location = *location;
+        }
+    }
 }
 
 bool source_file_belongs_to_import_family(const SourceLocation& location, const ImportDecl& import,
@@ -180,6 +233,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         NativeHeaderScan scan;
         parse_ast_dump(scan, raw_cache.ast_dump, import.location);
         parse_macro_dump(scan, raw_cache.macro_dump, import.location);
+        attach_macro_definition_locations(scan.macros, import, options);
         cache[key] = dedupe_scan(std::move(scan));
         store_native_header_scan_cache(raw_cache, cache[key]);
         print_project_step(project_step_timings_enabled(), "native-scan-raw",
@@ -240,6 +294,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
             "dudu.native_header.scan_failed", native_header_unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
+    attach_macro_definition_locations(scan.macros, import, options);
     if (!used_prelude_retry) {
         store_native_header_raw_cache(raw_cache, ast_dump, macro_dump,
                                       native_header_read_text(deps), cpp);
