@@ -201,6 +201,23 @@ void test_native_semantic_tokens() {
                                    native_modifier | readonly_modifier);
 }
 
+void test_native_import_semantic_token_ranges() {
+    const std::string source = "from cpp import thread\n"
+                               "from c import SDL3/SDL_pixels.h as sdl\n"
+                               "from cpp.path import vendor/foo.hpp as foo\n";
+    const dudu::ModuleAst module = dudu::parse_source(source, "native_import_tokens.dd");
+    const std::vector<DecodedSemanticToken> tokens =
+        decoded_semantic_tokens(source, dudu::semantic_tokens_json(module));
+
+    constexpr int token_namespace = 0;
+    constexpr int mod_declaration = 1;
+    constexpr int mod_native = 16;
+    require_decoded_semantic_token(tokens, "thread", token_namespace,
+                                   mod_declaration | mod_native);
+    require_decoded_semantic_token(tokens, "sdl", token_namespace, mod_declaration | mod_native);
+    require_decoded_semantic_token(tokens, "foo", token_namespace, mod_declaration | mod_native);
+}
+
 void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     const std::string source = "GLOBAL: i32 = 1\n"
                                "\n"
@@ -815,6 +832,7 @@ void test_ast_expr_path_at_cursor() {
 int main() {
     try {
         test_native_semantic_tokens();
+        test_native_import_semantic_token_ranges();
         test_decoded_semantic_tokens_cover_core_dudu_kinds();
         test_unresolved_semantic_tokens_are_marked();
         test_project_semantic_tokens_are_import_aware();

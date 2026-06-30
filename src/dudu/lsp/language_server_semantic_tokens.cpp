@@ -86,42 +86,13 @@ SourceLocation shifted_location(SourceLocation loc, int columns) {
 }
 
 SourceLocation import_bound_location(const ImportDecl& import) {
-    SourceLocation loc = import.location;
     if (!import.alias.empty()) {
-        if (import.kind == ImportKind::From) {
-            loc.column +=
-                static_cast<int>(std::string_view("from ").size() + import.module_path.size() +
-                                 std::string_view(" import ").size() + import.imported_name.size() +
-                                 std::string_view(" as ").size());
-            return loc;
-        }
-        std::string_view prefix = "import ";
-        if (import.kind == ImportKind::ForeignC) {
-            prefix = "import c ";
-        } else if (import.kind == ImportKind::ForeignCxx) {
-            prefix = "import cxx ";
-        } else if (import.kind == ImportKind::ForeignCpp) {
-            prefix = "import cpp ";
-        }
-        loc.column += static_cast<int>(prefix.size() + import.module_path.size() +
-                                       std::string_view(" as ").size());
-        return loc;
+        return import.alias_range.start;
     }
     if (import.kind == ImportKind::From) {
-        loc.column +=
-            static_cast<int>(std::string_view("from ").size() + import.module_path.size() +
-                             std::string_view(" import ").size());
-        return loc;
+        return import.imported_name_range.start;
     }
-    loc.column += static_cast<int>(std::string_view("import ").size());
-    if (import.kind == ImportKind::ForeignC) {
-        loc.column += static_cast<int>(std::string_view("c ").size());
-    } else if (import.kind == ImportKind::ForeignCxx) {
-        loc.column += static_cast<int>(std::string_view("cxx ").size());
-    } else if (import.kind == ImportKind::ForeignCpp) {
-        loc.column += static_cast<int>(std::string_view("cpp ").size());
-    }
-    return loc;
+    return import.module_range.start;
 }
 
 SourceLocation member_name_location(const Expr& expr) {

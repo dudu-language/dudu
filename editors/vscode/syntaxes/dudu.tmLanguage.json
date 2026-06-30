@@ -96,21 +96,37 @@
       "patterns": [
         {
           "name": "meta.import.native.dudu",
-          "match": "^\\s*(import)\\s+(c|cpp)\\s+(\"[^\"]+\")\\s+(as)\\s+([a-z][a-z0-9_]*)",
+          "match": "^\\s*(from)\\s+(c|cxx|cpp)(\\.path)?\\s+(import)\\s+([^\\s#]+)(?:\\s+(as)\\s+([a-z][A-Za-z0-9_]*))?",
           "captures": {
             "1": { "name": "keyword.control.import.dudu" },
             "2": { "name": "storage.modifier.import-kind.dudu" },
-            "3": { "name": "string.quoted.double.dudu" },
-            "4": { "name": "keyword.control.import.as.dudu" },
-            "5": { "name": "entity.name.namespace.dudu" }
+            "3": { "name": "storage.modifier.import-mode.dudu" },
+            "4": { "name": "keyword.control.import.dudu" },
+            "5": { "name": "string.unquoted.header.dudu" },
+            "6": { "name": "keyword.control.import.as.dudu" },
+            "7": { "name": "entity.name.namespace.dudu" }
+          }
+        },
+        {
+          "name": "meta.import.from.dudu",
+          "match": "^\\s*(from)\\s+([A-Za-z_][A-Za-z0-9_\\.]*)(\\s+)(import)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s+(as)\\s+([A-Za-z_][A-Za-z0-9_]*))?",
+          "captures": {
+            "1": { "name": "keyword.control.import.dudu" },
+            "2": { "name": "entity.name.namespace.dudu" },
+            "4": { "name": "keyword.control.import.dudu" },
+            "5": { "name": "entity.name.dudu" },
+            "6": { "name": "keyword.control.import.as.dudu" },
+            "7": { "name": "entity.name.namespace.dudu" }
           }
         },
         {
           "name": "meta.import.dudu",
-          "match": "^\\s*(from|import)\\s+([A-Za-z_][A-Za-z0-9_\\.]*)",
+          "match": "^\\s*(import)\\s+([A-Za-z_][A-Za-z0-9_\\.]*)(?:\\s+(as)\\s+([A-Za-z_][A-Za-z0-9_]*))?",
           "captures": {
             "1": { "name": "keyword.control.import.dudu" },
-            "2": { "name": "entity.name.namespace.dudu" }
+            "2": { "name": "entity.name.namespace.dudu" },
+            "3": { "name": "keyword.control.import.as.dudu" },
+            "4": { "name": "entity.name.namespace.dudu" }
           }
         }
       ]
