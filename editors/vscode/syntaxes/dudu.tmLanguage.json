@@ -6,7 +6,10 @@
     { "include": "#decorators" },
     { "include": "#declarations" },
     { "include": "#imports" },
+    { "include": "#type-annotations" },
     { "include": "#parameters" },
+    { "include": "#variables" },
+    { "include": "#namespaces" },
     { "include": "#members" },
     { "include": "#calls" },
     { "include": "#keywords" },
@@ -124,6 +127,29 @@
         }
       ]
     },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.declaration.dudu",
+          "match": "^\\s*([a-z_][A-Za-z0-9_]*)\\b(?=\\s*:)",
+          "captures": {
+            "1": { "name": "variable.other.declaration.dudu" }
+          }
+        },
+        {
+          "name": "variable.language.self.dudu",
+          "match": "\\bself\\b"
+        }
+      ]
+    },
+    "namespaces": {
+      "patterns": [
+        {
+          "name": "entity.name.namespace.dudu",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b(?=\\.)"
+        }
+      ]
+    },
     "members": {
       "patterns": [
         {
@@ -133,6 +159,29 @@
             "1": { "name": "punctuation.accessor.dudu" },
             "2": { "name": "variable.other.member.dudu" }
           }
+        }
+      ]
+    },
+    "type-annotations": {
+      "patterns": [
+        {
+          "name": "meta.type.annotation.dudu",
+          "begin": "(:|->)\\s*",
+          "beginCaptures": {
+            "1": { "name": "punctuation.separator.type.dudu" }
+          },
+          "end": "(?=$|[,)=])",
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#strings" },
+            { "include": "#types" },
+            { "include": "#namespaces" },
+            { "include": "#members" },
+            { "include": "#constants" },
+            { "include": "#numbers" },
+            { "include": "#operators" },
+            { "include": "#punctuation" }
+          ]
         }
       ]
     },
