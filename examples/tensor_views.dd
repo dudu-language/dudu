@@ -1,0 +1,133 @@
+class TensorView:
+    data: &list[f32]
+    offset: i32
+    rows: i32
+    cols: i32
+    row_stride: i32
+    col_stride: i32
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> f32:
+        index = self.offset + (row * self.row_stride) + (col * self.col_stride)
+        return self.data[index]
+
+    @operator("[]=")
+    def set_at(self, row: i32, col: i32, value: f32):
+        index = self.offset + (row * self.row_stride) + (col * self.col_stride)
+        self.data[index] = value
+
+
+class Tensor:
+    rows: i32
+    cols: i32
+    data: list[f32]
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> f32:
+        return self.data[(row * self.cols) + col]
+
+    @operator("[]=")
+    def set_at(self, row: i32, col: i32, value: f32):
+        self.data[(row * self.cols) + col] = value
+
+    @operator("[]")
+    def row_view(self, row: i32, cols: slice) -> TensorView:
+        col_start = slice_start(cols)
+        return TensorView(
+            self.data,
+            (row * self.cols) + col_start,
+            1,
+            slice_count(cols, self.cols),
+            self.cols,
+            slice_step(cols),
+        )
+
+    @operator("[]")
+    def column_view(self, rows: slice, col: i32) -> TensorView:
+        row_start = slice_start(rows)
+        return TensorView(
+            self.data,
+            (row_start * self.cols) + col,
+            slice_count(rows, self.rows),
+            1,
+            self.cols * slice_step(rows),
+            1,
+        )
+
+    @operator("[]")
+    def patch_view(self, rows: slice, cols: slice) -> TensorView:
+        row_start = slice_start(rows)
+        col_start = slice_start(cols)
+        return TensorView(
+            self.data,
+            (row_start * self.cols) + col_start,
+            slice_count(rows, self.rows),
+            slice_count(cols, self.cols),
+            self.cols * slice_step(rows),
+            slice_step(cols),
+        )
+
+
+def slice_start(value: slice) -> i32:
+    if value.has_start:
+        return i32(value.start)
+    return 0
+
+
+def slice_end(value: slice, limit: i32) -> i32:
+    if value.has_end:
+        return i32(value.end)
+    return limit
+
+
+def slice_step(value: slice) -> i32:
+    if value.has_step:
+        return i32(value.step)
+    return 1
+
+
+def slice_count(value: slice, limit: i32) -> i32:
+    start = slice_start(value)
+    stop = slice_end(value, limit)
+    step = slice_step(value)
+    if stop <= start:
+        return 0
+    return ((stop - start) + step - 1) / step
+
+
+def zeros(rows: i32, cols: i32) -> Tensor:
+    data: list[f32] = []
+    i = 0
+    while i < rows * cols:
+        data.append(0.0)
+        i += 1
+    return Tensor(rows, cols, data)
+
+
+def main() -> i32:
+    t = zeros(3, 4)
+    t[0, 0] = 1.0
+    t[0, 1] = 2.0
+    t[0, 2] = 3.0
+    t[0, 3] = 4.0
+    t[1, 0] = 5.0
+    t[1, 1] = 6.0
+    t[1, 2] = 7.0
+    t[1, 3] = 8.0
+    t[2, 0] = 9.0
+    t[2, 1] = 10.0
+    t[2, 2] = 11.0
+    t[2, 3] = 12.0
+
+    row = t[1, :]
+    col = t[:, 2]
+    patch = t[1:3, 1:4:2]
+
+    row_next: f32 = row[0, 0] + 6.0
+    row[0, 0] = row_next
+    col_next: f32 = col[2, 0] + 4.0
+    col[2, 0] = col_next
+    patch_next: f32 = patch[1, 1] + 4.0
+    patch[1, 1] = patch_next
+
+    return i32(t[1, 0] + t[2, 2] + t[2, 3])

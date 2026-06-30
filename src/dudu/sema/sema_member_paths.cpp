@@ -233,6 +233,15 @@ bool is_cpp_escape_member_path_string(const std::string& path) {
 std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                                const std::string& field) {
     const TypeRef resolved_type = resolve_alias_ref(symbols, receiver_type);
+    if (type_ref_head_name(resolved_type) == "slice") {
+        if (field == "has_start" || field == "has_end" || field == "has_step") {
+            return named_type_ref("bool", receiver_type.location);
+        }
+        if (field == "start" || field == "end" || field == "step") {
+            return named_type_ref("i64", receiver_type.location);
+        }
+        return std::nullopt;
+    }
     const std::vector<TypeRef> result_args = template_type_arg_refs(resolved_type, "Result");
     if (!result_args.empty()) {
         if (field == "ok") {

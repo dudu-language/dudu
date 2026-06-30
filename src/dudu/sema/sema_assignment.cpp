@@ -43,6 +43,17 @@ std::string indexed_assignment_label(const Expr& receiver) {
     return label.empty() ? "indexed assignment" : label;
 }
 
+std::vector<TypeRef> infer_assignment_arg_type_refs(const FunctionScope& scope,
+                                                    const std::vector<Expr>& args,
+                                                    const SourceLocation* location) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    for (const Expr& arg : args) {
+        out.push_back(infer_expr_type_ast(scope, arg, location));
+    }
+    return out;
+}
+
 TypeRef resolved_assignment_type(const Symbols& symbols, TypeRef type) {
     while (true) {
         const TypeRef resolved = resolve_alias_ref(symbols, type);
@@ -106,10 +117,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         const std::string& name = stmt_target_expr(stmt).children[0].name;
         if (scope.local_type_refs.contains(name)) {
             const TypeRef receiver_type = local_type_ref(scope, name, target_location);
-            if (const auto signature =
-                    dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
-                std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
-                args.push_back(stmt.value_expr);
+            std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            args.push_back(stmt.value_expr);
+            if (const auto signature = dudu_operator_signature_for_args(
+                    scope.symbols, "[]=", receiver_type, args,
+                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
@@ -125,10 +137,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location, receiver,
                                  {}, scope.current_class);
         if (has_type_ref(receiver_type)) {
-            if (const auto signature =
-                    dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
-                std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
-                args.push_back(stmt.value_expr);
+            std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            args.push_back(stmt.value_expr);
+            if (const auto signature = dudu_operator_signature_for_args(
+                    scope.symbols, "[]=", receiver_type, args,
+                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
                 check_call_args_ast(scope, indexed_assignment_label(receiver) + "[]=", *signature,
                                     args, &target_location);
                 return {};

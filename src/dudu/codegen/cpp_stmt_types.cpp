@@ -8,7 +8,9 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_index.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_native.hpp"
+#include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/sema_scan.hpp"
 #include "dudu/sema/type_compat.hpp"
 
@@ -52,6 +54,41 @@ TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_e
                                   : type_ref_head_name(receiver_type);
     return indexed_type_ref_from_type(active_symbols, index_expr.location, receiver_type,
                                       index_expr, label);
+}
+
+std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
+    if (index_expr.kind == ExprKind::TupleLiteral) {
+        return index_expr.children;
+    }
+    return {index_expr};
+}
+
+std::vector<TypeRef> infer_emitted_arg_type_refs(
+    const std::vector<Expr>& args, const std::map<std::string, TypeRef>& local_type_refs,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    for (const Expr& arg : args) {
+        out.push_back(infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
+    }
+    return out;
+}
+
+std::optional<TypeRef> emitted_index_hook_type_ref(
+    const TypeRef& receiver_type, const Expr& index_expr,
+    const std::map<std::string, TypeRef>& local_type_refs,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
+    if (symbols == nullptr) {
+        return std::nullopt;
+    }
+    const std::vector<Expr> args = index_arg_exprs(index_expr);
+    const auto signature = dudu_operator_signature_for_args(
+        *symbols, "[]", receiver_type, args,
+        infer_emitted_arg_type_refs(args, local_type_refs, function_returns, symbols));
+    if (!signature) {
+        return std::nullopt;
+    }
+    return signature_return_type_ref(*signature);
 }
 
 TypeRef infer_call_type_ref(const std::string& callee,
@@ -203,6 +240,10 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             if (expr.children[0].kind == ExprKind::Name) {
                 const TypeRef local_type = emitted_local_type_ref(
                     local_type_refs, expr.children[0].name, expr.children[0].location);
+                if (const auto hook_type = emitted_index_hook_type_ref(
+                        local_type, expr.children[1], local_type_refs, function_returns, symbols)) {
+                    return *hook_type;
+                }
                 if (const TypeRef indexed_type =
                         indexed_local_type_ref(local_type, expr.children[1], symbols);
                     has_type_ref(indexed_type)) {
@@ -212,6 +253,11 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             const TypeRef receiver_type = infer_emitted_local_type_ref(
                 expr.children[0], local_type_refs, function_returns, symbols);
             if (has_type_ref(receiver_type)) {
+                if (const auto hook_type = emitted_index_hook_type_ref(
+                        receiver_type, expr.children[1], local_type_refs, function_returns,
+                        symbols)) {
+                    return *hook_type;
+                }
                 if (const TypeRef indexed_type =
                         indexed_local_type_ref(receiver_type, expr.children[1], symbols);
                     has_type_ref(indexed_type)) {
@@ -227,8 +273,15 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             if (const auto native = native_member_expr_type_ref(*symbols, expr, expr.location)) {
                 return *native;
             }
+            if (const TypeRef member =
+                    member_expr_type_ref(*symbols, local_type_refs, nullptr, expr);
+                has_type_ref(member)) {
+                return member;
+            }
         }
         return {};
+    case ExprKind::Slice:
+        return named_type_ref("slice", expr.location);
     case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:
@@ -243,7 +296,6 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::ListLiteral:
     case ExprKind::NamedArg:
     case ExprKind::SetLiteral:
-    case ExprKind::Slice:
     case ExprKind::TupleLiteral:
         return {};
     }

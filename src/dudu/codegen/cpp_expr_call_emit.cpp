@@ -4,11 +4,13 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/codegen/cpp_stmt_types.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/sema_scope.hpp"
 #include "dudu/core/source.hpp"
 
@@ -120,35 +122,23 @@ bool expression_has_pointer_type(const Expr& expr,
     return type.kind == TypeKind::Pointer;
 }
 
-std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (const std::optional<std::string> arg =
-                decorator_first_string_literal_arg(decorator, name)) {
-            return *arg;
-        }
-    }
-    return {};
-}
-
-std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, const TypeRef& type,
-                                                     std::string_view op) {
-    const ClassDecl* klass = class_for_receiver_type(symbols, type);
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-    for (const FunctionDecl& method : klass->methods) {
-        if (decorator_arg(method, "operator") == op) {
-            return method.name;
-        }
-    }
-    return std::nullopt;
-}
-
 std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     if (index_expr.kind == ExprKind::TupleLiteral) {
         return index_expr.children;
     }
     return {index_expr};
+}
+
+std::vector<TypeRef> infer_index_arg_type_refs(
+    const std::vector<Expr>& args, const std::map<std::string, TypeRef>& local_type_refs,
+    const Symbols* symbols) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    const std::map<std::string, TypeRef> function_returns;
+    for (const Expr& arg : args) {
+        out.push_back(infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
+    }
+    return out;
 }
 
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
@@ -288,12 +278,14 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;
     }
-    const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]=");
+    std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+    args.push_back(stmt.value_expr);
+    const auto method = dudu_operator_method_name_for_args(
+        *symbols, "[]=", receiver_type, args,
+        infer_index_arg_type_refs(args, local_type_refs, symbols));
     if (!method) {
         return std::nullopt;
     }
-    std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
-    args.push_back(stmt.value_expr);
     const std::string lowered_receiver =
         lower_expr(receiver, aliases, locals, local_type_refs, symbols, options);
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
@@ -320,7 +312,10 @@ lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;
     }
-    const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]");
+    const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+    const auto method = dudu_operator_method_name_for_args(
+        *symbols, "[]", receiver_type, args,
+        infer_index_arg_type_refs(args, local_type_refs, symbols));
     if (!method) {
         return std::nullopt;
     }
@@ -328,9 +323,7 @@ lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
         lower_expr(receiver, aliases, locals, local_type_refs, symbols, options);
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
     return lowered_receiver + access + *method + "(" +
-           join_lowered_exprs(index_arg_exprs(expr.children[1]), aliases, locals, local_type_refs,
-                              ", ", symbols, options) +
-           ")";
+           join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
 }
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,

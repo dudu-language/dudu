@@ -428,11 +428,11 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;
-            if (!has_expr(field.value_expr)) {
-                out << "{}";
-            } else {
+            if (has_expr(field.value_expr)) {
                 out << " = "
                     << lower_cpp_expr_ast(field.value_expr, aliases, CppLocalContext{}, options);
+            } else if (field.type_ref.kind != TypeKind::Reference) {
+                out << "{}";
             }
             out << ";\n";
         }

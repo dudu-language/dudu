@@ -27,6 +27,16 @@ std::optional<std::string> unknown_module_function_message(const Symbols& symbol
     return "module '" + prefix + "' has no exported function '" + callee.substr(dot + 1) + "'";
 }
 
+std::vector<TypeRef> infer_arg_type_refs(const FunctionScope& scope, const std::vector<Expr>& args,
+                                         const SourceLocation* location) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    for (const Expr& arg : args) {
+        out.push_back(infer_expr_type_ast(scope, arg, location));
+    }
+    return out;
+}
+
 } // namespace
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
@@ -204,10 +214,13 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 if (scope.local_type_refs.contains(receiver.name)) {
                     const TypeRef receiver_type =
                         local_type_ref(scope, receiver.name, index_location);
-                    if (const auto signature =
-                            dudu_operator_signature(scope.symbols, "[]", receiver_type)) {
-                        check_call_args_ast(scope, receiver.name + "[]", *signature,
-                                            index_arg_exprs(expr.children[1]), location);
+                    const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+                    if (const auto signature = dudu_operator_signature_for_args(
+                            scope.symbols, "[]", receiver_type, args,
+                            infer_arg_type_refs(scope, args, location))) {
+                        check_call_args_ast(scope, receiver.name + "[]", *signature, args,
+                                            location);
+                        return signature_return_type_ref(*signature);
                     }
                 }
                 return indexed_value_type_ref(scope.symbols, scope.local_type_refs, index_location,
@@ -217,6 +230,14 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const TypeRef receiver_member_type = member_expr_type_ref(
                 scope.symbols, scope.local_type_refs, location, receiver, {}, scope.current_class);
             if (has_type_ref(receiver_member_type)) {
+                const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+                if (const auto signature = dudu_operator_signature_for_args(
+                        scope.symbols, "[]", receiver_member_type, args,
+                        infer_arg_type_refs(scope, args, location))) {
+                    check_call_args_ast(scope, index_receiver_label(receiver) + "[]", *signature,
+                                        args, location);
+                    return signature_return_type_ref(*signature);
+                }
                 return indexed_type_ref_from_type(scope.symbols, index_location,
                                                   receiver_member_type, expr.children[1],
                                                   index_receiver_label(receiver));

@@ -394,10 +394,18 @@ Status:
   library-defined indexing hook asks for one, so mixed forms such as
   `tensor[1:3, 2]` and `tensor[0:3:2, 4]` can dispatch through ordinary
   `@operator("[]")` / `@operator("[]=")` overloads.
+- Done: Dudu code can inspect `slice.has_start`, `slice.has_end`,
+  `slice.has_step`, `slice.start`, `slice.end`, and `slice.step`, so tensor
+  libraries can compute view offsets and strides without compiler patches.
+- Done: overloaded indexing hooks are selected by argument types, so one
+  tensor type can expose scalar element access plus row, column, and patch
+  slice views.
+- Done: reference-backed view structs can be aggregate-initialized without
+  invalid default reference fields.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
 - Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
   `tests/fixtures/tensor_slice_hook.dd` and
-  `tests/fixtures/cpu_tensor_matmul.dd`.
+  `tests/fixtures/tensor_slice_views.dd` and `tests/fixtures/cpu_tensor_matmul.dd`.
 - Remaining: `.vindex[...]`, `.oindex[...]`, masks, scatter, richer view
   objects, and missing-hook diagnostics for fancy forms.
 
@@ -428,9 +436,12 @@ Status:
 - Slice hook arguments are now available to library code as `slice` values, so
   row, column, and patch view APIs can be implemented as ordinary Dudu methods
   instead of fixed-array-only compiler behavior.
+- `tests/fixtures/tensor_slice_views.dd` and `examples/tensor_views.dd` define
+  row, column, and patch views backed by the original tensor storage through a
+  reference to the underlying `list[f32]`.
 - Remaining: move this from fixture-only proof into a small reusable example
-  module/repo, add row/column/patch view objects, and add activation/map
-  helpers.
+  module/repo, add activation/map helpers, and compare reusable tensor matmul
+  against BLAS.
 
 ### 3. Optional OpenBLAS Probe
 
