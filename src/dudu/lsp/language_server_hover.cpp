@@ -13,6 +13,7 @@
 #include "dudu/lsp/language_server_operator.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/lsp/language_server_type_hover.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/project/module_names.hpp"
@@ -164,6 +165,11 @@ std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
         const ModuleAst* imported = index.imported_unit(current, import);
         if (imported == nullptr) {
             continue;
+        }
+        for (const ClassDecl& klass : imported->classes) {
+            if (klass.name == target) {
+                return class_hover_json(*imported, klass, false);
+            }
         }
         for (const Symbol& symbol : symbols_for_module(*imported, false)) {
             if (symbol.name != target) {
@@ -414,6 +420,13 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
+        if (exact->kind == lsp_symbol_kind::Class) {
+            for (const ClassDecl& klass : current.classes) {
+                if (klass.name == exact->name) {
+                    return class_hover_json(current, klass, false);
+                }
+            }
+        }
         return symbol_hover_json(*exact);
     }
     if (const std::optional<std::string> module_hover =
@@ -464,6 +477,13 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
             }
         }
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
+            if (exact->kind == lsp_symbol_kind::Class) {
+                for (const ClassDecl& klass : native_visible.native_classes) {
+                    if (klass.name == exact->name) {
+                        return class_hover_json(native_visible, klass, true);
+                    }
+                }
+            }
             return symbol_hover_json(*exact);
         }
         if (const std::optional<Symbol> suffix =

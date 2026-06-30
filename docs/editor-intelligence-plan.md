@@ -242,6 +242,12 @@ For source in the current project or a Dudu library:
   reference behavior once decorator macros are implemented.
 - hover for primitive Dudu types should still be useful: `f64` should explain
   that it is a Dudu primitive and show the exact C++ lowering such as `double`
+- hover on class/type symbols should include a compact source-shaped definition
+  preview so users can inspect fields without jumping. Dudu-defined classes
+  should also show size/alignment when the compiler can compute the layout from
+  known primitive, pointer/reference, and fixed-array fields. Imported native
+  C/C++ type layout requires scanner/cache support for Clang layout facts; until
+  that exists, native type hover must not guess size or alignment.
 - hover should support Rust-Analyzer-style actions where the editor can expose
   them: go to declaration, go to type definition, and inspect generated C++
   for the hovered symbol or selected source range

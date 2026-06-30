@@ -638,6 +638,7 @@ def main() -> i32:
         request(69, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Counter.LIMIT", add=len("Counter."))}),
         request(30, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "current", occurrence=1)}),
         request(31, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player: Player", add=1)}),
+        request(145, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player: Player", add=len("player: "))}),
         request(71, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
         request(72, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
         request(32, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "current =")}),
@@ -923,6 +924,11 @@ def main() -> i32:
     module_hover_value = module_hover["contents"]["value"]
     if "Entities module docs." not in module_hover_value:
         raise AssertionError(f"missing module docs: {module_hover!r}")
+    player_type_hover = response(messages, 145)["contents"]["value"]
+    if "class Player:" not in player_type_hover or "hp: i32" not in player_type_hover:
+        raise AssertionError(f"missing Player definition hover: {player_type_hover!r}")
+    if "size = 4 bytes, align = 4 bytes" not in player_type_hover:
+        raise AssertionError(f"missing Player layout hover: {player_type_hover!r}")
     member_refs = response(messages, 38)
     assert_nonempty(member_refs, "member identity references")
     player_self_hp = position(entities_source, "self.hp", add=len("self."))
