@@ -183,6 +183,18 @@ def mul(a: Tensor, b: Tensor) -> Tensor:
     return out
 
 
+def scale(input: Tensor, factor: f32) -> Tensor:
+    out = zeros(input.rows, input.cols)
+    row = 0
+    while row < input.rows:
+        col = 0
+        while col < input.cols:
+            out[row, col] = input[row, col] * factor
+            col += 1
+        row += 1
+    return out
+
+
 def map_values(input: Tensor, fn: fn(f32) -> f32) -> Tensor:
     out = zeros(input.rows, input.cols)
     row = 0
@@ -190,6 +202,28 @@ def map_values(input: Tensor, fn: fn(f32) -> f32) -> Tensor:
         col = 0
         while col < input.cols:
             out[row, col] = fn(input[row, col])
+            col += 1
+        row += 1
+    return out
+
+
+def relu_value(value: f32) -> f32:
+    if value > 0.0:
+        return value
+    return 0.0
+
+
+def relu(input: Tensor) -> Tensor:
+    return map_values(input, relu_value)
+
+
+def transpose(input: Tensor) -> Tensor:
+    out = zeros(input.cols, input.rows)
+    row = 0
+    while row < input.rows:
+        col = 0
+        while col < input.cols:
+            out[col, row] = input[row, col]
             col += 1
         row += 1
     return out
@@ -210,6 +244,41 @@ def matmul(a: Tensor, b: Tensor) -> Tensor:
             col += 1
         row += 1
     return out
+
+
+def sum_values(input: Tensor) -> f32:
+    total: f32 = 0.0
+    row = 0
+    while row < input.rows:
+        col = 0
+        while col < input.cols:
+            total += input[row, col]
+            col += 1
+        row += 1
+    return total
+
+
+def mean_values(input: Tensor) -> f32:
+    count = input.rows * input.cols
+    if count <= 0:
+        return 0.0
+    return sum_values(input) / f32(count)
+
+
+def mean_squared_error(prediction: Tensor, target: Tensor) -> f32:
+    total: f32 = 0.0
+    row = 0
+    while row < prediction.rows:
+        col = 0
+        while col < prediction.cols:
+            diff = prediction[row, col] - target[row, col]
+            total += diff * diff
+            col += 1
+        row += 1
+    count = prediction.rows * prediction.cols
+    if count <= 0:
+        return 0.0
+    return total / f32(count)
 
 
 def add_row_bias(input: Tensor, bias: Tensor) -> Tensor:

@@ -1,0 +1,71 @@
+from tensor import Tensor
+from tensor import add_row_bias
+from tensor import from_4x2
+from tensor import matmul
+from tensor import mean_squared_error
+from tensor import scale
+from tensor import sub
+from tensor import sum_values
+from tensor import transpose
+from tensor import zeros
+
+
+def make_or_labels() -> Tensor:
+    out = zeros(4, 1)
+    out[0, 0] = 0.0
+    out[1, 0] = 1.0
+    out[2, 0] = 1.0
+    out[3, 0] = 1.0
+    return out
+
+
+def predict(input: Tensor, weights: Tensor, bias: Tensor) -> Tensor:
+    return add_row_bias(matmul(input, weights), bias)
+
+
+def train_or_classifier(input: Tensor, target: Tensor) -> tuple[Tensor, Tensor]:
+    weights = zeros(2, 1)
+    bias = zeros(1, 1)
+    learning_rate: f32 = 0.1
+    epoch = 0
+    while epoch < 200:
+        prediction = predict(input, weights, bias)
+        error = sub(prediction, target)
+
+        grad_weights = scale(matmul(transpose(input), error), 0.5)
+        grad_bias = sum_values(error) * 0.5
+
+        weights[0, 0] -= learning_rate * grad_weights[0, 0]
+        weights[1, 0] -= learning_rate * grad_weights[1, 0]
+        bias[0, 0] -= learning_rate * grad_bias
+        epoch += 1
+    return weights, bias
+
+
+def main() -> i32:
+    input = from_4x2(
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+    )
+    target = make_or_labels()
+    weights, bias = train_or_classifier(input, target)
+    prediction = predict(input, weights, bias)
+    loss = mean_squared_error(prediction, target)
+
+    if loss > 0.07:
+        return 1
+    if prediction[0, 0] >= 0.5:
+        return 2
+    if prediction[1, 0] <= 0.5:
+        return 3
+    if prediction[2, 0] <= 0.5:
+        return 4
+    if prediction[3, 0] <= 0.5:
+        return 5
+    return 42

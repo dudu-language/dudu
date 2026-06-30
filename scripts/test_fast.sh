@@ -89,6 +89,7 @@ compile_and_expect tensor_oindex_hook 42
 compile_and_expect tensor_slice_views 42
 compile_path_and_expect tensor_dogfood_views tests/fixtures/tensor_dogfood/views_main.dd 42
 compile_path_and_expect tensor_dogfood_xor tests/fixtures/tensor_dogfood/xor_main.dd 42
+compile_path_and_expect tensor_dogfood_tiny_training tests/fixtures/tensor_dogfood/tiny_training_main.dd 42
 compile_path_and_expect tensor_dogfood_autograd tests/fixtures/tensor_dogfood/autograd_main.dd 42
 compile_path_and_expect tensor_dogfood_shape_metadata tests/fixtures/tensor_dogfood/shape_metadata.dd 42
 compile_path_and_expect tensor_dogfood_shape_assume tests/fixtures/tensor_dogfood/shape_assume.dd 42

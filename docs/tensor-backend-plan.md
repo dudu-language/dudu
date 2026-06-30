@@ -486,11 +486,15 @@ Status:
   reference to the underlying `list[f32]`.
 - `tests/fixtures/tensor_dogfood/tensor.dd` is a reusable Dudu tensor module
   with scalar indexing, indexed assignment, row/column/patch views, elementwise
-  add/sub/mul, callback-based `map_values`, row-bias add, and pure Dudu matmul.
+  add/sub/mul, `scale`, transpose, reductions, mean squared error,
+  callback-based `map_values`, `relu`, row-bias add, and pure Dudu matmul.
 - `tests/fixtures/tensor_dogfood/views_main.dd` validates the reusable module's
   matrix/image-style view behavior through normal imports.
 - `tests/fixtures/tensor_dogfood/xor_main.dd` validates a tiny generated XOR
   classification path using `matmul`, row bias, and callback activation.
+- `tests/fixtures/tensor_dogfood/tiny_training_main.dd` validates a tiny
+  one-layer OR classifier trained with batch gradient descent using pure Dudu
+  tensor helpers, reductions, matmul, and indexed parameter updates.
 - `tests/fixtures/tensor_dogfood/autograd_main.dd` validates the start of an
   autograd-style graph using normal Dudu enums, classes, lists, operators, and
   explicit reference mutation.
