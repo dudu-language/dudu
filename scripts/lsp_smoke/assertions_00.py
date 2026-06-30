@@ -2,7 +2,8 @@ initialize = next(item for item in responses if item.get("id") == 1)
 assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
 assert initialize["result"]["capabilities"]["referencesProvider"] is True
-assert initialize["result"]["capabilities"]["renameProvider"] is True
+rename_provider = initialize["result"]["capabilities"]["renameProvider"]
+assert rename_provider["prepareProvider"] is True
 assert initialize["result"]["capabilities"]["codeActionProvider"] is True
 assert initialize["result"]["capabilities"]["completionProvider"]["resolveProvider"] is True
 assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True

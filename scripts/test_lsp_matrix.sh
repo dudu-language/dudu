@@ -611,6 +611,7 @@ def main() -> i32:
         request(67, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
         request(73, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
         request(74, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
+        request(111, "textDocument/prepareRename", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math."))}),
         request(79, "textDocument/rename", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math.")), "newName": "blend"}),
         request(80, "textDocument/rename", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player(")), "newName": "START_HP"}),
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
@@ -651,6 +652,7 @@ def main() -> i32:
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
+        request(112, "textDocument/prepareRename", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(92, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
@@ -963,6 +965,16 @@ def main() -> i32:
     if has_start(counter_bump_refs, entities.as_uri(), other_counter_bump_decl["line"], other_counter_bump_decl["character"]):
         raise AssertionError(f"OtherCounter.bump declaration leaked into Counter.bump refs: {counter_bump_refs!r}")
     initialize = response(messages, 1)
+    rename_provider = initialize["capabilities"].get("renameProvider")
+    if not isinstance(rename_provider, dict) or rename_provider.get("prepareProvider") is not True:
+        raise AssertionError(f"server did not advertise prepareRename: {initialize!r}")
+    prepare_math_mix = response(messages, 111)
+    if prepare_math_mix.get("placeholder") != "mix":
+        raise AssertionError(f"prepareRename did not return mix placeholder: {prepare_math_mix!r}")
+    if prepare_math_mix.get("range", {}).get("start") != main_math_mix:
+        raise AssertionError(f"prepareRename returned wrong mix range: {prepare_math_mix!r}")
+    if response(messages, 112) is not None:
+        raise AssertionError(f"prepareRename allowed native symbol rename: {response(messages, 112)!r}")
     semantic_legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]
     legend = semantic_legend["tokenTypes"]
     token_modifiers = semantic_legend["tokenModifiers"]

@@ -185,6 +185,10 @@ class LanguageServer {
                 if (id != nullptr) {
                     respond(*id, references_result(params));
                 }
+            } else if (method == "textDocument/prepareRename") {
+                if (id != nullptr) {
+                    respond(*id, prepare_rename_result(params));
+                }
             } else if (method == "textDocument/rename") {
                 if (id != nullptr) {
                     respond(*id, rename_result(params));
@@ -235,7 +239,7 @@ class LanguageServer {
                "\"documentSymbolProvider\":true,"
                "\"definitionProvider\":true,"
                "\"referencesProvider\":true,"
-               "\"renameProvider\":true,"
+               "\"renameProvider\":{\"prepareProvider\":true},"
                "\"codeActionProvider\":true,"
                "\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"namespace\",\"type\","
                "\"class\",\"enum\",\"function\",\"method\",\"variable\",\"parameter\","
@@ -385,6 +389,14 @@ class LanguageServer {
             return "null";
         }
         return rename_json(*doc, params, cached_workspace_documents());
+    }
+
+    std::string prepare_rename_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "null";
+        }
+        return prepare_rename_json(*doc, params);
     }
 
     std::string code_action_result(const Json* params) const {

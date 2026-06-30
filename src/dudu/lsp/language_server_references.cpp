@@ -20,6 +20,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -221,6 +222,66 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
         return RenameScope::CurrentDocument;
     }
     return RenameScope::None;
+}
+
+std::optional<std::string_view> line_at(const std::string& text, int line) {
+    if (line < 0) {
+        return std::nullopt;
+    }
+    size_t start = 0;
+    int current_line = 0;
+    while (current_line < line) {
+        const size_t next = text.find('\n', start);
+        if (next == std::string::npos) {
+            return std::nullopt;
+        }
+        start = next + 1;
+        ++current_line;
+    }
+    size_t end = text.find('\n', start);
+    if (end == std::string::npos) {
+        end = text.size();
+    }
+    if (end > start && text[end - 1] == '\r') {
+        --end;
+    }
+    return std::string_view(text).substr(start, end - start);
+}
+
+std::optional<std::string> prepare_rename_range_json(const Document& doc, const Json* params,
+                                                     const std::string& query) {
+    const LspPosition position = lsp_position(params);
+    const std::optional<std::string_view> line = line_at(doc.text, position.line);
+    if (!line || position.character < 0 || position.character > static_cast<int>(line->size())) {
+        return std::nullopt;
+    }
+    int start = position.character;
+    if (start == static_cast<int>(line->size()) && start > 0 &&
+        identifier_char((*line)[static_cast<size_t>(start - 1)])) {
+        --start;
+    }
+    if (start < 0 || start >= static_cast<int>(line->size()) ||
+        !identifier_char((*line)[static_cast<size_t>(start)])) {
+        return std::nullopt;
+    }
+    int end = start;
+    while (start > 0 && identifier_char((*line)[static_cast<size_t>(start - 1)])) {
+        --start;
+    }
+    while (end < static_cast<int>(line->size()) &&
+           identifier_char((*line)[static_cast<size_t>(end)])) {
+        ++end;
+    }
+    const std::string placeholder =
+        std::string(line->substr(static_cast<size_t>(start), static_cast<size_t>(end - start)));
+    if (placeholder.empty() || !valid_identifier(placeholder) ||
+        placeholder != dotted_tail(query)) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << "{\"range\":" << range_json(position.line, start, position.line, end)
+        << ",\"placeholder\":\"" << json_escape(placeholder) << "\"}";
+    return out.str();
 }
 
 ReferenceScope reference_scope_at(const Document& doc, const Json* params, const std::string& name,
@@ -448,6 +509,26 @@ std::string rename_json(const Document& doc, const Json* params,
     }
     out << "}}";
     return out.str();
+}
+
+std::string prepare_rename_json(const Document& doc, const Json* params) {
+    const ProjectIndex* current_index = document_project_index(doc, false);
+    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
+    if (current_unit == nullptr) {
+        return "null";
+    }
+    const AstSelection selection = ast_selection_at(*current_unit, params);
+    const std::vector<Symbol> current_symbols_without_native =
+        symbols_for_module(*current_unit, false);
+    const std::string old_name =
+        reference_query_at(doc, params, selection, current_unit, current_symbols_without_native);
+    const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
+                                              current_symbols_without_native);
+    if (scope == RenameScope::None) {
+        return "null";
+    }
+    const std::optional<std::string> range = prepare_rename_range_json(doc, params, old_name);
+    return range.value_or("null");
 }
 
 } // namespace dudu

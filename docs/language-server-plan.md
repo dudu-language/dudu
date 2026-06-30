@@ -501,6 +501,10 @@ the same target identity used by find-references: a rename from `math.mix` edits
 the imported declaration and matching `math.mix` uses while leaving unrelated
 `other_math.mix` symbols untouched, and a rename from `MAX_HP` edits the source
 constant declaration/import/use sites without touching `other_entities.MAX_HP`.
+`textDocument/prepareRename` is implemented and advertised through
+`renameProvider.prepareProvider`. It returns the exact token range and
+placeholder for renameable Dudu symbols and rejects native symbols instead of
+opening a misleading editor rename prompt.
 Other use-site rename requests stay rejected until the LSP can prove symbol
 identity strongly enough to avoid editing unrelated same-named locals. Initial
 `textDocument/codeAction` support is implemented with a format-document source
