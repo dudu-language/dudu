@@ -173,6 +173,29 @@ void test_rejected_oop_surface_fixtures(const std::filesystem::path& root) {
     }
 }
 
+void test_rejected_fancy_indexing_fixtures(const std::filesystem::path& root) {
+    struct Case {
+        std::string path;
+        std::string expected;
+    };
+    const std::vector<Case> cases = {
+        {"bad_tensor_vindex.dd", ".vindex[...] pairwise gather indexing is planned"},
+        {"bad_tensor_oindex.dd", ".oindex[...] orthogonal/cartesian gather indexing is planned"},
+    };
+
+    for (const Case& item : cases) {
+        bool rejected = false;
+        try {
+            const std::filesystem::path path = root / "tests" / "fixtures" / item.path;
+            const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+            dudu::analyze_module(module, {.check_bodies = true});
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(item.expected) != std::string::npos;
+        }
+        assert(rejected);
+    }
+}
+
 void test_header_emission() {
     const dudu::ModuleAst module = dudu::parse_source("import cpp \"raylib.h\" as rl\n"
                                                       "\n"
@@ -784,6 +807,7 @@ int main() {
         test_import_bindings();
         test_canonical_examples_parse(root);
         test_rejected_oop_surface_fixtures(root);
+        test_rejected_fancy_indexing_fixtures(root);
         test_header_emission();
         test_semantic_diagnostics();
         test_formatter();

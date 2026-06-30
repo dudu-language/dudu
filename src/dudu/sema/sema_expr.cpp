@@ -27,6 +27,31 @@ std::optional<std::string> unknown_module_function_message(const Symbols& symbol
     return "module '" + prefix + "' has no exported function '" + callee.substr(dot + 1) + "'";
 }
 
+std::optional<ExprPathSegment> unsupported_fancy_index_marker(const Expr& receiver) {
+    if (receiver.kind != ExprKind::Member) {
+        return std::nullopt;
+    }
+    if (receiver.name != "vindex" && receiver.name != "oindex") {
+        return std::nullopt;
+    }
+    const std::optional<ExprPath> path = expr_path_from_expr(receiver);
+    if (path.has_value() && !path->segments.empty()) {
+        return path->segments.back();
+    }
+    return ExprPathSegment{.kind = ExprPathSegmentKind::Name,
+                           .text = receiver.name,
+                           .location = receiver.location};
+}
+
+[[noreturn]] void reject_unsupported_fancy_index(const ExprPathSegment& marker) {
+    const std::string kind =
+        marker.text == "vindex" ? "pairwise gather" : "orthogonal/cartesian gather";
+    sema_expr_fail(marker.location,
+                   "." + marker.text + "[...] " + kind +
+                       " indexing is planned but not implemented yet; use ordinary [] "
+                       "operator hooks and slices for now");
+}
+
 std::vector<TypeRef> infer_arg_type_refs(const FunctionScope& scope, const std::vector<Expr>& args,
                                          const SourceLocation* location) {
     std::vector<TypeRef> out;
@@ -210,6 +235,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             !missing_expr(expr.children[1])) {
             const SourceLocation& index_location = location != nullptr ? *location : expr.location;
             const Expr& receiver = expr.children[0];
+            if (const auto marker = unsupported_fancy_index_marker(receiver)) {
+                reject_unsupported_fancy_index(*marker);
+            }
             if (receiver.kind == ExprKind::Name) {
                 if (scope.local_type_refs.contains(receiver.name)) {
                     const TypeRef receiver_type =
