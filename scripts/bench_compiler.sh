@@ -284,8 +284,8 @@ run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_bui
     "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
 prepare_lsp_project
-run_case "duc_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
-    python3 "$lsp_probe" "$tool_build_dir/duc" "$lsp_entry"
+run_case "dudu_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
+    python3 "$lsp_probe" "$tool_build_dir/dudu-lsp" "$lsp_entry"
 
 prepare_synthetic_project
 run_case "duc_check_synthetic" "frontend_synthetic" "$synthetic_project" \

@@ -1424,7 +1424,7 @@ push. They are not release packaging work.
    generated-CMake module build, generated-CMake no-op rebuild, and
    generated-CMake one-Dudu-file-changed rebuild cases. It also measures a
    lightweight LSP parse/diagnostic/document-symbol/references/definition/
-   hover/completion roundtrip through `duc_lsp_diagnostics`, so editor latency
+   hover/completion roundtrip through `dudu_lsp_diagnostics`, so editor latency
    is visible outside the full LSP smoke suite. A generated synthetic
    multi-module corpus under
    `build/bench_compiler` gives frontend throughput a larger parse/sema input

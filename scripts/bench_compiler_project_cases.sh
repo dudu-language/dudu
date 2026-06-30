@@ -46,7 +46,7 @@ import subprocess
 import sys
 import time
 
-duc = sys.argv[1]
+lsp_bin = pathlib.Path(sys.argv[1]).resolve()
 entry = pathlib.Path(sys.argv[2]).resolve()
 uri = entry.as_uri()
 source = entry.read_text()
@@ -200,7 +200,7 @@ def run_cold_warm(proc, case_base, phase_base, request_factory, validator):
     timed_request(proc, f"{case_base}_warm", f"{phase_base}_warm", request_factory(), validator)
 
 proc = subprocess.Popen(
-    [str(pathlib.Path(duc).parent / "dudu-lsp")],
+    [str(lsp_bin)],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
@@ -227,35 +227,35 @@ try:
 
     timed_diagnostics(
         proc,
-        "duc_lsp_diagnostics_cold",
+        "dudu_lsp_diagnostics_cold",
         "lsp_diagnostics_cold",
         notification("textDocument/didSave", document_params()),
         validate_diagnostics,
     )
     timed_request(
         proc,
-        "duc_lsp_document_symbols_warm",
+        "dudu_lsp_document_symbols_warm",
         "lsp_document_symbols_warm",
         request("textDocument/documentSymbol", document_params()),
         validate_document_symbols,
     )
     run_cold_warm(
         proc,
-        "duc_lsp_workspace_symbol_add",
+        "dudu_lsp_workspace_symbol_add",
         "lsp_workspace_symbol_add",
         lambda: request("workspace/symbol", {"query": "add"}),
         validate_workspace_add,
     )
     run_cold_warm(
         proc,
-        "duc_lsp_workspace_symbol_player",
+        "dudu_lsp_workspace_symbol_player",
         "lsp_workspace_symbol_player",
         lambda: request("workspace/symbol", {"query": "Player"}),
         validate_workspace_player,
     )
     run_cold_warm(
         proc,
-        "duc_lsp_references",
+        "dudu_lsp_references",
         "lsp_references",
         lambda: request(
             "textDocument/references",
@@ -265,7 +265,7 @@ try:
     )
     run_cold_warm(
         proc,
-        "duc_lsp_definition",
+        "dudu_lsp_definition",
         "lsp_definition",
         lambda: request(
             "textDocument/definition",
@@ -275,7 +275,7 @@ try:
     )
     run_cold_warm(
         proc,
-        "duc_lsp_hover",
+        "dudu_lsp_hover",
         "lsp_hover",
         lambda: request(
             "textDocument/hover",
@@ -285,7 +285,7 @@ try:
     )
     run_cold_warm(
         proc,
-        "duc_lsp_completion",
+        "dudu_lsp_completion",
         "lsp_completion",
         lambda: request(
             "textDocument/completion",
