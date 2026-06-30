@@ -1148,8 +1148,12 @@ push. They are not release packaging work.
    library-backed numeric stack that proves `@operator("[]")`, slices, BLAS,
    OpenCL/AMD-friendly GPU execution, and autograd-style graph code can be
    written as normal Dudu and C/C++ interop. That work should follow
-   `docs/tensor-backend-plan.md`, start with CPU/OpenBLAS, and only then add
-   OpenCL or ROCm probes when local tooling is available.
+   `docs/tensor-backend-plan.md`, whose fancy-indexing target forms are the
+   concrete source of truth for pairwise gather, orthogonal gather, boolean
+   masks, masked/scatter assignment, ellipsis, `newaxis`, broadcasting,
+   named-axis sketches, and transformer/MLP-shaped examples. Start with
+   CPU/OpenBLAS, and only then add OpenCL or ROCm probes when local tooling is
+   available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

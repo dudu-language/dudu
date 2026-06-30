@@ -70,6 +70,226 @@ The exact API can evolve, but the important rule is that `tensor[row, col]`
 and `tensor[y0:y1, x0:x1]` are just normal Dudu operator/language hooks on a
 library-defined type.
 
+## Fancy Indexing Target Forms
+
+The scratch dogfood file
+`/home/vega/Coding/Web/dudu-webserver/indexingcoolness.dd` sketches the kind of
+indexing Dudu should eventually make pleasant. The compiler plan should use
+those forms as target cases instead of only saying "NumPy-like indexing".
+
+Treat these as staged language/library targets. Early phases should reject
+unsupported forms with precise diagnostics instead of silently lowering them
+wrong.
+
+### Already-Planned / Near-Term Fixed-Array Forms
+
+These are the baseline syntax targets that should keep compiling as compiler
+work continues:
+
+```python
+heatmap: array[i32] = [
+    [1, 2, 3, 4],
+    [10, 20, 30, 40],
+    [100, 200, 300, 400],
+]
+
+center: i32 = heatmap[1, 2]
+heatmap[2, 3] = heatmap[2, 3] + center
+
+middle_row: span[i32] = heatmap[1, :]
+second_column: strided_span[i32] = heatmap[:, 1]
+bright_patch: strided_span2[i32] = heatmap[1:3, 2:4]
+```
+
+Rank-3 image/tensor indexing should also stay concrete:
+
+```python
+pixels: array[i32] = [
+    [[1, 2, 3, 255], [10, 20, 30, 255]],
+    [[4, 5, 6, 255], [40, 50, 60, 255]],
+]
+
+green: i32 = pixels[1, 1, 1]
+first_rgb: span[i32] = pixels[0, 0, 0:3]
+all_green: strided_span[i32] = pixels[:, :, 1]
+all_values: span[i32] = pixels[:, :, :]
+```
+
+### Pairwise Integer Gather
+
+Integer index arrays with matching shape select pairwise coordinates. This is
+the important "get the selected class/logit for each row" form:
+
+```python
+label: tensor[i32][32]
+logits: tensor[f32][32, 10]
+
+correct_class_logit: tensor[f32][32] = logits[arange[32](), label]
+```
+
+Transformer-style token embedding lookup is the same idea at higher rank:
+
+```python
+token_ids: tensor[i32][4, 16]
+token_embedding: tensor[f32][32000, 512]
+
+x: tensor[f32][4, 16, 512] = token_embedding[token_ids, :]
+```
+
+Rule: pairwise gather is not a view. It creates a gather expression or owning
+result unless the backend can represent a lazy gather view.
+
+### Orthogonal / Cartesian Gather
+
+Sometimes each index array should create its own output axis instead of zipping
+with the others. The current sketch uses `o[...]` as an orthogonal marker:
+
+```python
+batch_ids: array[i32] = [3, 0, 3, 1]
+head_ids: array[i32] = [0, 2, 4]
+hot_vocab: array[i32] = [2, 3, 5, 8, 13, 21]
+
+cartesian: tensor[f32][4, 8, 3, 6] =
+    logits[o[batch_ids], :, o[head_ids], o[hot_vocab]]
+```
+
+This spelling is tentative, but the semantic requirement is not: Dudu needs a
+way to distinguish pairwise gather from orthogonal/cartesian gather.
+
+### Boolean Masks
+
+Boolean masks should select rows/elements and produce dynamic-size axes when
+the selected count is runtime-known:
+
+```python
+train_row: mask[bool][32]
+x_norm: tensor[f32][32, 784]
+label: tensor[i32][32]
+
+train_x: tensor[f32][?, 784] = x_norm[train_row, :]
+train_label: tensor[i32][?] = label[train_row]
+```
+
+Computed masks should work the same:
+
+```python
+visible: mask[bool][4, 16, 16] = frames[:, :, :, 3] > 0.0
+visible_pixels: tensor[f32][?, 4] = frames[visible, :]
+```
+
+Rule: `?` is a runtime-known dimension. It must be explicit in type displays
+and diagnostics so users know shape is no longer compile-time fixed.
+
+### Masked Assignment And Scatter
+
+Mask assignment is scatter-style and should be visibly mutation:
+
+```python
+h1[dead_h1] = 0.0
+h1[:, not active_h1_units] = 0.0
+frames[not visible, :] = [1.0, 0.0, 1.0, 1.0]
+logits[logits < -100.0] = 0.0
+```
+
+Integer gather assignment is also scatter-style:
+
+```python
+confusion[label[train_row], prediction[train_row]] += 1
+logits[batch_ids, token_ids, :, hot_vocab] = -999.0
+```
+
+Scatter with repeated indices needs an explicit policy. For `+=`, backends may
+need atomic/add-reduce behavior. The first implementation should either define
+that policy clearly or reject ambiguous repeated-index scatter.
+
+### Ellipsis, Negative Indices, And New Axes
+
+These are valuable for ML-style code but should be staged after normal slices
+and gather are solid:
+
+```python
+last_vocab_per_head: tensor[f32][4, 8, 6] = logits[..., -1]
+
+per_head_bias: tensor[f32][6]
+logits[:, :, :, :] += per_head_bias[newaxis, newaxis, :, newaxis]
+```
+
+Rules:
+
+- `...` preserves all unspecified middle axes.
+- negative indices count from the end.
+- `newaxis` inserts a size-1 broadcast axis and should not allocate.
+
+### Broadcasting
+
+Broadcasting should be library/type-driven, but the target syntax needs to be
+clear:
+
+```python
+mean: tensor[f32][784]
+inv_std: tensor[f32][784]
+x: tensor[f32][32, 784]
+
+x_norm: tensor[f32][32, 784] = (x - mean[newaxis, :]) * inv_std[newaxis, :]
+
+b1: tensor[f32][256]
+h1: tensor[f32][32, 256] = matmul(x_norm, w1) + b1[newaxis, :]
+```
+
+Broadcast errors must explain which dimensions do not match.
+
+### Named-Axis Indexing
+
+Named-axis indexing is a dream syntax, not an immediate compiler task, but it
+captures the readability goal:
+
+```python
+rgb_tiles = frames[
+    batch = :,
+    height = windows.y,
+    width = windows.x,
+    channel = 0:3,
+].copy()
+```
+
+This likely requires tensor types to carry axis-name metadata. It should remain
+out of the first implementation unless the lower-level shape/indexing model is
+already stable.
+
+### Transformer And MLP Target Examples
+
+The real target examples are not just small matrices. We should eventually have
+non-default examples shaped like these:
+
+```python
+token_ids: tensor[i32][4, 16]
+valid_token: mask[bool][4, 16]
+
+x: tensor[f32][4, 16, 512] = token_embedding[token_ids, :]
+x += position_embedding[newaxis, :, :]
+
+qkv: tensor[f32][4, 16, 3, 8, 64] = einsum("btc,chd->bthd", x, wqkv)
+q: tensor[f32][4, 16, 8, 64] = qkv[:, :, 0, :, :]
+k: tensor[f32][4, 16, 8, 64] = qkv[:, :, 1, :, :]
+v: tensor[f32][4, 16, 8, 64] = qkv[:, :, 2, :, :]
+
+scores[:, :, :, not valid_token] = -inf[f32]()
+```
+
+And a more grounded MLP/MNIST-style case:
+
+```python
+important_features: array[i32] = [0, 1, 2, 27, 28, 29, 391, 392, 393]
+diagnostic_inputs: tensor[f32][32, 9] = x_norm[:, important_features]
+
+train_x: tensor[f32][?, 784] = x_norm[train_row, :]
+correct_class_logit: tensor[f32][32] = logits[arange[32](), label]
+nll: tensor[f32][?] = -log_probs[train_row, train_label]
+```
+
+These examples should become tracked fixtures/examples as the syntax becomes
+real. They do not belong in the fast default test suite.
+
 ## Implementation Phases
 
 ### 1. Audit Current Indexing Hooks
@@ -81,6 +301,9 @@ Verify the current compiler can express the library surface we need:
 - method calls on indexed member receivers
 - return types that are scalar, reference-like, view-like, or wrapper values
 - slice arguments passed to library hooks, not only Dudu fixed arrays
+- pairwise gather forms rejected or lowered deliberately
+- orthogonal gather marker syntax decided or rejected with a clear diagnostic
+- mask indexing and masked assignment rejected or lowered deliberately
 - good diagnostics when a tensor type does not implement a required hook
 
 Add small compiler fixtures for each missing case before writing the tensor
