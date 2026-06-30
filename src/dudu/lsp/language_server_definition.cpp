@@ -6,6 +6,7 @@
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_declaration_references.hpp"
+#include "dudu/lsp/language_server_decorators.hpp"
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
@@ -470,7 +471,14 @@ std::string definition_json(const Document& doc, const Json* params,
         return *header;
     }
     const AstSelection selection = ast_selection_at(current, params);
-    const std::string word = selection.symbol_path.value_or("");
+    std::string word = selection.symbol_path.value_or("");
+    if (const std::optional<DecoratorSelection> decorator =
+            decorator_selection_at(current, params)) {
+        if (builtin_decorator_symbol(*decorator)) {
+            return "null";
+        }
+        word = decorator->name;
+    }
     if (word.empty()) {
         return "null";
     }

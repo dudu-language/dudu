@@ -236,6 +236,10 @@ For source in the current project or a Dudu library:
 - hover on Dudu keywords such as `def`, `class`, `enum`, `import`, and
   `return` should explain the language construct, and hover on a function call
   should show the callee signature/docs just like hovering the declaration
+- decorator names such as `@operator` should receive semantic coloring and
+  hover text. Compiler-recognized decorators show language docs; user-defined
+  decorator macros should eventually use normal symbol definition, hover, and
+  reference behavior once decorator macros are implemented.
 - hover for primitive Dudu types should still be useful: `f64` should explain
   that it is a Dudu primitive and show the exact C++ lowering such as `double`
 - hover should support Rust-Analyzer-style actions where the editor can expose

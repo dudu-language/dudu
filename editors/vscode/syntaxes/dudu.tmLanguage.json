@@ -31,7 +31,14 @@
     },
     "decorators": {
       "patterns": [
-        { "name": "meta.annotation.dudu", "match": "@[A-Za-z_][A-Za-z0-9_\\.]*" }
+        {
+          "name": "meta.annotation.dudu",
+          "match": "(@)([A-Za-z_][A-Za-z0-9_\\.]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.annotation.dudu" },
+            "2": { "name": "entity.name.function.decorator.dudu" }
+          }
+        }
       ]
     },
     "declarations": {

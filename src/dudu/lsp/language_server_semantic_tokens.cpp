@@ -132,6 +132,35 @@ SourceLocation member_name_location(const Expr& expr) {
     return expr.location;
 }
 
+std::optional<std::string> decorator_path_text(const Decorator& decorator) {
+    const Expr& expr = decorator.expr;
+    if ((expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
+        has_expr_callee(expr)) {
+        if (const std::optional<ExprPath> path = expr_path_from_expr(expr_callee(expr).front())) {
+            return render_expr_path(*path);
+        }
+        return std::nullopt;
+    }
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
+    }
+    return std::nullopt;
+}
+
+void collect_decorator_tokens(const std::vector<Decorator>& decorators,
+                              std::vector<SemanticToken>& tokens,
+                              const DuduSemanticIndex& dudu_index) {
+    for (const Decorator& decorator : decorators) {
+        const std::optional<std::string> name = decorator_path_text(decorator);
+        if (!name) {
+            continue;
+        }
+        const int token_type = dudu_index.functions.contains(*name) ? token_function : token_macro;
+        add_semantic_token(tokens, decorator.location, "@" + *name, token_type,
+                           token_type == token_macro ? mod_readonly : 0);
+    }
+}
+
 void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens,
                          const DuduSemanticIndex& dudu_index,
                          const NativeSemanticIndex* native_index) {
@@ -534,6 +563,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         }
     }
     for (const ClassDecl& klass : module.classes) {
+        collect_decorator_tokens(klass.decorators, tokens, dudu_index);
         add_semantic_token(tokens, klass.location, klass.name, token_class, mod_declaration);
         for (const FieldDecl& field : klass.fields) {
             add_semantic_token(tokens, field.location, field.name, token_property, mod_declaration);
@@ -556,6 +586,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
                                 nullptr);
         }
         for (const FunctionDecl& method : klass.methods) {
+            collect_decorator_tokens(method.decorators, tokens, dudu_index);
             add_semantic_token(tokens, method.location, method.name, token_method, mod_declaration);
             std::set<std::string> local_bindings;
             std::map<std::string, TypeRef> local_types;
@@ -589,6 +620,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
                             nullptr);
     }
     for (const FunctionDecl& fn : module.functions) {
+        collect_decorator_tokens(fn.decorators, tokens, dudu_index);
         add_semantic_token(tokens, fn.location, fn.name, token_function, mod_declaration);
         std::set<std::string> local_bindings;
         std::map<std::string, TypeRef> local_types;

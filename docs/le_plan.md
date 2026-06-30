@@ -2383,6 +2383,10 @@ push. They are not release packaging work.
    `def`, `class`, `enum`, `import`, and `return`, and smoke coverage asserts
    that hovering a function call site shows the callee signature just like the
    declaration hover.
+   Decorator names are now first-class editor targets for semantic coloring and
+   hover. Compiler-recognized decorators such as `@operator` show language docs;
+   user-defined decorator macros should resolve through ordinary symbol
+   definition/hover/reference paths when macro definitions land.
    Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported

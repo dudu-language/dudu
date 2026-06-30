@@ -674,8 +674,11 @@ def main() -> i32:
         request(132, "textDocument/hover", {"textDocument": text_document(containers), "position": position(containers_source, "list[i32]", add=1)}),
         request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
+        request(142, "textDocument/semanticTokens/full", {"textDocument": text_document(ops)}),
         request(131, "textDocument/definition", {"textDocument": text_document(tmp / "math_utils.dd"), "position": position((tmp / "math_utils.dd").read_text(), "mix(left", add=1)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
+        request(143, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "@operator", add=1)}),
+        request(144, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "@operator", add=1)}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1072,6 +1075,9 @@ def main() -> i32:
         raise AssertionError(f"missing imported generic function semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "MAGIC", "variable", readonly):
         raise AssertionError(f"missing imported const semantic token: {decoded_tokens!r}")
+    ops_tokens = decode_semantic_tokens(ops_source, response(messages, 142)["data"], legend)
+    if not has_semantic(ops_tokens, "@operator", "macro", readonly):
+        raise AssertionError(f"missing decorator semantic token: {ops_tokens!r}")
     native_tokens = decode_semantic_tokens(native_source, response(messages, 84)["data"], legend)
     if not has_semantic(native_tokens, "matrix_native_add", "function", native_modifier):
         raise AssertionError(f"missing native function semantic token: {native_tokens!r}")
@@ -1108,6 +1114,11 @@ def main() -> i32:
     if has_start(declaration_definition, (tmp / "math_utils.dd").as_uri(), math_mix_decl["line"], math_mix_decl["character"]):
         raise AssertionError(f"declaration definition should not include its own declaration: {declaration_definition!r}")
     assert_nonempty(response(messages, 41), "operator method definition")
+    operator_decorator_hover = response(messages, 143)["contents"]["value"]
+    if "@operator" not in operator_decorator_hover or "operator overload" not in operator_decorator_hover:
+        raise AssertionError(f"missing @operator decorator hover: {operator_decorator_hover!r}")
+    if response(messages, 144) is not None:
+        raise AssertionError(f"built-in @operator decorator should not jump to compiler internals: {response(messages, 144)!r}")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)
     if operator_use_definition["uri"] != ops.as_uri():
