@@ -14,6 +14,7 @@
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <optional>
@@ -57,6 +58,25 @@ bool function_contains_line(const FunctionDecl& fn, int cursor_line) {
                                                       : fn.statements.back().location.line;
     }
     return fn.location.line <= cursor_line && cursor_line <= std::max(fn.location.line, end);
+}
+
+bool location_matches_target_file(const SourceLocation& location,
+                                  const SourceLocation& target_location) {
+    if (target_location.file.empty()) {
+        return true;
+    }
+    if (location.file.empty()) {
+        return true;
+    }
+    const std::filesystem::path left(location.file.str());
+    const std::filesystem::path right(target_location.file.str());
+    return same_path(left, right) ||
+           (!left.filename().empty() && left.filename() == right.filename());
+}
+
+bool function_contains_location(const FunctionDecl& fn, const SourceLocation& target_location) {
+    return location_matches_target_file(fn.location, target_location) &&
+           function_contains_line(fn, target_location.line);
 }
 
 bool token_is_syntax(const Token& token) {
@@ -258,6 +278,10 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 
 void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int cursor_line) {
     for (const ParamDecl& param : fn.params) {
+        if (param.name == "self" && !scope.current_class.empty() && !has_type_ref(param.type_ref)) {
+            lsp_bind_local(scope, param.name, named_type_ref(scope.current_class, param.location));
+            continue;
+        }
         lsp_bind_local(scope, param.name, param.type_ref);
     }
     collect_block_locals(scope, fn.statements, cursor_line);
@@ -283,31 +307,53 @@ TypeRef local_type_ref_before_cursor(const ModuleAst& module, const std::string&
     return found == locals.end() ? TypeRef{} : found->second;
 }
 
+TypeRef local_type_ref_before_cursor(const ModuleAst& module, const Document& doc,
+                                     const std::string& name, const Json* params) {
+    const std::map<std::string, TypeRef> locals =
+        local_type_refs_before_cursor(module, doc, params);
+    const auto found = locals.find(name);
+    return found == locals.end() ? TypeRef{} : found->second;
+}
+
 std::map<std::string, TypeRef> local_type_refs_before_cursor(const ModuleAst& module,
                                                              const Json* params) {
     return local_type_refs_before_line(module, one_based_cursor_line(params));
 }
 
+std::map<std::string, TypeRef>
+local_type_refs_before_cursor(const ModuleAst& module, const Document& doc, const Json* params) {
+    SourceLocation location;
+    location.file = SourceFileName(doc.path.string());
+    location.line = one_based_cursor_line(params);
+    return local_type_refs_before_location(module, location);
+}
+
 std::map<std::string, TypeRef> local_type_refs_before_line(const ModuleAst& module,
                                                            int one_based_line) {
+    SourceLocation location;
+    location.line = one_based_line;
+    return local_type_refs_before_location(module, location);
+}
+
+std::map<std::string, TypeRef> local_type_refs_before_location(const ModuleAst& module,
+                                                               SourceLocation location) {
     try {
         Symbols symbols = collect_symbols(module);
         FunctionScope scope(symbols);
         for (const FunctionDecl& fn : module.functions) {
-            if (!function_contains_line(fn, one_based_line)) {
+            if (!function_contains_location(fn, location)) {
                 continue;
             }
-            collect_function_locals(scope, fn, one_based_line);
+            collect_function_locals(scope, fn, location.line);
             return scope.local_type_refs;
         }
         for (const ClassDecl& klass : module.classes) {
             for (const FunctionDecl& method : klass.methods) {
-                if (!function_contains_line(method, one_based_line)) {
+                if (!function_contains_location(method, location)) {
                     continue;
                 }
                 scope.current_class = klass.name;
-                collect_function_locals(scope, method, one_based_line);
-                lsp_bind_local(scope, "self", named_type_ref(klass.name, method.location));
+                collect_function_locals(scope, method, location.line);
                 return scope.local_type_refs;
             }
         }

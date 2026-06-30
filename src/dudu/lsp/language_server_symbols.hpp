@@ -23,5 +23,8 @@ std::string constructor_detail(const ClassDecl& klass);
 std::string constructor_doc_comment(const ClassDecl& klass);
 std::string native_macro_detail(const NativeMacroDecl& macro);
 std::string native_function_detail(const NativeFunctionDecl& fn);
+std::optional<std::string> native_identity_key(const NativeSymbolId& identity);
+std::optional<std::string> native_class_member_identity_key(const ClassDecl& klass,
+                                                            const std::string& member);
 
 } // namespace dudu

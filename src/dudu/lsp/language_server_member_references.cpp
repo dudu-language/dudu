@@ -171,13 +171,14 @@ std::optional<std::string> member_declaration_reference_query_at(const Document&
 }
 
 std::optional<std::string> member_use_reference_query_at(const ModuleAst& module,
-                                                         const ExprPath& path, const Json* params) {
+                                                         const Document& doc, const ExprPath& path,
+                                                         const Json* params) {
     if (path.segments.size() != 2 || path.segments[0].kind != ExprPathSegmentKind::Name ||
         path.segments[1].kind != ExprPathSegmentKind::Name) {
         return std::nullopt;
     }
     const TypeRef receiver_type =
-        local_type_ref_before_cursor(module, path.segments[0].text, params);
+        local_type_ref_before_cursor(module, doc, path.segments[0].text, params);
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;
     }

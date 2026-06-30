@@ -18,6 +18,7 @@ std::optional<std::string> enum_value_declaration_reference_query_at(const Docum
                                                                      const Json* params,
                                                                      const ModuleAst* module);
 std::optional<std::string> member_use_reference_query_at(const ModuleAst& module,
-                                                         const ExprPath& path, const Json* params);
+                                                         const Document& doc, const ExprPath& path,
+                                                         const Json* params);
 
 } // namespace dudu

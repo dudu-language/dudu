@@ -31,6 +31,25 @@ inline std::string native_symbol_identity_key(const NativeSymbolId& identity) {
     return {};
 }
 
+inline NativeSymbolId native_class_member_identity(const ClassDecl& klass,
+                                                   const std::string& member) {
+    NativeSymbolId identity = klass.identity;
+    if (!identity.usr.empty()) {
+        identity.usr += "." + member;
+    }
+    if (!identity.canonical_path.empty()) {
+        identity.canonical_path += "." + member;
+    } else if (!klass.name.empty()) {
+        identity.canonical_path = klass.name + "." + member;
+    }
+    return identity;
+}
+
+inline std::string native_class_member_symbol_identity_key(const ClassDecl& klass,
+                                                           const std::string& member) {
+    return native_symbol_identity_key(native_class_member_identity(klass, member));
+}
+
 template <typename T> std::string native_decl_identity_key(const T& decl) {
     std::string key = native_symbol_identity_key(decl.identity);
     if (key.empty()) {

@@ -120,11 +120,14 @@ Find-references now uses those native identity keys to filter same-spelled
 native references across workspace documents when identity metadata is
 available, so two headers imported under the same alias with the same function
 name are not conflated. `ProjectIndex` now builds a per-module native identity
-table for native types, values, macros, functions, classes, and C++ methods, so
-native reference filtering uses indexed symbol identity instead of rebuilding
-LSP symbol lists per candidate document. Single-file editor overlays are also
-stamped with their entry path, so open documents that do not exist on disk still
-participate in indexed native reference filtering.
+table for native types, values, macros, functions, classes, C++ methods, and
+native class fields/constants/static fields, so native reference filtering uses
+indexed symbol identity instead of rebuilding LSP symbol lists per candidate
+document. Single-file editor overlays are also stamped with their entry path, so
+open documents that do not exist on disk still participate in indexed native
+reference filtering. Dudu import aliases that happen to use native-shaped symbol
+records are not treated as native references when their declaration location is
+in `.dd` source.
 Reference and rename workspace scans now prefer module units from the already
 loaded warm `ProjectIndex` for candidate files in the same module tree before
 falling back to per-document project loads, keeping repeated requests on shared
@@ -144,9 +147,11 @@ the selected declaration and receiver-type checks for member expressions, so
 `Player.hp` references do not include unrelated `Enemy.hp` declarations or
 uses. Member use sites such as `player.hp` and `player.move(...)` now resolve
 through the receiver's structured type to the same qualified member identity,
-including when `Player` is imported from another Dudu module. Enum value
-declaration references use the same qualified identity shape, so `Mode.Play`
-does not include another enum's `Play` variant.
+including when `Player` is imported from another Dudu module. Local context for
+these checks is file-aware inside merged module views and treats method `self`
+as the containing class before walking the method body. Enum value declaration
+references use the same qualified identity shape, so `Mode.Play` does not
+include another enum's `Play` variant.
 
 ## Architecture
 

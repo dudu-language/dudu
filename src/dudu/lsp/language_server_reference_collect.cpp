@@ -9,6 +9,7 @@
 #include "dudu/lsp/language_server_operator.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <set>
@@ -16,6 +17,9 @@
 
 namespace dudu {
 namespace {
+
+std::optional<std::string> self_owner_at_location(const ModuleAst& module,
+                                                  const SourceLocation& location);
 
 struct ReferenceCollector {
     const ModuleAst& module;
@@ -64,8 +68,14 @@ struct ReferenceCollector {
         }
         const std::string owner = query.substr(0, dot);
         std::set<std::string> candidate_types;
+        if (receiver == "self") {
+            if (const std::optional<std::string> self_owner =
+                    self_owner_at_location(module, location)) {
+                candidate_types.insert(*self_owner);
+            }
+        }
         const std::map<std::string, TypeRef> locals =
-            local_type_refs_before_line(module, location.line);
+            local_type_refs_before_location(module, location);
         const auto found = locals.find(receiver);
         if (found != locals.end()) {
             const std::set<std::string> local_candidates =
@@ -138,9 +148,36 @@ int function_end_line(const FunctionDecl& function) {
     return line;
 }
 
+bool location_matches_file(const SourceLocation& location, const SourceLocation& target) {
+    if (location.file.empty() || target.file.empty()) {
+        return true;
+    }
+    const std::filesystem::path left(location.file.str());
+    const std::filesystem::path right(target.file.str());
+    return same_path(left, right) ||
+           (!left.filename().empty() && left.filename() == right.filename());
+}
+
 bool function_contains_line(const FunctionDecl& function, int one_based_line) {
     return function.location.line <= one_based_line &&
            one_based_line <= std::max(function.location.line, function_end_line(function));
+}
+
+bool function_contains_location(const FunctionDecl& function, const SourceLocation& location) {
+    return location_matches_file(function.location, location) &&
+           function_contains_line(function, location.line);
+}
+
+std::optional<std::string> self_owner_at_location(const ModuleAst& module,
+                                                  const SourceLocation& location) {
+    for (const ClassDecl& klass : module.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            if (function_contains_location(method, location)) {
+                return klass.name;
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 bool function_binds_name(const FunctionDecl& function, const std::string& query) {

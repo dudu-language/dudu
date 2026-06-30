@@ -223,8 +223,8 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
         return std::nullopt;
     }
     const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
-    const auto find_member =
-        [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+    const auto find_member = [&](const std::vector<ClassDecl>& classes,
+                                 bool native) -> std::optional<std::string> {
         for (const ClassDecl& klass : classes) {
             if (!candidate_types.contains(klass.name)) {
                 continue;
@@ -236,7 +236,9 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
                          .detail = field.name + ": " + type_ref_text(field.type_ref),
                          .location = field.location,
                          .kind = lsp_symbol_kind::Field,
-                         .native_identity_key = std::nullopt,
+                         .native_identity_key =
+                             native ? native_class_member_identity_key(klass, field.name)
+                                    : std::nullopt,
                          .doc_comment = field.doc_comment});
                 }
             }
@@ -247,7 +249,9 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
                          .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                          .location = constant.location,
                          .kind = lsp_symbol_kind::Constant,
-                         .native_identity_key = std::nullopt,
+                         .native_identity_key =
+                             native ? native_class_member_identity_key(klass, constant.name)
+                                    : std::nullopt,
                          .doc_comment = constant.doc_comment});
                 }
             }
@@ -258,29 +262,33 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
                          .detail = field.name + ": " + type_ref_text(field.type_ref),
                          .location = field.location,
                          .kind = lsp_symbol_kind::Field,
-                         .native_identity_key = std::nullopt,
+                         .native_identity_key =
+                             native ? native_class_member_identity_key(klass, field.name)
+                                    : std::nullopt,
                          .doc_comment = field.doc_comment});
                 }
             }
             for (const FunctionDecl& method : klass.methods) {
                 if (method.name == member) {
-                    return symbol_hover_json({.name = method.name,
-                                              .detail = function_detail(method),
-                                              .location = method.location,
-                                              .kind = is_constructor_method_name(method.name)
-                                                          ? lsp_symbol_kind::Constructor
-                                                          : lsp_symbol_kind::Method,
-                                              .native_identity_key = std::nullopt,
-                                              .doc_comment = method.doc_comment});
+                    return symbol_hover_json(
+                        {.name = method.name,
+                         .detail = function_detail(method),
+                         .location = method.location,
+                         .kind = is_constructor_method_name(method.name)
+                                     ? lsp_symbol_kind::Constructor
+                                     : lsp_symbol_kind::Method,
+                         .native_identity_key =
+                             native ? native_identity_key(method.native_identity) : std::nullopt,
+                         .doc_comment = method.doc_comment});
                 }
             }
         }
         return std::nullopt;
     };
-    if (const std::optional<std::string> native = find_member(module.native_classes)) {
+    if (const std::optional<std::string> native = find_member(module.native_classes, true)) {
         return native;
     }
-    return find_member(module.classes);
+    return find_member(module.classes, false);
 }
 
 } // namespace

@@ -169,6 +169,15 @@ std::optional<std::string> native_identity_key(const NativeSymbolId& identity) {
     return key;
 }
 
+std::optional<std::string> native_class_member_identity_key(const ClassDecl& klass,
+                                                            const std::string& member) {
+    const std::string key = native_class_member_symbol_identity_key(klass, member);
+    if (key.empty()) {
+        return std::nullopt;
+    }
+    return key;
+}
+
 bool suffix_symbol_match(const std::string& symbol, const std::string& query) {
     if (symbol == query) {
         return false;
@@ -327,28 +336,31 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .native_identity_key = native_identity_key(klass.identity),
                        .doc_comment = klass.doc_comment});
         for (const FieldDecl& field : klass.fields) {
-            out.push_back({.name = klass.name + "." + field.name,
-                           .detail = field.name + ": " + type_ref_text(field.type_ref),
-                           .location = field.location,
-                           .kind = lsp_symbol_kind::Field,
-                           .native_identity_key = std::nullopt,
-                           .doc_comment = field.doc_comment});
+            out.push_back(
+                {.name = klass.name + "." + field.name,
+                 .detail = field.name + ": " + type_ref_text(field.type_ref),
+                 .location = field.location,
+                 .kind = lsp_symbol_kind::Field,
+                 .native_identity_key = native_class_member_identity_key(klass, field.name),
+                 .doc_comment = field.doc_comment});
         }
         for (const ConstDecl& constant : klass.constants) {
-            out.push_back({.name = klass.name + "." + constant.name,
-                           .detail = constant.name + ": " + type_ref_text(constant.type_ref),
-                           .location = constant.location,
-                           .kind = lsp_symbol_kind::Constant,
-                           .native_identity_key = std::nullopt,
-                           .doc_comment = constant.doc_comment});
+            out.push_back(
+                {.name = klass.name + "." + constant.name,
+                 .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                 .location = constant.location,
+                 .kind = lsp_symbol_kind::Constant,
+                 .native_identity_key = native_class_member_identity_key(klass, constant.name),
+                 .doc_comment = constant.doc_comment});
         }
         for (const ConstDecl& field : klass.static_fields) {
-            out.push_back({.name = klass.name + "." + field.name,
-                           .detail = field.name + ": " + type_ref_text(field.type_ref),
-                           .location = field.location,
-                           .kind = lsp_symbol_kind::Field,
-                           .native_identity_key = std::nullopt,
-                           .doc_comment = field.doc_comment});
+            out.push_back(
+                {.name = klass.name + "." + field.name,
+                 .detail = field.name + ": " + type_ref_text(field.type_ref),
+                 .location = field.location,
+                 .kind = lsp_symbol_kind::Field,
+                 .native_identity_key = native_class_member_identity_key(klass, field.name),
+                 .doc_comment = field.doc_comment});
         }
         for (const FunctionDecl& method : klass.methods) {
             out.push_back({.name = klass.name + "." + method.name,

@@ -154,6 +154,9 @@ std::optional<std::string> native_identity_for_query(const std::vector<Symbol>& 
         return std::nullopt;
     }
     for (const Symbol& symbol : symbols) {
+        if (symbol.location.file.ends_with(".dd")) {
+            continue;
+        }
         if (symbol.name == query && symbol.native_identity_key.has_value()) {
             return symbol.native_identity_key;
         }

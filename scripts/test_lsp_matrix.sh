@@ -1124,7 +1124,11 @@ def main() -> i32:
     if "Adds two matrix fixture integers." not in native_signature_docs:
         raise AssertionError(f"missing native signature docs: {native_signature_help!r}")
     native_c_field_hover = response(messages, 116)["contents"]["value"]
-    if "x:" not in native_c_field_hover or "Native point x coordinate docs." not in native_c_field_hover:
+    if (
+        "x:" not in native_c_field_hover
+        or "Native point x coordinate docs." not in native_c_field_hover
+        or "Native identity:" not in native_c_field_hover
+    ):
         raise AssertionError(f"missing native C field hover docs: {native_c_field_hover!r}")
     native_c_field_definition = response(messages, 117)
     if not native_c_field_definition["uri"].endswith("/native_bridge.h"):

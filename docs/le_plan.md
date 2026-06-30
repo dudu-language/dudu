@@ -3815,3 +3815,9 @@ push. They are not release packaging work.
    covers the actual `left + right` use site. Hover and references reuse the
    same class-qualified operator identity, so operator tokens expose method
    docs/signatures and references include both declarations and typed uses.
+   Native field intelligence now shares identity construction between the native
+   scanner boundary, LSP symbols, hover, references, semantic tokens, and
+   `ProjectIndex`. Native field/constant/static-field identities are indexed
+   alongside native methods, while Dudu import aliases with `.dd` locations are
+   deliberately excluded from native identity filtering so Dudu member
+   references such as `Player.hp` are not mistaken for native header symbols.

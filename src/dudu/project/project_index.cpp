@@ -180,6 +180,24 @@ native_identity_index_for_module(const ModuleAst& module) {
     }
     for (const ClassDecl& klass : module.native_classes) {
         add_native_identity(out, klass.name, klass.identity);
+        for (const FieldDecl& field : klass.fields) {
+            const std::string key = native_class_member_symbol_identity_key(klass, field.name);
+            if (!key.empty()) {
+                out[klass.name + "." + field.name].insert(key);
+            }
+        }
+        for (const ConstDecl& constant : klass.constants) {
+            const std::string key = native_class_member_symbol_identity_key(klass, constant.name);
+            if (!key.empty()) {
+                out[klass.name + "." + constant.name].insert(key);
+            }
+        }
+        for (const ConstDecl& field : klass.static_fields) {
+            const std::string key = native_class_member_symbol_identity_key(klass, field.name);
+            if (!key.empty()) {
+                out[klass.name + "." + field.name].insert(key);
+            }
+        }
         for (const FunctionDecl& method : klass.methods) {
             add_native_identity(out, klass.name + "." + method.name, method.native_identity);
         }
