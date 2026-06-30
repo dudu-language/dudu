@@ -67,9 +67,6 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                    ? infer_expr_type_ast(scope, expr.children.front(), location)
                    : named_type_ref("auto", type_location);
     case ExprKind::Slice:
-        if (location != nullptr) {
-            sema_expr_fail(*location, "slice expression must be used inside an index");
-        }
         for (const Expr& child : expr.children) {
             if (!missing_expr(child)) {
                 check_expr_ast(scope, child, location);

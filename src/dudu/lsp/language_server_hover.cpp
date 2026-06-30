@@ -82,6 +82,7 @@ std::optional<std::string> primitive_hover_json(const std::string& word) {
         {"f64", {"double", "64-bit floating-point value."}},
         {"str", {"std::string", "Owned UTF-8 string value."}},
         {"None", {"std::nullptr_t", "Null pointer value."}},
+        {"slice", {"dudu::Slice", "Index slice value used by library-defined indexing hooks."}},
         {"list", {"std::vector<T>", "Dynamic owning contiguous list. Use `list[T]`."}},
         {"dict", {"std::unordered_map<K, V>", "Dynamic hash map. Use `dict[K, V]`."}},
         {"set", {"std::unordered_set<T>", "Dynamic hash set. Use `set[T]`."}},

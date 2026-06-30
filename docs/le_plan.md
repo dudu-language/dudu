@@ -1136,7 +1136,8 @@ push. They are not release packaging work.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, including
    multi-scalar indices, member receivers such as `box.tensor[1, 2]`, member
-   receiver assignments, and indexed member paths such as `self.values[i]`.
+   receiver assignments, indexed member paths such as `self.values[i]`, and
+   mixed slice/scalar hook arguments such as `tensor[1:3, 2]`.
    One-dimensional fixed-array step slices such as `values[start:end:step]`
    produce `strided_span[T]` views.
    This is enough to play with fixed arrays, row/column/full-storage views,
@@ -1159,11 +1160,12 @@ push. They are not release packaging work.
    boundaries or shape assertions. Do not require left-side dimensions just to
    make local numeric code type-check. The first CPU fixture now proves a small
    Dudu `Tensor` with scalar indexing, assignment, elementwise add, and pure
-   Dudu matmul; the optional OpenBLAS fixture now proves CBLAS `sgemm` through
-   normal C interop. Continue by moving the tensor proof into reusable dogfood,
-   adding library slice hooks/views, comparing BLAS matmul against the pure Dudu
-   path, and only then adding OpenCL or ROCm probes when local tooling is
-   available.
+   Dudu matmul; a slice hook fixture proves `slice` values can be passed to
+   ordinary library indexing overloads; the optional OpenBLAS fixture now
+   proves CBLAS `sgemm` through normal C interop. Continue by moving the tensor
+   proof into reusable dogfood, adding row/column/patch view objects, comparing
+   BLAS matmul against the pure Dudu path, and only then adding OpenCL or ROCm
+   probes when local tooling is available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

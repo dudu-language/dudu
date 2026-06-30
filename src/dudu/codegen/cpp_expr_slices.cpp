@@ -101,6 +101,39 @@ std::string shape_element_count_expr(const std::vector<std::string>& shape) {
 
 } // namespace
 
+std::string lower_slice_value_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                                   const CppLocalContext& locals,
+                                   const std::map<std::string, TypeRef>& local_type_refs,
+                                   const Symbols* symbols, const CppEmitOptions& options) {
+    if (expr.kind != ExprKind::Slice || expr.children.size() != 2) {
+        throw CompileError(expr.location, "malformed slice expression");
+    }
+    const Expr* start_expr = &expr.children[0];
+    const Expr* end_expr = &expr.children[1];
+    const Expr* step_expr = nullptr;
+    if (end_expr->kind == ExprKind::Slice && end_expr->children.size() == 2) {
+        step_expr = &end_expr->children[1];
+        end_expr = &end_expr->children[0];
+    }
+    const bool has_start = !expr_missing(*start_expr);
+    const bool has_end = !expr_missing(*end_expr);
+    const bool has_step = step_expr != nullptr && !expr_missing(*step_expr);
+    const auto lower_or_zero = [&](const Expr& bound) {
+        return expr_missing(bound) ? std::string{"0"}
+                                   : lower_expr(bound, aliases, locals, local_type_refs, symbols,
+                                                options);
+    };
+    const std::string start = lower_or_zero(*start_expr);
+    const std::string end = lower_or_zero(*end_expr);
+    const std::string step =
+        has_step ? lower_expr(*step_expr, aliases, locals, local_type_refs, symbols, options)
+                 : std::string{"1"};
+    return "dudu::Slice{" + std::string(has_start ? "true" : "false") + ", " +
+           std::string(has_end ? "true" : "false") + ", " +
+           std::string(has_step ? "true" : "false") + ", " + start + ", " + end + ", " + step +
+           "}";
+}
+
 std::optional<std::string> lower_trailing_full_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,

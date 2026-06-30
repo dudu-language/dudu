@@ -82,6 +82,7 @@ compile_and_expect tensor_index_hook 42
 compile_and_expect tensor_index_set_hook 42
 compile_and_expect tensor_index_set_member_hook 42
 compile_and_expect tensor_multi_index_hook 42
+compile_and_expect tensor_slice_hook 42
 compile_and_expect static_fields 42
 compile_and_expect static_class_alias 42
 compile_and_expect static_class_method_alias 42

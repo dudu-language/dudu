@@ -88,6 +88,7 @@ compile_and_expect value_pointer_containers 42
 compile_and_expect class_methods 42
 compile_and_expect tensor_index_set_member_hook 42
 compile_and_expect tensor_multi_index_hook 42
+compile_and_expect tensor_slice_hook 42
 compile_and_expect c_direct_lowercase_macro 42
 compile_and_expect c_lowercase_macro 42
 compile_and_expect c_variadic_macro 42

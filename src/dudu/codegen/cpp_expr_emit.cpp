@@ -6,6 +6,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_index.hpp"
+#include "dudu/codegen/cpp_expr_slices.hpp"
 #include "dudu/codegen/cpp_expr_swizzles.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
@@ -380,7 +381,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Slice:
-        throw CompileError(expr.location, "slice expression must be used inside an index");
+        return lower_slice_value_expr(expr, aliases, locals, local_type_refs, symbols, options);
     case ExprKind::DictLiteral:
         return "{" +
                join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,

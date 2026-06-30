@@ -390,11 +390,16 @@ Status:
   receivers such as `box.tensor[1, 2]`.
 - Done: indexed assignment hooks accept multiple scalar indices plus the
   assigned value.
+- Done: slice expressions lower to a normal `slice` value when a
+  library-defined indexing hook asks for one, so mixed forms such as
+  `tensor[1:3, 2]` and `tensor[0:3:2, 4]` can dispatch through ordinary
+  `@operator("[]")` / `@operator("[]=")` overloads.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
 - Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
+  `tests/fixtures/tensor_slice_hook.dd` and
   `tests/fixtures/cpu_tensor_matmul.dd`.
-- Remaining: slice objects passed to library hooks, `.vindex[...]`,
-  `.oindex[...]`, masks, scatter, and missing-hook diagnostics for fancy forms.
+- Remaining: `.vindex[...]`, `.oindex[...]`, masks, scatter, richer view
+  objects, and missing-hook diagnostics for fancy forms.
 
 ### 2. CPU Tensor Library
 
@@ -420,9 +425,12 @@ Status:
 - It defines a small Dudu `Tensor` class with row-major `list[f32]` storage,
   `filled`, `zeros`, scalar indexing, indexed assignment, elementwise add, and
   pure Dudu matmul.
+- Slice hook arguments are now available to library code as `slice` values, so
+  row, column, and patch view APIs can be implemented as ordinary Dudu methods
+  instead of fixed-array-only compiler behavior.
 - Remaining: move this from fixture-only proof into a small reusable example
-  module/repo, add row/column/patch view objects once library slice hooks are
-  supported, and add activation/map helpers.
+  module/repo, add row/column/patch view objects, and add activation/map
+  helpers.
 
 ### 3. Optional OpenBLAS Probe
 
