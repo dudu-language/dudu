@@ -1085,6 +1085,37 @@ void test_lsp_static_class_member_definition_hover_and_references() {
     assert(signature.find("Bump docs.") != std::string::npos);
 }
 
+void test_lsp_index_operator_definition_and_hover() {
+    const dudu::Document doc{.uri = "file:///index_operator_lsp.dd",
+                             .path = "index_operator_lsp.dd",
+                             .text = "class Tensor:\n"
+                                     "    data: list[i32]\n"
+                                     "\n"
+                                     "    @operator(\"[]\")\n"
+                                     "    def at(self, index: i32) -> i32:\n"
+                                     "        '''Indexed read docs.'''\n"
+                                     "        return self.data[index]\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    tensor = Tensor([10])\n"
+                                     "    value = tensor[0]\n"
+                                     "    return value\n"};
+
+    dudu::Json bracket_params =
+        dudu::JsonParser("{\"position\":{\"line\":10,\"character\":18}}").parse();
+    const std::string definition = dudu::definition_json(doc, &bracket_params);
+    assert(definition.find("\"line\":4") != std::string::npos);
+
+    const std::string hover = dudu::hover_json(doc, "", &bracket_params);
+    assert(hover.find("def at(self: &Self, index: i32) -> i32") != std::string::npos);
+    assert(hover.find("Indexed read docs.") != std::string::npos);
+
+    dudu::Json index_arg_params =
+        dudu::JsonParser("{\"position\":{\"line\":10,\"character\":19}}").parse();
+    const std::string index_arg_definition = dudu::definition_json(doc, &index_arg_params);
+    assert(index_arg_definition.find("\"line\":4") == std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -1125,6 +1156,7 @@ int main() {
         test_lsp_references_track_member_path_root_segments();
         test_lsp_native_namespace_reference_query_uses_selected_segment();
         test_lsp_static_class_member_definition_hover_and_references();
+        test_lsp_index_operator_definition_and_hover();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

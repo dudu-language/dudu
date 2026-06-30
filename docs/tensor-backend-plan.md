@@ -615,6 +615,13 @@ Make sure tensor code is pleasant to write:
 - diagnostics explain missing index hooks
 - docs show copy-vs-view behavior clearly
 
+Status:
+
+- Done: definition and hover on a bracket/operator position in `tensor[...]`
+  resolve to the selected Dudu `@operator("[]")` hook, including its signature
+  and docs. Clicking normal index variables inside the brackets remains normal
+  symbol navigation.
+
 ## Acceptance
 
 This slice is done when:

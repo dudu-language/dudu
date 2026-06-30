@@ -28,6 +28,20 @@ bool contains_operator(const Expr& expr, const LspPosition& position) {
     return contains_name(expr.op_location, std::string(expr.op), position);
 }
 
+bool contains_index_operator(const Expr& expr, const LspPosition& position) {
+    if (expr.kind != ExprKind::Index || expr.children.size() != 2) {
+        return false;
+    }
+    const Expr& receiver = expr.children[0];
+    const Expr& index = expr.children[1];
+    if (receiver.range.end.line != position.line + 1 ||
+        index.location.line != position.line + 1) {
+        return false;
+    }
+    const int target_column = position.character + 1;
+    return target_column >= receiver.range.end.column && target_column < index.location.column;
+}
+
 ExprPath expr_path_prefix(const ExprPath& path, std::size_t last_segment_index) {
     ExprPath prefix;
     if (path.segments.empty()) {
@@ -118,6 +132,12 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
             selection.operator_expr = expr;
             return;
         }
+        if (!selection.operator_expr && contains_index_operator(expr, position)) {
+            selection.symbol = "[]";
+            selection.symbol_path = "[]";
+            selection.operator_expr = expr;
+            return;
+        }
         if (!selection.call_callee &&
             (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
             expr_callee(expr).size() == 1 && expr_callee(expr).front().kind == ExprKind::Name &&
@@ -188,6 +208,12 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         if (!selection.operator_expr && contains_operator(expr, position)) {
             selection.symbol = std::string(expr.op);
             selection.symbol_path = std::string(expr.op);
+            selection.operator_expr = expr;
+            return;
+        }
+        if (!selection.operator_expr && contains_index_operator(expr, position)) {
+            selection.symbol = "[]";
+            selection.symbol_path = "[]";
             selection.operator_expr = expr;
             return;
         }
