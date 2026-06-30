@@ -16,6 +16,47 @@ class TensorView:
         index = self.offset + (row * self.row_stride) + (col * self.col_stride)
         self.data[index] = value
 
+    def fill(self, value: f32):
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                self[row, col] = value
+                col += 1
+            row += 1
+
+    def sum(self) -> f32:
+        total: f32 = 0.0
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                total += self[row, col]
+                col += 1
+            row += 1
+        return total
+
+    def mean(self) -> f32:
+        count = self.rows * self.cols
+        if count <= 0:
+            return 0.0
+        return self.sum() / f32(count)
+
+    def max(self) -> f32:
+        if self.rows <= 0 or self.cols <= 0:
+            return 0.0
+        best = self[0, 0]
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                value = self[row, col]
+                if value > best:
+                    best = value
+                col += 1
+            row += 1
+        return best
+
 
 class Mask:
     data: list[bool]
@@ -226,25 +267,11 @@ def view_to_tensor(view: TensorView) -> Tensor:
 
 
 def fill_view(view: &TensorView, value: f32):
-    row = 0
-    while row < view.rows:
-        col = 0
-        while col < view.cols:
-            view[row, col] = value
-            col += 1
-        row += 1
+    view.fill(value)
 
 
 def sum_view(view: TensorView) -> f32:
-    total: f32 = 0.0
-    row = 0
-    while row < view.rows:
-        col = 0
-        while col < view.cols:
-            total += view[row, col]
-            col += 1
-        row += 1
-    return total
+    return view.sum()
 
 
 def filled(rows: i32, cols: i32, value: f32) -> Tensor:

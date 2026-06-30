@@ -1186,8 +1186,12 @@ push. They are not release packaging work.
    of that hook can flow into an API requiring `Tensor[i32][dyn, 2]` without
    restating the local type. A reusable matrix mask now proves `tensor[mask]`
    element gather plus scalar and tensor-valued masked scatter through ordinary
-   overloaded index hooks. Continue with optional backend BLAS probes when
-   local tooling is available, then repeated-index scatter policy, composed
+   overloaded index hooks. Reusable tensor views now own non-allocating
+   behavior such as fill, sum, mean, and max; owning view materialization still
+   uses an explicit helper because methods returning the owning tensor expose
+   the current C++ incomplete-type emission boundary. Continue with optional
+   backend BLAS probes when local tooling is available, then out-of-line method
+   emission where needed, repeated-index scatter policy, composed
    tensor-expression shape propagation, and explicit proof/conversion
    diagnostics for `dyn` values flowing into concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are

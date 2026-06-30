@@ -494,8 +494,13 @@ Status:
   arguments and shaped metadata through RHS inference, so
   `values = zeros[f32](4, 2)` can feed `values[mask, :]` and surface
   `Tensor[f32][dyn, 2]` in editor type information.
-- Remaining: richer backend/library-owned view objects and broader propagation
-  of shape facts through composed tensor expressions.
+- Done: reusable tensor views now own common non-allocating behavior such as
+  fill, sum, mean, and max. Owning view materialization remains an explicit
+  helper call because methods returning the owning tensor currently run into
+  the compiler's C++ incomplete-type emission boundary.
+- Remaining: broader propagation of shape facts through composed tensor
+  expressions, plus out-of-line method emission if libraries need mutually
+  referential value/view methods returning complete owning types.
 
 ### 2. CPU Tensor Library
 
@@ -534,7 +539,8 @@ Status:
   `leaky_relu`, `clamp`, `threshold`, row-mask selection/scatter, view
   copy/fill/sum helpers, row-bias add, and pure Dudu matmul.
 - `tests/fixtures/tensor_dogfood/views_main.dd` validates the reusable module's
-  matrix/image-style view behavior through normal imports.
+  matrix/image-style view behavior through normal imports, including view-owned
+  fill/reduction helpers.
 - `tests/fixtures/tensor_dogfood/mask_rows_main.dd` validates reusable row-mask
   read and explicit read/modify/write masked scatter. The separate generic
   `mask_indexing.dd` fixture validates `dyn` shaped flow.
