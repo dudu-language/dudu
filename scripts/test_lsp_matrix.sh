@@ -355,7 +355,9 @@ def main() -> i32:
 #define DUDU_MATRIX_NATIVE_SCALE(value) ((value) * 3)
 
 typedef struct MatrixNativePoint {
+    /** Native point x coordinate docs. */
     int x;
+    /** Native point y coordinate docs. */
     int y;
 } MatrixNativePoint;
 
@@ -676,6 +678,9 @@ def main() -> i32:
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(92, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
+        request(116, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
+        request(117, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
+        request(118, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
         request(113, "textDocument/definition", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
         request(114, "textDocument/hover", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
         request(115, "textDocument/references", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
@@ -1116,6 +1121,22 @@ def main() -> i32:
     native_signature_docs = native_signature_help["signatures"][0]["documentation"]["value"]
     if "Adds two matrix fixture integers." not in native_signature_docs:
         raise AssertionError(f"missing native signature docs: {native_signature_help!r}")
+    native_c_field_hover = response(messages, 116)["contents"]["value"]
+    if "x:" not in native_c_field_hover or "Native point x coordinate docs." not in native_c_field_hover:
+        raise AssertionError(f"missing native C field hover docs: {native_c_field_hover!r}")
+    native_c_field_definition = response(messages, 117)
+    if not native_c_field_definition["uri"].endswith("/native_bridge.h"):
+        raise AssertionError(f"native C field definition did not jump to header: {native_c_field_definition!r}")
+    native_c_field_decl = position((tmp / "native_bridge.h").read_text(), "    int x;", add=len("    int "))
+    if native_c_field_definition["range"]["start"]["line"] != native_c_field_decl["line"]:
+        raise AssertionError(f"native C field definition jumped to wrong line: {native_c_field_definition!r}")
+    native_c_field_refs = response(messages, 118)
+    native_c_field_assign = position(native_source, "point.x", add=len("point."))
+    native_c_field_call = position(native_source, "point.x", occurrence=1, add=len("point."))
+    if not has_start(native_c_field_refs, native.as_uri(), native_c_field_assign["line"], native_c_field_assign["character"]):
+        raise AssertionError(f"missing native C field assignment ref: {native_c_field_refs!r}")
+    if not has_start(native_c_field_refs, native.as_uri(), native_c_field_call["line"], native_c_field_call["character"]):
+        raise AssertionError(f"missing native C field call ref: {native_c_field_refs!r}")
     native_context_field_definition = response(messages, 113)
     if not native_context_field_definition["uri"].endswith("/needs_c_context.h"):
         raise AssertionError(
