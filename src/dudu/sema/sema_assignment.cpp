@@ -43,6 +43,44 @@ std::string indexed_assignment_label(const Expr& receiver) {
     return label.empty() ? "indexed assignment" : label;
 }
 
+TypeRef resolved_assignment_type(const Symbols& symbols, TypeRef type) {
+    while (true) {
+        const TypeRef resolved = resolve_alias_ref(symbols, type);
+        if (!type_ref_same_shape(resolved, type)) {
+            type = resolved;
+            continue;
+        }
+        return type;
+    }
+}
+
+bool member_assignment_receiver_is_const(const Symbols& symbols, TypeRef type) {
+    type = resolved_assignment_type(symbols, std::move(type));
+    if (type.kind == TypeKind::Const) {
+        return true;
+    }
+    if ((type.kind == TypeKind::Reference || type.kind == TypeKind::Pointer) &&
+        type.children.size() == 1) {
+        TypeRef target = resolved_assignment_type(symbols, type.children.front());
+        return target.kind == TypeKind::Const;
+    }
+    return false;
+}
+
+void reject_const_member_assignment(const FunctionScope& scope, const Expr& target,
+                                    const SourceLocation& location) {
+    if (target.kind != ExprKind::Member || target.children.size() != 1) {
+        return;
+    }
+    const TypeRef receiver_type = infer_expr_type_ast(scope, target.children.front(), &location);
+    if (has_type_ref(receiver_type) &&
+        member_assignment_receiver_is_const(scope.symbols, receiver_type)) {
+        const std::string label = expr_label(target);
+        sema_fail(location, "cannot assign to member through const receiver" +
+                                (label.empty() ? std::string{} : ": " + label));
+    }
+}
+
 } // namespace
 
 TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
@@ -113,6 +151,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         return type_ref;
     }
     if (stmt_target_expr(stmt).kind == ExprKind::Member) {
+        reject_const_member_assignment(scope, stmt_target_expr(stmt), target_location);
         if (stmt_target_expr(stmt).children.size() == 1 &&
             is_swizzle_name(stmt_target_expr(stmt).name)) {
             const Expr& receiver = stmt_target_expr(stmt).children.front();

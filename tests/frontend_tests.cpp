@@ -411,6 +411,21 @@ void test_receiver_reference_semantics() {
     const dudu::ModuleAst ok = dudu::parse_source("class Vec3:\n"
                                                   "    x: f32\n"
                                                   "\n"
+                                                  "    def mutable_value(self) -> Self:\n"
+                                                  "        return self\n"
+                                                  "\n"
+                                                  "    def mutable_ref(self) -> &Self:\n"
+                                                  "        return self\n"
+                                                  "\n"
+                                                  "    def mutable_const_ref(self) -> &const[Self]:\n"
+                                                  "        return self\n"
+                                                  "\n"
+                                                  "    def const_value(self: &const[Self]) -> Self:\n"
+                                                  "        return self\n"
+                                                  "\n"
+                                                  "    def const_ref(self: &const[Self]) -> &const[Self]:\n"
+                                                  "        return self\n"
+                                                  "\n"
                                                   "    def length(self: &const[Self]) -> f32:\n"
                                                   "        return self.x\n"
                                                   "\n"
@@ -419,7 +434,7 @@ void test_receiver_reference_semantics() {
                                                   "receiver_reference_semantics.dd");
     dudu::analyze_module(ok, {.check_bodies = true});
 
-    bool rejected = false;
+    bool rejected_value_receiver = false;
     try {
         const dudu::ModuleAst bad = dudu::parse_source("class Vec3:\n"
                                                        "    x: f32\n"
@@ -429,10 +444,46 @@ void test_receiver_reference_semantics() {
                                                        "bad_receiver_value.dd");
         dudu::analyze_module(bad, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
-        rejected = std::string(error.what()).find("self must be a receiver reference") !=
-                   std::string::npos;
+        rejected_value_receiver =
+            std::string(error.what()).find("self must be a receiver reference") !=
+            std::string::npos;
     }
-    assert(rejected);
+    assert(rejected_value_receiver);
+
+    bool rejected_const_to_mut_ref = false;
+    try {
+        const dudu::ModuleAst bad =
+            dudu::parse_source("class Vec3:\n"
+                               "    x: f32\n"
+                               "\n"
+                               "    def bad(self: &const[Self]) -> &Self:\n"
+                               "        return self\n",
+                               "bad_const_receiver_mut_ref_return.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected_const_to_mut_ref =
+            std::string(error.what())
+                .find("return type mismatch: expected &Self, got &const[Self]") !=
+            std::string::npos;
+    }
+    assert(rejected_const_to_mut_ref);
+
+    bool rejected_const_mutation = false;
+    try {
+        const dudu::ModuleAst bad =
+            dudu::parse_source("class Vec3:\n"
+                               "    x: f32\n"
+                               "\n"
+                               "    def bad(self: &const[Self]):\n"
+                               "        self.x = 1.0\n",
+                               "bad_const_receiver_mutation.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected_const_mutation =
+            std::string(error.what()).find("cannot assign to member through const receiver") !=
+            std::string::npos;
+    }
+    assert(rejected_const_mutation);
 }
 
 void test_pointer_dereference_uses_type_ast() {

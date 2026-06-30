@@ -88,10 +88,15 @@ void analyze_module_tree(const ModuleAst& module, const std::vector<std::string>
         return;
     }
     const std::set<std::string> selected(module_paths.begin(), module_paths.end());
+    bool matched_any = false;
     for (const ModuleAst& unit : module.module_units) {
         if (selected.contains(unit.module_path)) {
+            matched_any = true;
             analyze_module(unit, options);
         }
+    }
+    if (!matched_any) {
+        analyze_module_tree(module, options);
     }
 }
 

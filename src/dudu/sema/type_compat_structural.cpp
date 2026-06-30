@@ -142,6 +142,10 @@ bool structural_reference_assignment_allowed(const TypeRef& expected, const Type
         if (target.kind == TypeKind::Const && target.children.size() == 1) {
             return structural_type_assignment_allowed(target.children.front(), got);
         }
+        if (got.kind == TypeKind::Reference && got.children.size() == 1 &&
+            got.children.front().kind == TypeKind::Const) {
+            return false;
+        }
         return structural_type_assignment_allowed(target, got);
     }
     if (got.kind == TypeKind::Reference && got.children.size() == 1) {

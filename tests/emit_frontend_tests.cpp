@@ -370,6 +370,15 @@ void test_receiver_reference_emission() {
                            "    def length(self: &const[Self]) -> f32:\n"
                            "        return self.x\n"
                            "\n"
+                           "    def copy(self) -> Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def const_copy(self: &const[Self]) -> Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def const_ref(self: &const[Self]) -> &const[Self]:\n"
+                           "        return self\n"
+                           "\n"
                            "    def normalize(self) -> &Self:\n"
                            "        return self\n"
                            "\n"
@@ -381,6 +390,9 @@ void test_receiver_reference_emission() {
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("float length() const") != std::string::npos);
+    assert(cpp.find("Vec3 copy()") != std::string::npos);
+    assert(cpp.find("Vec3 const_copy() const") != std::string::npos);
+    assert(cpp.find("const Vec3& const_ref() const") != std::string::npos);
     assert(cpp.find("Vec3& normalize()") != std::string::npos);
     assert(cpp.find("Vec3& operator+=") != std::string::npos);
     assert(cpp.find("auto& self = *this;") != std::string::npos);

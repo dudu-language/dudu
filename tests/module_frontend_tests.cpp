@@ -238,6 +238,27 @@ void test_project_index_source_stamps_detect_changed_modules() {
     assert((affected == std::vector<std::string>{"dep", "main"}));
 }
 
+void test_selected_module_analysis_falls_back_when_paths_miss() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_selected_module_analysis_fallback_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "main.dd", "class Vec3:\n"
+                                "    x: f32\n"
+                                "\n"
+                                "    def bad(self: &const[Self]) -> &Self:\n"
+                                "        return self\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    bool rejected = false;
+    try {
+        dudu::analyze_module_tree(module, {"missing.module"}, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected = std::string(error.what()).find("return type mismatch") != std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_merged_output_rejects_same_named_module_declarations() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_merged_output_collision_test";
@@ -513,6 +534,7 @@ int main() {
         test_module_loader_rejects_duplicate_from_aliases();
         test_project_index_records_module_graph();
         test_project_index_source_stamps_detect_changed_modules();
+        test_selected_module_analysis_falls_back_when_paths_miss();
         test_merged_output_rejects_same_named_module_declarations();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();

@@ -111,6 +111,16 @@ reference to a live object. Non-receiver parameters keep normal type meaning:
 `other: Vec2` is by value, `other: &Vec2` is a mutable reference, and
 `other: &const[Vec2]` is a read-only reference.
 
+Receiver return matrix:
+
+- `self` / `self: &Self` returning `Self`: allowed, returns a copy.
+- `self` / `self: &Self` returning `&Self`: allowed, returns a mutable receiver reference.
+- `self` / `self: &Self` returning `&const[Self]`: allowed, returns a read-only receiver reference.
+- `self: &const[Self]` returning `Self`: allowed, returns a copy.
+- `self: &const[Self]` returning `&const[Self]`: allowed.
+- `self: &const[Self]` returning `&Self`: rejected by Dudu sema.
+- Assigning through `self` in a `self: &const[Self]` method is rejected by Dudu sema.
+
 Out-of-line methods can support C++-style organization:
 
 ```python

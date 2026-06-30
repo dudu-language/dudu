@@ -407,6 +407,35 @@ value. Returning `&Self` returns a mutable reference to a live object, commonly
 the receiver. Returning `&const[Self]` returns a read-only reference. Returning a
 reference to a local temporary is invalid.
 
+Receiver return rules:
+
+```python
+class Vec2:
+    x: f32
+    y: f32
+
+    def copy(self) -> Self:
+        return self                 # ok: copy from &Self
+
+    def mut_ref(self) -> &Self:
+        return self                 # ok: mutable receiver reference
+
+    def read_ref(self) -> &const[Self]:
+        return self                 # ok: &Self can bind as &const[Self]
+
+    def const_copy(self: &const[Self]) -> Self:
+        return self                 # ok: copy from const receiver
+
+    def const_ref(self: &const[Self]) -> &const[Self]:
+        return self                 # ok: read-only receiver reference
+
+    def bad_ref(self: &const[Self]) -> &Self:
+        return self                 # error: cannot drop const
+
+    def bad_mutation(self: &const[Self]):
+        self.x = 1.0                # error: const receiver
+```
+
 Non-receiver parameters are not special. `other: Vec2` is a value parameter.
 Use `other: &Vec2` for a mutable borrowed reference and
 `other: &const[Vec2]` for a read-only borrowed reference.
