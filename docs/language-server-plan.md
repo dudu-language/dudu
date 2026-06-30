@@ -151,7 +151,10 @@ including when `Player` is imported from another Dudu module. Local context for
 these checks is file-aware inside merged module views and treats method `self`
 as the containing class before walking the method body. Enum value declaration
 references use the same qualified identity shape, so `Mode.Play` does not
-include another enum's `Play` variant.
+include another enum's `Play` variant. Member completion for enum and sum-type
+names now resolves structured type aliases too, so imported `Mode.` and
+`Token.` completions offer the correct variants with enum-member item kinds and
+attached docs.
 
 ## Architecture
 

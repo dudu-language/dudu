@@ -83,6 +83,10 @@ Enum value declaration references use the same qualified identity shape, so
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for
 hover and references, so constructor-like variants do not collide with
 same-named variants on other enums.
+Completion after enum and sum-type names now uses the same structured type
+alias path: `Mode.` offers `Play` / `Pause`, `Token.` offers payload variants
+such as `IntLit`, and completion items carry enum-member kind plus declaration
+docs through the JSON-RPC matrix.
 Operator tokens now carry source locations in the AST, and go-to-definition on
 a Dudu operator use such as `left + right` resolves through operand type
 inference to the matching `@operator("+")` method. The JSON-RPC matrix asserts

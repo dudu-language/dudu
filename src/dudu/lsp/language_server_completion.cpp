@@ -25,6 +25,9 @@ namespace {
 
 int completion_kind(int symbol_kind) {
     switch (symbol_kind) {
+    case lsp_symbol_kind::Module:
+    case lsp_symbol_kind::Namespace:
+        return 9;
     case 5:
         return 7;
     case 6:
@@ -39,6 +42,10 @@ int completion_kind(int symbol_kind) {
         return 3;
     case 14:
         return 21;
+    case lsp_symbol_kind::EnumMember:
+        return 20;
+    case lsp_symbol_kind::Struct:
+        return 22;
     default:
         return 6;
     }
@@ -77,6 +84,33 @@ void write_completion_item(std::ostringstream& out, std::string_view label, int 
     write_documentation(out, documentation);
     out << "}";
 }
+
+struct CompletionAccumulator {
+    std::ostringstream out;
+    bool first = true;
+    std::set<std::string> labels;
+
+    CompletionAccumulator() {
+        out << "[";
+    }
+
+    void add(std::string_view label, int kind, std::string_view detail,
+             std::string_view documentation = {}) {
+        if (!labels.insert(std::string(label)).second) {
+            return;
+        }
+        if (!first) {
+            out << ",";
+        }
+        first = false;
+        write_completion_item(out, label, kind, detail, documentation);
+    }
+
+    std::string json() {
+        out << "]";
+        return out.str();
+    }
+};
 
 std::string completion_items_json(const std::vector<Symbol>& symbols) {
     std::ostringstream out;
@@ -120,6 +154,42 @@ std::optional<std::string> module_completion_json(const ProjectIndex& index,
     return std::nullopt;
 }
 
+std::string enum_value_completion_json(const ModuleAst& module, const std::string& target) {
+    const TypeRef target_ref = named_type_ref(target);
+    const std::set<std::string> candidate_types = member_candidate_types(module, target_ref);
+    std::set<std::string> qualified_candidates;
+    for (const std::string& candidate : candidate_types) {
+        if (candidate.find('.') != std::string::npos) {
+            qualified_candidates.insert(candidate);
+        }
+    }
+    CompletionAccumulator completions;
+    const auto add_enum_values = [&](const EnumDecl& en) {
+        const std::string qualified =
+            en.origin_module.empty() ? en.name : en.origin_module + "." + en.name;
+        for (const EnumValueDecl& value : en.values) {
+            completions.add(value.name, 20, "enum variant " + qualified + "." + value.name,
+                            value.doc_comment);
+        }
+    };
+    for (const EnumDecl& en : module.enums) {
+        const std::string qualified =
+            en.origin_module.empty() ? en.name : en.origin_module + "." + en.name;
+        if (qualified_candidates.contains(qualified)) {
+            add_enum_values(en);
+        }
+    }
+    if (!completions.labels.empty() || !qualified_candidates.empty()) {
+        return completions.json();
+    }
+    for (const EnumDecl& en : module.enums) {
+        if (candidate_types.contains(en.name)) {
+            add_enum_values(en);
+        }
+    }
+    return completions.json();
+}
+
 const ProjectIndex* completion_index(const Document& doc) {
     try {
         return &project_index_for_document(doc, true);
@@ -137,6 +207,10 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
     if (std::vector<Symbol> class_members = class_member_symbols_for_owner(current, target);
         !class_members.empty()) {
         return completion_items_json(class_members);
+    }
+    if (const std::string enum_values = enum_value_completion_json(index.merged_module(), target);
+        enum_values != "[]") {
+        return enum_values;
     }
     const std::string prefix = target + ".";
     std::vector<Symbol> prefixed_symbols;

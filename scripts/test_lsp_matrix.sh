@@ -640,6 +640,8 @@ def main() -> i32:
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(75, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
+        request(119, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "Mode.Play", add=len("Mode."))}),
+        request(120, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(76, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump()", add=len("Counter.bump("))}),
         request(77, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
@@ -856,6 +858,18 @@ def main() -> i32:
     assert_documentation_contains(item_named(counter_member_completion, "LIMIT"), "Counter limit docs.")
     assert_documentation_contains(item_named(counter_member_completion, "count"), "Counter mutable count docs.")
     assert_documentation_contains(item_named(counter_member_completion, "bump"), "Bumps the counter docs.")
+    enum_member_completion = response(messages, 119)
+    assert_completion_labels(enum_member_completion, ["Play", "Pause"])
+    enum_play_item = item_named(enum_member_completion, "Play")
+    if enum_play_item.get("kind") != 20:
+        raise AssertionError(f"Mode.Play completion was not an enum member: {enum_play_item!r}")
+    assert_documentation_contains(enum_play_item, "Mode play docs.")
+    sum_variant_completion = response(messages, 120)
+    assert_completion_labels(sum_variant_completion, ["Eof", "IntLit"])
+    int_lit_item = item_named(sum_variant_completion, "IntLit")
+    if int_lit_item.get("kind") != 20:
+        raise AssertionError(f"Token.IntLit completion was not an enum member: {int_lit_item!r}")
+    assert_documentation_contains(int_lit_item, "Integer token docs.")
     counter_signature_help = response(messages, 76)
     counter_signature_docs = counter_signature_help["signatures"][0]["documentation"]["value"]
     if "Bumps the counter docs." not in counter_signature_docs:

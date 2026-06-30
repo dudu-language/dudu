@@ -3821,3 +3821,7 @@ push. They are not release packaging work.
    alongside native methods, while Dudu import aliases with `.dd` locations are
    deliberately excluded from native identity filtering so Dudu member
    references such as `Player.hp` are not mistaken for native header symbols.
+   Enum and sum-type variant completion now uses structured alias/type
+   resolution instead of prefix spelling alone. The LSP matrix covers
+   `Mode.` and `Token.` completions, enum-member completion kinds, and docs
+   attached to variants such as `Mode.Play` and `Token.IntLit`.
