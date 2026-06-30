@@ -1,0 +1,116 @@
+from c import CL/cl.h as cl
+from tensor import Tensor
+from tensor import zeros
+
+
+def make_input() -> Tensor:
+    out = zeros(2, 2)
+    out[0, 0] = 1.0
+    out[0, 1] = 2.0
+    out[1, 0] = 3.0
+    out[1, 1] = 4.0
+    return out
+
+
+def run_opencl_add(input: Tensor) -> Tensor:
+    platform: cl.cl_platform_id = None
+    platform_count: u32 = 0
+    err: i32 = cl.clGetPlatformIDs(1, &platform, &platform_count)
+    if err != cl.CL_SUCCESS:
+        return zeros(input.rows, input.cols)
+    if platform_count == 0:
+        return zeros(input.rows, input.cols)
+
+    device: cl.cl_device_id = None
+    err = cl.clGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_DEFAULT, 1, &device, None)
+    if err != cl.CL_SUCCESS:
+        return zeros(input.rows, input.cols)
+
+    context = cl.clCreateContext(None, 1, &device, None, None, &err)
+    if err != cl.CL_SUCCESS:
+        return zeros(input.rows, input.cols)
+
+    queue = cl.clCreateCommandQueueWithProperties(context, device, None, &err)
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseContext(context)
+        return zeros(input.rows, input.cols)
+
+    source: cstr = "__kernel void add_one(__global const float* input, __global float* output) { int gid = get_global_id(0); output[gid] = input[gid] + 1.0f; }"
+    sources: array[*const[char]] = [*const[char](source)]
+    program = cl.clCreateProgramWithSource(context, 1, &sources[0], None, &err)
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseCommandQueue(queue)
+        cl.clReleaseContext(context)
+        return zeros(input.rows, input.cols)
+
+    err = cl.clBuildProgram(program, 1, &device, None, None, None)
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseProgram(program)
+        cl.clReleaseCommandQueue(queue)
+        cl.clReleaseContext(context)
+        return zeros(input.rows, input.cols)
+
+    kernel = cl.clCreateKernel(program, "add_one", &err)
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseProgram(program)
+        cl.clReleaseCommandQueue(queue)
+        cl.clReleaseContext(context)
+        return zeros(input.rows, input.cols)
+
+    bytes = usize(input.rows * input.cols) * sizeof[f32]()
+    output = zeros(input.rows, input.cols)
+    input_buffer = cl.clCreateBuffer(
+        context,
+        cl.CL_MEM_READ_ONLY | cl.CL_MEM_COPY_HOST_PTR,
+        bytes,
+        &input.data[0],
+        &err,
+    )
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseKernel(kernel)
+        cl.clReleaseProgram(program)
+        cl.clReleaseCommandQueue(queue)
+        cl.clReleaseContext(context)
+        return output
+
+    output_buffer = cl.clCreateBuffer(context, cl.CL_MEM_WRITE_ONLY, bytes, None, &err)
+    if err != cl.CL_SUCCESS:
+        cl.clReleaseMemObject(input_buffer)
+        cl.clReleaseKernel(kernel)
+        cl.clReleaseProgram(program)
+        cl.clReleaseCommandQueue(queue)
+        cl.clReleaseContext(context)
+        return output
+
+    err = cl.clSetKernelArg(kernel, 0, sizeof[cl.cl_mem](), &input_buffer)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 1, sizeof[cl.cl_mem](), &output_buffer)
+
+    global_work_items: array[usize] = [usize(input.rows * input.cols)]
+    if err == cl.CL_SUCCESS:
+        err = cl.clEnqueueNDRangeKernel(queue, kernel, 1, None, &global_work_items[0], None, 0, None, None)
+    if err == cl.CL_SUCCESS:
+        err = cl.clFinish(queue)
+    if err == cl.CL_SUCCESS:
+        err = cl.clEnqueueReadBuffer(queue, output_buffer, cl.CL_TRUE, 0, bytes, &output.data[0], 0, None, None)
+
+    cl.clReleaseMemObject(output_buffer)
+    cl.clReleaseMemObject(input_buffer)
+    cl.clReleaseKernel(kernel)
+    cl.clReleaseProgram(program)
+    cl.clReleaseCommandQueue(queue)
+    cl.clReleaseContext(context)
+
+    if err != cl.CL_SUCCESS:
+        return zeros(input.rows, input.cols)
+    return output
+
+
+def main() -> i32:
+    input = make_input()
+    output = run_opencl_add(input)
+    if i32(output[0, 0]) != 2:
+        return 1
+    if i32(output[1, 1]) != 5:
+        return 2
+    return i32(output[0, 0] + output[1, 1]) + 35

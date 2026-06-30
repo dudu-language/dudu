@@ -1171,8 +1171,10 @@ push. They are not release packaging work.
    views, XOR classification, and an autograd-style graph; the optional
    OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop; the
    optional reusable tensor OpenBLAS fixture compares Dudu tensor `matmul`
-   against CBLAS `sgemm`. Continue by adding OpenCL or ROCm probes when local
-   tooling is available.
+   against CBLAS `sgemm`; the optional reusable tensor OpenCL fixture drives
+   OpenCL buffers and a tiny elementwise kernel from Dudu tensor storage.
+   Continue by adding GPU matmul or backend BLAS probes when local tooling is
+   available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

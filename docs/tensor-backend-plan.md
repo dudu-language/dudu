@@ -496,6 +496,16 @@ Keep the first GPU test small and deterministic. It should prove the language
 can drive GPU buffers and kernels through imports and normal wrapper code. It
 does not need to beat optimized BLAS immediately.
 
+Status:
+
+- Done: `tests/fixtures/tensor_dogfood/opencl_tensor_add.dd` uses the reusable
+  Dudu `Tensor` storage, creates OpenCL buffers through the C API, runs a tiny
+  elementwise kernel, reads back into a Dudu tensor, and validates the result.
+- Done: `scripts/probe_optional.sh opencl` runs the existing host API probe and
+  the tensor add probe when OpenCL is discoverable through `pkg-config`.
+- Remaining: add a GPU matmul probe or backend BLAS probe only after the tiny
+  buffer/kernel/readback path stays stable.
+
 ### 5. Autograd Prototype
 
 Implement a small autograd graph in Dudu using ordinary classes:
