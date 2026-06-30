@@ -17,6 +17,7 @@ struct FunctionSignature {
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;
+    bool native_template_return_fallback = false;
 };
 
 struct Symbols {

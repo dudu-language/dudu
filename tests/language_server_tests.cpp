@@ -317,7 +317,7 @@ void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
                                 "from tensor import zeros\n"
                                 "\n"
                                 "def main() -> i32:\n"
-                                "    values: Tensor[f32] = zeros[f32](4, 2)\n"
+                                "    values = zeros[f32](4, 2)\n"
                                 "    mask = Mask([True, False, True, False])\n"
                                 "    selected = values[mask, :]\n"
                                 "    return selected.rows\n");

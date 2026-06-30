@@ -411,9 +411,12 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
                         indexed_tuple_return_type(signature_return_type_ref(resolved),
                                                   explicit_template_args, arg_type_refs)) {
                     set_signature_return_type(resolved, *indexed);
-                } else if (const auto explicit_return = explicit_type_return_ref(
-                               signature_return_type_ref(resolved), explicit_template_args)) {
-                    set_signature_return_type(resolved, *explicit_return);
+                } else if (signature.native_template_return_fallback) {
+                    const auto explicit_return = explicit_type_return_ref(
+                        signature_return_type_ref(resolved), explicit_template_args);
+                    if (explicit_return) {
+                        set_signature_return_type(resolved, *explicit_return);
+                    }
                 }
             }
             return resolved;

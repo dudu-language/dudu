@@ -486,6 +486,10 @@ Status:
   matrix multiply without leaking erased shape-only parameters into generated
   C++ templates. Conflicting shape inference is diagnosed in Dudu source,
   including after a shaped result flows into later same-shape tensor helpers.
+- Done: imported generic Dudu helpers preserve both their generic type
+  arguments and shaped metadata through RHS inference, so
+  `values = zeros[f32](4, 2)` can feed `values[mask, :]` and surface
+  `Tensor[f32][dyn, 2]` in editor type information.
 - Remaining: broader mask semantics, richer backend/library-owned view objects,
   and broader propagation of shape facts through composed tensor expressions.
 

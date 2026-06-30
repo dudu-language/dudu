@@ -413,6 +413,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         set_signature_return_type(signature, native_function_return_type_ref(fn));
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
+        signature.native_template_return_fallback = !fn.return_native_spelling.empty();
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
         symbols.native_function_decls[fn.name].push_back(&fn);
         add_native_path_prefix(symbols, fn.name);
