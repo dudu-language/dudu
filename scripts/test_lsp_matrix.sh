@@ -376,6 +376,24 @@ def main() -> i32:
     return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2)) + nb.MATRIX_MODE_FAST
 """
     (tmp / "native_user.dd").write_text(native_source)
+    (tmp / "needs_c_context.h").write_text(
+        """#pragma once
+
+struct DuduNeedsContext {
+    size_t count;
+    int state;
+};
+"""
+    )
+    native_context_source = """import c "./needs_c_context.h" as native
+
+def main() -> i32:
+    value: struct DuduNeedsContext
+    value.count = 7
+    value.state = 35
+    return i32(value.count) + value.state
+"""
+    (tmp / "native_context_user.dd").write_text(native_context_source)
     (tmp / "native_widget.hpp").write_text(
         """#pragma once
 
@@ -534,6 +552,7 @@ def main() -> i32:
     entities_source = entities.read_text()
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
+    native_context = tmp / "native_context_user.dd"
     native_cpp = tmp / "native_cpp_user.dd"
     native_cpp_same = tmp / "native_cpp_same.dd"
     native_cpp_other = tmp / "native_cpp_other.dd"
@@ -564,6 +583,7 @@ def main() -> i32:
         open_message(entities),
         open_message(ops),
         open_message(native),
+        open_message(native_context),
         open_message(native_cpp),
         open_message(native_cpp_same),
         open_message(native_cpp_other),
@@ -656,6 +676,8 @@ def main() -> i32:
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(92, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
+        request(113, "textDocument/definition", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
+        request(114, "textDocument/hover", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
         request(56, "textDocument/completion", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(57, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
@@ -1093,6 +1115,19 @@ def main() -> i32:
     native_signature_docs = native_signature_help["signatures"][0]["documentation"]["value"]
     if "Adds two matrix fixture integers." not in native_signature_docs:
         raise AssertionError(f"missing native signature docs: {native_signature_help!r}")
+    native_context_field_definition = response(messages, 113)
+    if not native_context_field_definition["uri"].endswith("/needs_c_context.h"):
+        raise AssertionError(
+            f"native context field definition did not jump to imported header: {native_context_field_definition!r}"
+        )
+    native_context_field_decl = position((tmp / "needs_c_context.h").read_text(), "count")
+    if native_context_field_definition["range"]["start"]["line"] != native_context_field_decl["line"]:
+        raise AssertionError(
+            f"native context field definition jumped to wrong line: {native_context_field_definition!r}"
+        )
+    native_context_field_hover = response(messages, 114)["contents"]["value"]
+    if "count:" not in native_context_field_hover:
+        raise AssertionError(f"missing native context field hover: {native_context_field_hover!r}")
     native_member_completion = response(messages, 56)
     assert_completion_labels(native_member_completion, ["scaled", "value"])
     assert_documentation_contains(item_named(native_member_completion, "scaled"), "Scales the matrix widget by a factor.")
