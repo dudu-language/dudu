@@ -681,6 +681,7 @@ def main() -> i32:
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(128, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "\"native_bridge.h\"", add=1)}),
+        request(129, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, " as nb", add=len(" as "))}),
         request(121, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(122, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(123, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE(2)", add=len("nb.DUDU_MATRIX_NATIVE_SCALE("))}),
@@ -1146,6 +1147,11 @@ def main() -> i32:
         raise AssertionError(f"native header import did not jump to header file: {native_header_definition!r}")
     if native_header_definition["range"]["start"]["line"] != 0:
         raise AssertionError(f"native header import did not jump to header top: {native_header_definition!r}")
+    native_alias_definition = response(messages, 129)
+    if native_alias_definition["uri"] != (tmp / "native_bridge.h").as_uri():
+        raise AssertionError(f"native import alias did not jump to header file: {native_alias_definition!r}")
+    if native_alias_definition["range"]["start"]["line"] != 0:
+        raise AssertionError(f"native import alias did not jump to header top: {native_alias_definition!r}")
     wrapped_native_type_definition = response(messages, 127)
     if not wrapped_native_type_definition["uri"].endswith("/native_bridge.h"):
         raise AssertionError(

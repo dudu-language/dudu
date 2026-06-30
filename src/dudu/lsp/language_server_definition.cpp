@@ -31,6 +31,10 @@ namespace dudu {
 namespace {
 
 bool range_contains_position(const SourceRange& range, int line, int character) {
+    if (range.start.line <= 0 || range.start.column <= 0 || range.end.line <= 0 ||
+        range.end.column <= 0) {
+        return false;
+    }
     const int start_line = range.start.line - 1;
     const int start_character = range.start.column - 1;
     const int end_line = range.end.line - 1;
@@ -170,7 +174,8 @@ std::optional<std::string> header_definition_json(const Document& doc, const Mod
             import.kind != ImportKind::ForeignCpp) {
             continue;
         }
-        if (!range_contains_position(import.module_range, position.line, position.character)) {
+        if (!range_contains_position(import.module_range, position.line, position.character) &&
+            !range_contains_position(import.alias_range, position.line, position.character)) {
             continue;
         }
         const ProjectConfig config = config_for_file(doc.path);
