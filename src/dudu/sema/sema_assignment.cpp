@@ -222,4 +222,40 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
               "unsupported assignment target: " + expr_label(stmt_target_expr(stmt)));
 }
 
+TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
+    const Expr& target = stmt_target_expr(stmt);
+    const SourceLocation& target_location = diagnostic_location(stmt.location, target);
+    if (target.kind != ExprKind::Index || target.children.size() != 2) {
+        return assignment_target_type_ref(scope, stmt);
+    }
+
+    const Expr& receiver = target.children[0];
+    TypeRef receiver_type;
+    if (receiver.kind == ExprKind::Name && scope.local_type_refs.contains(receiver.name)) {
+        receiver_type = local_type_ref(scope, receiver.name, target_location);
+    } else {
+        receiver_type = member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
+                                             receiver, {}, scope.current_class);
+    }
+    if (!has_type_ref(receiver_type) ||
+        class_for_receiver_type(scope.symbols, receiver_type) == nullptr) {
+        return assignment_target_type_ref(scope, stmt);
+    }
+
+    const TypeRef indexed_type = infer_expr_type_ast(scope, target, &target_location);
+    if (!has_type_ref(indexed_type)) {
+        return indexed_type;
+    }
+
+    std::vector<Expr> args = index_arg_exprs(target.children[1]);
+    std::vector<TypeRef> arg_types = infer_assignment_arg_type_refs(scope, args, &target_location);
+    arg_types.push_back(indexed_type);
+    if (!dudu_operator_signature_for_arg_types(scope.symbols, "[]=", receiver_type, arg_types)) {
+        sema_fail(target_location,
+                  "compound indexed assignment requires @operator(\"[]=\") accepting the "
+                  "indexed value type; use an explicit read/modify value and []= assignment");
+    }
+    return indexed_type;
+}
+
 } // namespace dudu

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dudu/core/ast.hpp"
 #include "dudu/codegen/cpp_emit_context.hpp"
 #include "dudu/codegen/cpp_emit_options.hpp"
+#include "dudu/core/ast.hpp"
 #include "dudu/sema/sema_context.hpp"
 
 #include <map>
@@ -15,11 +15,10 @@ namespace dudu {
 
 bool is_builtin_template_constructor(std::string_view name);
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const CppLocalContext& locals,
-                              const Symbols* symbols = nullptr);
+                              const CppLocalContext& locals, const Symbols* symbols = nullptr);
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const CppLocalContext& locals,
-                              const Symbols* symbols, const CppEmitOptions& options);
+                              const CppLocalContext& locals, const Symbols* symbols,
+                              const CppEmitOptions& options);
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
                               const CppLocalContext& locals,
                               const std::map<std::string, TypeRef>& local_type_refs,
@@ -29,13 +28,12 @@ bool is_pointer_receiver_expr(const Expr& expr,
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const CppLocalContext& locals,
-                                           const Symbols* symbols);
+                                           const CppLocalContext& locals, const Symbols* symbols);
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const CppLocalContext& locals,
-                                           const Symbols* symbols, const CppEmitOptions& options);
+                                           const CppLocalContext& locals, const Symbols* symbols,
+                                           const CppEmitOptions& options);
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
@@ -48,16 +46,20 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options);
 std::optional<std::string>
+lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
+                                     const CppLocalContext& locals,
+                                     const std::map<std::string, TypeRef>& local_type_refs,
+                                     const Symbols* symbols, const CppEmitOptions& options);
+std::optional<std::string>
 lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
                       const CppLocalContext& locals,
-                      const std::map<std::string, TypeRef>& local_type_refs,
-                      const Symbols* symbols, const CppEmitOptions& options);
+                      const std::map<std::string, TypeRef>& local_type_refs, const Symbols* symbols,
+                      const CppEmitOptions& options);
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const CppLocalContext& locals,
-                                 const Symbols* symbols = nullptr);
+                                 const CppLocalContext& locals, const Symbols* symbols = nullptr);
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const CppLocalContext& locals,
-                                 const Symbols* symbols, const CppEmitOptions& options);
+                                 const CppLocalContext& locals, const Symbols* symbols,
+                                 const CppEmitOptions& options);
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
                                  const CppLocalContext& locals,
                                  const std::map<std::string, TypeRef>& local_type_refs,
@@ -77,11 +79,10 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
                         const std::map<std::string, TypeRef>& local_type_refs,
                         const Symbols* symbols, const CppEmitOptions& options);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const Symbols* symbols);
+                            const CppLocalContext& locals, const Symbols* symbols);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const Symbols* symbols, const CppEmitOptions& options);
+                            const CppLocalContext& locals, const Symbols* symbols,
+                            const CppEmitOptions& options);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,

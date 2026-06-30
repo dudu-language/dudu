@@ -80,6 +80,7 @@ compile_and_expect matrix_math 26
 compile_and_expect cpu_tensor_matmul 42
 compile_and_expect tensor_index_hook 42
 compile_and_expect tensor_index_set_hook 42
+compile_and_expect tensor_index_compound_hook 42
 compile_and_expect tensor_index_set_member_hook 42
 compile_and_expect tensor_multi_index_hook 42
 compile_and_expect tensor_slice_hook 42
@@ -96,6 +97,9 @@ grep -Fq "Tensor<float>" "$repo_root/build/tensor_dogfood_shape_metadata.cpp"
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/mask_indexing.dd" \
     --emit-cpp "$repo_root/build/tensor_dogfood_mask_indexing.cpp"
 grep -Fq "set_masked_rows" "$repo_root/build/tensor_dogfood_mask_indexing.cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_index_compound_hook.dd" \
+    --emit-cpp "$repo_root/build/tensor_index_compound_hook.cpp"
+grep -Fq "set_at(1, (tensor.at(1) + 20))" "$repo_root/build/tensor_index_compound_hook.cpp"
 compile_and_expect static_fields 42
 compile_and_expect static_class_alias 42
 compile_and_expect static_class_method_alias 42

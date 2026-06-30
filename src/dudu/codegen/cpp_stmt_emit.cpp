@@ -1,9 +1,5 @@
 #include "dudu/codegen/cpp_stmt_emit.hpp"
 
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
-#include "dudu/core/control_flow.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_expr_swizzles.hpp"
@@ -14,12 +10,16 @@
 #include "dudu/codegen/cpp_stmt_generic_methods.hpp"
 #include "dudu/codegen/cpp_stmt_helpers.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/control_flow.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -256,6 +256,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
+        if (const auto call = lower_compound_index_assignment_hook(
+                stmt, aliases, locals, local_type_refs, symbols, options)) {
+            out << indent(depth) << *call << ";\n";
+            return;
+        }
         out << indent(depth)
             << lower_emitted_expr(stmt_target_expr(stmt), aliases, locals, local_type_refs, symbols,
                                   options)

@@ -1,18 +1,19 @@
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/codegen/cpp_stmt_emit_support.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/sema_scope.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -130,14 +131,16 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
-std::vector<TypeRef> infer_index_arg_type_refs(
-    const std::vector<Expr>& args, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols) {
+std::vector<TypeRef>
+infer_index_arg_type_refs(const std::vector<Expr>& args,
+                          const std::map<std::string, TypeRef>& local_type_refs,
+                          const Symbols* symbols) {
     std::vector<TypeRef> out;
     out.reserve(args.size());
     const std::map<std::string, TypeRef> function_returns;
     for (const Expr& arg : args) {
-        out.push_back(infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
+        out.push_back(
+            infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
     }
     return out;
 }
@@ -292,6 +295,61 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
     return lowered_receiver + access + *method + "(" +
            join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
+}
+
+std::optional<std::string>
+lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
+                                     const CppLocalContext& locals,
+                                     const std::map<std::string, TypeRef>& local_type_refs,
+                                     const Symbols* symbols, const CppEmitOptions& options) {
+    if (symbols == nullptr || stmt_target_expr(stmt).kind != ExprKind::Index ||
+        stmt_target_expr(stmt).children.size() != 2) {
+        return std::nullopt;
+    }
+    const Expr& target = stmt_target_expr(stmt);
+    const Expr& receiver = target.children[0];
+    TypeRef receiver_type;
+    if (receiver.kind == ExprKind::Name) {
+        receiver_type = local_type_ref(local_type_refs, receiver.name, receiver.location);
+    } else {
+        receiver_type = member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver, {},
+                                             locals.current_class);
+    }
+    if (!has_type_ref(receiver_type)) {
+        return std::nullopt;
+    }
+
+    const std::optional<std::string> read =
+        lower_index_read_hook(target, aliases, locals, local_type_refs, symbols, options);
+    if (!read) {
+        return std::nullopt;
+    }
+
+    std::vector<Expr> args = index_arg_exprs(target.children[1]);
+    std::vector<TypeRef> arg_types = infer_index_arg_type_refs(args, local_type_refs, symbols);
+    const TypeRef indexed_type = infer_emitted_local_type_ref(target, local_type_refs, {}, symbols);
+    if (!has_type_ref(indexed_type)) {
+        return std::nullopt;
+    }
+    arg_types.push_back(indexed_type);
+    const auto method =
+        dudu_operator_method_name_for_arg_types(*symbols, "[]=", receiver_type, arg_types);
+    if (!method) {
+        return std::nullopt;
+    }
+
+    const std::string lowered_receiver =
+        lower_expr(receiver, aliases, locals, local_type_refs, symbols, options);
+    std::vector<std::string> lowered_args;
+    lowered_args.reserve(args.size() + 1);
+    for (const Expr& arg : args) {
+        lowered_args.push_back(lower_expr(arg, aliases, locals, local_type_refs, symbols, options));
+    }
+    lowered_args.push_back(
+        "(" + *read + " " + std::string(compound_assign_op_text(stmt.compound_op)) + " " +
+        lower_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols, options) + ")");
+    const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
+    return lowered_receiver + access + *method + "(" + join_names(lowered_args) + ")";
 }
 
 std::optional<std::string>

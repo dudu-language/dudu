@@ -120,9 +120,8 @@ std::string operator_function_name(const std::string& op) {
     return "operator" + op;
 }
 
-std::vector<DuduOperatorCandidate> dudu_operator_candidates(const Symbols& symbols,
-                                                           const std::string& op,
-                                                           const TypeRef& left) {
+std::vector<DuduOperatorCandidate>
+dudu_operator_candidates(const Symbols& symbols, const std::string& op, const TypeRef& left) {
     std::vector<DuduOperatorCandidate> out;
     if (!is_supported_dudu_operator(op)) {
         return out;
@@ -135,8 +134,8 @@ std::vector<DuduOperatorCandidate> dudu_operator_candidates(const Symbols& symbo
         if (!method_has_operator(method, op)) {
             continue;
         }
-        out.push_back(
-            DuduOperatorCandidate{method.name, operator_method_signature(symbols, left, *klass, method)});
+        out.push_back(DuduOperatorCandidate{
+            method.name, operator_method_signature(symbols, left, *klass, method)});
     }
     return out;
 }
@@ -246,11 +245,13 @@ std::optional<FunctionSignature> dudu_operator_signature(const Symbols& symbols,
     return std::nullopt;
 }
 
-std::optional<FunctionSignature> dudu_operator_signature_for_args(
-    const Symbols& symbols, std::string_view op, const TypeRef& left, const std::vector<Expr>& args,
-    const std::vector<TypeRef>& arg_types) {
+std::optional<FunctionSignature>
+dudu_operator_signature_for_args(const Symbols& symbols, std::string_view op, const TypeRef& left,
+                                 const std::vector<Expr>& args,
+                                 const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate : dudu_operator_candidates(symbols, op_text, left)) {
+    for (const DuduOperatorCandidate& candidate :
+         dudu_operator_candidates(symbols, op_text, left)) {
         if (signature_matches_args(candidate.signature, args, arg_types)) {
             return candidate.signature;
         }
@@ -258,11 +259,26 @@ std::optional<FunctionSignature> dudu_operator_signature_for_args(
     return std::nullopt;
 }
 
-std::optional<std::string> dudu_operator_method_name_for_arg_types(
-    const Symbols& symbols, std::string_view op, const TypeRef& left,
-    const std::vector<TypeRef>& arg_types) {
+std::optional<FunctionSignature>
+dudu_operator_signature_for_arg_types(const Symbols& symbols, std::string_view op,
+                                      const TypeRef& left, const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate : dudu_operator_candidates(symbols, op_text, left)) {
+    for (const DuduOperatorCandidate& candidate :
+         dudu_operator_candidates(symbols, op_text, left)) {
+        if (signature_matches_arg_types(candidate.signature, arg_types)) {
+            return candidate.signature;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string>
+dudu_operator_method_name_for_arg_types(const Symbols& symbols, std::string_view op,
+                                        const TypeRef& left,
+                                        const std::vector<TypeRef>& arg_types) {
+    const std::string op_text(op);
+    for (const DuduOperatorCandidate& candidate :
+         dudu_operator_candidates(symbols, op_text, left)) {
         if (signature_matches_arg_types(candidate.signature, arg_types)) {
             return candidate.method_name;
         }
@@ -270,11 +286,13 @@ std::optional<std::string> dudu_operator_method_name_for_arg_types(
     return std::nullopt;
 }
 
-std::optional<std::string> dudu_operator_method_name_for_args(
-    const Symbols& symbols, std::string_view op, const TypeRef& left, const std::vector<Expr>& args,
-    const std::vector<TypeRef>& arg_types) {
+std::optional<std::string>
+dudu_operator_method_name_for_args(const Symbols& symbols, std::string_view op, const TypeRef& left,
+                                   const std::vector<Expr>& args,
+                                   const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate : dudu_operator_candidates(symbols, op_text, left)) {
+    for (const DuduOperatorCandidate& candidate :
+         dudu_operator_candidates(symbols, op_text, left)) {
         if (signature_matches_args(candidate.signature, args, arg_types)) {
             return candidate.method_name;
         }

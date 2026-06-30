@@ -430,6 +430,14 @@ Status:
 - Done: library hook return types preserve shape metadata through local RHS
   inference; `selected = tensor[mask, :]` can flow into an API requiring
   `Tensor[i32][dyn, 2]` without restating the local type.
+- Done: scalar compound indexed assignment on library-owned receivers lowers
+  through the same read/write hook pair as explicit indexing. For example,
+  `tensor[i] += 1` calls `@operator("[]")` to read and `@operator("[]=")` to
+  write the modified value.
+- Done: compound scatter is rejected when the write hook does not accept the
+  selected value type. For example, `tensor[mask, :] += 1` does not silently
+  lower through a scalar-fill scatter hook; users must spell the read/modify
+  value and `[]=` assignment explicitly so the library policy is visible.
 - Remaining: advanced mask semantics, repeated-index scatter policy, richer
   view objects, propagation of shape facts through composed tensor expressions,
   and diagnostics/conversions for proving runtime-known `dyn` values satisfy
