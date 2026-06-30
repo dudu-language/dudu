@@ -96,6 +96,7 @@ compile_path_and_expect tensor_dogfood_autograd tests/fixtures/tensor_dogfood/au
 compile_path_and_expect tensor_dogfood_shape_metadata tests/fixtures/tensor_dogfood/shape_metadata.dd 42
 compile_path_and_expect tensor_dogfood_shape_assume tests/fixtures/tensor_dogfood/shape_assume.dd 42
 compile_path_and_expect tensor_dogfood_shape_generics tests/fixtures/tensor_dogfood/shape_generics.dd 42
+compile_path_and_expect tensor_dogfood_shape_composition tests/fixtures/tensor_dogfood/shape_composition.dd 42
 compile_path_and_expect tensor_dogfood_mask_indexing tests/fixtures/tensor_dogfood/mask_indexing.dd 42
 compile_path_and_expect tensor_dogfood_mask_rows tests/fixtures/tensor_dogfood/mask_rows_main.dd 42
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/shape_metadata.dd" \

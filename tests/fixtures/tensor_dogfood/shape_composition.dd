@@ -1,0 +1,48 @@
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+
+def filled[T](rows: i32, cols: i32, value: T) -> Tensor[T]:
+    return Tensor[T](rows, cols, value)
+
+
+def add_same_shape[Rows, Cols](
+    left: Tensor[f32][Rows, Cols],
+    right: Tensor[f32][Rows, Cols],
+) -> Tensor[f32][Rows, Cols]:
+    return filled[f32](left.rows, left.cols, 0.0)
+
+
+def scale_shape[Rows, Cols](
+    input: Tensor[f32][Rows, Cols],
+    factor: f32,
+) -> Tensor[f32][Rows, Cols]:
+    return filled[f32](input.rows, input.cols, factor)
+
+
+def relu_shape[Rows, Cols](input: Tensor[f32][Rows, Cols]) -> Tensor[f32][Rows, Cols]:
+    return input
+
+
+def matmul_shape[Rows, Inner, Cols](
+    left: Tensor[f32][Rows, Inner],
+    right: Tensor[f32][Inner, Cols],
+) -> Tensor[f32][Rows, Cols]:
+    return filled[f32](left.rows, right.cols, 0.0)
+
+
+def expect_2x4(value: Tensor[f32][2, 4]) -> i32:
+    return value.rows * 10 + value.cols
+
+
+def main() -> i32:
+    a: Tensor[f32][2, 3] = filled[f32](2, 3, 1.0)
+    b: Tensor[f32][3, 4] = filled[f32](3, 4, 2.0)
+    c: Tensor[f32][2, 4] = filled[f32](2, 4, 3.0)
+    product = matmul_shape(a, b)
+    sum = add_same_shape(product, c)
+    scaled = scale_shape(sum, 0.5)
+    activated = relu_shape(scaled)
+    return expect_2x4(activated) + 18

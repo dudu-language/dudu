@@ -455,7 +455,8 @@ Status:
 - Done: generic functions can use shape parameters in library tensor metadata,
   such as `Tensor[f32][Rows, Inner]`, and propagate composed result shapes like
   matrix multiply without leaking erased shape-only parameters into generated
-  C++ templates. Conflicting shape inference is diagnosed in Dudu source.
+  C++ templates. Conflicting shape inference is diagnosed in Dudu source,
+  including after a shaped result flows into later same-shape tensor helpers.
 - Remaining: broader mask semantics, richer backend/library-owned view objects,
   and broader propagation of shape facts through composed tensor expressions.
 
