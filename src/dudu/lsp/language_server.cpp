@@ -70,6 +70,7 @@ class LanguageServer {
     size_t documents_revision_ = 0;
     mutable size_t workspace_cache_revision_ = std::numeric_limits<size_t>::max();
     mutable std::map<std::string, Document> workspace_cache_;
+    InlayHintOptions inlay_hint_options_{};
     bool shutdown_ = false;
     bool exit_ = false;
 
@@ -150,6 +151,7 @@ class LanguageServer {
 
         try {
             if (method == "initialize") {
+                configure_initialize(params);
                 if (id != nullptr) {
                     respond(*id, initialize_result());
                 }
@@ -257,6 +259,32 @@ class LanguageServer {
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
                "\"workspaceSymbolProvider\":true"
                "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"0.1.0\"}}";
+    }
+
+    static bool bool_setting(const Json* object, std::string_view name, bool default_value) {
+        const Json* value = object == nullptr ? nullptr : object->get(name);
+        if (value == nullptr) {
+            return default_value;
+        }
+        if (const bool* boolean = std::get_if<bool>(&value->value)) {
+            return *boolean;
+        }
+        return default_value;
+    }
+
+    void configure_initialize(const Json* params) {
+        const Json* init = params == nullptr ? nullptr : params->get("initializationOptions");
+        const Json* hints = init == nullptr ? nullptr : init->get("inlayHints");
+        inlay_hint_options_.inferred_types =
+            bool_setting(hints, "inferredTypes", inlay_hint_options_.inferred_types);
+        inlay_hint_options_.loop_binding_types =
+            bool_setting(hints, "loopBindingTypes", inlay_hint_options_.loop_binding_types);
+        inlay_hint_options_.implicit_self =
+            bool_setting(hints, "implicitSelf", inlay_hint_options_.implicit_self);
+        inlay_hint_options_.parameter_names =
+            bool_setting(hints, "parameterNames", inlay_hint_options_.parameter_names);
+        inlay_hint_options_.argument_types =
+            bool_setting(hints, "argumentTypes", inlay_hint_options_.argument_types);
     }
 
     void did_open(const Json* params) {
@@ -430,7 +458,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "[]";
         }
-        return inlay_hints_json(*doc, params);
+        return inlay_hints_json(*doc, params, inlay_hint_options_);
     }
 
     std::string completion_resolve_result(const Json* params) const {

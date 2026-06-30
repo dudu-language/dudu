@@ -84,6 +84,31 @@
           "type": "string",
           "default": "dudu-lsp",
           "description": "Path to the Dudu language server executable."
+        },
+        "dudu.inlayHints.inferredTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inlay hints for inferred local binding types."
+        },
+        "dudu.inlayHints.loopBindingTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inlay hints for inferred for-loop binding types."
+        },
+        "dudu.inlayHints.implicitSelf": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inlay hints for implicit method receiver type, such as self: &Self."
+        },
+        "dudu.inlayHints.parameterNames": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inlay hints for positional call parameter names."
+        },
+        "dudu.inlayHints.argumentTypes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show inlay hints for argument expression types. This is useful for debugging inference but can be noisy."
         }
       }
     }

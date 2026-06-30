@@ -259,7 +259,14 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
                                      "    sum = 0\n"
                                      "    for value in values:\n"
                                      "        sum += value\n"
-                                     "    return sum\n"};
+                                     "    return sum\n"
+                                     "\n"
+                                     "def add(left: i32, right: i32) -> i32:\n"
+                                     "    return left + right\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    counter = Counter(7)\n"
+                                     "    return add(counter.value, 2)\n"};
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"label\":\": &Self\"") != std::string::npos);
     assert(hints.find("\"line\":3") != std::string::npos);
@@ -267,6 +274,14 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
     assert(hints.find("\"line\":4") != std::string::npos);
     assert(hints.find("\"line\":9") != std::string::npos);
     assert(hints.find("\"line\":10") != std::string::npos);
+    assert(hints.find("\"label\":\"value:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"left:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"right:\"") != std::string::npos);
+
+    dudu::InlayHintOptions quiet;
+    quiet.parameter_names = false;
+    const std::string quiet_hints = dudu::inlay_hints_json(doc, nullptr, quiet);
+    assert(quiet_hints.find("\"label\":\"left:\"") == std::string::npos);
 }
 
 void test_lsp_signature_help_uses_visible_imported_functions() {

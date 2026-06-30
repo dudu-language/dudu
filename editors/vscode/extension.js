@@ -129,8 +129,18 @@ function findProjectConfig(start) {
 }
 
 function clientOptions() {
+  const hints = vscode.workspace.getConfiguration("dudu.inlayHints");
   return {
     documentSelector: [{ scheme: "file", language: "dudu" }],
+    initializationOptions: {
+      inlayHints: {
+        inferredTypes: hints.get("inferredTypes", true),
+        loopBindingTypes: hints.get("loopBindingTypes", true),
+        implicitSelf: hints.get("implicitSelf", true),
+        parameterNames: hints.get("parameterNames", true),
+        argumentTypes: hints.get("argumentTypes", false),
+      },
+    },
     synchronize: {
       fileEvents: vscode.workspace.createFileSystemWatcher("**/*.dd"),
     },

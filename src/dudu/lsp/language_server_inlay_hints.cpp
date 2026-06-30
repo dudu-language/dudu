@@ -1,13 +1,16 @@
 #include "dudu/lsp/language_server_inlay_hints.hpp"
 
+#include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema_common.hpp"
+#include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
@@ -24,6 +27,10 @@ struct InlayHint {
     int character = 0;
     std::string label;
     int kind = 1;
+};
+
+struct ParamHints {
+    std::vector<std::string> names;
 };
 
 bool hintable_type(const TypeRef& type) {
@@ -80,6 +87,27 @@ void add_type_hint(std::vector<InlayHint>& hints, SourceLocation location, const
                      .kind = 1});
 }
 
+void add_argument_type_hint(std::vector<InlayHint>& hints, const Expr& expr, const TypeRef& type) {
+    const std::string label = type_label(type);
+    if (label.empty() || expr.range.end.column <= 0) {
+        return;
+    }
+    hints.push_back({.line = std::max(0, expr.range.end.line - 1),
+                     .character = std::max(0, expr.range.end.column - 1),
+                     .label = ": " + label,
+                     .kind = 1});
+}
+
+void add_parameter_hint(std::vector<InlayHint>& hints, const Expr& expr, const std::string& name) {
+    if (name.empty() || expr.kind == ExprKind::NamedArg) {
+        return;
+    }
+    hints.push_back({.line = hint_line(expr.location),
+                     .character = std::max(0, expr.location.column - 1),
+                     .label = name + ":",
+                     .kind = 2});
+}
+
 void bind_inlay_local(FunctionScope& scope, const std::string& name, TypeRef type) {
     if (name.empty()) {
         return;
@@ -95,6 +123,159 @@ TypeRef infer_type(FunctionScope& scope, const Expr& expr) {
         return infer_expr_type_ast(scope, expr, &expr.location);
     } catch (const std::exception&) {
         return {};
+    }
+}
+
+TypeRef unwrap_ref_const(TypeRef type) {
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+           type.children.size() == 1) {
+        type = type.children.front();
+    }
+    return type;
+}
+
+const ClassDecl* class_for_name(const Symbols& symbols, const std::string& name) {
+    if (const auto found = symbols.classes.find(name); found != symbols.classes.end()) {
+        return found->second;
+    }
+    if (const auto found = symbols.native_classes.find(name);
+        found != symbols.native_classes.end()) {
+        return &found->second;
+    }
+    return nullptr;
+}
+
+const ClassDecl* class_for_type(const Symbols& symbols, const TypeRef& type) {
+    const TypeRef unwrapped = unwrap_ref_const(resolve_alias_ref(symbols, type));
+    return class_for_name(symbols, type_ref_head_name(unwrapped));
+}
+
+ParamHints constructor_param_hints(const ClassDecl& klass) {
+    ParamHints hints;
+    for (const ConstructorParam& param : constructor_params(klass)) {
+        hints.names.push_back(param.name);
+    }
+    return hints;
+}
+
+ParamHints function_param_hints(const FunctionDecl& fn, bool skip_self) {
+    ParamHints hints;
+    size_t start = skip_self && !fn.params.empty() && fn.params.front().name == "self" ? 1 : 0;
+    for (size_t i = start; i < fn.params.size(); ++i) {
+        hints.names.push_back(fn.params[i].name);
+    }
+    return hints;
+}
+
+ParamHints method_param_hints_for_class(const ClassDecl& klass, const std::string& method_name) {
+    for (const FunctionDecl& method : klass.methods) {
+        if (method.name == method_name) {
+            return function_param_hints(method, true);
+        }
+    }
+    return {};
+}
+
+ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
+    if (expr.kind != ExprKind::Call || !has_expr_callee(expr) || expr_callee(expr).empty()) {
+        return {};
+    }
+
+    const Expr& callee_expr = expr_callee(expr).front();
+    if (callee_expr.kind == ExprKind::Name) {
+        const std::string callee = callee_expr.name;
+        if (const auto found = scope.symbols.function_decls.find(callee);
+            found != scope.symbols.function_decls.end()) {
+            return function_param_hints(*found->second, false);
+        }
+        if (const ClassDecl* klass = class_for_name(scope.symbols, callee)) {
+            return constructor_param_hints(*klass);
+        }
+        return {};
+    }
+
+    if (callee_expr.kind != ExprKind::Member || callee_expr.children.size() != 1) {
+        return {};
+    }
+
+    const Expr& receiver = callee_expr.children.front();
+    if (receiver.kind == ExprKind::Name) {
+        if (receiver.name == "class" && !scope.current_class.empty()) {
+            if (const ClassDecl* klass = class_for_name(scope.symbols, scope.current_class)) {
+                return method_param_hints_for_class(*klass, callee_expr.name);
+            }
+        }
+        if (!scope.local_type_refs.contains(receiver.name.str())) {
+            if (const ClassDecl* klass = class_for_name(scope.symbols, receiver.name.str())) {
+                return method_param_hints_for_class(*klass, callee_expr.name);
+            }
+        }
+    }
+
+    const TypeRef receiver_type = infer_type(scope, receiver);
+    if (const ClassDecl* klass = class_for_type(scope.symbols, receiver_type)) {
+        return method_param_hints_for_class(*klass, callee_expr.name);
+    }
+    return {};
+}
+
+void collect_hints_for_expr(FunctionScope& scope, const Expr& expr, const InlayHintOptions& options,
+                            std::vector<InlayHint>& hints) {
+    if (expr.kind == ExprKind::Call) {
+        const ParamHints params = param_hints_for_call(scope, expr);
+        for (size_t i = 0; i < expr.children.size(); ++i) {
+            const Expr& arg = expr.children[i];
+            if (options.parameter_names && i < params.names.size()) {
+                add_parameter_hint(hints, arg, params.names[i]);
+            }
+            if (options.argument_types) {
+                add_argument_type_hint(hints, arg, infer_type(scope, arg));
+            }
+        }
+    }
+
+    if (expr.callee != nullptr) {
+        for (const Expr& child : *expr.callee) {
+            collect_hints_for_expr(scope, child, options, hints);
+        }
+    }
+    if (expr.template_args != nullptr) {
+        for (const Expr& child : *expr.template_args) {
+            collect_hints_for_expr(scope, child, options, hints);
+        }
+    }
+    for (const Expr& child : expr.children) {
+        collect_hints_for_expr(scope, child, options, hints);
+    }
+}
+
+void collect_hints_for_statement_exprs(FunctionScope& scope, const Stmt& stmt,
+                                       const InlayHintOptions& options,
+                                       std::vector<InlayHint>& hints) {
+    auto collect = [&](const Expr& expr) {
+        if (expr.kind != ExprKind::Missing) {
+            collect_hints_for_expr(scope, expr, options, hints);
+        }
+    };
+    collect(stmt.expr);
+    collect(stmt.value_expr);
+    if (stmt.target_expr != nullptr) {
+        collect(*stmt.target_expr);
+    }
+    if (stmt.condition_expr != nullptr) {
+        collect(*stmt.condition_expr);
+    }
+    if (stmt.message_expr != nullptr) {
+        collect(*stmt.message_expr);
+    }
+    if (stmt.iterable_expr != nullptr) {
+        collect(*stmt.iterable_expr);
+    }
+    if (stmt.pattern_expr != nullptr) {
+        collect(*stmt.pattern_expr);
+    }
+    if (stmt.guard_expr != nullptr) {
+        collect(*stmt.guard_expr);
     }
 }
 
@@ -123,7 +304,8 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
 }
 
 void collect_hints_for_block(const Document& doc, FunctionScope& scope,
-                             const std::vector<Stmt>& statements, std::vector<InlayHint>& hints);
+                             const std::vector<Stmt>& statements, const InlayHintOptions& options,
+                             std::vector<InlayHint>& hints);
 
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
     if (stmt.target_expr == nullptr) {
@@ -144,11 +326,14 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
 }
 
 void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const Stmt& stmt,
-                                std::vector<InlayHint>& hints) {
+                                const InlayHintOptions& options, std::vector<InlayHint>& hints) {
+    collect_hints_for_statement_exprs(scope, stmt, options, hints);
+
     if (stmt.kind == StmtKind::VarDecl) {
         TypeRef type =
             has_stmt_type_ref(stmt) ? stmt_type_ref(stmt) : infer_type(scope, stmt.value_expr);
-        if (!source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
+        if (options.inferred_types &&
+            !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
             add_type_hint(hints, stmt.location, stmt.name, type);
         }
         bind_inlay_local(scope, stmt.name, std::move(type));
@@ -163,7 +348,9 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
         }
         if (target.kind == ExprKind::Name && !scope.local_type_refs.contains(target.name.str())) {
             TypeRef type = infer_type(scope, stmt.value_expr);
-            add_type_hint(hints, target.location, target.name, type);
+            if (options.inferred_types) {
+                add_type_hint(hints, target.location, target.name, type);
+            }
             bind_inlay_local(scope, target.name.str(), std::move(type));
         }
         return;
@@ -177,11 +364,12 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
                 binding_type = *inferred;
             }
         }
-        if (!source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
+        if (options.loop_binding_types &&
+            !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
             add_type_hint(hints, stmt.location, stmt.name, binding_type);
         }
         bind_inlay_local(body_scope, stmt.name, std::move(binding_type));
-        collect_hints_for_block(doc, body_scope, stmt.children, hints);
+        collect_hints_for_block(doc, body_scope, stmt.children, options, hints);
         return;
     }
 
@@ -191,29 +379,31 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
 
     if (!stmt.children.empty()) {
         FunctionScope child_scope = scope;
-        collect_hints_for_block(doc, child_scope, stmt.children, hints);
+        collect_hints_for_block(doc, child_scope, stmt.children, options, hints);
     }
 }
 
 void collect_hints_for_block(const Document& doc, FunctionScope& scope,
-                             const std::vector<Stmt>& statements, std::vector<InlayHint>& hints) {
+                             const std::vector<Stmt>& statements, const InlayHintOptions& options,
+                             std::vector<InlayHint>& hints) {
     for (const Stmt& stmt : statements) {
-        collect_hint_for_statement(doc, scope, stmt, hints);
+        collect_hint_for_statement(doc, scope, stmt, options, hints);
     }
 }
 
 void collect_hints_for_function(const Document& doc, const Symbols& symbols, const FunctionDecl& fn,
-                                std::string current_class, std::vector<InlayHint>& hints) {
+                                std::string current_class, const InlayHintOptions& options,
+                                std::vector<InlayHint>& hints) {
     FunctionScope scope(symbols);
     scope.current_class = std::move(current_class);
     for (const ParamDecl& param : fn.params) {
-        if (param.name == "self" &&
+        if (options.implicit_self && param.name == "self" &&
             !source_has_explicit_type_after_name(doc, param.location, param.name)) {
             add_type_hint(hints, param.location, param.name, param.type_ref);
         }
         bind_inlay_local(scope, param.name, param.type_ref);
     }
-    collect_hints_for_block(doc, scope, fn.statements, hints);
+    collect_hints_for_block(doc, scope, fn.statements, options, hints);
 }
 
 std::string hint_json(const InlayHint& hint) {
@@ -226,19 +416,19 @@ std::string hint_json(const InlayHint& hint) {
 
 } // namespace
 
-std::string inlay_hints_json(const Document& doc, const Json*) {
+std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions options) {
     std::vector<InlayHint> hints;
     try {
         const ProjectIndex& index = project_index_for_document(doc, false, false);
         const ModuleAst& module = index.visible_unit_for_path(doc.path);
         const Symbols symbols = collect_symbols(module);
         for (const FunctionDecl& fn : module.functions) {
-            collect_hints_for_function(doc, symbols, fn, {}, hints);
+            collect_hints_for_function(doc, symbols, fn, {}, options, hints);
         }
         for (const ClassDecl& klass : module.classes) {
             const Symbols method_symbols = with_self_type(symbols, klass.name);
             for (const FunctionDecl& method : klass.methods) {
-                collect_hints_for_function(doc, method_symbols, method, klass.name, hints);
+                collect_hints_for_function(doc, method_symbols, method, klass.name, options, hints);
             }
         }
     } catch (const std::exception&) {

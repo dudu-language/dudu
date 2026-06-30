@@ -272,11 +272,29 @@ High-value hints:
   `def move(self: &Self, ...)`
 - positional call parameter-name hints, when argument names are not already
   visible and the hint improves readability
+- optional argument expression type hints for debugging inference-heavy code
 
-This pass should not expand into hover actions, generated-C++ inspection, layout
-facts, CodeLens, or native documentation scraping. Those remain part of the
-broader editor-intelligence work. Hints must come from AST and semantic facts,
-not regex guesses.
+VS Code defaults should keep hints available but not visually permanent:
+
+```json
+"[dudu]": {
+  "editor.inlayHints.enabled": "offUnlessPressed"
+}
+```
+
+Dudu-specific categories should be independently configurable:
+
+- `dudu.inlayHints.inferredTypes`
+- `dudu.inlayHints.loopBindingTypes`
+- `dudu.inlayHints.implicitSelf`
+- `dudu.inlayHints.parameterNames`
+- `dudu.inlayHints.argumentTypes`
+
+Argument expression type hints should default off because they are useful for
+debugging inference but noisy in normal code. This work should not expand into
+hover actions, generated-C++ inspection, layout facts, CodeLens, or native
+documentation scraping. Those remain part of the broader editor-intelligence
+work. Hints must come from AST and semantic facts, not regex guesses.
 
 ### Native C/C++ Interop
 
