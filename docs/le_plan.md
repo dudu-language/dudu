@@ -1172,18 +1172,19 @@ push. They are not release packaging work.
    OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop; the
    optional reusable tensor OpenBLAS fixture compares Dudu tensor `matmul`
    against CBLAS `sgemm`; the optional reusable tensor OpenCL fixture drives
-   OpenCL buffers and a tiny elementwise kernel from Dudu tensor storage.
+   OpenCL buffers plus tiny elementwise and matmul kernels from Dudu tensor
+   storage.
    Generic library types can now carry type-level shape metadata such as
    `Tensor[f32][dyn, 784]`; the metadata participates in Dudu type checking,
    lowers to the underlying library type instead of `std::array`, and treats
    `dyn` as a runtime-known wildcard in expected/API positions. A
    library-defined `Mask` can now drive ordinary `@operator("[]")` and
    `@operator("[]=")` hooks, proving basic `tensor[mask, :]` selection and
-   masked scatter without compiler tensor-backend patches. Continue by adding
-   GPU matmul or backend BLAS probes when local tooling is available, then
-   advanced mask semantics, repeated-index scatter policy, shape propagation
-   through tensor expressions, and explicit proof/conversion diagnostics for
-   `dyn` values flowing into concrete shape assertions.
+   masked scatter without compiler tensor-backend patches. Continue with
+   optional backend BLAS probes when local tooling is available, then advanced
+   mask semantics, repeated-index scatter policy, shape propagation through
+   tensor expressions, and explicit proof/conversion diagnostics for `dyn`
+   values flowing into concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

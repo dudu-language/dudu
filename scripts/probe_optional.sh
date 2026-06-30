@@ -723,6 +723,20 @@ probe_opencl() {
         echo "OpenCL tensor probe returned $status, expected 42" >&2
         exit 1
     fi
+
+    cpp="$repo_root/build/probe_opencl_tensor_matmul.cpp"
+    bin="$repo_root/build/probe_opencl_tensor_matmul"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tensor_dogfood/opencl_tensor_matmul.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 -DCL_TARGET_OPENCL_VERSION=300 "$cpp" \
+        $(pkg-config --cflags --libs OpenCL) -o "$bin"
+    set +e
+    "$bin"
+    status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "OpenCL tensor matmul probe returned $status, expected 42" >&2
+        exit 1
+    fi
     echo "ok OpenCL"
 }
 

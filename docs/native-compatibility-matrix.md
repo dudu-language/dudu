@@ -66,7 +66,7 @@ Last local dogfood run: 2026-06-27 with `scripts/test_dogfood.sh`.
 | Dear ImGui | UI | C++ namespace API, unaliased namespace visibility, context lifecycle, version query, link | pass | `scripts/probe_optional.sh` / `imgui_context.dd` | no |
 | X11 | platform / windowing | C API, nullable `cstr`, opaque display pointer, XID return | pass | `scripts/probe_optional.sh` / `x11_display_probe.dd` | no |
 | Wayland client | platform / windowing | C API, nullable `cstr`, opaque display pointer, link | pass | `scripts/probe_optional.sh` / `wayland_display_probe.dd` | no |
-| OpenCL | compute | host API, kernel setup, run result, tensor buffer upload/download, elementwise kernel | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd`, `tensor_dogfood/opencl_tensor_add.dd` | no |
+| OpenCL | compute | host API, kernel setup, run result, tensor buffer upload/download, elementwise and matmul kernels | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd`, `tensor_dogfood/opencl_tensor_add.dd`, `tensor_dogfood/opencl_tensor_matmul.dd` | no |
 | Vulkan | graphics | header import, object setup smoke, link | pass | `scripts/probe_optional.sh` / `examples/vulkan_triangle.dd` | no |
 | FFmpeg libavcodec | media | direct C header import, package link, packet alloc/free smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | no |
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |

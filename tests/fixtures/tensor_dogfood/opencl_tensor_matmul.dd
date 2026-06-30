@@ -1,0 +1,166 @@
+from c import CL/cl.h as cl
+from tensor import Tensor
+from tensor import matmul
+from tensor import zeros
+
+
+def make_a() -> Tensor:
+    out = zeros(2, 3)
+    out[0, 0] = 1.0
+    out[0, 1] = 2.0
+    out[0, 2] = 3.0
+    out[1, 0] = 4.0
+    out[1, 1] = 5.0
+    out[1, 2] = 6.0
+    return out
+
+
+def make_b() -> Tensor:
+    out = zeros(3, 2)
+    out[0, 0] = 7.0
+    out[0, 1] = 8.0
+    out[1, 0] = 9.0
+    out[1, 1] = 10.0
+    out[2, 0] = 11.0
+    out[2, 1] = 12.0
+    return out
+
+
+def cleanup(
+    context: cl.cl_context,
+    queue: cl.cl_command_queue,
+    program: cl.cl_program,
+    kernel: cl.cl_kernel,
+    a_buffer: cl.cl_mem,
+    b_buffer: cl.cl_mem,
+    out_buffer: cl.cl_mem,
+):
+    if out_buffer != None:
+        cl.clReleaseMemObject(out_buffer)
+    if b_buffer != None:
+        cl.clReleaseMemObject(b_buffer)
+    if a_buffer != None:
+        cl.clReleaseMemObject(a_buffer)
+    if kernel != None:
+        cl.clReleaseKernel(kernel)
+    if program != None:
+        cl.clReleaseProgram(program)
+    if queue != None:
+        cl.clReleaseCommandQueue(queue)
+    if context != None:
+        cl.clReleaseContext(context)
+
+
+def run_opencl_matmul(a: Tensor, b: Tensor) -> Tensor:
+    out = zeros(a.rows, b.cols)
+
+    platform: cl.cl_platform_id = None
+    platform_count: u32 = 0
+    err: i32 = cl.clGetPlatformIDs(1, &platform, &platform_count)
+    if err != cl.CL_SUCCESS:
+        return out
+    if platform_count == 0:
+        return out
+
+    device: cl.cl_device_id = None
+    err = cl.clGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_DEFAULT, 1, &device, None)
+    if err != cl.CL_SUCCESS:
+        return out
+
+    context = cl.clCreateContext(None, 1, &device, None, None, &err)
+    if err != cl.CL_SUCCESS:
+        return out
+
+    queue = cl.clCreateCommandQueueWithProperties(context, device, None, &err)
+    if err != cl.CL_SUCCESS:
+        cleanup(context, None, None, None, None, None, None)
+        return out
+
+    source: cstr = "__kernel void matmul(const int m, const int n, const int k, __global const float* a, __global const float* b, __global float* out) { int row = get_global_id(0); int col = get_global_id(1); if (row >= m || col >= n) return; float acc = 0.0f; for (int i = 0; i < k; ++i) { acc += a[row * k + i] * b[i * n + col]; } out[row * n + col] = acc; }"
+    sources: array[*const[char]] = [*const[char](source)]
+    program = cl.clCreateProgramWithSource(context, 1, &sources[0], None, &err)
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, None, None, None, None, None)
+        return out
+
+    err = cl.clBuildProgram(program, 1, &device, None, None, None)
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, program, None, None, None, None)
+        return out
+
+    kernel = cl.clCreateKernel(program, "matmul", &err)
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, program, None, None, None, None)
+        return out
+
+    a_bytes = usize(a.rows * a.cols) * sizeof[f32]()
+    b_bytes = usize(b.rows * b.cols) * sizeof[f32]()
+    out_bytes = usize(out.rows * out.cols) * sizeof[f32]()
+
+    a_buffer = cl.clCreateBuffer(
+        context,
+        cl.CL_MEM_READ_ONLY | cl.CL_MEM_COPY_HOST_PTR,
+        a_bytes,
+        &a.data[0],
+        &err,
+    )
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, program, kernel, None, None, None)
+        return out
+
+    b_buffer = cl.clCreateBuffer(
+        context,
+        cl.CL_MEM_READ_ONLY | cl.CL_MEM_COPY_HOST_PTR,
+        b_bytes,
+        &b.data[0],
+        &err,
+    )
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, program, kernel, a_buffer, None, None)
+        return out
+
+    out_buffer = cl.clCreateBuffer(context, cl.CL_MEM_WRITE_ONLY, out_bytes, None, &err)
+    if err != cl.CL_SUCCESS:
+        cleanup(context, queue, program, kernel, a_buffer, b_buffer, None)
+        return out
+
+    m = a.rows
+    n = b.cols
+    k = a.cols
+    err = cl.clSetKernelArg(kernel, 0, sizeof[i32](), &m)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 1, sizeof[i32](), &n)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 2, sizeof[i32](), &k)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 3, sizeof[cl.cl_mem](), &a_buffer)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 4, sizeof[cl.cl_mem](), &b_buffer)
+    if err == cl.CL_SUCCESS:
+        err = cl.clSetKernelArg(kernel, 5, sizeof[cl.cl_mem](), &out_buffer)
+
+    global_work_items: array[usize] = [usize(out.rows), usize(out.cols)]
+    if err == cl.CL_SUCCESS:
+        err = cl.clEnqueueNDRangeKernel(queue, kernel, 2, None, &global_work_items[0], None, 0, None, None)
+    if err == cl.CL_SUCCESS:
+        err = cl.clFinish(queue)
+    if err == cl.CL_SUCCESS:
+        err = cl.clEnqueueReadBuffer(queue, out_buffer, cl.CL_TRUE, 0, out_bytes, &out.data[0], 0, None, None)
+
+    cleanup(context, queue, program, kernel, a_buffer, b_buffer, out_buffer)
+
+    if err != cl.CL_SUCCESS:
+        return zeros(a.rows, b.cols)
+    return out
+
+
+def main() -> i32:
+    a = make_a()
+    b = make_b()
+    pure = matmul(a, b)
+    gpu = run_opencl_matmul(a, b)
+    if i32(gpu[0, 0]) != i32(pure[0, 0]):
+        return 1
+    if i32(gpu[1, 1]) != i32(pure[1, 1]):
+        return 2
+    return i32(gpu[0, 0] + gpu[1, 1]) - 170

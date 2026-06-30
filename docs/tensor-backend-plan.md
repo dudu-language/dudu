@@ -524,10 +524,14 @@ Status:
 - Done: `tests/fixtures/tensor_dogfood/opencl_tensor_add.dd` uses the reusable
   Dudu `Tensor` storage, creates OpenCL buffers through the C API, runs a tiny
   elementwise kernel, reads back into a Dudu tensor, and validates the result.
+- Done: `tests/fixtures/tensor_dogfood/opencl_tensor_matmul.dd` uploads two
+  reusable Dudu tensors, runs a tiny OpenCL matmul kernel, reads back into a
+  Dudu tensor, and compares the result against pure Dudu `matmul`.
 - Done: `scripts/probe_optional.sh opencl` runs the existing host API probe and
-  the tensor add probe when OpenCL is discoverable through `pkg-config`.
-- Remaining: add a GPU matmul probe or backend BLAS probe only after the tiny
-  buffer/kernel/readback path stays stable.
+  the tensor add/matmul probes when OpenCL is discoverable through
+  `pkg-config`.
+- Remaining: backend BLAS probes such as rocBLAS/cuBLAS are optional follow-up
+  work when local hardware and tooling make them practical.
 
 ### 5. Autograd Prototype
 
