@@ -135,6 +135,35 @@ train_x: tensor[f32][dyn, 784] = x_norm[train_row, :]
 at runtime, usually because a mask or data-dependent gather selected an unknown
 number of elements.
 
+## Copy Vs View Rules
+
+Normal slice syntax should be view-like when the library can represent the
+selection without allocating:
+
+```python
+row = tensor[3, :]        # view-like row selection
+patch = image[y0:y1, x0:x1, :]  # view-like patch/channel selection
+```
+
+The compiler does not add hidden tensor copies for slices. A Dudu library may
+return a `TensorView`, `Span`, lazy expression, or backend-specific view object
+from `@operator("[]")`; the return type is the contract users see in hover and
+inlay hints. If the user wants an owning result, the library should make that
+explicit with an ordinary call such as `view.to_tensor()` or `tensor.copy(view)`.
+
+Advanced indexing is not assumed to be view-like:
+
+```python
+pairwise = logits.vindex[rows, cols]   # gather/lazy gather/owning result
+grid = logits.oindex[rows, cols]       # orthogonal/cartesian selection
+masked = values[mask, :]               # runtime-sized selection
+```
+
+Those forms must be implemented by library-owned hooks with visible return
+types. Repeated-index scatter, mask scatter, and accumulation order are library
+policy. The compiler should route the syntax to hooks and reject unsupported
+forms precisely; it should not silently invent NumPy/PyTorch copy behavior.
+
 ## Fancy Indexing Target Forms
 
 The scratch dogfood file
