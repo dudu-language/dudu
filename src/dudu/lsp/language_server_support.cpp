@@ -80,10 +80,10 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     options.source_overrides = std::move(source_overrides);
     options.config = config;
     options.source_dir = doc.path.parent_path();
-    options.allow_module_tree = doc.path.has_parent_path() &&
-                                std::filesystem::exists(doc.path.parent_path());
+    options.allow_module_tree =
+        doc.path.has_parent_path() && std::filesystem::exists(doc.path.parent_path());
     options.include_native_headers = include_native_headers;
-    options.include_native_headers_in_merged_module = include_native_headers;
+    options.include_native_headers_in_merged_module = false;
     options.check_semantics = check_semantics;
     options.semantic_options = {.check_bodies = true};
     return project_index_cache.get(options);

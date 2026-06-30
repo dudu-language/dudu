@@ -733,6 +733,12 @@ Document symbols intentionally use the Dudu-owned symbol view and do not force a
 native-header scan; native imported symbols remain available through explicit
 native-aware requests such as hover, definition, completion, signature help,
 references, and workspace symbols.
+LSP native indexes now merge native headers into the source module units only,
+not into both every unit and the aggregate merged module. Native member
+completion/signature help/definition/hover and native alias hover/definition use
+the visible module unit for the current document, avoiding duplicate native
+cache deserialization while keeping symbol identity local to the file being
+edited.
 Native class-alias target lookup now builds one reusable native class index per
 request path instead of rebuilding it for every native type. This removed the
 header-heavy quadratic behavior that made `dudu-webserver` warm hover,

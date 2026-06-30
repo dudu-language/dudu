@@ -354,24 +354,24 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     try {
         const ProjectIndex* native = load_native_index();
+        const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
         if (has_selection) {
             if (const std::optional<std::string> constructor =
-                    constructor_hover_json(native->visible_unit_for_path(doc.path), selection)) {
+                    constructor_hover_json(native_visible, selection)) {
                 return *constructor;
             }
         }
         if (selected_path.has_value()) {
-            if (const std::optional<Symbol> class_member = class_member_symbol_for_path(
-                    native->visible_unit_for_path(doc.path), *selected_path)) {
+            if (const std::optional<Symbol> class_member =
+                    class_member_symbol_for_path(native_visible, *selected_path)) {
                 return symbol_hover_json(*class_member);
             }
         }
         if (const std::optional<std::string> native_alias =
-                native_alias_hover_json(query, native->merged_module())) {
+                native_alias_hover_json(query, native_visible)) {
             return *native_alias;
         }
-        const std::vector<Symbol> native_symbols =
-            symbols_for_module(native->visible_unit_for_path(doc.path), true);
+        const std::vector<Symbol> native_symbols = symbols_for_module(native_visible, true);
         if (has_selection) {
             if (const std::optional<Symbol> native_namespace =
                     native_namespace_segment_symbol(native_symbols, selection.symbol, query)) {
@@ -390,8 +390,9 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     if (selected_path.has_value()) {
         try {
             const ProjectIndex* native = load_native_index();
+            const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
             if (const std::optional<std::string> member_hover =
-                    member_hover_json(*selected_path, params, current, native->merged_module())) {
+                    member_hover_json(*selected_path, params, current, native_visible)) {
                 return *member_hover;
             }
         } catch (const std::exception&) {

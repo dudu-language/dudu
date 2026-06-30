@@ -228,7 +228,7 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
     if (!has_type_ref(type_ref)) {
         return "[]";
     }
-    const ModuleAst& module = index.merged_module();
+    const ModuleAst& module = current;
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -306,8 +306,8 @@ void add_constructor_signature_candidates(std::vector<SignatureCandidate>& signa
 }
 
 void add_member_signature_candidates(std::vector<SignatureCandidate>& signatures,
-                                     const ProjectIndex& index, const ModuleAst& current,
-                                     const CallSite& call, const Json* params) {
+                                     const ModuleAst& current, const CallSite& call,
+                                     const Json* params) {
     const size_t dot = call.name.rfind('.');
     if (dot == std::string::npos || dot == 0 || dot + 1 >= call.name.size()) {
         return;
@@ -324,7 +324,7 @@ void add_member_signature_candidates(std::vector<SignatureCandidate>& signatures
     if (!has_type_ref(type_ref)) {
         return;
     }
-    const ModuleAst& module = index.merged_module();
+    const ModuleAst& module = current;
     const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
     const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
         for (const ClassDecl& klass : classes) {
@@ -554,7 +554,7 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     std::vector<SignatureCandidate> signatures;
     if (const ProjectIndex* index = completion_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
-        add_member_signature_candidates(signatures, *index, current, call, params);
+        add_member_signature_candidates(signatures, current, call, params);
         add_constructor_signature_candidates(signatures, current, call.name);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
             if (symbol_matches(symbol.name, call.name) &&

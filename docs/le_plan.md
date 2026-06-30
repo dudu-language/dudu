@@ -945,6 +945,11 @@ push. They are not release packaging work.
    does not force native-header scanning for import-heavy files. Native imported
    symbols remain exposed through explicit native-aware hover, definition,
    completion, signature help, references, and workspace-symbol requests.
+   LSP native indexes now merge native headers into source module units only,
+   not into both every unit and the aggregate merged module. Native member
+   completion/signature help/definition/hover and native alias hover/definition
+   use the current document's visible native unit, reducing duplicate native
+   cache deserialization in first native-aware editor requests.
    AST traversal helpers now own expression-tree and statement-expression
    walking, and the AST lint, unsupported-feature, build-flag, and navigation
    passes use those helpers instead of maintaining hand-written expression-slot

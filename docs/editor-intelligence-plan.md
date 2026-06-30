@@ -132,6 +132,11 @@ Document symbols intentionally stay on the Dudu-owned symbol view so opening an
 import-heavy file does not force a native-header scan just to populate the
 outline; native imported symbols remain available through hover, definition,
 completion, signature help, references, and workspace symbols.
+Native editor intelligence now keeps scanned headers attached to the visible
+module unit for the current document instead of also duplicating them into the
+aggregate merged module. Native member completion/signature help/definition/
+hover and native alias hover/definition use that visible unit, which reduces the
+first native-aware request cost without changing warm request behavior.
 Hover for selective imports now preserves suffix identity, so `Mode.Play`
 resolves to the imported enum variant docs instead of falling back to spelling
 or only handling the imported `Mode` name.
