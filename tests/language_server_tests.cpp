@@ -270,7 +270,11 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"label\":\": &Self\"") != std::string::npos);
     assert(hints.find("\"line\":3") != std::string::npos);
-    assert(hints.find("\"label\":\": i32\"") != std::string::npos);
+    assert(hints.find("\"value\":\"i32\"") != std::string::npos);
+    assert(hints.find("size = 4 bytes, align = 4 bytes") != std::string::npos);
+    assert(hints.find("\"value\":\"Counter\"") != std::string::npos);
+    assert(hints.find("class Counter") != std::string::npos);
+    assert(hints.find("\"location\"") != std::string::npos);
     assert(hints.find("\"line\":4") != std::string::npos);
     assert(hints.find("\"line\":9") != std::string::npos);
     assert(hints.find("\"line\":10") != std::string::npos);

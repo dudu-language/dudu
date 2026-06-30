@@ -277,6 +277,14 @@ High-value hints:
   scanner sees real parameter names.
 - optional argument expression type hints for debugging inference-heavy code
 
+Type hints should be hoverable through standard LSP inlay-hint tooltips. When a
+hint includes a resolvable Dudu or native type name, the label part should carry
+that symbol location so editors can expose normal go-to-definition behavior from
+the hint itself. Tooltips should include the rendered type and, when honestly
+known, compact layout facts such as size and alignment. Dudu class type parts may
+show a short class preview; native C++ classes should not invent layout facts
+unless the scanner has a trustworthy source for them.
+
 VS Code defaults should keep hints available but not visually permanent:
 
 ```json

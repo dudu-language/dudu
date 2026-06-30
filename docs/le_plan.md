@@ -2237,6 +2237,9 @@ push. They are not release packaging work.
    names. Parameter hints cover Dudu functions/methods/constructors,
    language-level builtin methods such as `list.append(value:)`, and scanned
    native C/C++ functions or methods when real parameter names are available.
+   Type inlay hints should expose markdown tooltips and clickable label parts
+   for resolvable type names, with compact layout facts only when they are known
+   without guessing.
    Hints must be served through standard LSP `textDocument/inlayHint` from
    AST/sema/native metadata facts, not through VS Code-only decoration logic.
 

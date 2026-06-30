@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_inlay_type_details.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
@@ -27,6 +28,8 @@ struct InlayHint {
     int line = 0;
     int character = 0;
     std::string label;
+    std::string label_json;
+    std::string tooltip_json;
     int kind = 1;
 };
 
@@ -88,26 +91,33 @@ bool source_has_explicit_type_after_name(const Document& doc, SourceLocation loc
     return cursor < text.size() && text[cursor] == ':';
 }
 
-void add_type_hint(std::vector<InlayHint>& hints, SourceLocation location, const std::string& name,
-                   const TypeRef& type) {
+void add_type_hint(std::vector<InlayHint>& hints, const Document& doc, const Symbols& symbols,
+                   SourceLocation location, const std::string& name, const TypeRef& type) {
     const std::string label = type_label(type);
     if (name.empty() || label.empty()) {
         return;
     }
+    const InlayTypeDetail detail = inlay_type_detail(doc, symbols, type, ": ");
     hints.push_back({.line = hint_line(location),
                      .character = hint_character_after(location, name),
-                     .label = ": " + label,
+                     .label = detail.label,
+                     .label_json = inlay_label_json(detail, doc),
+                     .tooltip_json = inlay_tooltip_json(detail),
                      .kind = 1});
 }
 
-void add_argument_type_hint(std::vector<InlayHint>& hints, const Expr& expr, const TypeRef& type) {
+void add_argument_type_hint(std::vector<InlayHint>& hints, const Document& doc,
+                            const Symbols& symbols, const Expr& expr, const TypeRef& type) {
     const std::string label = type_label(type);
     if (label.empty() || expr.range.end.column <= 0) {
         return;
     }
+    const InlayTypeDetail detail = inlay_type_detail(doc, symbols, type, ": ");
     hints.push_back({.line = std::max(0, expr.range.end.line - 1),
                      .character = std::max(0, expr.range.end.column - 1),
-                     .label = ": " + label,
+                     .label = detail.label,
+                     .label_json = inlay_label_json(detail, doc),
+                     .tooltip_json = inlay_tooltip_json(detail),
                      .kind = 1});
 }
 
@@ -118,6 +128,8 @@ void add_parameter_hint(std::vector<InlayHint>& hints, const Expr& expr, const s
     hints.push_back({.line = hint_line(expr.location),
                      .character = std::max(0, expr.location.column - 1),
                      .label = name + ":",
+                     .label_json = {},
+                     .tooltip_json = {},
                      .kind = 2});
 }
 
@@ -275,8 +287,8 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
     return builtin_member_param_hints(callee_expr.name);
 }
 
-void collect_hints_for_expr(FunctionScope& scope, const Expr& expr, const InlayHintOptions& options,
-                            std::vector<InlayHint>& hints) {
+void collect_hints_for_expr(const Document& doc, FunctionScope& scope, const Expr& expr,
+                            const InlayHintOptions& options, std::vector<InlayHint>& hints) {
     if (expr.kind == ExprKind::Call) {
         const ParamHints params = param_hints_for_call(scope, expr);
         for (size_t i = 0; i < expr.children.size(); ++i) {
@@ -285,32 +297,32 @@ void collect_hints_for_expr(FunctionScope& scope, const Expr& expr, const InlayH
                 add_parameter_hint(hints, arg, params.names[i]);
             }
             if (options.argument_types) {
-                add_argument_type_hint(hints, arg, infer_type(scope, arg));
+                add_argument_type_hint(hints, doc, scope.symbols, arg, infer_type(scope, arg));
             }
         }
     }
 
     if (expr.callee != nullptr) {
         for (const Expr& child : *expr.callee) {
-            collect_hints_for_expr(scope, child, options, hints);
+            collect_hints_for_expr(doc, scope, child, options, hints);
         }
     }
     if (expr.template_args != nullptr) {
         for (const Expr& child : *expr.template_args) {
-            collect_hints_for_expr(scope, child, options, hints);
+            collect_hints_for_expr(doc, scope, child, options, hints);
         }
     }
     for (const Expr& child : expr.children) {
-        collect_hints_for_expr(scope, child, options, hints);
+        collect_hints_for_expr(doc, scope, child, options, hints);
     }
 }
 
-void collect_hints_for_statement_exprs(FunctionScope& scope, const Stmt& stmt,
+void collect_hints_for_statement_exprs(const Document& doc, FunctionScope& scope, const Stmt& stmt,
                                        const InlayHintOptions& options,
                                        std::vector<InlayHint>& hints) {
     auto collect = [&](const Expr& expr) {
         if (expr.kind != ExprKind::Missing) {
-            collect_hints_for_expr(scope, expr, options, hints);
+            collect_hints_for_expr(doc, scope, expr, options, hints);
         }
     };
     collect(stmt.expr);
@@ -383,14 +395,14 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
 
 void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const Stmt& stmt,
                                 const InlayHintOptions& options, std::vector<InlayHint>& hints) {
-    collect_hints_for_statement_exprs(scope, stmt, options, hints);
+    collect_hints_for_statement_exprs(doc, scope, stmt, options, hints);
 
     if (stmt.kind == StmtKind::VarDecl) {
         TypeRef type =
             has_stmt_type_ref(stmt) ? stmt_type_ref(stmt) : infer_type(scope, stmt.value_expr);
         if (options.inferred_types &&
             !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
-            add_type_hint(hints, stmt.location, stmt.name, type);
+            add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, type);
         }
         bind_inlay_local(scope, stmt.name, std::move(type));
         return;
@@ -405,7 +417,7 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
         if (target.kind == ExprKind::Name && !scope.local_type_refs.contains(target.name.str())) {
             TypeRef type = infer_type(scope, stmt.value_expr);
             if (options.inferred_types) {
-                add_type_hint(hints, target.location, target.name, type);
+                add_type_hint(hints, doc, scope.symbols, target.location, target.name, type);
             }
             bind_inlay_local(scope, target.name.str(), std::move(type));
         }
@@ -422,7 +434,7 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
         }
         if (options.loop_binding_types &&
             !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
-            add_type_hint(hints, stmt.location, stmt.name, binding_type);
+            add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, binding_type);
         }
         bind_inlay_local(body_scope, stmt.name, std::move(binding_type));
         collect_hints_for_block(doc, body_scope, stmt.children, options, hints);
@@ -455,7 +467,7 @@ void collect_hints_for_function(const Document& doc, const Symbols& symbols, con
     for (const ParamDecl& param : fn.params) {
         if (options.implicit_self && param.name == "self" &&
             !source_has_explicit_type_after_name(doc, param.location, param.name)) {
-            add_type_hint(hints, param.location, param.name, param.type_ref);
+            add_type_hint(hints, doc, symbols, param.location, param.name, param.type_ref);
         }
         bind_inlay_local(scope, param.name, param.type_ref);
     }
@@ -465,8 +477,17 @@ void collect_hints_for_function(const Document& doc, const Symbols& symbols, con
 std::string hint_json(const InlayHint& hint) {
     std::ostringstream out;
     out << "{\"position\":{\"line\":" << hint.line << ",\"character\":" << hint.character
-        << "},\"label\":\"" << json_escape(hint.label) << "\",\"kind\":" << hint.kind
-        << ",\"paddingLeft\":true}";
+        << "},\"label\":";
+    if (!hint.label_json.empty()) {
+        out << hint.label_json;
+    } else {
+        out << "\"" << json_escape(hint.label) << "\"";
+    }
+    out << ",\"kind\":" << hint.kind << ",\"paddingLeft\":true";
+    if (!hint.tooltip_json.empty()) {
+        out << ",\"tooltip\":" << hint.tooltip_json;
+    }
+    out << "}";
     return out.str();
 }
 
