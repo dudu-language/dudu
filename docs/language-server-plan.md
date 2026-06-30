@@ -303,7 +303,6 @@ leading import block, and normalizes leading tab indentation to four spaces.
 - `textDocument/definition`
 - `textDocument/references`
 - `textDocument/hover`
-- `textDocument/codeLens`
 - `textDocument/documentSymbol`
 - `workspace/symbol`
 
@@ -325,9 +324,11 @@ through imported module aliases, so `module.symbol` shows the imported
 declaration signature instead of falling back to an empty hover. Unaliased
 nested module imports such as `import vendor.helper` now also resolve through
 the full dotted path for hover, go-to-definition, and member completion.
-Reference CodeLens is implemented for Dudu declarations and opens VS Code's
-references peek UI through the extension command. It uses the non-native
-reference path so ordinary lenses do not trigger native header scans.
+Definition requests on Dudu declarations return the declaration's reference
+locations instead of the declaration itself. Editors can then jump directly for
+one reference or show the normal location picker for multiple references. Dudu
+does not advertise reference CodeLens by default because the inline fake line is
+too noisy for dense source.
 
 Initial full-document semantic tokens are also implemented for Dudu AST nodes,
 covering declarations, parameters, fields, locals, types, literals, calls, and

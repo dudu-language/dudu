@@ -5,6 +5,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
+#include "dudu/lsp/language_server_declaration_references.hpp"
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
@@ -461,7 +462,8 @@ std::optional<std::string> local_definition_json(const Document& doc, const Modu
 
 } // namespace
 
-std::string definition_json(const Document& doc, const Json* params) {
+std::string definition_json(const Document& doc, const Json* params,
+                            const std::map<std::string, Document>& workspace) {
     const ProjectIndex& index = project_index_for_document(doc, false);
     const ModuleAst& current = index.visible_unit_for_path(doc.path);
     if (const std::optional<std::string> header = header_definition_json(doc, current, params)) {
@@ -471,6 +473,10 @@ std::string definition_json(const Document& doc, const Json* params) {
     const std::string word = selection.symbol_path.value_or("");
     if (word.empty()) {
         return "null";
+    }
+    if (const std::optional<std::string> references =
+            declaration_references_json(doc, current, params, workspace)) {
+        return *references;
     }
     if (const std::optional<std::string> local =
             local_definition_json(doc, current, params, word)) {
@@ -583,6 +589,10 @@ std::string definition_json(const Document& doc, const Json* params) {
         return symbol_definition_json(*suffix, doc);
     }
     return "null";
+}
+
+std::string definition_json(const Document& doc, const Json* params) {
+    return definition_json(doc, params, {});
 }
 
 } // namespace dudu

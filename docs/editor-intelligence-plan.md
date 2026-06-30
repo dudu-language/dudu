@@ -238,9 +238,10 @@ For source in the current project or a Dudu library:
 - hover should support Rust-Analyzer-style actions where the editor can expose
   them: go to declaration, go to type definition, and inspect generated C++
   for the hovered symbol or selected source range
-- declarations should expose reference CodeLens, similar to Rust Analyzer's
-  inline implementation/reference counts, and clicking it should open the
-  references peek UI
+- ctrl-clicking a declaration should navigate to its references: one reference
+  jumps directly, while multiple references use the editor's normal location
+  picker/peek UI. Dudu intentionally does not show inline reference CodeLens by
+  default because the extra fake line is noisy in dense source.
 
 ### Native C/C++ Interop
 

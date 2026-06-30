@@ -5,7 +5,6 @@
 #include "dudu/core/source.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/lsp/language_server_code_actions.hpp"
-#include "dudu/lsp/language_server_code_lens.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_definition.hpp"
 #include "dudu/lsp/language_server_diagnostics.hpp"
@@ -198,10 +197,6 @@ class LanguageServer {
                 if (id != nullptr) {
                     respond(*id, code_action_result(params));
                 }
-            } else if (method == "textDocument/codeLens") {
-                if (id != nullptr) {
-                    respond(*id, code_lens_result(params));
-                }
             } else if (method == "textDocument/hover") {
                 if (id != nullptr) {
                     respond(*id, hover_result(params));
@@ -246,7 +241,6 @@ class LanguageServer {
                "\"referencesProvider\":true,"
                "\"renameProvider\":{\"prepareProvider\":true},"
                "\"codeActionProvider\":true,"
-               "\"codeLensProvider\":{\"resolveProvider\":false},"
                "\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"namespace\",\"type\","
                "\"class\",\"enum\",\"function\",\"method\",\"variable\",\"parameter\","
                "\"property\",\"enumMember\",\"macro\",\"keyword\",\"number\",\"string\","
@@ -378,7 +372,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        return definition_json(*doc, params);
+        return definition_json(*doc, params, cached_workspace_documents());
     }
 
     std::string references_result(const Json* params) const {
@@ -411,14 +405,6 @@ class LanguageServer {
             return "[]";
         }
         return code_actions_json(*doc, params, cached_workspace_documents());
-    }
-
-    std::string code_lens_result(const Json* params) const {
-        const Document* doc = document_from_params(params);
-        if (doc == nullptr) {
-            return "[]";
-        }
-        return code_lens_json(*doc, params, cached_workspace_documents());
     }
 
     std::string hover_result(const Json* params) const {

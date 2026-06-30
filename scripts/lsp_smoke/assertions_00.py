@@ -194,7 +194,9 @@ nested_module_completion_labels = [item["label"] for item in nested_module_compl
 assert "vendored_helper" in nested_module_completion_labels
 
 definition = next(item for item in responses if item.get("id") == 4)
-assert definition["result"]["range"]["start"]["line"] == 3
+assert isinstance(definition["result"], list)
+assert any(item["range"]["start"]["line"] == 7 for item in definition["result"])
+assert not any(item["range"]["start"]["line"] == 3 for item in definition["result"])
 
 semantic_tokens = next(item for item in responses if item.get("id") == 44)
 semantic_data = semantic_tokens["result"]["data"]

@@ -202,6 +202,11 @@ def mix(left: i32, right: i32) -> i32:
     return left - right + MAGIC
 """
     )
+    containers_source = """def count(values: list[i32]) -> i32:
+    return 0
+"""
+    containers = tmp / "containers.dd"
+    containers.write_text(containers_source)
     (tmp / "transitive.dd").write_text(
         """def transitive_value() -> i32:
     return 5
@@ -585,6 +590,8 @@ def main() -> i32:
         lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
         lsp_message({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
         open_message(main),
+        open_message(tmp / "math_utils.dd"),
+        open_message(containers),
         open_message(entities),
         open_message(ops),
         open_message(native),
@@ -664,9 +671,10 @@ def main() -> i32:
         request(48, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
         request(62, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(130, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "def main() -> i32", add=len("def main() -> "))}),
+        request(132, "textDocument/hover", {"textDocument": text_document(containers), "position": position(containers_source, "list[i32]", add=1)}),
         request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
-        request(131, "textDocument/codeLens", {"textDocument": text_document(main)}),
+        request(131, "textDocument/definition", {"textDocument": text_document(tmp / "math_utils.dd"), "position": position((tmp / "math_utils.dd").read_text(), "mix(left", add=1)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1034,6 +1042,8 @@ def main() -> i32:
     rename_provider = initialize["capabilities"].get("renameProvider")
     if not isinstance(rename_provider, dict) or rename_provider.get("prepareProvider") is not True:
         raise AssertionError(f"server did not advertise prepareRename: {initialize!r}")
+    if "codeLensProvider" in initialize["capabilities"]:
+        raise AssertionError(f"server should not advertise reference CodeLens: {initialize!r}")
     prepare_math_mix = response(messages, 111)
     if prepare_math_mix.get("placeholder") != "mix":
         raise AssertionError(f"prepareRename did not return mix placeholder: {prepare_math_mix!r}")
@@ -1090,14 +1100,13 @@ def main() -> i32:
     if not has_semantic(unresolved_tokens, "missing_value", "variable", unresolved_modifier):
         raise AssertionError(f"missing unresolved return variable token: {unresolved_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
-    main_code_lenses = response(messages, 131)
-    if not any(
-        item.get("command", {}).get("command") == "dudu.showReferences"
-        and "reference" in item.get("command", {}).get("title", "")
-        and len(item.get("command", {}).get("arguments", [])) == 3
-        for item in main_code_lenses
-    ):
-        raise AssertionError(f"missing reference CodeLens command: {main_code_lenses!r}")
+    declaration_definition = response(messages, 131)
+    if not isinstance(declaration_definition, list):
+        raise AssertionError(f"declaration definition should return reference locations: {declaration_definition!r}")
+    if not has_start(declaration_definition, main.as_uri(), main_math_mix["line"], main_math_mix["character"]):
+        raise AssertionError(f"declaration definition missed main use: {declaration_definition!r}")
+    if has_start(declaration_definition, (tmp / "math_utils.dd").as_uri(), math_mix_decl["line"], math_mix_decl["character"]):
+        raise AssertionError(f"declaration definition should not include its own declaration: {declaration_definition!r}")
     assert_nonempty(response(messages, 41), "operator method definition")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)
@@ -1145,6 +1154,9 @@ def main() -> i32:
     primitive_hover = response(messages, 130)["contents"]["value"]
     if "type i32" not in primitive_hover or "C++ lowering: `std::int32_t`" not in primitive_hover:
         raise AssertionError(f"missing primitive type hover/lowering: {primitive_hover!r}")
+    list_hover = response(messages, 132)["contents"]["value"]
+    if "type list" not in list_hover or "std::vector<T>" not in list_hover:
+        raise AssertionError(f"missing list type hover/lowering: {list_hover!r}")
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")

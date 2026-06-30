@@ -16,6 +16,7 @@
 #include "dudu/project/module_names.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <set>
@@ -26,9 +27,32 @@
 namespace dudu {
 namespace {
 
+std::string fenced_code(std::string_view language, const std::string& code) {
+    return "```" + std::string(language) + "\n" + code + "\n```";
+}
+
+std::optional<std::filesystem::path> native_identity_path(const std::string& identity) {
+    if (!starts_with(identity, "usr:")) {
+        return std::nullopt;
+    }
+    const size_t delimiter = identity.find("::", 4);
+    if (delimiter == std::string::npos) {
+        return std::nullopt;
+    }
+    std::filesystem::path path = identity.substr(4, delimiter - 4);
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
+
 std::string hover_markdown(const Symbol& symbol) {
-    std::string markdown = "`" + symbol.detail + "`";
+    const bool native = symbol.native_identity_key.has_value();
+    std::string markdown = fenced_code(native ? "cpp" : "dudu", symbol.detail);
     if (symbol.native_identity_key.has_value()) {
+        if (const std::optional<std::filesystem::path> path =
+                native_identity_path(*symbol.native_identity_key)) {
+            markdown += "\n\nDeclared in: `" + path->string() + "`";
+        }
         markdown += "\n\nNative identity: `" + *symbol.native_identity_key + "`";
     }
     if (!symbol.doc_comment.empty()) {
@@ -54,13 +78,26 @@ std::optional<std::string> primitive_hover_json(const std::string& word) {
         {"f64", {"double", "64-bit floating-point value."}},
         {"str", {"std::string", "Owned UTF-8 string value."}},
         {"None", {"std::nullptr_t", "Null pointer value."}},
+        {"list", {"std::vector<T>", "Dynamic owning contiguous list. Use `list[T]`."}},
+        {"dict", {"std::unordered_map<K, V>", "Dynamic hash map. Use `dict[K, V]`."}},
+        {"set", {"std::unordered_set<T>", "Dynamic hash set. Use `set[T]`."}},
+        {"tuple", {"dudu::TupleN<T...>", "Fixed-size heterogenous tuple. Use `tuple[T...]`."}},
+        {"variant", {"std::variant<T...>", "Tagged union over explicit alternatives."}},
+        {"Option", {"std::optional<T>", "Optional value. Use `Option[T]`."}},
+        {"Result", {"dudu::Result<T, E>", "Result value with `Ok[T]` or `Err[E]` payload."}},
+        {"array",
+         {"std::array<T, N> / nested fixed storage",
+          "Fixed-shape contiguous array. Use `array[T][shape]`, or `array[T] = literal` "
+          "when the shape can be inferred."}},
+        {"span", {"std::span<T>", "Non-owning contiguous view. Use `span[T]`."}},
     };
     const auto found = primitives.find(word);
     if (found == primitives.end()) {
         return std::nullopt;
     }
-    const std::string markdown = "`type " + word + "`\n\n" + found->second.second +
-                                 "\n\nC++ lowering: `" + found->second.first + "`";
+    const std::string markdown = fenced_code("dudu", "type " + word) + "\n\n" +
+                                 found->second.second + "\n\nC++ lowering: `" +
+                                 found->second.first + "`";
     return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) + "\"}}";
 }
 
@@ -78,7 +115,7 @@ std::optional<std::string> imported_module_hover_json(const ProjectIndex& index,
         if (imported == nullptr) {
             continue;
         }
-        std::string markdown = "`module " + import.module_path + "`";
+        std::string markdown = fenced_code("dudu", "module " + import.module_path);
         if (!imported->doc_comment.empty()) {
             markdown += "\n\n" + imported->doc_comment;
         }
@@ -149,17 +186,21 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
         if (!target) {
             return std::nullopt;
         }
-        const std::string markdown = "`native type = " + native_type_alias_type_text(type) +
-                                     "`\n\nresolves to `" + "native class " + target->name + "`";
+        std::string markdown =
+            fenced_code("cpp", "native type = " + native_type_alias_type_text(type)) +
+            "\n\nresolves to `" + "native class " + target->name + "`";
         const std::string identity = native_symbol_identity_key(type.identity);
-        const std::string identity_text =
-            identity.empty() ? std::string{} : "\n\nNative identity: `" + identity + "`";
+        if (!identity.empty()) {
+            if (const std::optional<std::filesystem::path> path = native_identity_path(identity)) {
+                markdown += "\n\nDeclared in: `" + path->string() + "`";
+            }
+            markdown += "\n\nNative identity: `" + identity + "`";
+        }
         const std::string doc_comment =
             !type.doc_comment.empty() ? type.doc_comment : target->doc_comment;
         const std::string doc_text = doc_comment.empty() ? std::string{} : "\n\n" + doc_comment;
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-               json_escape(identity_text) + json_escape(doc_text) +
-               "\"},\"range\":" + range_json(type.location) + "}";
+               json_escape(doc_text) + "\"},\"range\":" + range_json(type.location) + "}";
     };
     for (const NativeTypeDecl& type : module.native_types) {
         if (type.name == word) {
@@ -447,8 +488,8 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
     }
     if (!local_type.empty()) {
-        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(query) + ": " +
-               json_escape(local_type) + "`\"}}";
+        const std::string markdown = fenced_code("dudu", query + ": " + local_type);
+        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) + "\"}}";
     }
     return "null";
 }
