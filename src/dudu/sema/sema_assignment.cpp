@@ -93,6 +93,16 @@ void reject_const_member_assignment(const FunctionScope& scope, const Expr& targ
     }
 }
 
+void check_declared_index_assignment_operator_if_any(const FunctionScope& scope,
+                                                     const TypeRef& receiver_type,
+                                                     const std::string& label,
+                                                     const std::vector<Expr>& args,
+                                                     const SourceLocation& location) {
+    if (const auto signature = dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
+        check_call_args_ast(scope, label + "[]=", *signature, args, &location);
+    }
+}
+
 } // namespace
 
 TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
@@ -126,6 +136,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
+            check_declared_index_assignment_operator_if_any(scope, receiver_type, name, args,
+                                                            target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
                 sema_fail(target_location,
                           "no matching @operator(\"[]=\") for indexed assignment to " + name);
@@ -151,6 +163,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                                     args, &target_location);
                 return {};
             }
+            check_declared_index_assignment_operator_if_any(
+                scope, receiver_type, indexed_assignment_label(receiver), args, target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
                 sema_fail(target_location,
                           "no matching @operator(\"[]=\") for indexed assignment to " +

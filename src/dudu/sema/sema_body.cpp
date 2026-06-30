@@ -28,6 +28,12 @@ namespace {
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
                 int loop_depth);
 
+void reject_standalone_slice_value(const Expr& expr) {
+    if (expr.kind == ExprKind::Slice) {
+        sema_fail(expr.location, "slice expression must be used inside an index");
+    }
+}
+
 void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
                  const TypeRef& return_type_ref, int loop_depth) {
     const bool allow_super_init_at_start = scope.allow_super_init;
@@ -192,6 +198,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     }
     if (stmt.kind == StmtKind::VarDecl) {
         check_local_binding_name(stmt.location, stmt.name);
+        reject_standalone_slice_value(stmt.value_expr);
         const TypeRef& declared_type = stmt_type_ref(stmt);
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(declared_type, stmt.value_expr);
@@ -277,6 +284,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         }
         if (stmt_target_expr(stmt).kind == ExprKind::Name &&
             !scope.local_type_refs.contains(stmt_target_expr(stmt).name)) {
+            reject_standalone_slice_value(stmt.value_expr);
             const std::string& name = stmt_target_expr(stmt).name;
             check_local_binding_name(diagnostic_location(stmt.location, stmt_target_expr(stmt)),
                                      name);
@@ -289,6 +297,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             return;
         }
         const TypeRef target_type = assignment_target_type_ref(scope, stmt);
+        reject_standalone_slice_value(stmt.value_expr);
         if (has_type_ref(target_type)) {
             check_type_ref_match(scope, target_type, stmt.value_expr,
                                  diagnostic_location(stmt.location, stmt.value_expr));

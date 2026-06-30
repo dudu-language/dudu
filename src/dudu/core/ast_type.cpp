@@ -33,6 +33,18 @@ std::string join_fixed_array_shape_refs(const TypeRef& type,
     return out.str();
 }
 
+std::string join_shape_refs(const TypeRef& type,
+                            const std::map<std::string, std::string>& substitutions) {
+    std::ostringstream out;
+    for (size_t i = 1; i < type.children.size(); ++i) {
+        if (i > 1) {
+            out << ", ";
+        }
+        out << substitute_type_ref_text(type.children[i], substitutions);
+    }
+    return out.str();
+}
+
 std::string substitute_wrapper(std::string_view name, const TypeRef& type,
                                const std::map<std::string, std::string>& substitutions) {
     if (type.children.empty()) {
@@ -130,6 +142,8 @@ std::string type_ref_head_name(const TypeRef& type) {
         return "static";
     case TypeKind::FixedArray:
         return "array";
+    case TypeKind::Shaped:
+        return type.children.empty() ? std::string{} : type_ref_head_name(type.children.front());
     case TypeKind::PackExpansion:
         return "...";
     case TypeKind::Unknown:
@@ -202,6 +216,13 @@ std::string substitute_type_ref_text(const TypeRef& type,
         }
         return substitute_type_ref_text(type.children[0], substitutions) + "[" +
                join_fixed_array_shape_refs(type, substitutions) + "]";
+    case TypeKind::Shaped:
+        if (type.children.empty()) {
+            throw CompileError(type.location,
+                               "malformed structured type node: shaped is missing its base type");
+        }
+        return substitute_type_ref_text(type.children[0], substitutions) + "[" +
+               join_shape_refs(type, substitutions) + "]";
     case TypeKind::Function: {
         const std::string result = type.children.empty()
                                        ? "void"
@@ -316,6 +337,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
         }
         break;
     case TypeKind::FixedArray:
+    case TypeKind::Shaped:
         break;
     case TypeKind::Pointer:
     case TypeKind::Reference:
@@ -437,7 +459,8 @@ TypeRef substitute_type_ref(const TypeRef& type,
     for (TypeRef& child : out.children) {
         child = substitute_type_ref(child, substitutions);
     }
-    if (out.kind == TypeKind::FixedArray && out.children.size() > 1) {
+    if ((out.kind == TypeKind::FixedArray || out.kind == TypeKind::Shaped) &&
+        out.children.size() > 1) {
         std::ostringstream value;
         for (size_t i = 1; i < out.children.size(); ++i) {
             if (i > 1) {

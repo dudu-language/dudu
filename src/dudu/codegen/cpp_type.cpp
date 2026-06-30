@@ -45,7 +45,7 @@ std::optional<std::string> lower_parsed_template_type(const std::string& type) {
 
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
     const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::FixedArray) {
+    if (parsed.kind != TypeKind::FixedArray && parsed.kind != TypeKind::Shaped) {
         return std::nullopt;
     }
     return lower_cpp_type(parsed);

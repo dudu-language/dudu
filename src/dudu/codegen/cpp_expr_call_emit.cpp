@@ -58,6 +58,7 @@ bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
     case TypeKind::Template:
     case TypeKind::Qualified:
     case TypeKind::FixedArray:
+    case TypeKind::Shaped:
     case TypeKind::Const:
     case TypeKind::Volatile:
     case TypeKind::Atomic:

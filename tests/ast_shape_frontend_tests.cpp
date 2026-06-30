@@ -460,7 +460,13 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type_spelling("array[Box[list[i32]]][3]") ==
            "std::array<Box<std::vector<int32_t>>, 3>");
     assert(dudu::parse_type_text("Player[3][4]").kind == dudu::TypeKind::Unknown);
-    assert(dudu::parse_type_text("Box[list[i32]][3]").kind == dudu::TypeKind::Unknown);
+    const dudu::TypeRef shaped_tensor = dudu::parse_type_text("Tensor[f32][dyn, 784]");
+    assert(shaped_tensor.kind == dudu::TypeKind::Shaped);
+    assert(dudu::type_ref_text(shaped_tensor) == "Tensor[f32][dyn, 784]");
+    assert(dudu::lower_cpp_type(shaped_tensor) == "Tensor<float>");
+    const dudu::TypeRef shaped_box = dudu::parse_type_text("Box[list[i32]][3]");
+    assert(shaped_box.kind == dudu::TypeKind::Shaped);
+    assert(dudu::lower_cpp_type(shaped_box) == "Box<std::vector<int32_t>>");
     bool rejected_array_shorthand = false;
     try {
         const dudu::ModuleAst bad_array = dudu::parse_source("class Player:\n"

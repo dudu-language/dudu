@@ -153,6 +153,11 @@ std::string lower_cpp_type(const TypeRef& type) {
         return lower_cpp_type(type.children[0]);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type);
+    case TypeKind::Shaped:
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front());
     case TypeKind::Function:
         return lower_cpp_function_type(type, true);
     case TypeKind::PackExpansion:
@@ -217,6 +222,11 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases);
+    case TypeKind::Shaped:
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front(), namespace_aliases);
     case TypeKind::Function:
         return lower_cpp_function_type(type, true, namespace_aliases);
     case TypeKind::PackExpansion:
@@ -286,6 +296,11 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases, options);
+    case TypeKind::Shaped:
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front(), namespace_aliases, options);
     case TypeKind::Function:
         return lower_cpp_function_type(type, true, namespace_aliases, options);
     case TypeKind::PackExpansion:

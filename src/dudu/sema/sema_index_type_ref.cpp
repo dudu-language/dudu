@@ -249,9 +249,6 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     if (type->kind == TypeKind::Template && type->children.size() == 1) {
         return type->children.front();
     }
-    if (const auto signature = dudu_operator_signature(symbols, "[]", *type)) {
-        return signature_return_type_ref(*signature);
-    }
     if (foreign_or_auto_indexable_type(*type)) {
         return named_type_ref("auto", location);
     }

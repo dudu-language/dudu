@@ -71,6 +71,7 @@ enum class TypeKind {
     FixedArray,
     Function,
     PackExpansion,
+    Shaped,
 };
 
 struct TypeRef {

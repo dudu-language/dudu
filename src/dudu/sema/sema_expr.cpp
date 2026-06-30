@@ -62,6 +62,15 @@ std::vector<TypeRef> infer_arg_type_refs(const FunctionScope& scope, const std::
     return out;
 }
 
+void check_declared_index_operator_if_any(const FunctionScope& scope, const TypeRef& receiver_type,
+                                          const std::string& label,
+                                          const std::vector<Expr>& args,
+                                          const SourceLocation* location) {
+    if (const auto signature = dudu_operator_signature(scope.symbols, "[]", receiver_type)) {
+        check_call_args_ast(scope, label + "[]", *signature, args, location);
+    }
+}
+
 } // namespace
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
@@ -250,6 +259,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                                             location);
                         return signature_return_type_ref(*signature);
                     }
+                    check_declared_index_operator_if_any(scope, receiver_type, receiver.name, args,
+                                                         location);
                 }
                 return indexed_value_type_ref(scope.symbols, scope.local_type_refs, index_location,
                                               receiver.name, expr.children[1],
@@ -266,6 +277,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                                         args, location);
                     return signature_return_type_ref(*signature);
                 }
+                check_declared_index_operator_if_any(scope, receiver_member_type,
+                                                     index_receiver_label(receiver), args,
+                                                     location);
                 return indexed_type_ref_from_type(scope.symbols, index_location,
                                                   receiver_member_type, expr.children[1],
                                                   index_receiver_label(receiver));

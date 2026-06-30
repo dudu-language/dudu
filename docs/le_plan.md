@@ -1173,8 +1173,14 @@ push. They are not release packaging work.
    optional reusable tensor OpenBLAS fixture compares Dudu tensor `matmul`
    against CBLAS `sgemm`; the optional reusable tensor OpenCL fixture drives
    OpenCL buffers and a tiny elementwise kernel from Dudu tensor storage.
-   Continue by adding GPU matmul or backend BLAS probes when local tooling is
-   available.
+   Generic library types can now carry type-level shape metadata such as
+   `Tensor[f32][dyn, 784]`; the metadata participates in Dudu type checking,
+   lowers to the underlying library type instead of `std::array`, and treats
+   `dyn` as a runtime-known wildcard in expected/API positions. Continue by
+   adding GPU matmul or backend BLAS probes when local tooling is available,
+   then shape propagation through tensor expressions, mask/scatter handling,
+   and explicit proof/conversion diagnostics for `dyn` values flowing into
+   concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

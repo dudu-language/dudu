@@ -414,6 +414,8 @@ std::string_view type_kind_name(TypeKind kind) {
         return "static";
     case TypeKind::FixedArray:
         return "fixed_array";
+    case TypeKind::Shaped:
+        return "shaped";
     case TypeKind::Function:
         return "function";
     case TypeKind::PackExpansion:

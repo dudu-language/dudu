@@ -36,6 +36,7 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
         }
         break;
     case TypeKind::FixedArray:
+    case TypeKind::Shaped:
         break;
     case TypeKind::Pointer:
     case TypeKind::Reference:
@@ -113,6 +114,37 @@ bool structural_fixed_array_assignment_allowed(const TypeRef& expected, const Ty
     return structural_type_assignment_allowed(expected.children.front(), got.children.front());
 }
 
+bool shaped_dim_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind == TypeKind::Value && trim_copy(expected.value) == "dyn") {
+        return true;
+    }
+    return type_ref_equivalent(expected, got);
+}
+
+bool structural_shaped_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind == TypeKind::Shaped && got.kind == TypeKind::Shaped) {
+        if (expected.children.empty() || got.children.empty()) {
+            return false;
+        }
+        if (expected.children.size() != got.children.size()) {
+            return false;
+        }
+        for (size_t i = 1; i < expected.children.size(); ++i) {
+            if (!shaped_dim_assignment_allowed(expected.children[i], got.children[i])) {
+                return false;
+            }
+        }
+        return structural_type_assignment_allowed(expected.children.front(), got.children.front());
+    }
+    if (expected.kind == TypeKind::Shaped && !expected.children.empty()) {
+        return structural_type_assignment_allowed(expected.children.front(), got);
+    }
+    if (got.kind == TypeKind::Shaped && !got.children.empty()) {
+        return structural_type_assignment_allowed(expected, got.children.front());
+    }
+    return false;
+}
+
 bool structural_pointer_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     if (expected.kind != TypeKind::Pointer || got.kind != TypeKind::Pointer ||
         expected.children.size() != 1 || got.children.size() != 1) {
@@ -180,6 +212,9 @@ bool structural_type_assignment_allowed(const TypeRef& expected, const TypeRef& 
     }
     if (expected.kind == TypeKind::Function || got.kind == TypeKind::Function) {
         return structural_function_assignment_allowed(expected, got);
+    }
+    if (expected.kind == TypeKind::Shaped || got.kind == TypeKind::Shaped) {
+        return structural_shaped_assignment_allowed(expected, got);
     }
     if (expected.kind == TypeKind::Template || got.kind == TypeKind::Template) {
         return structural_template_assignment_allowed(expected, got);

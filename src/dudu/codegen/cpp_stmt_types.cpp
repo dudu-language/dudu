@@ -32,6 +32,7 @@ std::string receiver_base_type(const TypeRef& type) {
     case TypeKind::Device:
     case TypeKind::Static:
     case TypeKind::FixedArray:
+    case TypeKind::Shaped:
     case TypeKind::PackExpansion:
         return type.children.empty() ? std::string{} : receiver_base_type(type.children.front());
     case TypeKind::Template:

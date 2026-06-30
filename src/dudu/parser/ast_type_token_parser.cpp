@@ -20,6 +20,34 @@ SourceLocation token_end_location(const Token& token) {
     return end;
 }
 
+TypeRef shape_dim_ref(TypeRef dim) {
+    if (dim.kind == TypeKind::Named && dim.name == "dyn") {
+        dim.kind = TypeKind::Value;
+        dim.value = "dyn";
+        dim.name = {};
+    }
+    return dim;
+}
+
+std::vector<TypeRef> shape_dim_refs(std::vector<TypeRef> dims) {
+    for (TypeRef& dim : dims) {
+        dim = shape_dim_ref(std::move(dim));
+    }
+    return dims;
+}
+
+bool type_metadata_base_args_are_types(const TypeRef& type) {
+    if (type.kind != TypeKind::Template) {
+        return false;
+    }
+    for (const TypeRef& child : type.children) {
+        if (child.kind == TypeKind::Value || child.kind == TypeKind::Unknown) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 TypeTokenParser::TypeTokenParser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -347,10 +375,21 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         if (type.kind == TypeKind::Template && type.name == "array") {
             TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
             fixed.children.push_back(std::move(type));
+            args = shape_dim_refs(std::move(args));
             fixed.children.insert(fixed.children.end(), std::make_move_iterator(args.begin()),
                                   std::make_move_iterator(args.end()));
             fixed.value = trim_string(text_between(inner_begin, inner_end));
             type = std::move(fixed);
+            continue;
+        }
+        if (type_metadata_base_args_are_types(type)) {
+            TypeRef shaped = make_node(TypeKind::Shaped, begin, cursor_);
+            shaped.children.push_back(std::move(type));
+            args = shape_dim_refs(std::move(args));
+            shaped.children.insert(shaped.children.end(), std::make_move_iterator(args.begin()),
+                                   std::make_move_iterator(args.end()));
+            shaped.value = trim_string(text_between(inner_begin, inner_end));
+            type = std::move(shaped);
             continue;
         }
         if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
