@@ -416,15 +416,21 @@ Status:
   `tests/fixtures/bad_tensor_oindex.dd` and
   `tests/fixtures/bad_tensor_missing_index_hook.dd` and
   `tests/fixtures/bad_tensor_missing_index_set_hook.dd` and
-  `tests/fixtures/tensor_dogfood/shape_metadata.dd`.
+  `tests/fixtures/tensor_dogfood/shape_metadata.dd` and
+  `tests/fixtures/tensor_dogfood/mask_indexing.dd`.
 - Done: generic library types can carry a second shape-metadata bracket such as
   `Tensor[f32][dyn, 784]`. This metadata participates in Dudu type checking
   but lowers to the underlying library type, such as `Tensor<float>`, not to
   `std::array`. `dyn` means runtime-known dimension and is accepted as a
   wildcard in expected/API positions.
-- Remaining: masks, scatter, richer view objects, propagation of shape facts
-  through tensor expressions, and diagnostics/conversions for proving
-  runtime-known `dyn` values satisfy concrete shape assertions.
+- Done: a library-defined `Mask` can participate in ordinary index hooks, so
+  `tensor[mask, :]` can return a `Tensor[T][dyn, N]` value and
+  `tensor[mask, :] = value` can lower to a normal `@operator("[]=")` scatter
+  method without compiler knowledge of tensor backends.
+- Remaining: advanced mask semantics, repeated-index scatter policy, richer
+  view objects, propagation of shape facts through tensor expressions, and
+  diagnostics/conversions for proving runtime-known `dyn` values satisfy
+  concrete shape assertions.
 
 ### 2. CPU Tensor Library
 

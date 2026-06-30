@@ -1176,11 +1176,14 @@ push. They are not release packaging work.
    Generic library types can now carry type-level shape metadata such as
    `Tensor[f32][dyn, 784]`; the metadata participates in Dudu type checking,
    lowers to the underlying library type instead of `std::array`, and treats
-   `dyn` as a runtime-known wildcard in expected/API positions. Continue by
-   adding GPU matmul or backend BLAS probes when local tooling is available,
-   then shape propagation through tensor expressions, mask/scatter handling,
-   and explicit proof/conversion diagnostics for `dyn` values flowing into
-   concrete shape assertions.
+   `dyn` as a runtime-known wildcard in expected/API positions. A
+   library-defined `Mask` can now drive ordinary `@operator("[]")` and
+   `@operator("[]=")` hooks, proving basic `tensor[mask, :]` selection and
+   masked scatter without compiler tensor-backend patches. Continue by adding
+   GPU matmul or backend BLAS probes when local tooling is available, then
+   advanced mask semantics, repeated-index scatter policy, shape propagation
+   through tensor expressions, and explicit proof/conversion diagnostics for
+   `dyn` values flowing into concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

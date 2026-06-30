@@ -70,6 +70,9 @@ std::string substitution_lookup_key(const TypeRef& type) {
 } // namespace
 
 std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_view name) {
+    if (type.kind == TypeKind::Shaped && !type.children.empty()) {
+        return template_type_arg_refs(type.children.front(), name);
+    }
     if (type.kind != TypeKind::Template || type.name != name) {
         return {};
     }

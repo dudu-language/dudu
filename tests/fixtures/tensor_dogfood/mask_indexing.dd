@@ -1,0 +1,121 @@
+class Mask:
+    data: list[bool]
+
+    @operator("[]")
+    def at(self, index: i32) -> bool:
+        return self.data[index]
+
+    def count_true(self) -> i32:
+        count = 0
+        i = 0
+        total = i32(len(self.data))
+        while i < total:
+            if self.data[i]:
+                count += 1
+            i += 1
+        return count
+
+
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    data: list[T]
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> T:
+        return self.data[(row * self.cols) + col]
+
+    @operator("[]=")
+    def set_at(self, row: i32, col: i32, value: T):
+        self.data[(row * self.cols) + col] = value
+
+    @operator("[]")
+    def masked_rows(self, mask: Mask, cols: slice) -> Tensor[T][dyn, 2]:
+        out = zeros[T](mask.count_true(), slice_count(cols, self.cols))
+        out_row = 0
+        row = 0
+        while row < self.rows:
+            if mask[row]:
+                col = 0
+                start = slice_start(cols)
+                while col < out.cols:
+                    out[out_row, col] = self[row, start + col]
+                    col += 1
+                out_row += 1
+            row += 1
+        return out
+
+    @operator("[]=")
+    def set_masked_rows(self, mask: Mask, cols: slice, value: T):
+        row = 0
+        while row < self.rows:
+            if mask[row]:
+                col = slice_start(cols)
+                stop = slice_end(cols, self.cols)
+                while col < stop:
+                    self[row, col] = value
+                    col += 1
+            row += 1
+
+
+def slice_start(value: slice) -> i32:
+    if value.has_start:
+        return i32(value.start)
+    return 0
+
+
+def slice_end(value: slice, limit: i32) -> i32:
+    if value.has_end:
+        return i32(value.end)
+    return limit
+
+
+def slice_count(value: slice, limit: i32) -> i32:
+    start = slice_start(value)
+    stop = slice_end(value, limit)
+    if stop <= start:
+        return 0
+    return stop - start
+
+
+def zeros[T](rows: i32, cols: i32) -> Tensor[T]:
+    data: list[T] = []
+    total = rows * cols
+    i = 0
+    while i < total:
+        data.append(T())
+        i += 1
+    return Tensor[T](rows, cols, data)
+
+
+def make_mask() -> Mask:
+    data: list[bool] = []
+    data.append(True)
+    data.append(False)
+    data.append(True)
+    data.append(False)
+    return Mask(data)
+
+
+def make_values() -> Tensor[i32]:
+    out = zeros[i32](4, 2)
+    out.data[0] = 10
+    out.data[1] = 11
+    out.data[2] = 20
+    out.data[3] = 21
+    out.data[4] = 30
+    out.data[5] = 31
+    out.data[6] = 40
+    out.data[7] = 41
+    return out
+
+
+def main() -> i32:
+    mask = make_mask()
+    values = make_values()
+    selected: Tensor[i32][dyn, 2] = values[mask, :]
+    before = selected[0, 0] + selected[1, 1]
+
+    values[mask, :] = 0
+    after = values[0, 0] + values[0, 1] + values[2, 0] + values[2, 1]
+    return before - after + 1
