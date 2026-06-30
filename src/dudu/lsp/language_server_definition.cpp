@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -87,6 +88,49 @@ std::vector<std::filesystem::path> pkg_config_include_dirs(const ProjectConfig& 
     return out;
 }
 
+std::vector<std::filesystem::path> compiler_include_dirs(const ProjectConfig& config) {
+    static std::map<std::string, std::vector<std::filesystem::path>> cache;
+    const std::string compiler = config.compiler.empty() ? "c++" : config.compiler;
+    const std::string key = compiler + "|" + config.cpp_std;
+    if (const auto found = cache.find(key); found != cache.end()) {
+        return found->second;
+    }
+    const std::string command = shell_quote_arg(compiler) +
+                                " -std=" + shell_quote_arg(config.cpp_std) +
+                                " -E -x c++ /dev/null -v 2>&1 >/dev/null";
+    FILE* pipe = popen(command.c_str(), "r");
+    if (pipe == nullptr) {
+        return {};
+    }
+    std::string output;
+    char buffer[512];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        output += buffer;
+    }
+    if (pclose(pipe) != 0) {
+        return {};
+    }
+    std::vector<std::filesystem::path> out;
+    bool in_search = false;
+    std::istringstream lines(output);
+    std::string line;
+    while (std::getline(lines, line)) {
+        const std::string trimmed = trim_copy(line);
+        if (trimmed == "#include <...> search starts here:") {
+            in_search = true;
+            continue;
+        }
+        if (in_search && trimmed == "End of search list.") {
+            break;
+        }
+        if (in_search && !trimmed.empty() && !starts_with(trimmed, "(")) {
+            out.emplace_back(trimmed);
+        }
+    }
+    cache[key] = out;
+    return out;
+}
+
 std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::path& source_dir,
                                                          const ProjectConfig& config,
                                                          const std::string& header) {
@@ -100,6 +144,9 @@ std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::
             roots.push_back(project_path(config, include_dir));
         }
         for (const std::filesystem::path& include_dir : pkg_config_include_dirs(config)) {
+            roots.push_back(include_dir);
+        }
+        for (const std::filesystem::path& include_dir : compiler_include_dirs(config)) {
             roots.push_back(include_dir);
         }
     }
