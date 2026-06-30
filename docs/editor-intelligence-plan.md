@@ -256,6 +256,28 @@ For source in the current project or a Dudu library:
   picker/peek UI. Dudu intentionally does not show inline reference CodeLens by
   default because the extra fake line is noisy in dense source.
 
+### Inlay Hints
+
+Inlay hints are the immediate Rust-Analyzer parity target. Dudu should expose
+them through the standard LSP `textDocument/inlayHint` request so VS Code and
+other clients can use normal hint settings such as always on, off unless a key
+is held, or on unless a key is held.
+
+High-value hints:
+
+- inferred local bindings, such as `count = 0` displayed as `count: i32 = 0`
+- inferred loop bindings, such as `for value in values:` displayed as
+  `for value: i32 in values:`
+- implicit receiver types, such as `def move(self, ...)` displayed as
+  `def move(self: &Self, ...)`
+- positional call parameter-name hints, when argument names are not already
+  visible and the hint improves readability
+
+This pass should not expand into hover actions, generated-C++ inspection, layout
+facts, CodeLens, or native documentation scraping. Those remain part of the
+broader editor-intelligence work. Hints must come from AST and semantic facts,
+not regex guesses.
+
 ### Native C/C++ Interop
 
 For imported native code:

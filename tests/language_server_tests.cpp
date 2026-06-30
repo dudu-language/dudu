@@ -2,6 +2,7 @@
 #include "dudu/lsp/language_server_definition.hpp"
 #include "dudu/lsp/language_server_diagnostics.hpp"
 #include "dudu/lsp/language_server_hover.hpp"
+#include "dudu/lsp/language_server_inlay_hints.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
@@ -241,6 +242,31 @@ void test_lsp_completion_resolve_preserves_ast_docs() {
     const std::string resolved = dudu::completion_resolve_json(&params);
     assert(resolved.find("Existing AST docs.") != std::string::npos);
     assert(resolved.find("def helper()") != std::string::npos);
+}
+
+void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
+    const dudu::Document doc{.uri = "file:///inlay_hints.dd",
+                             .path = "inlay_hints.dd",
+                             .text = "class Counter:\n"
+                                     "    value: i32\n"
+                                     "\n"
+                                     "    def bump(self, amount: i32) -> &Self:\n"
+                                     "        next = self.value + amount\n"
+                                     "        self.value = next\n"
+                                     "        return self\n"
+                                     "\n"
+                                     "def total(values: list[i32]) -> i32:\n"
+                                     "    sum = 0\n"
+                                     "    for value in values:\n"
+                                     "        sum += value\n"
+                                     "    return sum\n"};
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"label\":\": &Self\"") != std::string::npos);
+    assert(hints.find("\"line\":3") != std::string::npos);
+    assert(hints.find("\"label\":\": i32\"") != std::string::npos);
+    assert(hints.find("\"line\":4") != std::string::npos);
+    assert(hints.find("\"line\":9") != std::string::npos);
+    assert(hints.find("\"line\":10") != std::string::npos);
 }
 
 void test_lsp_signature_help_uses_visible_imported_functions() {
@@ -553,6 +579,7 @@ int main() {
         test_lsp_completion_includes_imported_ast_docs();
         test_lsp_member_completion_includes_ast_docs();
         test_lsp_completion_resolve_preserves_ast_docs();
+        test_lsp_inlay_hints_show_inferred_types_and_receiver();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_module_completion_uses_loaded_module_units();

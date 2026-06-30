@@ -9,6 +9,7 @@
 #include "dudu/lsp/language_server_definition.hpp"
 #include "dudu/lsp/language_server_diagnostics.hpp"
 #include "dudu/lsp/language_server_hover.hpp"
+#include "dudu/lsp/language_server_inlay_hints.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
@@ -201,6 +202,10 @@ class LanguageServer {
                 if (id != nullptr) {
                     respond(*id, hover_result(params));
                 }
+            } else if (method == "textDocument/inlayHint") {
+                if (id != nullptr) {
+                    respond(*id, inlay_hint_result(params));
+                }
             } else if (method == "textDocument/completion") {
                 if (id != nullptr) {
                     respond(*id, completion_result(params));
@@ -247,6 +252,7 @@ class LanguageServer {
                "\"operator\"],\"tokenModifiers\":[\"declaration\",\"definition\",\"readonly\","
                "\"static\",\"native\",\"unresolved\"]},\"full\":true},"
                "\"hoverProvider\":true,"
+               "\"inlayHintProvider\":{\"resolveProvider\":false},"
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
                "\"workspaceSymbolProvider\":true"
@@ -417,6 +423,14 @@ class LanguageServer {
 
     std::string completion_result(const Json* params) const {
         return completion_json(document_from_params(params), params);
+    }
+
+    std::string inlay_hint_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "[]";
+        }
+        return inlay_hints_json(*doc, params);
     }
 
     std::string completion_resolve_result(const Json* params) const {

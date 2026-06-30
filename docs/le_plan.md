@@ -2231,6 +2231,13 @@ push. They are not release packaging work.
    JSON-RPC plumbing and use standard language-client integration so capabilities
    such as semantic tokens are not missed by the client layer.
 
+   Inlay hints are part of the same editor-quality target. The immediate hint
+   set is inferred local binding types, inferred loop binding types, and the
+   implicit receiver type behind bare `self`; positional call parameter hints
+   are the next useful addition. Hints must be served through standard LSP
+   `textDocument/inlayHint` from AST/sema facts, not through VS Code-only
+   decoration logic.
+
    Status: unaliased nested Dudu module imports such as
    `import vendor.helper` now resolve through their full dotted path for hover,
    go-to-definition, and member completion, matching the compiler's
