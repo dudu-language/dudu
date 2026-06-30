@@ -1186,13 +1186,18 @@ push. They are not release packaging work.
    of that hook can flow into an API requiring `Tensor[i32][dyn, 2]` without
    restating the local type. A reusable matrix mask now proves `tensor[mask]`
    element gather plus scalar and tensor-valued masked scatter through ordinary
-   overloaded index hooks. Reusable tensor views now own non-allocating
-   behavior such as fill, sum, mean, and max; owning view materialization still
-   uses an explicit helper because methods returning the owning tensor expose
-   the current C++ incomplete-type emission boundary. Continue with optional
-   backend BLAS probes when local tooling is available, then out-of-line method
-   emission where needed, repeated-index scatter policy, composed
-   tensor-expression shape propagation, and explicit proof/conversion
+   overloaded index hooks. Runtime-sized mask selections can now compose
+   through later generic tensor APIs such as matmul-style helpers, producing
+   results like `Tensor[i32][dyn, 3]` without local left-side shape
+   annotations. Codegen-side local type inference preserves explicit generic
+   function return substitutions, so generic tensor locals inferred from
+   `zeros[i32](...)` still lower scalar `@operator("[]=")` writes through the
+   write hook. Reusable tensor views now own non-allocating behavior such as
+   fill, sum, mean, and max; owning view materialization still uses an explicit
+   helper because methods returning the owning tensor expose the current C++
+   incomplete-type emission boundary. Continue with optional backend BLAS
+   probes when local tooling is available, then out-of-line method emission
+   where needed, repeated-index scatter policy, and explicit proof/conversion
    diagnostics for `dyn` values flowing into concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width

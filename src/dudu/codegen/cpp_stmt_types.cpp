@@ -131,6 +131,17 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
                 return signature_return_type_ref(signature);
             }
         }
+        if (symbols != nullptr && expr.kind == ExprKind::TemplateCall) {
+            if (const auto decl = symbols->function_decls.find(callee.name);
+                decl != symbols->function_decls.end() && !decl->second->generic_params.empty()) {
+                const std::vector<TypeRef> type_args = template_type_refs(expr);
+                if (type_args.size() == decl->second->generic_params.size()) {
+                    const FunctionSignature signature =
+                        instantiate_generic_signature(*decl->second, type_args);
+                    return signature_return_type_ref(signature);
+                }
+            }
+        }
         return infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {

@@ -494,13 +494,21 @@ Status:
   arguments and shaped metadata through RHS inference, so
   `values = zeros[f32](4, 2)` can feed `values[mask, :]` and surface
   `Tensor[f32][dyn, 2]` in editor type information.
+- Done: composed shape facts propagate through runtime-sized mask selections
+  and later generic tensor APIs. For example, `values[mask, :]` can flow into a
+  generic matmul-style helper and produce `Tensor[i32][dyn, 3]` without a local
+  left-side shape annotation.
+- Done: codegen-side local type inference preserves explicit generic function
+  return substitutions, so generic tensor locals inferred from calls such as
+  `zeros[i32](...)` can still lower scalar `@operator("[]=")` writes through
+  the write hook instead of falling back to read-accessor assignment.
 - Done: reusable tensor views now own common non-allocating behavior such as
   fill, sum, mean, and max. Owning view materialization remains an explicit
   helper call because methods returning the owning tensor currently run into
   the compiler's C++ incomplete-type emission boundary.
-- Remaining: broader propagation of shape facts through composed tensor
-  expressions, plus out-of-line method emission if libraries need mutually
-  referential value/view methods returning complete owning types.
+- Remaining: out-of-line method emission if libraries need mutually referential
+  value/view methods returning complete owning types, plus broader shape
+  propagation only as future examples demand it.
 
 ### 2. CPU Tensor Library
 
@@ -544,6 +552,10 @@ Status:
 - `tests/fixtures/tensor_dogfood/mask_rows_main.dd` validates reusable row-mask
   read and explicit read/modify/write masked scatter. The separate generic
   `mask_indexing.dd` fixture validates `dyn` shaped flow.
+- `tests/fixtures/tensor_dogfood/shape_mask_composition.dd` validates `dyn`
+  mask-selection shape propagation through a later generic matmul-style helper
+  and covers scalar `[]=` writes on a generic tensor local inferred from an
+  explicit generic function call.
 - `tests/fixtures/tensor_dogfood/mask_elements_main.dd` validates reusable
   element-mask gather, scalar masked fill, and tensor-valued masked scatter.
 - `tests/fixtures/tensor_dogfood/activation_metrics_main.dd` validates broader
