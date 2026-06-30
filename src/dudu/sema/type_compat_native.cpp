@@ -44,6 +44,23 @@ bool native_type_head_ends_with_name(const TypeRef& type, const std::string& nam
     return spelling == name || spelling.ends_with("." + name) || spelling.ends_with("::" + name);
 }
 
+bool native_type_head_is_qualified(const TypeRef& type) {
+    const std::string spelling = native_type_head_spelling(type);
+    return spelling.find('.') != std::string::npos || spelling.find("::") != std::string::npos;
+}
+
+bool native_named_type_tail_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    if ((expected.kind != TypeKind::Named && expected.kind != TypeKind::Qualified) ||
+        (got.kind != TypeKind::Named && got.kind != TypeKind::Qualified)) {
+        return false;
+    }
+    if (!native_type_head_is_qualified(expected) && !native_type_head_is_qualified(got)) {
+        return false;
+    }
+    const std::string expected_tail = native_type_tail_name(expected);
+    return !expected_tail.empty() && expected_tail == native_type_tail_name(got);
+}
+
 TypeRef normalize_tuple_element(const TypeRef& type) {
     if (type.kind == TypeKind::Reference && type.children.size() == 1) {
         TypeRef out = type;
@@ -205,7 +222,8 @@ bool native_associated_type_assignment_allowed(const TypeRef& expected, const Ty
     const TypeRef normalized_expected = normalize_cpp_type_artifacts_ref(expected);
     const TypeRef normalized_got = normalize_cpp_type_artifacts_ref(got);
     if (type_ref_equivalent(normalized_expected, normalized_got) ||
-        structural_type_assignment_allowed(normalized_expected, normalized_got)) {
+        structural_type_assignment_allowed(normalized_expected, normalized_got) ||
+        native_named_type_tail_assignment_allowed(normalized_expected, normalized_got)) {
         return true;
     }
 

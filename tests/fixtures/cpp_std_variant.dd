@@ -1,5 +1,5 @@
-import cpp "string" as std
-import cpp "variant" as std
+from cpp import string
+from cpp import variant
 
 
 def main() -> i32:

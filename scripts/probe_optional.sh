@@ -425,7 +425,20 @@ probe_openblas() {
     local status=$?
     set -e
     if [[ "$status" -ne 42 ]]; then
-        echo "openblas probe returned $status, expected 42" >&2
+        echo "openblas ddot probe returned $status, expected 42" >&2
+        exit 1
+    fi
+
+    cpp="$repo_root/build/probe_openblas_sgemm.cpp"
+    bin="$repo_root/build/probe_openblas_sgemm"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/openblas_sgemm.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs openblas) -o "$bin"
+    set +e
+    "$bin"
+    status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "openblas sgemm probe returned $status, expected 42" >&2
         exit 1
     fi
     echo "ok openblas"
@@ -729,37 +742,60 @@ probe_ffmpeg() {
     echo "ok ffmpeg"
 }
 
-probe_glm
-probe_opencv
-probe_sqlite
-probe_lua
-probe_zlib
-probe_lzma
-probe_uuid
-probe_curl
-probe_libpng
-probe_libjpeg
-probe_openssl
-probe_libevent
-probe_libxml2
-probe_expat
-probe_cairo
-probe_freetype
-probe_fmt
-probe_eigen
-probe_openblas
-probe_spdlog
-probe_stb
-probe_x11
-probe_boost_filesystem
-probe_imgui
-probe_wayland
-probe_threading
-probe_posix_mmap
-probe_posix_threads
-probe_raylib
-probe_sdl3
-probe_glfw
-probe_opencl
-probe_vulkan
-probe_ffmpeg
+run_probe() {
+    case "$1" in
+        glm) probe_glm ;;
+        opencv | opencv4) probe_opencv ;;
+        sqlite | sqlite3) probe_sqlite ;;
+        lua) probe_lua ;;
+        zlib) probe_zlib ;;
+        lzma | liblzma) probe_lzma ;;
+        uuid) probe_uuid ;;
+        curl | libcurl) probe_curl ;;
+        libpng | png) probe_libpng ;;
+        libjpeg | jpeg) probe_libjpeg ;;
+        openssl) probe_openssl ;;
+        libevent) probe_libevent ;;
+        libxml2) probe_libxml2 ;;
+        expat) probe_expat ;;
+        cairo) probe_cairo ;;
+        freetype) probe_freetype ;;
+        fmt) probe_fmt ;;
+        eigen | eigen3) probe_eigen ;;
+        openblas | openblas_tensor_matmul) probe_openblas ;;
+        spdlog) probe_spdlog ;;
+        stb) probe_stb ;;
+        x11) probe_x11 ;;
+        boost_filesystem | boost-filesystem) probe_boost_filesystem ;;
+        imgui) probe_imgui ;;
+        wayland) probe_wayland ;;
+        threading) probe_threading ;;
+        posix_mmap | posix-mmap) probe_posix_mmap ;;
+        posix_threads | posix-threads) probe_posix_threads ;;
+        raylib) probe_raylib ;;
+        sdl3) probe_sdl3 ;;
+        glfw | glfw3) probe_glfw ;;
+        opencl) probe_opencl ;;
+        vulkan) probe_vulkan ;;
+        ffmpeg) probe_ffmpeg ;;
+        *)
+            echo "unknown optional probe: $1" >&2
+            exit 2
+            ;;
+    esac
+}
+
+if [[ "$#" -gt 0 ]]; then
+    for probe in "$@"; do
+        run_probe "$probe"
+    done
+    exit 0
+fi
+
+for probe in \
+    glm opencv sqlite lua zlib lzma uuid curl libpng libjpeg openssl \
+    libevent libxml2 expat cairo freetype fmt eigen openblas spdlog stb \
+    x11 boost_filesystem imgui wayland threading posix_mmap posix_threads \
+    raylib sdl3 glfw opencl vulkan ffmpeg; do
+    run_probe "$probe"
+done

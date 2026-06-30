@@ -74,5 +74,7 @@ class ProjectIndex {
 };
 
 bool source_stamp_file_current(const std::filesystem::path& path);
+bool source_stamp_file_current_for_entry(const std::filesystem::path& path,
+                                         const std::filesystem::path& entry_path);
 
 } // namespace dudu

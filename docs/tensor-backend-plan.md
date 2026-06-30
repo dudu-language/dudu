@@ -382,6 +382,20 @@ Verify the current compiler can express the library surface we need:
 Add small compiler fixtures for each missing case before writing the tensor
 library.
 
+Status:
+
+- Done: Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` write
+  hooks lower through named methods instead of pretending to be C++ `operator[]`.
+- Done: multi-scalar indexing works for library receivers, including member
+  receivers such as `box.tensor[1, 2]`.
+- Done: indexed assignment hooks accept multiple scalar indices plus the
+  assigned value.
+- Done: operator declarations now validate `[]` / `[]=` arity directly.
+- Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
+  `tests/fixtures/cpu_tensor_matmul.dd`.
+- Remaining: slice objects passed to library hooks, `.vindex[...]`,
+  `.oindex[...]`, masks, scatter, and missing-hook diagnostics for fancy forms.
+
 ### 2. CPU Tensor Library
 
 Add a small Dudu CPU tensor library in examples or a dogfood repo:
@@ -399,6 +413,17 @@ The BLAS call should be a normal imported C function. If a small adapter is
 needed for enum constants or CBLAS layout values, keep it as a user-library
 adapter, not a compiler patch.
 
+Status:
+
+- First compiler-resident dogfood fixture exists in
+  `tests/fixtures/cpu_tensor_matmul.dd`.
+- It defines a small Dudu `Tensor` class with row-major `list[f32]` storage,
+  `filled`, `zeros`, scalar indexing, indexed assignment, elementwise add, and
+  pure Dudu matmul.
+- Remaining: move this from fixture-only proof into a small reusable example
+  module/repo, add row/column/patch view objects once library slice hooks are
+  supported, and add activation/map helpers.
+
 ### 3. Optional OpenBLAS Probe
 
 Add a non-default optional probe:
@@ -415,6 +440,17 @@ It should:
 - fail clearly when OpenBLAS is not installed
 
 This belongs in the compatibility matrix, not the always-on unit tests.
+
+Status:
+
+- Done: `tests/fixtures/openblas_sgemm.dd` validates CBLAS `sgemm` through
+  normal C header interop, alongside the existing `openblas_ddot` probe.
+- Done: `scripts/probe_optional.sh` runs both ddot and sgemm when OpenBLAS is
+  discoverable through `pkg-config`.
+- Done: native enum/type compatibility now handles the qualified CBLAS enum
+  spellings without OpenBLAS-specific compiler cases.
+- Remaining: wrap the BLAS call from the reusable Dudu tensor example and
+  compare its result against pure Dudu matmul in the same dogfood path.
 
 ### 4. GPU Tensor Backend
 

@@ -414,6 +414,28 @@ bool source_stamp_file_current(const std::filesystem::path& path) {
     return true;
 }
 
+bool source_stamp_file_current_for_entry(const std::filesystem::path& path,
+                                         const std::filesystem::path& entry_path) {
+    const std::vector<SourceStamp> stamps = parse_source_stamp_file(path);
+    if (stamps.empty()) {
+        return false;
+    }
+    const std::string entry_key = path_key(entry_path);
+    bool found_entry = false;
+    for (const SourceStamp& stamp : stamps) {
+        if (stamp.source_key.empty() || stamp.mtime.empty()) {
+            return false;
+        }
+        if (stamp.source_key == entry_key) {
+            found_entry = true;
+        }
+        if (mtime_stamp(file_mtime(std::filesystem::path(stamp.source_key))) != stamp.mtime) {
+            return false;
+        }
+    }
+    return found_entry;
+}
+
 const ModuleAst* ProjectIndex::unit_for_path(const std::filesystem::path& path) const {
     const auto found = source_path_to_index_.find(path_key(path));
     if (found == source_path_to_index_.end()) {

@@ -1,4 +1,4 @@
-import cpp "memory" as std
+from cpp import memory
 
 
 class Node:

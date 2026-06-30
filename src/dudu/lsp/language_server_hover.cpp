@@ -195,9 +195,9 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
         if (!target) {
             return std::nullopt;
         }
-        std::string markdown =
-            fenced_code("cpp", "native type = " + native_type_alias_type_text(type)) +
-            "\n\nresolves to `" + "native class " + target->name + "`";
+        const std::string target_display = native_type_alias_type_text(type);
+        std::string markdown = fenced_code("cpp", "native type = " + target_display) +
+                               "\n\nresolves to `" + "native class " + target_display + "`";
         const std::string identity = native_symbol_identity_key(type.identity);
         if (!identity.empty()) {
             if (const std::optional<std::filesystem::path> path = native_identity_path(identity)) {

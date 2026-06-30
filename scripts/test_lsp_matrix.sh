@@ -387,7 +387,7 @@ typedef enum MatrixNativeMode {
 /** Adds two matrix fixture integers. */ int matrix_native_add(int a, int b);
 """
     )
-    native_source = """import c "native_bridge.h" as nb
+    native_source = """from c.path import native_bridge.h as nb
 
 def main() -> i32:
     point: nb.MatrixNativePoint
@@ -405,10 +405,10 @@ struct DuduNeedsContext {
 };
 """
     )
-    native_context_source = """import c "./needs_c_context.h" as native
+    native_context_source = """from c.path import ./needs_c_context.h as native
 
 def main() -> i32:
-    value: struct DuduNeedsContext
+    value: native.DuduNeedsContext
     value.count = 7
     value.state = 35
     return i32(value.count) + value.state
@@ -446,7 +446,7 @@ class OtherWidget {
 };
 """
     )
-    native_cpp_source = """import cpp "native_widget.hpp"
+    native_cpp_source = """from cpp.path import native_widget.hpp
 
 def main() -> i32:
     widget: MatrixWidget = MatrixWidget(5)
@@ -454,14 +454,14 @@ def main() -> i32:
     return widget.scaled(2)
 """
     (tmp / "native_cpp_user.dd").write_text(native_cpp_source)
-    native_cpp_same_source = """import cpp "native_widget.hpp"
+    native_cpp_same_source = """from cpp.path import native_widget.hpp
 
 def same() -> i32:
     widget: MatrixWidget
     return widget.scaled(3) + widget.value
 """
     (tmp / "native_cpp_same.dd").write_text(native_cpp_same_source)
-    native_cpp_other_source = """import cpp "native_other_widget.hpp"
+    native_cpp_other_source = """from cpp.path import native_other_widget.hpp
 
 def other() -> i32:
     widget: OtherWidget
@@ -485,13 +485,13 @@ namespace matrix_space {
 }
 """
     )
-    native_namespace_source = """import cpp "native_namespace.hpp"
+    native_namespace_source = """from cpp.path import native_namespace.hpp
 
 def main() -> i32:
     return matrix_space.namespaced_add(2, 3) + matrix_space.identity[i32](4)
 """
     (tmp / "native_namespace_user.dd").write_text(native_namespace_source)
-    native_namespace_same_source = """import cpp "native_namespace.hpp"
+    native_namespace_same_source = """from cpp.path import native_namespace.hpp
 
 def same_namespace() -> i32:
     return matrix_space.namespaced_add(4, 5)
@@ -507,7 +507,7 @@ namespace matrix_space {
 }
 """
     )
-    native_namespace_other_source = """import cpp "native_namespace_other.hpp"
+    native_namespace_other_source = """from cpp.path import native_namespace_other.hpp
 
 def other_namespace() -> i32:
     return matrix_space.namespaced_add(6, 7)
@@ -717,7 +717,7 @@ def main() -> i32:
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
-        request(128, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "\"native_bridge.h\"", add=1)}),
+        request(128, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "native_bridge.h")}),
         request(129, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, " as nb", add=len(" as "))}),
         request(121, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(122, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
@@ -1172,7 +1172,7 @@ def main() -> i32:
     if other_x_definition["range"]["start"]["line"] != vec2_x_field["line"]:
         raise AssertionError(f"other.x member definition jumped to wrong line: {other_x_definition!r}")
     self_root_hover = response(messages, 150)["contents"]["value"]
-    if "self: Vec2" not in self_root_hover:
+    if "self: &Vec2" not in self_root_hover:
         raise AssertionError(f"self root hover did not show local type: {self_root_hover!r}")
     other_root_hover = response(messages, 151)["contents"]["value"]
     if "other: Vec2" not in other_root_hover:
@@ -1411,7 +1411,7 @@ def main() -> i32:
     native_constructor_signature = response(messages, 81)
     native_constructor_label = native_constructor_signature["signatures"][0]["label"]
     native_constructor_docs = native_constructor_signature["signatures"][0]["documentation"]["value"]
-    if "MatrixWidget(arg0: i32)" not in native_constructor_label:
+    if "MatrixWidget(seed: i32)" not in native_constructor_label:
         raise AssertionError(f"missing native constructor signature: {native_constructor_signature!r}")
     if "Builds a matrix widget from a seed." not in native_constructor_docs:
         raise AssertionError(f"missing native constructor docs: {native_constructor_signature!r}")
@@ -1421,7 +1421,7 @@ def main() -> i32:
     if native_constructor_definition["range"]["start"]["line"] != 6:
         raise AssertionError(f"native constructor definition jumped to wrong line: {native_constructor_definition!r}")
     native_constructor_hover = response(messages, 83)["contents"]["value"]
-    if "MatrixWidget(arg0: i32)" not in native_constructor_hover:
+    if "MatrixWidget(seed: i32)" not in native_constructor_hover:
         raise AssertionError(f"missing native constructor hover signature: {native_constructor_hover!r}")
     if "Builds a matrix widget from a seed." not in native_constructor_hover:
         raise AssertionError(f"missing native constructor hover docs: {native_constructor_hover!r}")

@@ -1,4 +1,4 @@
-import cpp "variant" as std
+from cpp import variant
 
 
 def main() -> i32:

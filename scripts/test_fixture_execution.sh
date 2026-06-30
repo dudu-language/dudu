@@ -72,6 +72,7 @@ compile_and_expect member_full_matrix_slice 42
 compile_and_expect member_column_slice 39
 compile_and_expect member_channel_slice 45
 compile_and_expect member_trailing_range_slice 210
+compile_and_expect cpu_tensor_matmul 42
 compile_and_expect compound_assignment 46
 compile_and_expect bitwise_ops 42
 compile_and_expect binary_packet_parser 42
@@ -86,6 +87,7 @@ compile_and_expect list_append_named 42
 compile_and_expect value_pointer_containers 42
 compile_and_expect class_methods 42
 compile_and_expect tensor_index_set_member_hook 42
+compile_and_expect tensor_multi_index_hook 42
 compile_and_expect c_direct_lowercase_macro 42
 compile_and_expect c_lowercase_macro 42
 compile_and_expect c_variadic_macro 42

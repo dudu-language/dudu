@@ -1,16 +1,16 @@
-import cpp "algorithm" as std
-import cpp "array" as std
-import cpp "functional" as std
-import cpp "map" as std
-import cpp "memory" as std
-import cpp "mutex" as std
-import cpp "numeric" as std
-import cpp "optional" as std
-import cpp "span" as std
-import cpp "string" as std
-import cpp "string_view" as std
-import cpp "unordered_set" as std
-import cpp "vector" as std
+from cpp import algorithm
+from cpp import array
+from cpp import functional
+from cpp import map
+from cpp import memory
+from cpp import mutex
+from cpp import numeric
+from cpp import optional
+from cpp import span
+from cpp import string
+from cpp import string_view
+from cpp import unordered_set
+from cpp import vector
 
 
 class Counter:

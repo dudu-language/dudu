@@ -278,8 +278,16 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 
 void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int cursor_line) {
     for (const ParamDecl& param : fn.params) {
-        if (param.name == "self" && !scope.current_class.empty() && !has_type_ref(param.type_ref)) {
-            lsp_bind_local(scope, param.name, named_type_ref(scope.current_class, param.location));
+        if (param.name == "self" && !scope.current_class.empty()) {
+            if (!has_type_ref(param.type_ref)) {
+                lsp_bind_local(scope, param.name,
+                               named_type_ref(scope.current_class, param.location));
+                continue;
+            }
+            lsp_bind_local(scope, param.name,
+                           substitute_type_ref(param.type_ref,
+                                               {{"Self", named_type_ref(scope.current_class,
+                                                                        param.location)}}));
             continue;
         }
         lsp_bind_local(scope, param.name, param.type_ref);
@@ -369,6 +377,12 @@ std::set<std::string> type_candidate_names(const TypeRef& type) {
     std::set<std::string> out;
     if (!has_type_ref(type)) {
         return out;
+    }
+    if (const auto child =
+            unary_type_child_ref(type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const,
+                                        TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
+                                        TypeKind::Shared, TypeKind::Device})) {
+        out.merge(type_candidate_names(*child));
     }
     if (const std::string head = type_ref_head_name(type); !head.empty()) {
         out.insert(head);

@@ -139,6 +139,10 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
 } // namespace
 
 bool native_template_placeholder(const std::string& type) {
+    const size_t qualifier = type.find_last_of(".:");
+    if (qualifier != std::string::npos && qualifier + 1 < type.size()) {
+        return native_template_placeholder(type.substr(qualifier + 1));
+    }
     static const std::set<std::string> simple = {
         "T", "U", "V", "A", "B", "L", "Q", "Key", "Value", "__i", "__j", "_Int", "_Index", "_Nm"};
     if (simple.contains(type)) {

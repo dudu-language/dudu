@@ -79,6 +79,16 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::SetLiteral:
         return named_type_ref("set", type_location);
     case ExprKind::Name:
+        if (expr.name == "class") {
+            if (!scope.current_class.empty()) {
+                return named_type_ref(scope.current_class, type_location);
+            }
+            if (location != nullptr) {
+                throw CompileError(*location, "class static access outside class",
+                                   "dudu.sema.static_class", expr.name);
+            }
+            return {};
+        }
         if (scope.symbols.generic_params.contains(expr.name)) {
             if (location != nullptr) {
                 throw CompileError(*location, "type parameter used as a value: " + expr.name,
@@ -102,6 +112,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto native = scope.symbols.native_function_signatures.find(expr.name);
             native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {
             return function_type_ref(native->second.front(), type_location);
+        }
+        if (scope.symbols.classes.contains(expr.name)) {
+            return named_type_ref(expr.name, type_location);
         }
         if (is_dudu_all_caps(expr.name)) {
             return named_type_ref("i32", type_location);

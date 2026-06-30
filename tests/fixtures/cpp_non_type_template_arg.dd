@@ -1,4 +1,4 @@
-import cpp "array" as std
+from cpp import array
 
 
 def main() -> i32:

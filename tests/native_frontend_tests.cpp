@@ -726,6 +726,8 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
 void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     assert(dudu::dudu_type("unsigned char[16]") == "array[u8][16]");
     assert(dudu::dudu_type("int[2][3]") == "array[i32][2, 3]");
+    assert(dudu::dudu_type("enum NativeMode") == "NativeMode");
+    assert(dudu::dudu_type("const enum NativeMode") == "const[NativeMode]");
 
     const std::filesystem::path source_dir = root / "build" / "native-fixed-array-typedef";
     const std::filesystem::path header = source_dir / "fixed_array_alias.hpp";

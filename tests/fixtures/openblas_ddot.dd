@@ -1,4 +1,4 @@
-import c "cblas.h" as blas
+from c import cblas.h as blas
 
 
 def main() -> i32:

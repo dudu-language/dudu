@@ -1,4 +1,4 @@
-import cpp "cmath" as std
+from cpp import cmath
 
 
 def main() -> i32:

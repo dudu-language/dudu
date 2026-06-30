@@ -1,0 +1,84 @@
+class Tensor:
+    rows: i32
+    cols: i32
+    data: list[f32]
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> f32:
+        return self.data[(row * self.cols) + col]
+
+    @operator("[]=")
+    def set_at(self, row: i32, col: i32, value: f32):
+        self.data[(row * self.cols) + col] = value
+
+
+def zeros(rows: i32, cols: i32) -> Tensor:
+    data: list[f32] = []
+    i = 0
+    total = rows * cols
+    while i < total:
+        data.append(0.0)
+        i += 1
+    return Tensor(rows, cols, data)
+
+
+def filled(rows: i32, cols: i32, value: f32) -> Tensor:
+    data: list[f32] = []
+    i = 0
+    total = rows * cols
+    while i < total:
+        data.append(value)
+        i += 1
+    return Tensor(rows, cols, data)
+
+
+def add(a: Tensor, b: Tensor) -> Tensor:
+    out = zeros(a.rows, a.cols)
+    row = 0
+    while row < a.rows:
+        col = 0
+        while col < a.cols:
+            out[row, col] = a[row, col] + b[row, col]
+            col += 1
+        row += 1
+    return out
+
+
+def matmul(a: Tensor, b: Tensor) -> Tensor:
+    out = zeros(a.rows, b.cols)
+    row = 0
+    while row < a.rows:
+        col = 0
+        while col < b.cols:
+            acc: f32 = 0.0
+            k = 0
+            while k < a.cols:
+                acc += a[row, k] * b[k, col]
+                k += 1
+            out[row, col] = acc
+            col += 1
+        row += 1
+    return out
+
+
+def main() -> i32:
+    a = zeros(2, 3)
+    a[0, 0] = 1.0
+    a[0, 1] = 2.0
+    a[0, 2] = 3.0
+    a[1, 0] = 4.0
+    a[1, 1] = 5.0
+    a[1, 2] = 6.0
+
+    b = zeros(3, 2)
+    b[0, 0] = 7.0
+    b[0, 1] = 8.0
+    b[1, 0] = 9.0
+    b[1, 1] = 10.0
+    b[2, 0] = 11.0
+    b[2, 1] = 12.0
+
+    c = matmul(a, b)
+    bias = filled(2, 2, 1.0)
+    d = add(c, bias)
+    return i32(d[0, 0] + d[1, 1]) - 172

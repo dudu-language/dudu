@@ -288,7 +288,7 @@ std::string dudu_type(std::string type) {
             type = trim_copy(type.substr(0, type.size() - 6));
         }
     }
-    for (const char* prefix : {"class ", "struct ", "union "}) {
+    for (const char* prefix : {"class ", "struct ", "union ", "enum "}) {
         if (starts_with(type, prefix)) {
             type = trim_copy(type.substr(std::string_view(prefix).size()));
             break;

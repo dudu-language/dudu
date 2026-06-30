@@ -60,8 +60,8 @@ organize_edit = organize_imports["edit"]["changes"][native_uri][0]
 assert organize_edit["range"]["start"]["line"] == 0
 assert organize_edit["range"]["end"]["line"] == 3
 assert organize_edit["newText"].splitlines() == [
-    'import c "native_headers/simple_c.h" as dudu_native',
-    'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+    "from c.path import native_headers/simple_c.h as dudu_native",
+    "from cpp.path import native_headers/simple_cpp.hpp as native_cpp",
     "import lsp_workspace_helper as helper",
 ]
 

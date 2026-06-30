@@ -1,4 +1,4 @@
-import cpp "algorithm" as std
+from cpp import algorithm
 
 
 def less_i32(left: i32, right: i32) -> bool:

@@ -1,4 +1,4 @@
-import cpp "filesystem" as std
+from cpp import filesystem
 
 
 def main() -> i32:

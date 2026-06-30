@@ -412,6 +412,9 @@ TypeRef native_value_type_ref(const NativeValueDecl& value) {
 }
 
 std::string native_type_alias_type_text(const NativeTypeDecl& type) {
+    if (!type.native_spelling.empty()) {
+        return type.native_spelling;
+    }
     return type_ref_text(native_type_alias_type_ref(type));
 }
 

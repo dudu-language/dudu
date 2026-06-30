@@ -434,7 +434,7 @@ int run_cli(int argc, char** argv) {
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
         const std::filesystem::path stamp_file = *options.output / ".dudu_sources.stamp";
         const std::filesystem::path artifact_manifest = *options.output / ".dudu_artifacts.stamp";
-        if (source_stamp_file_current(stamp_file) &&
+        if (source_stamp_file_current_for_entry(stamp_file, options.input) &&
             artifact_manifest_current(*options.output, artifact_manifest)) {
             print_project_step(project_output, "dirty", "0 modules");
             print_project_step(project_output, "analyze", "0 modules");
@@ -473,7 +473,7 @@ int run_cli(int argc, char** argv) {
         const std::filesystem::path stamp_file = *options.output / ".dudu_test_sources.stamp";
         const std::filesystem::path artifact_manifest =
             *options.output / ".dudu_test_artifacts.stamp";
-        if (source_stamp_file_current(stamp_file) &&
+        if (source_stamp_file_current_for_entry(stamp_file, options.input) &&
             artifact_manifest_current(*options.output, artifact_manifest)) {
             print_project_step(project_output, "dirty", "0 modules");
             print_project_step(project_output, "analyze", "0 modules");

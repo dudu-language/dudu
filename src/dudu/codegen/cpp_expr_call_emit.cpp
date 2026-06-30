@@ -301,6 +301,38 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
            join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
 }
 
+std::optional<std::string>
+lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
+                      const CppLocalContext& locals,
+                      const std::map<std::string, TypeRef>& local_type_refs, const Symbols* symbols,
+                      const CppEmitOptions& options) {
+    if (symbols == nullptr || expr.kind != ExprKind::Index || expr.children.size() != 2) {
+        return std::nullopt;
+    }
+    const Expr& receiver = expr.children[0];
+    TypeRef receiver_type;
+    if (receiver.kind == ExprKind::Name) {
+        receiver_type = local_type_ref(local_type_refs, receiver.name, receiver.location);
+    } else {
+        receiver_type = member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver, {},
+                                             locals.current_class);
+    }
+    if (!has_type_ref(receiver_type)) {
+        return std::nullopt;
+    }
+    const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]");
+    if (!method) {
+        return std::nullopt;
+    }
+    const std::string lowered_receiver =
+        lower_expr(receiver, aliases, locals, local_type_refs, symbols, options);
+    const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
+    return lowered_receiver + access + *method + "(" +
+           join_lowered_exprs(index_arg_exprs(expr.children[1]), aliases, locals, local_type_refs,
+                              ", ", symbols, options) +
+           ")";
+}
+
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::vector<std::string>& aliases,
                                                    const CppLocalContext& locals,

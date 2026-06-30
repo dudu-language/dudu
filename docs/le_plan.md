@@ -1134,10 +1134,11 @@ push. They are not release packaging work.
    `array[T][Rows, Cols]` and member-backed fixed arrays such as
    `self.items[:, :]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
-   assignment hooks work for library-style tensor wrappers, including member
-   receiver assignments such as `box.tensor[i] = value`, and indexed member
-   paths such as `self.values[i]` type-check. One-dimensional fixed-array step
-   slices such as `values[start:end:step]` produce `strided_span[T]` views.
+   assignment hooks work for library-style tensor wrappers, including
+   multi-scalar indices, member receivers such as `box.tensor[1, 2]`, member
+   receiver assignments, and indexed member paths such as `self.values[i]`.
+   One-dimensional fixed-array step slices such as `values[start:end:step]`
+   produce `strided_span[T]` views.
    This is enough to play with fixed arrays, row/column/full-storage views,
    channel views, basic step slices, and library indexing hooks, but it is not
    full NumPy-style indexing yet. Non-contiguous multidimensional patch
@@ -1156,8 +1157,13 @@ push. They are not release packaging work.
    transformer/MLP-shaped examples. Dudu should infer tensor shapes from the
    right side when possible and use explicit shape annotations mainly for API
    boundaries or shape assertions. Do not require left-side dimensions just to
-   make local numeric code type-check. Start with CPU/OpenBLAS, and only then
-   add OpenCL or ROCm probes when local tooling is available.
+   make local numeric code type-check. The first CPU fixture now proves a small
+   Dudu `Tensor` with scalar indexing, assignment, elementwise add, and pure
+   Dudu matmul; the optional OpenBLAS fixture now proves CBLAS `sgemm` through
+   normal C interop. Continue by moving the tensor proof into reusable dogfood,
+   adding library slice hooks/views, comparing BLAS matmul against the pure Dudu
+   path, and only then adding OpenCL or ROCm probes when local tooling is
+   available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

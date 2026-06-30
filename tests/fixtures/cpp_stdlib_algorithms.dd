@@ -1,11 +1,11 @@
-import cpp "algorithm" as std
-import cpp "deque" as std
-import cpp "numeric" as std
-import cpp "queue" as std
-import cpp "set" as std
-import cpp "string" as std
-import cpp "tuple" as std
-import cpp "vector" as std
+from cpp import algorithm
+from cpp import deque
+from cpp import numeric
+from cpp import queue
+from cpp import set
+from cpp import string
+from cpp import tuple
+from cpp import vector
 
 
 def main() -> i32:

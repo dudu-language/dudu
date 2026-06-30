@@ -1,4 +1,4 @@
-import cpp "cpp_swizzle.hpp" as swiz
+from cpp.path import cpp_swizzle.hpp
 
 
 def main() -> i32:

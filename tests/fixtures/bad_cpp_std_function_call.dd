@@ -1,4 +1,4 @@
-import cpp "functional" as std
+from cpp import functional
 
 
 def add_one(value: i32) -> i32:

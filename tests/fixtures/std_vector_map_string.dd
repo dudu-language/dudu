@@ -1,6 +1,6 @@
-import cpp "string" as std
-import cpp "unordered_map" as std
-import cpp "vector" as std
+from cpp import string
+from cpp import unordered_map
+from cpp import vector
 
 
 def main() -> i32:

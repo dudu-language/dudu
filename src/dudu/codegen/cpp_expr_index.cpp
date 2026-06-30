@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
+#include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_slices.hpp"
 
 #include <optional>
@@ -35,6 +36,11 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                              const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.children.size() != 2) {
         return {};
+    }
+
+    if (const std::optional<std::string> hook =
+            lower_index_read_hook(expr, aliases, locals, local_type_refs, symbols, options)) {
+        return *hook;
     }
 
     std::string out =

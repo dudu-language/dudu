@@ -1,4 +1,4 @@
-import cpp "chrono" as std
+from cpp import chrono
 
 
 def main() -> i32:

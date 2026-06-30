@@ -1,5 +1,5 @@
 import c "sqlite3.h" as sqlite
-import cpp "string" as std
+from cpp import string
 
 
 class Todo:

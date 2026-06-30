@@ -1,0 +1,38 @@
+from c import cblas.h as blas
+
+
+def main() -> i32:
+    a: array[f32] = [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+    ]
+    b: array[f32] = [
+        7.0,
+        8.0,
+        9.0,
+        10.0,
+        11.0,
+        12.0,
+    ]
+    c: array[f32] = [0.0, 0.0, 0.0, 0.0]
+    blas.cblas_sgemm(
+        blas.CblasRowMajor,
+        blas.CblasNoTrans,
+        blas.CblasNoTrans,
+        2,
+        2,
+        3,
+        1.0,
+        &a[0],
+        3,
+        &b[0],
+        2,
+        0.0,
+        &c[0],
+        2,
+    )
+    return i32(c[0] + c[3]) - 170

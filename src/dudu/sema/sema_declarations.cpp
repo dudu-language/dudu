@@ -371,10 +371,16 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     if (!function_returns(method, "bool")) {
                         fail(method.location, "bool operator methods must return bool");
                     }
-                } else if (op == "[]=") {
-                    if (method.params.size() != 3 || method.params.front().name != "self") {
+                } else if (op == "[]") {
+                    if (method.params.size() < 2 || method.params.front().name != "self") {
                         fail(method.location,
-                             "indexed assignment operator methods require self, index, and value");
+                             "index operator methods require self and at least one index");
+                    }
+                } else if (op == "[]=") {
+                    if (method.params.size() < 3 || method.params.front().name != "self") {
+                        fail(method.location,
+                             "indexed assignment operator methods require self, at least one "
+                             "index, and value");
                     }
                     if (function_has_return_type(method) && !function_returns(method, "void")) {
                         fail(method.location,

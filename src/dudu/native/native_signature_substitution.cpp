@@ -283,6 +283,10 @@ TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& 
 } // namespace
 
 bool native_index_placeholder(const std::string& name) {
+    const size_t qualifier = name.find_last_of(".:");
+    if (qualifier != std::string::npos && qualifier + 1 < name.size()) {
+        return native_index_placeholder(name.substr(qualifier + 1));
+    }
     return name == "__i" || name == "__j" || name == "_Int" || name == "_Index" || name == "_Nm" ||
            name == "_Np";
 }
