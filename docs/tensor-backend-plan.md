@@ -70,12 +70,79 @@ The exact API can evolve, but the important rule is that `tensor[row, col]`
 and `tensor[y0:y1, x0:x1]` are just normal Dudu operator/language hooks on a
 library-defined type.
 
+## External Baseline
+
+Dudu should feel familiar to people coming from Python numeric code, but it
+should not copy the parts that numeric Python users already find confusing.
+
+Useful baseline rules:
+
+- NumPy and PyTorch make normal slicing view-like, while advanced indexing is
+  not a simple view. Dudu should keep that distinction explicit in types and
+  hovers.
+- NumPy's mixed advanced indexing has a long-known ambiguity between pairwise
+  and cartesian selection. Dudu should provide explicit `.vindex[...]` and
+  `.oindex[...]` forms instead of inventing marker expressions inside `[]`.
+- Julia's array model is a useful reminder that indexing, views, broadcasting,
+  and array traits can be library-extensible. Dudu should make tensor indexing
+  a library capability, not a compiler patch for one tensor library.
+- Broadcasting should be library/type-driven. The language should provide the
+  syntax and operator hooks; the tensor library chooses CPU, BLAS, GPU, lazy
+  expression, or materialized output.
+
+References:
+
+- NumPy indexing:
+  <https://numpy.org/doc/stable/user/basics.indexing.html>
+- NumPy NEP 21 advanced indexing:
+  <https://numpy.org/neps/nep-0021-advanced-indexing.html>
+- PyTorch tensor views:
+  <https://docs.pytorch.org/docs/stable/tensor_view.html>
+- Julia arrays:
+  <https://docs.julialang.org/en/v1/manual/arrays/>
+
+## Shape Annotations And Inference
+
+Do not require users to put every dimension on the left side. If the right side
+fully determines the shape, Dudu should infer it and let the LSP show the
+result through inlay hints and hover.
+
+```python
+x = tensor.zeros[f32](32, 784)          # tensor[f32][32, 784]
+w = tensor.zeros[f32](784, 256)         # tensor[f32][784, 256]
+h = matmul(x, w)                        # tensor[f32][32, 256]
+red = image[:, :, 0]                    # view or tensor expr with rank 2
+```
+
+Explicit shape annotations are still important at API boundaries and when the
+author wants a shape assertion:
+
+```python
+def classify(x: tensor[f32][32, 784]) -> tensor[f32][32, 10]:
+    return model.forward(x)
+
+logits: tensor[f32][32, 10] = classify(batch)
+```
+
+Runtime-known dimensions should be spelled `dyn`, not `?`.
+
+```python
+train_x = x_norm[train_row, :]          # tensor[f32][dyn, 784]
+train_x: tensor[f32][dyn, 784] = x_norm[train_row, :]
+```
+
+`dyn` is a shape fact, not a mystery type. It means the dimension is known only
+at runtime, usually because a mask or data-dependent gather selected an unknown
+number of elements.
+
 ## Fancy Indexing Target Forms
 
 The scratch dogfood file
 `/home/vega/Coding/Web/dudu-webserver/indexingcoolness.dd` sketches the kind of
-indexing Dudu should eventually make pleasant. The compiler plan should use
-those forms as target cases instead of only saying "NumPy-like indexing".
+indexing Dudu should eventually make pleasant. That file is not the spec. The
+compiler plan should use it as a source of target cases, then normalize those
+cases into syntax that is close to Python/NumPy/PyTorch while avoiding their
+known ambiguous corners.
 
 Treat these as staged language/library targets. Early phases should reject
 unsupported forms with precise diagnostics instead of silently lowering them
@@ -117,14 +184,14 @@ all_values: span[i32] = pixels[:, :, :]
 
 ### Pairwise Integer Gather
 
-Integer index arrays with matching shape select pairwise coordinates. This is
-the important "get the selected class/logit for each row" form:
+Integer index arrays with matching shape can select pairwise coordinates. This
+is the important "get the selected class/logit for each row" form:
 
 ```python
 label: tensor[i32][32]
 logits: tensor[f32][32, 10]
 
-correct_class_logit: tensor[f32][32] = logits[arange[32](), label]
+correct_class_logit = logits.vindex[arange[32](), label]  # tensor[f32][32]
 ```
 
 Transformer-style token embedding lookup is the same idea at higher rank:
@@ -133,28 +200,32 @@ Transformer-style token embedding lookup is the same idea at higher rank:
 token_ids: tensor[i32][4, 16]
 token_embedding: tensor[f32][32000, 512]
 
-x: tensor[f32][4, 16, 512] = token_embedding[token_ids, :]
+x = token_embedding.vindex[token_ids, :]  # tensor[f32][4, 16, 512]
 ```
 
 Rule: pairwise gather is not a view. It creates a gather expression or owning
 result unless the backend can represent a lazy gather view.
 
+Plain `tensor[ids, labels]` may eventually be accepted for the common pairwise
+case, but mixed advanced indexing should initially diagnose and suggest
+`.vindex[...]` or `.oindex[...]` when there is ambiguity.
+
 ### Orthogonal / Cartesian Gather
 
 Sometimes each index array should create its own output axis instead of zipping
-with the others. The current sketch uses `o[...]` as an orthogonal marker:
+with the others. Use an explicit orthogonal indexer on the receiver:
 
 ```python
 batch_ids: array[i32] = [3, 0, 3, 1]
 head_ids: array[i32] = [0, 2, 4]
 hot_vocab: array[i32] = [2, 3, 5, 8, 13, 21]
 
-cartesian: tensor[f32][4, 8, 3, 6] =
-    logits[o[batch_ids], :, o[head_ids], o[hot_vocab]]
+cartesian = logits.oindex[batch_ids, :, head_ids, hot_vocab]
+# tensor[f32][4, 8, 3, 6]
 ```
 
-This spelling is tentative, but the semantic requirement is not: Dudu needs a
-way to distinguish pairwise gather from orthogonal/cartesian gather.
+The semantic requirement is not tentative: Dudu needs a clear way to
+distinguish pairwise gather from orthogonal/cartesian gather.
 
 ### Boolean Masks
 
@@ -166,18 +237,18 @@ train_row: mask[bool][32]
 x_norm: tensor[f32][32, 784]
 label: tensor[i32][32]
 
-train_x: tensor[f32][?, 784] = x_norm[train_row, :]
-train_label: tensor[i32][?] = label[train_row]
+train_x = x_norm[train_row, :]       # tensor[f32][dyn, 784]
+train_label = label[train_row]       # tensor[i32][dyn]
 ```
 
 Computed masks should work the same:
 
 ```python
 visible: mask[bool][4, 16, 16] = frames[:, :, :, 3] > 0.0
-visible_pixels: tensor[f32][?, 4] = frames[visible, :]
+visible_pixels = frames[visible, :]  # tensor[f32][dyn, 4]
 ```
 
-Rule: `?` is a runtime-known dimension. It must be explicit in type displays
+Rule: `dyn` is a runtime-known dimension. It must be explicit in type displays
 and diagnostics so users know shape is no longer compile-time fixed.
 
 ### Masked Assignment And Scatter
@@ -230,10 +301,12 @@ mean: tensor[f32][784]
 inv_std: tensor[f32][784]
 x: tensor[f32][32, 784]
 
-x_norm: tensor[f32][32, 784] = (x - mean[newaxis, :]) * inv_std[newaxis, :]
+x_norm = (x - mean[newaxis, :]) * inv_std[newaxis, :]
+# tensor[f32][32, 784]
 
 b1: tensor[f32][256]
-h1: tensor[f32][32, 256] = matmul(x_norm, w1) + b1[newaxis, :]
+h1 = matmul(x_norm, w1) + b1[newaxis, :]
+# tensor[f32][32, 256]
 ```
 
 Broadcast errors must explain which dimensions do not match.
@@ -265,13 +338,13 @@ non-default examples shaped like these:
 token_ids: tensor[i32][4, 16]
 valid_token: mask[bool][4, 16]
 
-x: tensor[f32][4, 16, 512] = token_embedding[token_ids, :]
+x = token_embedding.vindex[token_ids, :]  # tensor[f32][4, 16, 512]
 x += position_embedding[newaxis, :, :]
 
-qkv: tensor[f32][4, 16, 3, 8, 64] = einsum("btc,chd->bthd", x, wqkv)
-q: tensor[f32][4, 16, 8, 64] = qkv[:, :, 0, :, :]
-k: tensor[f32][4, 16, 8, 64] = qkv[:, :, 1, :, :]
-v: tensor[f32][4, 16, 8, 64] = qkv[:, :, 2, :, :]
+qkv = einsum("btc,chd->bthd", x, wqkv)  # tensor[f32][4, 16, 3, 8, 64]
+q = qkv[:, :, 0, :, :]                  # tensor[f32][4, 16, 8, 64]
+k = qkv[:, :, 1, :, :]                  # tensor[f32][4, 16, 8, 64]
+v = qkv[:, :, 2, :, :]                  # tensor[f32][4, 16, 8, 64]
 
 scores[:, :, :, not valid_token] = -inf[f32]()
 ```
@@ -280,11 +353,11 @@ And a more grounded MLP/MNIST-style case:
 
 ```python
 important_features: array[i32] = [0, 1, 2, 27, 28, 29, 391, 392, 393]
-diagnostic_inputs: tensor[f32][32, 9] = x_norm[:, important_features]
+diagnostic_inputs = x_norm.oindex[:, important_features]  # tensor[f32][32, 9]
 
-train_x: tensor[f32][?, 784] = x_norm[train_row, :]
-correct_class_logit: tensor[f32][32] = logits[arange[32](), label]
-nll: tensor[f32][?] = -log_probs[train_row, train_label]
+train_x = x_norm[train_row, :]                          # tensor[f32][dyn, 784]
+correct_class_logit = logits.vindex[arange[32](), label] # tensor[f32][32]
+nll = -log_probs.vindex[train_row, train_label]          # tensor[f32][dyn]
 ```
 
 These examples should become tracked fixtures/examples as the syntax becomes

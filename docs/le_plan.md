@@ -1149,11 +1149,15 @@ push. They are not release packaging work.
    OpenCL/AMD-friendly GPU execution, and autograd-style graph code can be
    written as normal Dudu and C/C++ interop. That work should follow
    `docs/tensor-backend-plan.md`, whose fancy-indexing target forms are the
-   concrete source of truth for pairwise gather, orthogonal gather, boolean
-   masks, masked/scatter assignment, ellipsis, `newaxis`, broadcasting,
-   named-axis sketches, and transformer/MLP-shaped examples. Start with
-   CPU/OpenBLAS, and only then add OpenCL or ROCm probes when local tooling is
-   available.
+   concrete source of truth for shape inference, `dyn` runtime dimensions,
+   explicit `.vindex[...]` pairwise gather, explicit `.oindex[...]`
+   orthogonal/cartesian gather, boolean masks, masked/scatter assignment,
+   ellipsis, `newaxis`, broadcasting, named-axis sketches, and
+   transformer/MLP-shaped examples. Dudu should infer tensor shapes from the
+   right side when possible and use explicit shape annotations mainly for API
+   boundaries or shape assertions. Do not require left-side dimensions just to
+   make local numeric code type-check. Start with CPU/OpenBLAS, and only then
+   add OpenCL or ROCm probes when local tooling is available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
