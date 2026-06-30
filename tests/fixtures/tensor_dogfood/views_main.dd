@@ -1,4 +1,7 @@
 from tensor import Tensor
+from tensor import fill_view
+from tensor import sum_view
+from tensor import view_to_tensor
 from tensor import zeros
 
 
@@ -32,4 +35,9 @@ def main() -> i32:
     patch_next: f32 = patch[1, 1] + 4.0
     patch[1, 1] = patch_next
 
-    return i32(t[1, 0] + t[2, 2] + t[2, 3])
+    row_copy = view_to_tensor(row)
+    row_score = sum_view(row)
+    fill_view(patch, 2.0)
+    patch_score = sum_view(patch)
+
+    return i32(row_copy[0, 0] + row_score + patch_score - 9.0)

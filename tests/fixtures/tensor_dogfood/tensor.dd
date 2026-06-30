@@ -104,6 +104,40 @@ def zeros(rows: i32, cols: i32) -> Tensor:
     return Tensor(rows, cols, data)
 
 
+def view_to_tensor(view: TensorView) -> Tensor:
+    out = zeros(view.rows, view.cols)
+    row = 0
+    while row < view.rows:
+        col = 0
+        while col < view.cols:
+            out[row, col] = view[row, col]
+            col += 1
+        row += 1
+    return out
+
+
+def fill_view(view: &TensorView, value: f32):
+    row = 0
+    while row < view.rows:
+        col = 0
+        while col < view.cols:
+            view[row, col] = value
+            col += 1
+        row += 1
+
+
+def sum_view(view: TensorView) -> f32:
+    total: f32 = 0.0
+    row = 0
+    while row < view.rows:
+        col = 0
+        while col < view.cols:
+            total += view[row, col]
+            col += 1
+        row += 1
+    return total
+
+
 def filled(rows: i32, cols: i32, value: f32) -> Tensor:
     out = zeros(rows, cols)
     row = 0
