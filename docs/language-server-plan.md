@@ -650,9 +650,9 @@ Go-to-definition for imported C/C++ headers respects manifest-relative
 Native overloaded function signature help is covered with a local fixture
 header.
 Native field navigation from a C header that only scans after the C prelude
-retry is covered in the JSON-RPC matrix: `value.count` definition and hover
-resolve to the imported `needs_c_context.h` declaration instead of the
-generated scanner wrapper.
+retry is covered in the JSON-RPC matrix: `value.count` definition, hover, and
+references resolve to the imported `needs_c_context.h` field identity instead
+of the generated scanner wrapper or plain member spelling.
 Go-to-definition for parameters, inferred assignment locals, loop bindings,
 and destructured bindings is covered in both direct frontend tests and
 JSON-RPC smoke fixtures.

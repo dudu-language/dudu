@@ -678,6 +678,7 @@ def main() -> i32:
         request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(113, "textDocument/definition", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
         request(114, "textDocument/hover", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
+        request(115, "textDocument/references", {"textDocument": text_document(native_context), "position": position(native_context_source, "value.count", add=len("value."))}),
         request(56, "textDocument/completion", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(57, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
@@ -1128,6 +1129,31 @@ def main() -> i32:
     native_context_field_hover = response(messages, 114)["contents"]["value"]
     if "count:" not in native_context_field_hover:
         raise AssertionError(f"missing native context field hover: {native_context_field_hover!r}")
+    native_context_field_refs = response(messages, 115)
+    native_context_count_assign = position(native_context_source, "value.count", add=len("value."))
+    native_context_count_return = position(native_context_source, "value.count", occurrence=1, add=len("value."))
+    native_context_state_assign = position(native_context_source, "value.state", add=len("value."))
+    if not has_start(
+        native_context_field_refs,
+        native_context.as_uri(),
+        native_context_count_assign["line"],
+        native_context_count_assign["character"],
+    ):
+        raise AssertionError(f"missing native context count assignment ref: {native_context_field_refs!r}")
+    if not has_start(
+        native_context_field_refs,
+        native_context.as_uri(),
+        native_context_count_return["line"],
+        native_context_count_return["character"],
+    ):
+        raise AssertionError(f"missing native context count return ref: {native_context_field_refs!r}")
+    if has_start(
+        native_context_field_refs,
+        native_context.as_uri(),
+        native_context_state_assign["line"],
+        native_context_state_assign["character"],
+    ):
+        raise AssertionError(f"native context state field leaked into count refs: {native_context_field_refs!r}")
     native_member_completion = response(messages, 56)
     assert_completion_labels(native_member_completion, ["scaled", "value"])
     assert_documentation_contains(item_named(native_member_completion, "scaled"), "Scales the matrix widget by a factor.")
