@@ -1,8 +1,8 @@
 #include "dudu/sema/sema_common.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/source.hpp"
 
 namespace dudu {
@@ -47,6 +47,15 @@ Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& par
         }
         symbols.generic_params.insert(param);
     }
+    return symbols;
+}
+
+Symbols with_self_type(Symbols symbols, const std::string& class_name) {
+    if (class_name.empty()) {
+        return symbols;
+    }
+    symbols.types.insert("Self");
+    symbols.alias_type_refs["Self"] = named_type_ref(class_name);
     return symbols;
 }
 

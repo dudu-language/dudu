@@ -1,13 +1,14 @@
 #include "dudu/sema/sema_ops.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/type_compat.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 
+#include <map>
 #include <set>
 #include <utility>
 #include <vector>
@@ -60,7 +61,8 @@ bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeR
 
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
-        "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
+        "+",  "-",  "*", "/",  "%", "+=", "-=",   "*=", "/=",  "%=",
+        "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
     };
     return operators.contains(op);
 }
@@ -72,6 +74,41 @@ bool method_has_operator(const FunctionDecl& method, const std::string& op) {
         }
     }
     return false;
+}
+
+TypeRef operator_self_type_ref(const Symbols& symbols, const TypeRef& receiver,
+                               const ClassDecl& klass) {
+    TypeRef self = unwrap_value_type_ref(symbols, receiver);
+    return has_type_ref(self) ? self : named_type_ref(klass.name, receiver.location);
+}
+
+TypeRef operator_method_type_ref(const Symbols& symbols, const TypeRef& receiver,
+                                 const ClassDecl& klass, const TypeRef& type) {
+    std::map<std::string, TypeRef> substitutions;
+    substitutions.emplace("Self", operator_self_type_ref(symbols, receiver, klass));
+    const std::vector<TypeRef> receiver_args = template_type_arg_refs(receiver, klass.name);
+    for (size_t i = 0; i < klass.generic_params.size() && i < receiver_args.size(); ++i) {
+        substitutions.emplace(klass.generic_params[i], receiver_args[i]);
+    }
+    return substitute_type_ref(type, substitutions);
+}
+
+FunctionSignature operator_method_signature(const Symbols& symbols, const TypeRef& receiver,
+                                            const ClassDecl& klass, const FunctionDecl& method) {
+    FunctionSignature signature;
+    const size_t first_param =
+        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    std::vector<TypeRef> param_types;
+    param_types.reserve(method.params.size() - first_param);
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        param_types.push_back(
+            operator_method_type_ref(symbols, receiver, klass, method.params[i].type_ref));
+    }
+    set_signature_param_types(signature, std::move(param_types));
+    set_signature_return_type(
+        signature,
+        operator_method_type_ref(symbols, receiver, klass, function_return_type_ref(method)));
+    return signature;
 }
 
 std::string operator_function_name(const std::string& op) {
@@ -141,17 +178,7 @@ std::optional<FunctionSignature> dudu_operator_signature(const Symbols& symbols,
         if (!method_has_operator(method, op_text)) {
             continue;
         }
-        FunctionSignature signature;
-        const size_t first_param =
-            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-        std::vector<TypeRef> param_types;
-        param_types.reserve(method.params.size() - first_param);
-        for (size_t i = first_param; i < method.params.size(); ++i) {
-            param_types.push_back(method.params[i].type_ref);
-        }
-        set_signature_param_types(signature, std::move(param_types));
-        set_signature_return_type(signature, function_return_type_ref(method));
-        return signature;
+        return operator_method_signature(symbols, left, *klass, method);
     }
     return std::nullopt;
 }
@@ -170,16 +197,7 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
         if (!method_has_operator(method, op)) {
             continue;
         }
-        FunctionSignature signature;
-        const size_t first_param =
-            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-        std::vector<TypeRef> param_types;
-        param_types.reserve(method.params.size() - first_param);
-        for (size_t i = first_param; i < method.params.size(); ++i) {
-            param_types.push_back(method.params[i].type_ref);
-        }
-        set_signature_param_types(signature, std::move(param_types));
-        set_signature_return_type(signature, function_return_type_ref(method));
+        FunctionSignature signature = operator_method_signature(symbols, left, *klass, method);
         if (signature_param_count(signature) == 0 ||
             assignment_type_allowed(signature_param_type_ref(signature, 0), right_expr, right)) {
             return signature;

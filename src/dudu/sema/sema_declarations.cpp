@@ -1,12 +1,12 @@
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -86,6 +86,19 @@ void check_single_string_arg(const Decorator& decorator, std::string_view name,
 
 bool is_operator_method(const FunctionDecl& method) {
     return !operator_decorator_arg(method).empty();
+}
+
+bool receiver_type_is_reference_to_class(const Symbols& symbols, const TypeRef& type,
+                                         std::string_view class_name) {
+    TypeRef resolved = resolve_alias_ref(symbols, type);
+    if (resolved.kind != TypeKind::Reference || resolved.children.size() != 1) {
+        return false;
+    }
+    TypeRef target = resolve_alias_ref(symbols, resolved.children.front());
+    if (target.kind == TypeKind::Const && target.children.size() == 1) {
+        target = resolve_alias_ref(symbols, target.children.front());
+    }
+    return type_ref_head_name(target) == class_name;
 }
 
 bool is_comparison_operator_method(const FunctionDecl& method) {
@@ -264,11 +277,12 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         std::optional<Symbols> class_symbol_storage;
         const Symbols* class_symbols = &symbols;
         if (!klass.generic_params.empty()) {
-            class_symbol_storage =
-                with_generic_params(symbols, klass.generic_params,
-                                    generic_value_params_for_class(klass));
+            class_symbol_storage = with_generic_params(symbols, klass.generic_params,
+                                                       generic_value_params_for_class(klass));
             class_symbols = &*class_symbol_storage;
         }
+        class_symbol_storage = with_self_type(*class_symbols, klass.name);
+        class_symbols = &*class_symbol_storage;
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(decorator);
         }
@@ -328,6 +342,12 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             const bool is_override = has_decorator(method, "override");
             if ((is_abstract || is_virtual || is_override) && is_static) {
                 fail(method.location, "inheritance method decorators require self");
+            }
+            if (!is_static && !receiver_type_is_reference_to_class(
+                                  *method_symbols, method.params.front().type_ref, klass.name)) {
+                fail(method.params.front().location,
+                     "self must be a receiver reference: use self, self: &Self, or "
+                     "self: &const[Self]");
             }
             if (is_abstract && !method.statements.empty()) {
                 fail(method.location, "@abstract methods cannot have a body");
@@ -431,9 +451,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         std::optional<Symbols> function_symbol_storage;
         const Symbols* function_symbols = &symbols;
         if (!fn.generic_params.empty()) {
-            function_symbol_storage =
-                with_generic_params(symbols, fn.generic_params,
-                                    generic_value_params_for_function(fn));
+            function_symbol_storage = with_generic_params(symbols, fn.generic_params,
+                                                          generic_value_params_for_function(fn));
             function_symbols = &*function_symbol_storage;
         }
         for (const Decorator& decorator : fn.decorators) {

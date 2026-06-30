@@ -409,8 +409,11 @@ Make the C++ object model feel complete through Python-shaped syntax:
 Status: constructors, destructors, member methods, imported C++ operator
 overloads, Dudu-native operator methods, imported C++ base-method lookup,
 `init`/`drop`, class-scoped functions without `@staticmethod`, explicit
-`static[T]` fields, and `@operator(...)` are implemented. Broader overload-set
-polish remains part of header-awareness hardening.
+`static[T]` fields, and `@operator(...)` are implemented. Bare `self` now means
+`self: &Self`; explicit `self: &const[Self]` lowers to C++ `const` member
+functions, and `&Self`/`&const[Self]` return types make in-place versus
+copy-returning methods explicit. Broader overload-set polish remains part of
+header-awareness hardening.
 
 This is more important than user-defined macros because it directly affects
 normal systems and game code.
@@ -1067,7 +1070,8 @@ push. They are not release packaging work.
    leading-underscore names stay out of generated public headers while normal
    names remain public. Out-of-line methods such as
    `def Player.damage(self, amount: i32):` attach to the declared class and use
-   the normal method sema/emission path. `@staticmethod`, `@classmethod`, and
+   the normal method sema/emission path; their bare `self` receiver is
+   `&Self`, matching in-line methods. `@staticmethod`, `@classmethod`, and
    `@property` are rejected with explicit OOP-surface diagnostics. Regression
    fixtures cover stale Python dunder lifecycle/operator names, stale
    static/class/property decorators, and explicit member visibility keywords so

@@ -352,8 +352,11 @@ std::map<std::string, TypeRef> local_type_refs_before_location(const ModuleAst& 
                 if (!function_contains_location(method, location)) {
                     continue;
                 }
-                scope.current_class = klass.name;
-                collect_function_locals(scope, method, location.line);
+                Symbols method_symbols = with_self_type(symbols, klass.name);
+                FunctionScope method_scope(method_symbols);
+                method_scope.current_class = klass.name;
+                collect_function_locals(method_scope, method, location.line);
+                scope.local_type_refs = std::move(method_scope.local_type_refs);
                 return scope.local_type_refs;
             }
         }

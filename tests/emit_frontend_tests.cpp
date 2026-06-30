@@ -1,9 +1,9 @@
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
-#include "dudu/core/source.hpp"
 
 #include <cassert>
 #include <exception>
@@ -362,6 +362,30 @@ void test_expected_generic_method_emission_uses_type_ast_receiver() {
     assert(cpp.find("std::string text = wrapper.make<std::string>();") != std::string::npos);
 }
 
+void test_receiver_reference_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("class Vec3:\n"
+                           "    x: f32\n"
+                           "\n"
+                           "    def length(self: &const[Self]) -> f32:\n"
+                           "        return self.x\n"
+                           "\n"
+                           "    def normalize(self) -> &Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    @operator(\"+=\")\n"
+                           "    def add_assign(self, other: &const[Self]) -> &Self:\n"
+                           "        self.x += other.x\n"
+                           "        return self\n",
+                           "receiver_reference_emit.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("float length() const") != std::string::npos);
+    assert(cpp.find("Vec3& normalize()") != std::string::npos);
+    assert(cpp.find("Vec3& operator+=") != std::string::npos);
+    assert(cpp.find("auto& self = *this;") != std::string::npos);
+}
+
 void test_class_emit_order_uses_type_ast_fields() {
     const dudu::ModuleAst module = dudu::parse_source("class Holder:\n"
                                                       "    items: list[Node]\n"
@@ -411,6 +435,7 @@ int main() {
         test_inferred_auto_assignment_is_not_redeclared();
         test_inferred_native_pointer_member_emission_uses_type_ast(root);
         test_expected_generic_method_emission_uses_type_ast_receiver();
+        test_receiver_reference_emission();
         test_class_emit_order_uses_type_ast_fields();
         test_operator_continuation_is_part_of_return_expression();
     } catch (const std::exception& error) {

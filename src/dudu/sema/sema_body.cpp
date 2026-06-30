@@ -6,6 +6,7 @@
 #include "dudu/core/control_flow.hpp"
 #include "dudu/core/escapes.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_alloc.hpp"
 #include "dudu/sema/sema_assignment.hpp"
 #include "dudu/sema/sema_bindings.hpp"
@@ -18,7 +19,6 @@
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_match.hpp"
 #include "dudu/sema/sema_super.hpp"
-#include "dudu/core/source.hpp"
 
 #include <optional>
 #include <set>
@@ -349,6 +349,8 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
                                                        generic_value_params_for_class(klass));
             class_symbols = &*class_symbol_storage;
         }
+        class_symbol_storage = with_self_type(*class_symbols, klass.name);
+        class_symbols = &*class_symbol_storage;
         for (const FunctionDecl& method : klass.methods) {
             if (function_has_decorator(method, "abstract")) {
                 continue;

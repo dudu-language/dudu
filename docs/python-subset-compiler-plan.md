@@ -46,6 +46,8 @@ Implement this first:
 - selective imports with compile errors on direct-name collisions.
 - facade modules through ordinary imports, with no special reexport system.
 - `class` with typed fields and methods.
+- method receivers: bare `self` means `self: &Self`; explicit
+  `self: &const[Self]` lowers to a C++ `const` member function.
 - `enum`.
 - `type Name = Type`.
 - `def name(args...) -> Return:`.
@@ -130,6 +132,25 @@ r: &i32
 pc: *const[i32]
 rc: &const[PlayerState]
 ```
+
+Receiver and return reference intent:
+
+```python
+class Vec2:
+    @operator("+")
+    def add(self: &const[Self], other: &const[Self]) -> Self:
+        return Self(self.x + other.x, self.y + other.y)
+
+    @operator("+=")
+    def add_assign(self, other: &const[Self]) -> &Self:
+        self.x += other.x
+        self.y += other.y
+        return self
+```
+
+Plain `T` parameters are value parameters. Use `&T`, `&const[T]`, and `*T`
+when the API needs mutable borrowing, read-only borrowing, or raw pointer
+interop.
 
 Allocation helpers:
 

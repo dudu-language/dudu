@@ -383,6 +383,34 @@ def PlayerState.damage(self, amount: i32):
 
 `self` is explicit. That is Python, and it avoids hidden receiver rules.
 
+Bare `self` is receiver sugar for `self: &Self`. `Self` names the containing
+class inside method signatures. Methods that do not mutate the receiver should
+spell the receiver as `self: &const[Self]`; these lower to C++ `const` member
+functions.
+
+```python
+class Vec2:
+    x: f32
+    y: f32
+
+    def length_squared(self: &const[Self]) -> f32:
+        return self.x * self.x + self.y * self.y
+
+    def scale_in_place(self, scale: f32) -> &Self:
+        self.x *= scale
+        self.y *= scale
+        return self
+```
+
+The return type carries copy/reference intent. Returning `Self` returns a new
+value. Returning `&Self` returns a mutable reference to a live object, commonly
+the receiver. Returning `&const[Self]` returns a read-only reference. Returning a
+reference to a local temporary is invalid.
+
+Non-receiver parameters are not special. `other: Vec2` is a value parameter.
+Use `other: &Vec2` for a mutable borrowed reference and
+`other: &const[Vec2]` for a read-only borrowed reference.
+
 ## Enums
 
 Enums can stay simple.
@@ -1274,15 +1302,22 @@ class Vec2:
     y: i32
 
     @operator("+")
-    def add(self, other: Vec2) -> Vec2:
+    def add(self: &const[Self], other: &const[Vec2]) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
+    @operator("+=")
+    def add_assign(self, other: &const[Vec2]) -> &Self:
+        self.x += other.x
+        self.y += other.y
+        return self
+
     @operator("==")
-    def equals(self, other: Vec2) -> bool:
+    def equals(self: &const[Self], other: &const[Vec2]) -> bool:
         return self.x == other.x and self.y == other.y
 ```
 
-Supported binary operators are `+`, `-`, `*`, `/`, and `%`. Supported comparison
+Supported binary operators are `+`, `-`, `*`, `/`, and `%`. Supported compound
+assignment operators are `+=`, `-=`, `*=`, `/=`, and `%=`. Supported comparison
 operators are `==`, `!=`, `<`, `<=`, `>`, and `>=`. Operator methods take
 `self` plus one argument. Comparison operators must return `bool`.
 

@@ -1,9 +1,9 @@
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/format/format_path.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
@@ -15,10 +15,10 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
-#include "dudu/parser/lexer.hpp"
-#include "dudu/project/module_loader.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema.hpp"
@@ -407,6 +407,34 @@ void test_negative_numeric_literals_contextualize_as_f32_args() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_receiver_reference_semantics() {
+    const dudu::ModuleAst ok = dudu::parse_source("class Vec3:\n"
+                                                  "    x: f32\n"
+                                                  "\n"
+                                                  "    def length(self: &const[Self]) -> f32:\n"
+                                                  "        return self.x\n"
+                                                  "\n"
+                                                  "    def normalize(self) -> &Self:\n"
+                                                  "        return self\n",
+                                                  "receiver_reference_semantics.dd");
+    dudu::analyze_module(ok, {.check_bodies = true});
+
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst bad = dudu::parse_source("class Vec3:\n"
+                                                       "    x: f32\n"
+                                                       "\n"
+                                                       "    def bad(self: Vec3) -> f32:\n"
+                                                       "        return self.x\n",
+                                                       "bad_receiver_value.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected = std::string(error.what()).find("self must be a receiver reference") !=
+                   std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_pointer_dereference_uses_type_ast() {
     const dudu::ModuleAst module = dudu::parse_source("def read(ptr: *const[i32]) -> const[i32]:\n"
                                                       "    return *ptr\n"
@@ -693,6 +721,7 @@ int main() {
         test_list_iterator_methods();
         test_reference_list_indexing();
         test_negative_numeric_literals_contextualize_as_f32_args();
+        test_receiver_reference_semantics();
         test_pointer_dereference_uses_type_ast();
         test_extern_c_signature_uses_type_ast();
         test_pointer_arithmetic_uses_type_ast();

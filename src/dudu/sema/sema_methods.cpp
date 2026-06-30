@@ -1,7 +1,7 @@
 #include "dudu/sema/sema_methods.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr.hpp"
@@ -30,12 +30,25 @@ std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::str
     return out;
 }
 
+TypeRef self_type_ref_for_method(const ClassDecl& klass, const std::vector<TypeRef>& receiver_args,
+                                 SourceLocation location) {
+    if (receiver_args.empty()) {
+        return named_type_ref(klass.name, location);
+    }
+    TypeRef type = named_type_ref(klass.name, location);
+    type.kind = TypeKind::Template;
+    type.children = receiver_args;
+    return type;
+}
+
 TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
                                     const TypeRef& type, const std::vector<TypeRef>& receiver_args,
                                     const std::vector<TypeRef>& method_args) {
     TypeRef out =
         substitute_type_ref(type, type_ref_substitutions(method.generic_params, method_args));
     out = substitute_type_ref(out, type_ref_substitutions(klass.generic_params, receiver_args));
+    out = substitute_type_ref(
+        out, {{"Self", self_type_ref_for_method(klass, receiver_args, type.location)}});
     return substitute_receiver_template_type(out, receiver_args);
 }
 

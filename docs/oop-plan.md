@@ -88,6 +88,29 @@ class Player:
         return self.hp > 0
 ```
 
+Bare `self` means `self: &Self`. `Self` is the containing class type inside a
+method signature. Read-only methods can spell the receiver as
+`self: &const[Self]`, which lowers to a C++ `const` member function:
+
+```python
+class Vec2:
+    x: f32
+    y: f32
+
+    def length_squared(self: &const[Self]) -> f32:
+        return self.x * self.x + self.y * self.y
+
+    def scale_in_place(self, scale: f32) -> &Self:
+        self.x *= scale
+        self.y *= scale
+        return self
+```
+
+Returning `Self` returns a value. Returning `&Self` or `&const[Self]` returns a
+reference to a live object. Non-receiver parameters keep normal type meaning:
+`other: Vec2` is by value, `other: &Vec2` is a mutable reference, and
+`other: &const[Vec2]` is a read-only reference.
+
 Out-of-line methods can support C++-style organization:
 
 ```python
@@ -326,11 +349,17 @@ class Vec2:
     y: f32
 
     @operator("+")
-    def add(self, other: Vec2) -> Vec2:
+    def add(self: &const[Self], other: &const[Self]) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
+    @operator("+=")
+    def add_assign(self, other: &const[Self]) -> &Self:
+        self.x += other.x
+        self.y += other.y
+        return self
+
     @operator("==")
-    def equals(self, other: Vec2) -> bool:
+    def equals(self: &const[Self], other: &const[Self]) -> bool:
         return self.x == other.x and self.y == other.y
 ```
 
@@ -341,6 +370,11 @@ Supported first set:
 - `@operator("*")`
 - `@operator("/")`
 - `@operator("%")`
+- `@operator("+=")`
+- `@operator("-=")`
+- `@operator("*=")`
+- `@operator("/=")`
+- `@operator("%=")`
 - `@operator("==")`
 - `@operator("!=")`
 - `@operator("<")`

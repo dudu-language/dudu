@@ -20,6 +20,7 @@ void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& ty
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params);
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params,
                             const std::set<std::string>& value_params);
+Symbols with_self_type(Symbols symbols, const std::string& class_name);
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
 struct ScopedCallee {
     std::optional<ExprPath> path;

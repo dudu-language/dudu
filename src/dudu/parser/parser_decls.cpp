@@ -16,6 +16,11 @@ Visibility visibility_from_name(Visibility explicit_visibility, const std::strin
     return name.size() > 1 && name.front() == '_' ? Visibility::Private : Visibility::Default;
 }
 
+TypeRef bare_self_type_ref(SourceLocation location) {
+    TypeRef self = named_type_ref("Self", location);
+    return wrapped_type_ref(TypeKind::Reference, std::move(self), location);
+}
+
 } // namespace
 
 ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
@@ -318,8 +323,7 @@ void Parser::parse_params(std::vector<ParamDecl>& params, const TypeRef& receive
         param.location = name.location;
         if (has_type_ref(receiver_type) && params.empty() && param.name == "self" &&
             !at(TokenKind::Colon)) {
-            param.type_ref = receiver_type;
-            param.type_ref.location = name.location;
+            param.type_ref = bare_self_type_ref(name.location);
             params.push_back(std::move(param));
             if (match(TokenKind::Comma)) {
                 continue;

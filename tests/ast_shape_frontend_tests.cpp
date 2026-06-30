@@ -1,16 +1,16 @@
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/match_patterns.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
-#include "dudu/core/match_patterns.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
@@ -333,6 +333,7 @@ void test_decorator_expression_ast_shape() {
 
     assert(module.classes.size() == 1);
     assert(module.classes[0].methods.size() == 1);
+    assert(dudu::type_ref_text(module.classes[0].methods[0].params.front().type_ref) == "&Self");
     assert(module.classes[0].methods[0].decorators.size() == 1);
     const dudu::Expr& op = module.classes[0].methods[0].decorators[0].expr;
     assert(op.kind == dudu::ExprKind::Call);

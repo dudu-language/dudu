@@ -1,12 +1,13 @@
 #include "dudu/codegen/cpp_emit_classes.hpp"
 
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/sema/sema_body_substitution.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
@@ -191,6 +192,32 @@ bool method_is_instance(const FunctionDecl& method) {
     return !method.params.empty() && method.params.front().name == "self";
 }
 
+std::map<std::string, TypeRef> self_type_substitution(const std::string& class_name,
+                                                      SourceLocation location) {
+    return {{"Self", named_type_ref(class_name, location)}};
+}
+
+TypeRef method_type_for_emit(const TypeRef& type, const std::string& class_name,
+                             SourceLocation location) {
+    return substitute_type_ref(type, self_type_substitution(class_name, location));
+}
+
+TypeRef method_return_type_for_emit(const FunctionDecl& method, const std::string& class_name) {
+    return method_type_for_emit(function_return_type_ref(method), class_name, method.location);
+}
+
+bool self_receiver_is_const(const FunctionDecl& method, const std::string& class_name) {
+    if (!method_is_instance(method)) {
+        return false;
+    }
+    TypeRef type = method_type_for_emit(method.params.front().type_ref, class_name,
+                                        method.params.front().location);
+    if (type.kind != TypeKind::Reference || type.children.size() != 1) {
+        return false;
+    }
+    return type.children.front().kind == TypeKind::Const;
+}
+
 bool has_drop_method(const ClassDecl& klass) {
     for (const FunctionDecl& method : klass.methods) {
         if (is_destructor_method(method)) {
@@ -282,16 +309,18 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
         } else {
-            out << lower_cpp_type(function_return_type_ref(method), aliases, options) << ' '
-                << lowered_name << '(';
+            out << lower_cpp_type(method_return_type_for_emit(method, class_name), aliases, options)
+                << ' ' << lowered_name << '(';
         }
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {
             out << ", ";
         }
-        out << lower_cpp_type(method.params[i].type_ref, aliases, options) << ' '
-            << method.params[i].name;
+        out << lower_cpp_type(method_type_for_emit(method.params[i].type_ref, class_name,
+                                                   method.params[i].location),
+                              aliases, options)
+            << ' ' << method.params[i].name;
     }
     CppLocalContext locals;
     std::map<std::string, TypeRef> local_type_refs;
@@ -305,13 +334,19 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (first_param == 1) {
         locals.bind(method.params.front().name);
-        local_type_refs[method.params.front().name] = method.params.front().type_ref;
+        local_type_refs[method.params.front().name] = method_type_for_emit(
+            method.params.front().type_ref, source_class_name, method.params.front().location);
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals.bind(method.params[i].name);
-        local_type_refs[method.params[i].name] = method.params[i].type_ref;
+        local_type_refs[method.params[i].name] = method_type_for_emit(
+            method.params[i].type_ref, source_class_name, method.params[i].location);
     }
     out << ")";
+    if (!is_constructor_method(method) && !is_destructor_method(method) &&
+        self_receiver_is_const(method, class_name)) {
+        out << " const";
+    }
     if (is_constructor_method(method)) {
         if (const Expr* super_init = super_init_expr(method)) {
             if (const BaseClassDecl* base = super_init_base_decl(symbols, class_name)) {
@@ -333,11 +368,17 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
-        emit_block(out, body, 2, aliases, locals, local_type_refs, function_return_type_ref(method),
-                   function_returns, &symbols, options);
+        body = substitute_body_types(std::move(body),
+                                     self_type_substitution(class_name, method.location));
+        emit_block(out, body, 2, aliases, locals, local_type_refs,
+                   method_return_type_for_emit(method, class_name), function_returns, &symbols,
+                   options);
     } else {
-        emit_block(out, method.statements, 2, aliases, locals, local_type_refs,
-                   function_return_type_ref(method), function_returns, &symbols, options);
+        std::vector<Stmt> body = substitute_body_types(
+            method.statements, self_type_substitution(class_name, method.location));
+        emit_block(out, body, 2, aliases, locals, local_type_refs,
+                   method_return_type_for_emit(method, class_name), function_returns, &symbols,
+                   options);
     }
     out << "    }\n";
 }
