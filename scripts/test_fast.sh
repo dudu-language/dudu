@@ -85,7 +85,9 @@ compile_and_expect tensor_index_set_member_hook 42
 compile_and_expect tensor_multi_index_hook 42
 compile_and_expect tensor_slice_hook 42
 compile_and_expect tensor_vindex_hook 42
+compile_and_expect tensor_vindex_compound_hook 42
 compile_and_expect tensor_oindex_hook 42
+compile_and_expect tensor_oindex_compound_hook 42
 compile_and_expect tensor_slice_views 42
 compile_path_and_expect tensor_dogfood_views tests/fixtures/tensor_dogfood/views_main.dd 42
 compile_path_and_expect tensor_dogfood_xor tests/fixtures/tensor_dogfood/xor_main.dd 42
@@ -105,6 +107,14 @@ grep -Fq "set_masked_rows" "$repo_root/build/tensor_dogfood_mask_indexing.cpp"
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_index_compound_hook.dd" \
     --emit-cpp "$repo_root/build/tensor_index_compound_hook.cpp"
 grep -Fq "set_at(1, (tensor.at(1) + 20))" "$repo_root/build/tensor_index_compound_hook.cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_vindex_compound_hook.dd" \
+    --emit-cpp "$repo_root/build/tensor_vindex_compound_hook.cpp"
+grep -Fq "set_pairwise(rows, cols, (tensor.pairwise(rows, cols) + 10))" \
+    "$repo_root/build/tensor_vindex_compound_hook.cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_oindex_compound_hook.dd" \
+    --emit-cpp "$repo_root/build/tensor_oindex_compound_hook.cpp"
+grep -Fq "set_cartesian(rows, cols, (tensor.cartesian(rows, cols) + 1))" \
+    "$repo_root/build/tensor_oindex_compound_hook.cpp"
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/shape_assume.dd" \
     --emit-cpp "$repo_root/build/tensor_dogfood_shape_assume.cpp"
 grep -Fq "return value;" "$repo_root/build/tensor_dogfood_shape_assume.cpp"

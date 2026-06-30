@@ -1,0 +1,38 @@
+class Tensor:
+    rows: i32
+    cols: i32
+    data: list[i32]
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> i32:
+        return self.data[(row * self.cols) + col]
+
+    @operator("[]=")
+    def set_at(self, row: i32, col: i32, value: i32):
+        self.data[(row * self.cols) + col] = value
+
+    @operator("oindex[]")
+    def cartesian(self, rows: array[i32][2], cols: array[i32][2]) -> i32:
+        return (
+            self[rows[0], cols[0]]
+            + self[rows[0], cols[1]]
+            + self[rows[1], cols[0]]
+            + self[rows[1], cols[1]]
+        )
+
+    @operator("oindex[]=")
+    def set_cartesian(self, rows: array[i32][2], cols: array[i32][2], value: i32):
+        self[rows[0], cols[0]] = value
+        self[rows[0], cols[1]] = value
+        self[rows[1], cols[0]] = value
+        self[rows[1], cols[1]] = value
+
+
+def main() -> i32:
+    tensor = Tensor(2, 2, [1, 2, 3, 4])
+    rows: array[i32] = [0, 1]
+    cols: array[i32] = [0, 1]
+    before = tensor.oindex[rows, cols]
+    tensor.oindex[rows, cols] += 1
+    after = tensor.oindex[rows, cols]
+    return before + after - 12

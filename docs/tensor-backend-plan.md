@@ -441,6 +441,12 @@ Status:
   selected value type. For example, `tensor[mask, :] += 1` does not silently
   lower through a scalar-fill scatter hook; users must spell the read/modify
   value and `[]=` assignment explicitly so the library policy is visible.
+- Done: compound assignment also works for explicit advanced-index hooks when
+  the library provides matching selected-value write hooks. `tensor.vindex[...] += x`
+  lowers to one `vindex[]` read and one `vindex[]=` write, and
+  `tensor.oindex[...] += x` does the same for orthogonal selection.
+  Repeated-index scatter order and accumulation behavior is therefore a
+  library policy, not a compiler policy.
 - Done: `assume_shape[T](value)` lets library/user code narrow a runtime-known
   `dyn` shaped value to a concrete shaped type after explicit runtime checks.
   The builtin is restricted to shaped target types and lowers to the value
@@ -450,9 +456,8 @@ Status:
   such as `Tensor[f32][Rows, Inner]`, and propagate composed result shapes like
   matrix multiply without leaking erased shape-only parameters into generated
   C++ templates. Conflicting shape inference is diagnosed in Dudu source.
-- Remaining: advanced mask semantics, repeated-index scatter policy, richer
-  view objects and broader propagation of shape facts through composed tensor
-  expressions.
+- Remaining: advanced mask semantics, richer view objects and broader
+  propagation of shape facts through composed tensor expressions.
 
 ### 2. CPU Tensor Library
 
