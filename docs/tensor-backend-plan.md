@@ -459,6 +459,10 @@ Status:
   `tensor[mask, :]` can return a `Tensor[T][dyn, N]` value and
   `tensor[mask, :] = value` can lower to a normal `@operator("[]=")` scatter
   method without compiler knowledge of tensor backends.
+- Done: a library-defined matrix mask can gather individual elements with
+  `tensor[mask]` and scatter either a scalar fill or a same-length tensor value
+  through overloaded `@operator("[]=")` hooks, keeping element-mask behavior in
+  ordinary library code.
 - Done: library hook return types preserve shape metadata through local RHS
   inference; `selected = tensor[mask, :]` can flow into an API requiring
   `Tensor[i32][dyn, 2]` without restating the local type.
@@ -490,8 +494,8 @@ Status:
   arguments and shaped metadata through RHS inference, so
   `values = zeros[f32](4, 2)` can feed `values[mask, :]` and surface
   `Tensor[f32][dyn, 2]` in editor type information.
-- Remaining: broader mask semantics, richer backend/library-owned view objects,
-  and broader propagation of shape facts through composed tensor expressions.
+- Remaining: richer backend/library-owned view objects and broader propagation
+  of shape facts through composed tensor expressions.
 
 ### 2. CPU Tensor Library
 
@@ -534,6 +538,8 @@ Status:
 - `tests/fixtures/tensor_dogfood/mask_rows_main.dd` validates reusable row-mask
   read and explicit read/modify/write masked scatter. The separate generic
   `mask_indexing.dd` fixture validates `dyn` shaped flow.
+- `tests/fixtures/tensor_dogfood/mask_elements_main.dd` validates reusable
+  element-mask gather, scalar masked fill, and tensor-valued masked scatter.
 - `tests/fixtures/tensor_dogfood/activation_metrics_main.dd` validates broader
   activation and metric helpers through normal imported Dudu tensor code.
 - `tests/fixtures/tensor_dogfood/xor_main.dd` validates a tiny generated XOR

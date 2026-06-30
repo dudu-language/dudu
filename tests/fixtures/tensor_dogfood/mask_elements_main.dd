@@ -1,0 +1,43 @@
+from tensor import MatrixMask
+from tensor import Tensor
+from tensor import from_4x2
+from tensor import greater_than
+from tensor import scale
+from tensor import sum_values
+
+
+def selected_score(values: Tensor, mask: MatrixMask) -> f32:
+    selected = values[mask]
+    return sum_values(selected)
+
+
+def main() -> i32:
+    values = from_4x2(
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+    )
+    mask = greater_than(values, 4.0)
+    selected = values[mask]
+    before = selected_score(values, mask)
+
+    values[mask] = scale(selected, 0.5)
+    after_tensor_scatter = values[2, 0] + values[2, 1] + values[3, 0] + values[3, 1]
+
+    values[mask] = 0.0
+    after_scalar_scatter = selected_score(values, mask)
+
+    if i32(before) != 26:
+        return 1
+    if i32(after_tensor_scatter) != 13:
+        return 2
+    if after_scalar_scatter != 0.0:
+        return 3
+    if mask.count_true() != 4:
+        return 4
+    return 42

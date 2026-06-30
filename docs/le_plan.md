@@ -1184,11 +1184,12 @@ push. They are not release packaging work.
    `@operator("[]=")` hooks, proving basic `tensor[mask, :]` selection and
    masked scatter without compiler tensor-backend patches; the inferred result
    of that hook can flow into an API requiring `Tensor[i32][dyn, 2]` without
-   restating the local type. Continue with optional backend BLAS probes when
-   local tooling is available, then advanced mask semantics, repeated-index
-   scatter policy, composed tensor-expression shape propagation, and explicit
-   proof/conversion diagnostics for `dyn` values flowing into concrete shape
-   assertions.
+   restating the local type. A reusable matrix mask now proves `tensor[mask]`
+   element gather plus scalar and tensor-valued masked scatter through ordinary
+   overloaded index hooks. Continue with optional backend BLAS probes when
+   local tooling is available, then repeated-index scatter policy, composed
+   tensor-expression shape propagation, and explicit proof/conversion
+   diagnostics for `dyn` values flowing into concrete shape assertions.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

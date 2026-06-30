@@ -35,6 +35,28 @@ class Mask:
         return count
 
 
+class MatrixMask:
+    rows: i32
+    cols: i32
+    data: list[bool]
+
+    @operator("[]")
+    def at(self, row: i32, col: i32) -> bool:
+        return self.data[(row * self.cols) + col]
+
+    def count_true(self) -> i32:
+        count = 0
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                if self[row, col]:
+                    count += 1
+                col += 1
+            row += 1
+        return count
+
+
 class Tensor:
     rows: i32
     cols: i32
@@ -113,6 +135,45 @@ class Tensor:
                     self[row, col_start + col] = value[value_row, col]
                     col += 1
                 value_row += 1
+            row += 1
+
+    @operator("[]")
+    def masked_elements(self, mask: MatrixMask) -> Tensor:
+        out = zeros(mask.count_true(), 1)
+        out_row = 0
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                if mask[row, col]:
+                    out[out_row, 0] = self[row, col]
+                    out_row += 1
+                col += 1
+            row += 1
+        return out
+
+    @operator("[]=")
+    def set_masked_elements_scalar(self, mask: MatrixMask, value: f32):
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                if mask[row, col]:
+                    self[row, col] = value
+                col += 1
+            row += 1
+
+    @operator("[]=")
+    def set_masked_elements(self, mask: MatrixMask, value: Tensor):
+        value_row = 0
+        row = 0
+        while row < self.rows:
+            col = 0
+            while col < self.cols:
+                if mask[row, col]:
+                    self[row, col] = value[value_row, 0]
+                    value_row += 1
+                col += 1
             row += 1
 
 
@@ -241,6 +302,18 @@ def row_sum_mask(input: Tensor, threshold: f32) -> Mask:
         data.append(total > threshold)
         row += 1
     return Mask(data)
+
+
+def greater_than(input: Tensor, threshold: f32) -> MatrixMask:
+    data: list[bool] = []
+    row = 0
+    while row < input.rows:
+        col = 0
+        while col < input.cols:
+            data.append(input[row, col] > threshold)
+            col += 1
+        row += 1
+    return MatrixMask(input.rows, input.cols, data)
 
 
 def add(a: Tensor, b: Tensor) -> Tensor:
