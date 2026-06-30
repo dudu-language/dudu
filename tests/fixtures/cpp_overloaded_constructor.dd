@@ -1,4 +1,4 @@
-import cpp "cpp_overloaded_constructor.hpp" as dudu_ctor
+from cpp.path import cpp_overloaded_constructor.hpp
 
 
 def main() -> i32:

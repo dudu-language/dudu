@@ -1,4 +1,4 @@
-import cpp "native_dependent_template_return.hpp" as dep
+from cpp.path import native_dependent_template_return.hpp
 
 
 def main() -> i32:

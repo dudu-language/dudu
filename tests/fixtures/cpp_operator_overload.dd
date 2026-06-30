@@ -1,4 +1,4 @@
-import cpp "cpp_operator_overload.hpp" as dudu_op
+from cpp.path import cpp_operator_overload.hpp
 
 
 def main() -> i32:

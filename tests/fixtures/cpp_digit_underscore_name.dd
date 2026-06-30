@@ -1,4 +1,4 @@
-import cpp "cpp_digit_underscore_name.hpp" as dudu_digits
+from cpp.path import cpp_digit_underscore_name.hpp
 
 
 def main() -> i32:

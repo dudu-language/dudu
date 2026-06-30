@@ -1,4 +1,4 @@
-import cpp "cpp_template_member.hpp" as dudu_tpl
+from cpp.path import cpp_template_member.hpp
 
 
 def main() -> i32:
