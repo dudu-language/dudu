@@ -40,7 +40,7 @@ Last local dogfood run: 2026-06-27 with `scripts/test_dogfood.sh`.
 | C++ standard library variants | C++ stdlib | `std.variant`, `std.holds_alternative`, `std.get` | fixture | `tests/fixtures/cpp_std_variant.dd` | no |
 | glm | math | header import, constructors, functions such as `glm.dot` | pass | `scripts/probe_optional.sh` / `glm_math.dd` | no |
 | Eigen | math | header-only templates, vector typedef aliases and constructors | pass | `scripts/probe_optional.sh` / `eigen_vector.dd` | alias-target methods and inherited template methods/operators such as `Vector3f.dot` need deeper native base-template modeling |
-| OpenBLAS / CBLAS | numeric | C ABI calls, fixed arrays, C enum parameters, pointer handoff, BLAS dot/matmul link behavior | pass | `scripts/probe_optional.sh` / `openblas_ddot.dd`, `openblas_sgemm.dd` | no |
+| OpenBLAS / CBLAS | numeric | C ABI calls, fixed arrays, C enum parameters, pointer handoff, BLAS dot/matmul link behavior, reusable tensor comparison | pass | `scripts/probe_optional.sh` / `openblas_ddot.dd`, `openblas_sgemm.dd`, `tensor_dogfood/openblas_compare.dd` | no |
 | OpenCV | image / CV | generated C++ build and tiny image write smoke | pass | `scripts/probe_optional.sh` / `examples/image_filter.dd` | no |
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
 | Lua | scripting / embedding | multiple C headers, stack API, C strings, constants, lifecycle | pass | `scripts/probe_optional.sh` / `lua_stack.dd` | no |

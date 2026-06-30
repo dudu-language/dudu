@@ -441,6 +441,19 @@ probe_openblas() {
         echo "openblas sgemm probe returned $status, expected 42" >&2
         exit 1
     fi
+
+    cpp="$repo_root/build/probe_openblas_tensor_compare.cpp"
+    bin="$repo_root/build/probe_openblas_tensor_compare"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tensor_dogfood/openblas_compare.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs openblas) -o "$bin"
+    set +e
+    "$bin"
+    status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "openblas tensor compare probe returned $status, expected 42" >&2
+        exit 1
+    fi
     echo "ok openblas"
 }
 

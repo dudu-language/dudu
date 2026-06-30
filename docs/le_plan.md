@@ -1169,9 +1169,10 @@ push. They are not release packaging work.
    imported tensor module with elementwise ops, callback-based map activation,
    row-bias add, and pure Dudu matmul; dogfood mains validate matrix/image-style
    views, XOR classification, and an autograd-style graph; the optional
-   OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop. Continue
-   by comparing reusable tensor matmul against BLAS and only then adding OpenCL
-   or ROCm probes when local tooling is available.
+   OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop; the
+   optional reusable tensor OpenBLAS fixture compares Dudu tensor `matmul`
+   against CBLAS `sgemm`. Continue by adding OpenCL or ROCm probes when local
+   tooling is available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

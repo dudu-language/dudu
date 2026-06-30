@@ -1,0 +1,59 @@
+from c import cblas.h as blas
+from tensor import Tensor
+from tensor import matmul
+from tensor import zeros
+
+
+def make_a() -> Tensor:
+    out = zeros(2, 3)
+    out[0, 0] = 1.0
+    out[0, 1] = 2.0
+    out[0, 2] = 3.0
+    out[1, 0] = 4.0
+    out[1, 1] = 5.0
+    out[1, 2] = 6.0
+    return out
+
+
+def make_b() -> Tensor:
+    out = zeros(3, 2)
+    out[0, 0] = 7.0
+    out[0, 1] = 8.0
+    out[1, 0] = 9.0
+    out[1, 1] = 10.0
+    out[2, 0] = 11.0
+    out[2, 1] = 12.0
+    return out
+
+
+def blas_matmul(a: Tensor, b: Tensor) -> Tensor:
+    out = zeros(a.rows, b.cols)
+    blas.cblas_sgemm(
+        blas.CblasRowMajor,
+        blas.CblasNoTrans,
+        blas.CblasNoTrans,
+        a.rows,
+        b.cols,
+        a.cols,
+        1.0,
+        &a.data[0],
+        a.cols,
+        &b.data[0],
+        b.cols,
+        0.0,
+        &out.data[0],
+        out.cols,
+    )
+    return out
+
+
+def main() -> i32:
+    a = make_a()
+    b = make_b()
+    pure = matmul(a, b)
+    blas_result = blas_matmul(a, b)
+    if i32(pure[0, 0]) != i32(blas_result[0, 0]):
+        return 1
+    if i32(pure[1, 1]) != i32(blas_result[1, 1]):
+        return 2
+    return i32(blas_result[0, 0] + blas_result[1, 1]) - 170

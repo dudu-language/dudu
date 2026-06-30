@@ -449,8 +449,9 @@ Status:
 - `tests/fixtures/tensor_dogfood/autograd_main.dd` validates the start of an
   autograd-style graph using normal Dudu enums, classes, lists, operators, and
   explicit reference mutation.
-- Remaining: compare reusable tensor matmul against BLAS and add broader
-  activation/map helpers as needed by later examples.
+- `tests/fixtures/tensor_dogfood/openblas_compare.dd` compares reusable Dudu
+  tensor `matmul` against CBLAS `sgemm` through normal C interop.
+- Remaining: add broader activation/map helpers as needed by later examples.
 
 ### 3. Optional OpenBLAS Probe
 
@@ -473,12 +474,13 @@ Status:
 
 - Done: `tests/fixtures/openblas_sgemm.dd` validates CBLAS `sgemm` through
   normal C header interop, alongside the existing `openblas_ddot` probe.
-- Done: `scripts/probe_optional.sh` runs both ddot and sgemm when OpenBLAS is
-  discoverable through `pkg-config`.
+- Done: `tests/fixtures/tensor_dogfood/openblas_compare.dd` validates reusable
+  tensor `matmul` against CBLAS `sgemm`.
+- Done: `scripts/probe_optional.sh` runs ddot, sgemm, and reusable tensor
+  compare probes when OpenBLAS is discoverable through `pkg-config`.
 - Done: native enum/type compatibility now handles the qualified CBLAS enum
   spellings without OpenBLAS-specific compiler cases.
-- Remaining: wrap the BLAS call from the reusable Dudu tensor example and
-  compare its result against pure Dudu matmul in the same dogfood path.
+- Remaining: no OpenBLAS work for this slice; GPU probing is tracked below.
 
 ### 4. GPU Tensor Backend
 
