@@ -427,9 +427,12 @@ Status:
   `tensor[mask, :]` can return a `Tensor[T][dyn, N]` value and
   `tensor[mask, :] = value` can lower to a normal `@operator("[]=")` scatter
   method without compiler knowledge of tensor backends.
+- Done: library hook return types preserve shape metadata through local RHS
+  inference; `selected = tensor[mask, :]` can flow into an API requiring
+  `Tensor[i32][dyn, 2]` without restating the local type.
 - Remaining: advanced mask semantics, repeated-index scatter policy, richer
-  view objects, propagation of shape facts through tensor expressions, and
-  diagnostics/conversions for proving runtime-known `dyn` values satisfy
+  view objects, propagation of shape facts through composed tensor expressions,
+  and diagnostics/conversions for proving runtime-known `dyn` values satisfy
   concrete shape assertions.
 
 ### 2. CPU Tensor Library

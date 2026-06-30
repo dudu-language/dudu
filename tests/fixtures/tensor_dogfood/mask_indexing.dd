@@ -110,11 +110,15 @@ def make_values() -> Tensor[i32]:
     return out
 
 
+def selected_score(selected: Tensor[i32][dyn, 2]) -> i32:
+    return selected[0, 0] + selected[1, 1]
+
+
 def main() -> i32:
     mask = make_mask()
     values = make_values()
-    selected: Tensor[i32][dyn, 2] = values[mask, :]
-    before = selected[0, 0] + selected[1, 1]
+    selected = values[mask, :]
+    before = selected_score(selected)
 
     values[mask, :] = 0
     after = values[0, 0] + values[0, 1] + values[2, 0] + values[2, 1]
