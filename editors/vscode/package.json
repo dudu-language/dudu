@@ -41,6 +41,11 @@
         "path": "./syntaxes/dudu.tmLanguage.json"
       }
     ],
+    "configurationDefaults": {
+      "[dudu]": {
+        "editor.inlayHints.enabled": "offUnlessPressed"
+      }
+    },
     "commands": [
       {
         "command": "dudu.fmtFile",
