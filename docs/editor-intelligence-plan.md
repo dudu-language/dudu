@@ -140,6 +140,9 @@ first native-aware request cost without changing warm request behavior.
 Hover for selective imports now preserves suffix identity, so `Mode.Play`
 resolves to the imported enum variant docs instead of falling back to spelling
 or only handling the imported `Mode` name.
+Go-to-definition for selective imports is token-aware too: the module token in
+`from math_utils import mix` jumps to the module file, while the imported name
+jumps to the declaration inside that module.
 Native hover now surfaces the scanner's canonical native identity key when the
 symbol has one, so hover shows both the Dudu-shaped signature/type and the
 identity used by native references. Native function hover/detail also includes
@@ -150,6 +153,9 @@ hover can show real C/C++ declaration docs when the header exposes them.
 Native C++ class docs are covered in direct tests and the JSON-RPC matrix, and
 native alias hover can reuse the resolved class documentation when the alias
 itself has no separate comment.
+Wrapped native type annotations are covered as well. In a type such as
+`*const[nb.MatrixNativePoint]`, definition lookup selects the inner native type
+instead of the pointer/const wrapper and jumps to the scanned header location.
 Doc-commented native enum constants are covered as native values: completion
 shows the scanned docs, hover shows the Dudu-shaped constant type plus docs and
 native identity, definition jumps to the header declaration, references include

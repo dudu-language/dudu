@@ -110,6 +110,9 @@ path-qualified member uses such as an imported native class constructor call
 matching the same qualified type annotation, from either cursor position.
 Frontend tests cover go-to-definition from a Dudu native type annotation to the
 source location of a real scanned local C header declaration.
+The JSON-RPC matrix also covers wrapped native type annotations such as
+`*const[nb.MatrixNativePoint]`; cursor selection prefers the inner named native
+type over the wrapper so go-to-definition still lands in the scanned header.
 LSP `Symbol` entries now carry native identity keys for scanned native types,
 values, functions, macros, classes, and C++ class methods when Clang metadata
 provides them. That keeps identity available at the editor boundary and is the
@@ -142,6 +145,9 @@ of falling back to the bare member name, so unrelated same-named member calls
 are not reported together. Module-qualified references include the declaration
 inside the target module by searching that module with the unqualified imported
 member name.
+Selective imports keep separate source ranges for the module token, imported
+symbol token, and alias token. Go-to-definition on `from math_utils import mix`
+jumps `math_utils` to the module file and `mix` to the imported declaration.
 Dudu class member declaration references now use class-qualified identity for
 the selected declaration and receiver-type checks for member expressions, so
 `Player.hp` references do not include unrelated `Enemy.hp` declarations or

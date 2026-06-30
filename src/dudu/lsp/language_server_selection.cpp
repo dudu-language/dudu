@@ -86,8 +86,14 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
         set_symbol(text, type.location);
         set_symbol_path(text, type.location);
     };
-    const auto visit_type_tree = [&](const TypeRef& type) {
-        visit_type_ref_tree(type, visit_type);
+    const auto visit_type_tree = [&](const TypeRef& type, const auto& visit_type_tree_ref) -> void {
+        if (!has_type_ref(type)) {
+            return;
+        }
+        for (const TypeRef& child : type.children) {
+            visit_type_tree_ref(child, visit_type_tree_ref);
+        }
+        visit_type(type);
     };
     const auto visit_expr = [&](const Expr& expr) {
         collect_call_callee_selection(expr, position, selection);
@@ -127,7 +133,7 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
     visit_lsp_stmt_tree(statements, [&](const Stmt& stmt) {
         visit_stmt_binding_names(stmt, set_symbol);
         visit_stmt_binding_names(stmt, set_symbol_path);
-        visit_type_tree(stmt_type_ref(stmt));
+        visit_type_tree(stmt_type_ref(stmt), visit_type_tree);
         visit_stmt_expressions(
             stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
     });
@@ -153,8 +159,14 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         set_symbol(text, type.location);
         set_symbol_path(text, type.location);
     };
-    const auto visit_type_tree = [&](const TypeRef& type) {
-        visit_type_ref_tree(type, visit_type);
+    const auto visit_type_tree = [&](const TypeRef& type, const auto& visit_type_tree_ref) -> void {
+        if (!has_type_ref(type)) {
+            return;
+        }
+        for (const TypeRef& child : type.children) {
+            visit_type_tree_ref(child, visit_type_tree_ref);
+        }
+        visit_type(type);
     };
     const auto visit_expr = [&](const Expr& expr) {
         collect_call_callee_selection(expr, position, selection);
@@ -192,33 +204,37 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         }
     };
     for (const ImportDecl& import : module.imports) {
-        set_symbol(bound_import_name(import), import.location);
-        set_symbol_path(bound_import_name(import), import.location);
-        set_symbol(import.imported_name, import.location);
-        set_symbol_path(import.imported_name, import.location);
+        set_symbol(import.module_path, import.module_range.start);
+        set_symbol_path(import.module_path, import.module_range.start);
+        set_symbol(import.imported_name, import.imported_name_range.start);
+        set_symbol_path(import.imported_name, import.imported_name_range.start);
+        if (!import.alias.empty()) {
+            set_symbol(import.alias, import.alias_range.start);
+            set_symbol_path(import.alias, import.alias_range.start);
+        }
     }
     for (const TypeAliasDecl& alias : module.aliases) {
         set_symbol(alias.name, alias.location);
         set_symbol_path(alias.name, alias.location);
-        visit_type_tree(alias.type_ref);
+        visit_type_tree(alias.type_ref, visit_type_tree);
     }
     for (const ConstDecl& constant : module.constants) {
         set_symbol(constant.name, constant.location);
         set_symbol_path(constant.name, constant.location);
-        visit_type_tree(constant.type_ref);
+        visit_type_tree(constant.type_ref, visit_type_tree);
         visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
     }
     for (const EnumDecl& en : module.enums) {
         set_symbol(en.name, en.location);
         set_symbol_path(en.name, en.location);
-        visit_type_tree(en.underlying_type_ref);
+        visit_type_tree(en.underlying_type_ref, visit_type_tree);
         for (const EnumValueDecl& value : en.values) {
             set_symbol(value.name, value.location);
             set_symbol_path(value.name, value.location);
             for (const EnumPayloadField& field : value.payload_fields) {
                 set_symbol(field.name, field.location);
                 set_symbol_path(field.name, field.location);
-                visit_type_tree(field.type_ref);
+                visit_type_tree(field.type_ref, visit_type_tree);
             }
             visit_lsp_expr_tree(value.value_expr, visit_expr, visit_type);
         }
@@ -227,35 +243,35 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         set_symbol(klass.name, klass.location);
         set_symbol_path(klass.name, klass.location);
         for (const BaseClassDecl& base : klass.base_class_refs) {
-            visit_type_tree(base.type_ref);
+            visit_type_tree(base.type_ref, visit_type_tree);
         }
         for (const FieldDecl& field : klass.fields) {
             set_symbol(field.name, field.location);
             set_symbol_path(field.name, field.location);
-            visit_type_tree(field.type_ref);
+            visit_type_tree(field.type_ref, visit_type_tree);
             visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
         }
         for (const ConstDecl& constant : klass.constants) {
             set_symbol(constant.name, constant.location);
             set_symbol_path(constant.name, constant.location);
-            visit_type_tree(constant.type_ref);
+            visit_type_tree(constant.type_ref, visit_type_tree);
             visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
         }
         for (const ConstDecl& field : klass.static_fields) {
             set_symbol(field.name, field.location);
             set_symbol_path(field.name, field.location);
-            visit_type_tree(field.type_ref);
+            visit_type_tree(field.type_ref, visit_type_tree);
             visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
         }
         for (const FunctionDecl& method : klass.methods) {
             set_symbol(method.name, method.location);
             set_symbol_path(method.name, method.location);
-            visit_type_tree(method.receiver_type_ref);
-            visit_type_tree(method.return_type_ref);
+            visit_type_tree(method.receiver_type_ref, visit_type_tree);
+            visit_type_tree(method.return_type_ref, visit_type_tree);
             for (const ParamDecl& param : method.params) {
                 set_symbol(param.name, param.location);
                 set_symbol_path(param.name, param.location);
-                visit_type_tree(param.type_ref);
+                visit_type_tree(param.type_ref, visit_type_tree);
             }
             collect_selection_from_statements(method.statements, position, selection);
         }
@@ -263,12 +279,12 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
     for (const FunctionDecl& fn : module.functions) {
         set_symbol(fn.name, fn.location);
         set_symbol_path(fn.name, fn.location);
-        visit_type_tree(fn.receiver_type_ref);
-        visit_type_tree(fn.return_type_ref);
+        visit_type_tree(fn.receiver_type_ref, visit_type_tree);
+        visit_type_tree(fn.return_type_ref, visit_type_tree);
         for (const ParamDecl& param : fn.params) {
             set_symbol(param.name, param.location);
             set_symbol_path(param.name, param.location);
-            visit_type_tree(param.type_ref);
+            visit_type_tree(param.type_ref, visit_type_tree);
         }
         collect_selection_from_statements(fn.statements, position, selection);
     }

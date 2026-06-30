@@ -262,9 +262,15 @@ ImportDecl Parser::parse_import(const Token& start) {
     ImportDecl import;
     import.kind = ImportKind::Module;
     import.location = start.location;
+    const size_t module_begin = cursor_;
     import.module_path = parse_path();
+    import.module_range = join_tokens(module_begin, cursor_).range;
     if (match_identifier("as")) {
-        import.alias = consume_identifier("expected alias after as").text;
+        const Token& alias = consume_identifier("expected alias after as");
+        import.alias = alias.text;
+        import.alias_range.start = alias.location;
+        import.alias_range.end = alias.location;
+        import.alias_range.end.column += static_cast<int>(alias.text.size());
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
     import.range = source.range;
@@ -287,7 +293,11 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
         --import.module_range.end.column;
     }
     if (match_identifier("as")) {
-        import.alias = consume_identifier("expected alias after as").text;
+        const Token& alias = consume_identifier("expected alias after as");
+        import.alias = alias.text;
+        import.alias_range.start = alias.location;
+        import.alias_range.end = alias.location;
+        import.alias_range.end.column += static_cast<int>(alias.text.size());
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
     import.range = source.range;
@@ -300,13 +310,23 @@ ImportDecl Parser::parse_from_import(const Token& start) {
     ImportDecl import;
     import.kind = ImportKind::From;
     import.location = start.location;
+    const size_t module_begin = cursor_;
     import.module_path = parse_path();
+    import.module_range = join_tokens(module_begin, cursor_).range;
     if (!match_identifier("import")) {
         fail_current("expected import after module path");
     }
-    import.imported_name = consume_identifier("expected imported name").text;
+    const Token& imported_name = consume_identifier("expected imported name");
+    import.imported_name = imported_name.text;
+    import.imported_name_range.start = imported_name.location;
+    import.imported_name_range.end = imported_name.location;
+    import.imported_name_range.end.column += static_cast<int>(imported_name.text.size());
     if (match_identifier("as")) {
-        import.alias = consume_identifier("expected alias after as").text;
+        const Token& alias = consume_identifier("expected alias after as");
+        import.alias = alias.text;
+        import.alias_range.start = alias.location;
+        import.alias_range.end = alias.location;
+        import.alias_range.end.column += static_cast<int>(alias.text.size());
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
     import.range = source.range;

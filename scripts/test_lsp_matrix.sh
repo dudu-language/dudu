@@ -305,6 +305,7 @@ import other_math_utils as other_math
 import entities
 import other_entities
 import transitive
+from math_utils import mix
 from entities import Player
 from entities import MAX_HP
 from entities import Mode
@@ -375,6 +376,7 @@ typedef enum MatrixNativeMode {
 
 def main() -> i32:
     point: nb.MatrixNativePoint
+    wrapped: *const[nb.MatrixNativePoint]
     point.x = nb.DUDU_MATRIX_NATIVE_MAGIC
     return nb.matrix_native_add(point.x, nb.DUDU_MATRIX_NATIVE_SCALE(2)) + nb.MATRIX_MODE_FAST
 """
@@ -623,6 +625,8 @@ def main() -> i32:
         request(28, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Box[i32]", add=1)}),
         request(29, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(49, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
+        request(125, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "from math_utils import mix", add=len("from "))}),
+        request(126, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "from math_utils import mix", add=len("from math_utils import "))}),
         request(68, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
         request(69, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Counter.LIMIT", add=len("Counter."))}),
         request(30, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "current", occurrence=1)}),
@@ -685,6 +689,7 @@ def main() -> i32:
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(92, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
         request(93, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
+        request(127, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "wrapped: *const[nb.MatrixNativePoint]", add=len("wrapped: *const[nb."))}),
         request(116, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
         request(117, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
         request(118, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "point.x", add=len("point."))}),
@@ -792,15 +797,25 @@ def main() -> i32:
         raise AssertionError(f"Player constructor definition did not jump to source module: {player_definition!r}")
     if player_definition["range"]["start"]["line"] != player_decl["line"]:
         raise AssertionError(f"Player constructor definition jumped to wrong line: {player_definition!r}")
+    from_module_definition = response(messages, 125)
+    if from_module_definition["uri"] != (tmp / "math_utils.dd").as_uri():
+        raise AssertionError(f"from-import module token did not jump to module file: {from_module_definition!r}")
+    if from_module_definition["range"]["start"]["line"] != 0:
+        raise AssertionError(f"from-import module token did not jump to module top: {from_module_definition!r}")
+    from_symbol_definition = response(messages, 126)
+    math_source = (tmp / "math_utils.dd").read_text()
+    math_mix_decl = position(math_source, "mix(left")
+    if from_symbol_definition["uri"] != (tmp / "math_utils.dd").as_uri():
+        raise AssertionError(f"from-import symbol token did not jump to symbol module: {from_symbol_definition!r}")
+    if from_symbol_definition["range"]["start"]["line"] != math_mix_decl["line"]:
+        raise AssertionError(f"from-import symbol token did not jump to symbol declaration: {from_symbol_definition!r}")
     for request_id in (30, 31):
         hover = response(messages, request_id)
         assert_nonempty(hover and hover.get("contents"), f"hover {request_id}")
     assert_nonempty(response(messages, 32), "local references")
     imported_function_refs = response(messages, 66)
     assert_nonempty(imported_function_refs, "imported Dudu function references")
-    math_source = (tmp / "math_utils.dd").read_text()
     other_math_source = (tmp / "other_math_utils.dd").read_text()
-    math_mix_decl = position(math_source, "mix(left")
     other_math_mix_decl = position(other_math_source, "mix(left")
     main_math_mix = position(main_source, "math.mix", add=len("math."))
     main_other_math_mix = position(main_source, "other_math.mix", add=len("other_math."))
@@ -1125,6 +1140,16 @@ def main() -> i32:
     native_type_hover = response(messages, 51)["contents"]["value"]
     if "Native identity:" not in native_type_hover or "MatrixNativePoint" not in native_type_hover:
         raise AssertionError(f"missing native type identity: {native_type_hover!r}")
+    wrapped_native_type_definition = response(messages, 127)
+    if not wrapped_native_type_definition["uri"].endswith("/native_bridge.h"):
+        raise AssertionError(
+            f"wrapped native type definition did not jump to header: {wrapped_native_type_definition!r}"
+        )
+    native_type_decl = position((tmp / "native_bridge.h").read_text(), "MatrixNativePoint {")
+    if wrapped_native_type_definition["range"]["start"]["line"] != native_type_decl["line"]:
+        raise AssertionError(
+            f"wrapped native type definition jumped to wrong line: {wrapped_native_type_definition!r}"
+        )
     native_macro_hover = response(messages, 53)["contents"]["value"]
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")

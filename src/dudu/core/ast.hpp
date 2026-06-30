@@ -33,6 +33,8 @@ struct ImportDecl {
     SourceLocation location;
     SourceRange range;
     SourceRange module_range;
+    SourceRange imported_name_range;
+    SourceRange alias_range;
 };
 
 struct ModuleDependency {

@@ -190,6 +190,15 @@ std::optional<std::string> import_definition_json(const Document& doc, const Pro
         }
         std::string from_suffix;
         if (import.kind == ImportKind::From) {
+            if (word == import.module_path) {
+                const std::filesystem::path file =
+                    module_path_to_file(doc.path.parent_path(), import.module_path);
+                std::error_code error;
+                if (std::filesystem::exists(file, error) && !error) {
+                    return location_json(file_uri(file), range_json(0, 0, 0));
+                }
+                continue;
+            }
             const std::string bound = bound_import_name(import);
             if (bound != word) {
                 if (word.rfind(bound + ".", 0) != 0) {

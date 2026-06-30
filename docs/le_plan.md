@@ -3842,6 +3842,12 @@ push. They are not release packaging work.
    resolution instead of prefix spelling alone. The LSP matrix covers
    `Mode.` and `Token.` completions, enum-member completion kinds, and docs
    attached to variants such as `Mode.Play` and `Token.IntLit`.
+   Selective-import definitions now use real token ranges: in
+   `from math_utils import mix`, the module token jumps to the imported module
+   file and the imported-name token jumps to the declaration. Wrapped native
+   type definitions also select the inner named type first, so
+   `*const[nb.MatrixNativePoint]` jumps to the scanned C header declaration
+   instead of stopping at the wrapper.
    Native macro definition now resolves through scanner-provided header
    locations instead of stopping at the Dudu import alias. Local imported headers
    are searched for the matching `#define` line after macro dump parsing, and
