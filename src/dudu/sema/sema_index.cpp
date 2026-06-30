@@ -5,6 +5,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index_type_ref.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <optional>
@@ -276,6 +277,10 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
             symbols, location, receiver_type, index_count_from_expr(index_expr),
             is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
         return *indexed_ref;
+    }
+    if (class_for_receiver_type(symbols, receiver_type) != nullptr) {
+        throw CompileError(location,
+                           "no matching @operator(\"[]\") for indexed access to " + label);
     }
     throw CompileError(location, "cannot index non-container: " + label);
 }

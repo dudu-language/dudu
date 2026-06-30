@@ -406,13 +406,17 @@ Status:
 - Done: `.vindex[...]` and `.oindex[...]` are rejected with explicit diagnostics
   describing the planned pairwise and orthogonal gather forms instead of
   falling through to a misleading unknown-field error.
+- Done: Dudu class receivers without matching index hooks now diagnose missing
+  `@operator("[]")` or `@operator("[]=")` directly instead of reporting
+  "cannot index non-container".
 - Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
   `tests/fixtures/tensor_slice_hook.dd` and
   `tests/fixtures/tensor_slice_views.dd` and `tests/fixtures/cpu_tensor_matmul.dd`
   and `tests/fixtures/bad_tensor_vindex.dd` and
-  `tests/fixtures/bad_tensor_oindex.dd`.
-- Remaining: masks, scatter, richer view objects, and missing-hook diagnostics
-  for fancy forms.
+  `tests/fixtures/bad_tensor_oindex.dd` and
+  `tests/fixtures/bad_tensor_missing_index_hook.dd` and
+  `tests/fixtures/bad_tensor_missing_index_set_hook.dd`.
+- Remaining: masks, scatter, and richer view objects.
 
 ### 2. CPU Tensor Library
 

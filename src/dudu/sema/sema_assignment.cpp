@@ -8,6 +8,7 @@
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
@@ -125,6 +126,10 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
+            if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
+                sema_fail(target_location,
+                          "no matching @operator(\"[]=\") for indexed assignment to " + name);
+            }
         }
         return indexed_value_type_ref(scope.symbols, scope.local_type_refs, target_location, name,
                                       stmt_target_expr(stmt).children[1],
@@ -145,6 +150,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 check_call_args_ast(scope, indexed_assignment_label(receiver) + "[]=", *signature,
                                     args, &target_location);
                 return {};
+            }
+            if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
+                sema_fail(target_location,
+                          "no matching @operator(\"[]=\") for indexed assignment to " +
+                              indexed_assignment_label(receiver));
             }
             return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
                                               stmt_target_expr(stmt).children[1],

@@ -181,6 +181,10 @@ void test_rejected_fancy_indexing_fixtures(const std::filesystem::path& root) {
     const std::vector<Case> cases = {
         {"bad_tensor_vindex.dd", ".vindex[...] pairwise gather indexing is planned"},
         {"bad_tensor_oindex.dd", ".oindex[...] orthogonal/cartesian gather indexing is planned"},
+        {"bad_tensor_missing_index_hook.dd",
+         "no matching @operator(\"[]\") for indexed access to tensor"},
+        {"bad_tensor_missing_index_set_hook.dd",
+         "no matching @operator(\"[]=\") for indexed assignment to tensor"},
     };
 
     for (const Case& item : cases) {
