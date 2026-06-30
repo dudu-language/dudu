@@ -141,8 +141,9 @@ shows the scanned docs, hover shows the Dudu-shaped constant type plus docs and
 native identity, definition jumps to the header declaration, references include
 the value use site, and semantic tokens mark the value readonly/native.
 Doc-commented C struct fields are covered too: receiver-typed `point.x`
-hover, definition, and references use the scanned field docs/location/identity
-from the imported header.
+hover, definition, references, and semantic tokens use the scanned field
+docs/location/identity from the imported header, and the use-site token carries
+the native property modifier.
 Native find-references now consults `ProjectIndex`'s per-module native identity
 table instead of rebuilding LSP symbol lists for every candidate document. Open
 single-file editor overlays are indexed with their entry path, so unsaved or

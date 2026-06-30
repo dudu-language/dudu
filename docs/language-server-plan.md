@@ -625,7 +625,8 @@ results.
 Doc-commented native C struct fields are covered in the JSON-RPC matrix:
 receiver-typed `point.x` hover shows scanned field docs, definition jumps to
 the header field, and references include typed uses without dropping to a bare
-field-name search.
+field-name search. Semantic tokens also classify the receiver-resolved field as
+a native property.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file, plus a guard that an open unrelated same-named declaration is
 not edited.

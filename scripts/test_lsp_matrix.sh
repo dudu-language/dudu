@@ -1031,6 +1031,8 @@ def main() -> i32:
         raise AssertionError(f"missing native macro semantic token: {native_tokens!r}")
     if not has_semantic(native_tokens, "MATRIX_MODE_FAST", "variable", readonly | native_modifier):
         raise AssertionError(f"missing native value semantic token: {native_tokens!r}")
+    if not has_semantic(native_tokens, "x", "property", native_modifier):
+        raise AssertionError(f"missing native C field semantic token: {native_tokens!r}")
     entity_tokens = decode_semantic_tokens(entities_source, response(messages, 85)["data"], legend)
     if not has_semantic(entity_tokens, "count", "property", declaration | static):
         raise AssertionError(f"missing static field declaration semantic token: {entity_tokens!r}")

@@ -25,6 +25,11 @@ struct SemanticToken {
     int modifiers = 0;
 };
 
+struct SemanticTokenShape {
+    int type = 0;
+    int modifiers = 0;
+};
+
 constexpr int token_namespace = 0;
 constexpr int token_type = 1;
 constexpr int token_class = 2;
@@ -193,11 +198,11 @@ TypeRef local_binding_type(const Stmt& stmt, const DuduSemanticIndex& dudu_index
     return obvious_expr_type(stmt.value_expr, dudu_index, &local_types);
 }
 
-std::optional<int> member_token_type_for_receiver(const Expr& receiver, std::string_view member,
-                                                  const DuduSemanticIndex& dudu_index,
-                                                  const NativeSemanticIndex* native_index,
-                                                  const std::map<std::string, TypeRef>* local_types,
-                                                  bool callee) {
+std::optional<SemanticTokenShape>
+member_token_shape_for_receiver(const Expr& receiver, std::string_view member,
+                                const DuduSemanticIndex& dudu_index,
+                                const NativeSemanticIndex* native_index,
+                                const std::map<std::string, TypeRef>* local_types, bool callee) {
     const TypeRef receiver_type = obvious_expr_type(receiver, dudu_index, local_types);
     const std::string type_name = type_ref_head_name(receiver_type);
     if (type_name.empty()) {
@@ -205,19 +210,19 @@ std::optional<int> member_token_type_for_receiver(const Expr& receiver, std::str
     }
     const std::string key = type_name + "." + std::string(member);
     if (dudu_index.functions.contains(key)) {
-        return token_method;
+        return SemanticTokenShape{.type = token_method};
     }
     if (dudu_index.values.contains(key)) {
-        return token_property;
+        return SemanticTokenShape{.type = token_property};
     }
     if (dudu_index.enum_members.contains(key)) {
-        return token_enum_member;
+        return SemanticTokenShape{.type = token_enum_member};
     }
     if (native_index != nullptr && native_index->methods.contains(key)) {
-        return token_method;
+        return SemanticTokenShape{.type = token_method, .modifiers = mod_native};
     }
     if (native_index != nullptr && native_index->values.contains(key)) {
-        return token_property;
+        return SemanticTokenShape{.type = token_property, .modifiers = mod_native};
     }
     if (callee) {
         return std::nullopt;
@@ -276,11 +281,11 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         } else if (native_index != nullptr && path && native_index->methods.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_method);
         } else if (!expr.children.empty()) {
-            const std::optional<int> receiver_type = member_token_type_for_receiver(
+            const std::optional<SemanticTokenShape> receiver_shape = member_token_shape_for_receiver(
                 expr.children.front(), expr.name, dudu_index, native_index, local_types, true);
             add_semantic_token(tokens, member_location, expr.name,
-                               receiver_type.value_or(token_method),
-                               receiver_type ? 0 : mod_unresolved);
+                               receiver_shape ? receiver_shape->type : token_method,
+                               receiver_shape ? receiver_shape->modifiers : mod_unresolved);
         } else if (path && dudu_index.enum_members.contains(*path)) {
             add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
@@ -374,11 +379,11 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
         } else if (!expr.children.empty()) {
-            const std::optional<int> receiver_type = member_token_type_for_receiver(
+            const std::optional<SemanticTokenShape> receiver_shape = member_token_shape_for_receiver(
                 expr.children.front(), expr.name, dudu_index, native_index, local_types, false);
             add_semantic_token(tokens, member_location, expr.name,
-                               receiver_type.value_or(token_property),
-                               receiver_type ? 0 : mod_unresolved);
+                               receiver_shape ? receiver_shape->type : token_property,
+                               receiver_shape ? receiver_shape->modifiers : mod_unresolved);
         } else {
             add_semantic_token(tokens, member_location, expr.name, token_property, mod_unresolved);
         }
