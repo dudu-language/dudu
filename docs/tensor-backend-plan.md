@@ -456,8 +456,8 @@ Status:
   such as `Tensor[f32][Rows, Inner]`, and propagate composed result shapes like
   matrix multiply without leaking erased shape-only parameters into generated
   C++ templates. Conflicting shape inference is diagnosed in Dudu source.
-- Remaining: advanced mask semantics, richer view objects and broader
-  propagation of shape facts through composed tensor expressions.
+- Remaining: broader mask semantics, richer backend/library-owned view objects,
+  and broader propagation of shape facts through composed tensor expressions.
 
 ### 2. CPU Tensor Library
 
