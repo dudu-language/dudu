@@ -66,6 +66,8 @@ void test_keyword_statements_keep_token_ranges() {
     const dudu::Stmt& loop = main.statements[1];
     assert(loop.kind == dudu::StmtKind::For);
     assert(loop.name == "item");
+    assert(loop.location.column == 9);
+    assert(loop.range.start.column == 5);
     assert(dudu::has_stmt_type_ref(loop));
     assert(dudu::substitute_type_ref_text(dudu::stmt_type_ref(loop), {}) == "i32");
     assert(dudu::stmt_iterable_expr(loop).kind == dudu::ExprKind::Name);

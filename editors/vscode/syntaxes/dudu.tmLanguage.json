@@ -170,7 +170,7 @@
           "beginCaptures": {
             "1": { "name": "punctuation.separator.type.dudu" }
           },
-          "end": "(?=$|[,)=])",
+          "end": "(?=$|[,)=:])",
           "patterns": [
             { "include": "#comments" },
             { "include": "#strings" },

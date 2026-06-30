@@ -351,6 +351,8 @@ def main() -> i32:
     left: Vec2 = Vec2(1, 2)
     right: Vec2 = Vec2(3, 4)
     total = left + right
+    for i in range(2):
+        total = total + Vec2(i, i)
     return total.x
 """
     (tmp / "operators.dd").write_text(ops_source)
@@ -686,6 +688,7 @@ def main() -> i32:
         request(149, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=len("other."))}),
         request(150, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "self.x + other.x", add=1)}),
         request(151, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "other.x", add=1)}),
+        request(152, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "for i in range", add=len("for "))}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1160,6 +1163,9 @@ def main() -> i32:
     other_root_hover = response(messages, 151)["contents"]["value"]
     if "other: Vec2" not in other_root_hover:
         raise AssertionError(f"other root hover did not show local type: {other_root_hover!r}")
+    loop_binding_hover = response(messages, 152)["contents"]["value"]
+    if "i: i32" not in loop_binding_hover:
+        raise AssertionError(f"for binding hover did not show inferred type: {loop_binding_hover!r}")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)
     if operator_use_definition["uri"] != ops.as_uri():

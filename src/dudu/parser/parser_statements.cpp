@@ -257,6 +257,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::For;
         const Token& name = consume_identifier("expected for loop binding");
         stmt.name = name.text;
+        stmt.location = name.location;
         if (match(TokenKind::Colon)) {
             const JoinedTokens type = join_until_top_level_identifier("in", {TokenKind::Newline});
             set_stmt_type_ref(stmt, parse_type_piece(type));

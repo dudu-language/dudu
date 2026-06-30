@@ -217,6 +217,8 @@ void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
                                "def make_player(seed: i32) -> Player:\n"
                                "    player: Player = Player(seed)\n"
                                "    player.move(2)\n"
+                               "    for i in range(2):\n"
+                               "        player.move(i)\n"
                                "    mode: Mode = Mode.Play\n"
                                "    label = \"ok\"\n"
                                "    return player\n";
@@ -254,6 +256,7 @@ void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     require_decoded_semantic_token(tokens, "next_hp", token_variable, mod_declaration);
     require_decoded_semantic_token(tokens, "make_player", token_function, mod_declaration);
     require_decoded_semantic_token(tokens, "player", token_variable, mod_declaration);
+    require_decoded_semantic_token(tokens, "i", token_variable, mod_declaration);
     require_decoded_semantic_token(tokens, "move", token_method, 0);
     require_decoded_semantic_token(tokens, "Play", token_enum_member, mod_readonly);
     require_decoded_semantic_token(tokens, "2", token_number, 0);
