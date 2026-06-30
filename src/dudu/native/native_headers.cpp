@@ -185,8 +185,7 @@ std::optional<SourceLocation> macro_definition_location(const std::filesystem::p
     return std::nullopt;
 }
 
-void attach_macro_definition_locations(std::vector<NativeMacroDecl>& macros,
-                                       const ImportDecl& import,
+void attach_macro_definition_locations(NativeHeaderScan& scan, const ImportDecl& import,
                                        const NativeHeaderOptions& options) {
     const std::optional<std::filesystem::path> header =
         normalized_existing_header_path(import, options);
@@ -196,7 +195,7 @@ void attach_macro_definition_locations(std::vector<NativeMacroDecl>& macros,
     const std::vector<std::string> lines = read_lines(*header);
     std::map<std::string, SourceLocation> locations;
     std::map<std::string, std::string> docs;
-    for (NativeMacroDecl& macro : macros) {
+    for (NativeMacroDecl& macro : scan.macros) {
         const std::string raw_name = macro_raw_name(macro.name);
         if (const auto found = locations.find(raw_name); found != locations.end()) {
             macro.location = found->second;
@@ -213,6 +212,21 @@ void attach_macro_definition_locations(std::vector<NativeMacroDecl>& macros,
                 macro_doc_before_line(lines, static_cast<size_t>(location->line - 1));
             docs.emplace(raw_name, doc);
             macro.doc_comment = doc;
+        }
+    }
+    for (NativeFunctionDecl& function : scan.functions) {
+        const std::string raw_name = macro_raw_name(function.name);
+        const auto doc = docs.find(raw_name);
+        if (doc == docs.end() || doc->second.empty()) {
+            continue;
+        }
+        const bool macro_stub =
+            function.identity.canonical_path == raw_name &&
+            function.return_native_spelling == "auto" &&
+            std::ranges::all_of(function.param_native_spellings,
+                                [](const std::string& param) { return param == "auto"; });
+        if (macro_stub) {
+            function.doc_comment = doc->second;
         }
     }
 }
@@ -314,7 +328,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         NativeHeaderScan scan;
         parse_ast_dump(scan, raw_cache.ast_dump, import.location);
         parse_macro_dump(scan, raw_cache.macro_dump, import.location);
-        attach_macro_definition_locations(scan.macros, import, options);
+        attach_macro_definition_locations(scan, import, options);
         cache[key] = dedupe_scan(std::move(scan));
         store_native_header_scan_cache(raw_cache, cache[key]);
         print_project_step(project_step_timings_enabled(), "native-scan-raw",
@@ -375,7 +389,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
             "dudu.native_header.scan_failed", native_header_unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
-    attach_macro_definition_locations(scan.macros, import, options);
+    attach_macro_definition_locations(scan, import, options);
     if (!used_prelude_retry) {
         store_native_header_raw_cache(raw_cache, ast_dump, macro_dump,
                                       native_header_read_text(deps), cpp);

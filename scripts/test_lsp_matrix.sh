@@ -678,6 +678,7 @@ def main() -> i32:
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(121, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(122, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
+        request(123, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE(2)", add=len("nb.DUDU_MATRIX_NATIVE_SCALE("))}),
         request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
         request(112, "textDocument/prepareRename", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(91, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MATRIX_MODE_FAST", add=len("nb."))}),
@@ -1138,6 +1139,10 @@ def main() -> i32:
     native_macro_use = position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))
     if not has_start(native_macro_refs, native.as_uri(), native_macro_use["line"], native_macro_use["character"]):
         raise AssertionError(f"missing native macro reference: {native_macro_refs!r}")
+    native_macro_signature_help = response(messages, 123)
+    native_macro_signature_docs = native_macro_signature_help["signatures"][0]["documentation"]["value"]
+    if "Native scale macro docs." not in native_macro_signature_docs:
+        raise AssertionError(f"missing native macro signature docs: {native_macro_signature_help!r}")
     assert_nonempty(response(messages, 54), "native function references")
     native_value_hover = response(messages, 91)["contents"]["value"]
     if "MATRIX_MODE_FAST:" not in native_value_hover or "Native mode fast docs." not in native_value_hover:
