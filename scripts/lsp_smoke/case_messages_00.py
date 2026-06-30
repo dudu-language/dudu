@@ -243,6 +243,28 @@ messages.extend([
     lsp_message(
         {
             "jsonrpc": "2.0",
+            "id": 140,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 3, "character": 1},
+            },
+        }
+    ),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 141,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 7, "character": 18},
+            },
+        }
+    ),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {

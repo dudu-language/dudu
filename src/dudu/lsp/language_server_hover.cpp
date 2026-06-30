@@ -4,6 +4,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
+#include "dudu/lsp/language_server_hover_keywords.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -383,6 +384,9 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         if (!selected_path.has_value()) {
             selected_path = selection.expr_path;
         }
+    }
+    if (const std::optional<std::string> keyword = keyword_hover_json(doc, params)) {
+        return *keyword;
     }
     if (const std::optional<std::string> primitive = primitive_hover_json(query)) {
         return *primitive;

@@ -2379,6 +2379,10 @@ push. They are not release packaging work.
    docstring-backed module, class, enum, enum-value, method, and function docs.
    Hover for selective imports preserves suffix identity, so `Mode.Play`
    resolves through the imported `Mode` symbol to enum variant docs.
+   Keyword hover now uses lexer token ranges to explain Dudu constructs such as
+   `def`, `class`, `enum`, `import`, and `return`, and smoke coverage asserts
+   that hovering a function call site shows the callee signature just like the
+   declaration hover.
    Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported

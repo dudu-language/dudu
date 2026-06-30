@@ -147,6 +147,13 @@ assert "main" in symbol_names
 hover = next(item for item in responses if item.get("id") == 3)
 assert "def add" in hover["result"]["contents"]["value"]
 
+def_keyword_hover = next(item for item in responses if item.get("id") == 140)
+assert "keyword def" in def_keyword_hover["result"]["contents"]["value"]
+assert "Declares a function or method." in def_keyword_hover["result"]["contents"]["value"]
+
+call_hover = next(item for item in responses if item.get("id") == 141)
+assert "def add(a: i32, b: i32) -> i32" in call_hover["result"]["contents"]["value"]
+
 inferred_hover = next(item for item in responses if item.get("id") == 39)
 assert "inferred: i32" in inferred_hover["result"]["contents"]["value"]
 

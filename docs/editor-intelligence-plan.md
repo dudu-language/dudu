@@ -233,6 +233,9 @@ For source in the current project or a Dudu library:
   or imported declaration
 - hover shows kind, type/signature, module path, visibility, docs, and relevant
   native identity if the symbol comes from native code
+- hover on Dudu keywords such as `def`, `class`, `enum`, `import`, and
+  `return` should explain the language construct, and hover on a function call
+  should show the callee signature/docs just like hovering the declaration
 - hover for primitive Dudu types should still be useful: `f64` should explain
   that it is a Dudu primitive and show the exact C++ lowering such as `double`
 - hover should support Rust-Analyzer-style actions where the editor can expose
