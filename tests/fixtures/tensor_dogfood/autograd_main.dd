@@ -1,0 +1,89 @@
+enum Op:
+    Input
+    Add
+    Mul
+
+
+class Value:
+    data: f32
+    grad: f32
+
+    @operator("+")
+    def add(self, other: Value) -> Value:
+        return Value(self.data + other.data, 0.0)
+
+    @operator("*")
+    def mul(self, other: Value) -> Value:
+        return Value(self.data * other.data, 0.0)
+
+
+class Node:
+    value: Value
+    op: Op
+    left: i32
+    right: i32
+
+
+class Tape:
+    nodes: list[Node]
+
+
+def make_tape() -> Tape:
+    nodes: list[Node] = []
+    return Tape(nodes)
+
+
+def push_input(tape: &Tape, value: f32) -> i32:
+    index = i32(len(tape.nodes))
+    tape.nodes.append(Node(Value(value, 0.0), Op.Input, -1, -1))
+    return index
+
+
+def push_add(tape: &Tape, left: i32, right: i32) -> i32:
+    index = i32(len(tape.nodes))
+    value = tape.nodes[left].value + tape.nodes[right].value
+    tape.nodes.append(Node(value, Op.Add, left, right))
+    return index
+
+
+def push_mul(tape: &Tape, left: i32, right: i32) -> i32:
+    index = i32(len(tape.nodes))
+    value = tape.nodes[left].value * tape.nodes[right].value
+    tape.nodes.append(Node(value, Op.Mul, left, right))
+    return index
+
+
+def backward(tape: &Tape, output: i32):
+    tape.nodes[output].value.grad = 1.0
+    i = output
+    while i >= 0:
+        node = tape.nodes[i]
+        if node.op == Op.Add:
+            grad = node.value.grad
+            tape.nodes[node.left].value.grad += grad
+            tape.nodes[node.right].value.grad += grad
+        if node.op == Op.Mul:
+            grad = node.value.grad
+            left_value = tape.nodes[node.left].value.data
+            right_value = tape.nodes[node.right].value.data
+            tape.nodes[node.left].value.grad += right_value * grad
+            tape.nodes[node.right].value.grad += left_value * grad
+        i -= 1
+
+
+def main() -> i32:
+    tape = make_tape()
+    x = push_input(tape, 3.0)
+    y = push_input(tape, 4.0)
+    xy = push_mul(tape, x, y)
+    out = push_add(tape, xy, y)
+    backward(tape, out)
+
+    # out = x * y + y, so d(out)/dx = y and d(out)/dy = x + 1.
+    if i32(tape.nodes[out].value.data) != 16:
+        return 1
+    if i32(tape.nodes[x].value.grad) != 4:
+        return 2
+    if i32(tape.nodes[y].value.grad) != 4:
+        return 3
+    return 42

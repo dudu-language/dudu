@@ -1,0 +1,48 @@
+from tensor import Tensor
+from tensor import add_row_bias
+from tensor import from_2x2
+from tensor import from_4x2
+from tensor import map_values
+from tensor import matmul
+
+
+def step(value: f32) -> f32:
+    if value > 0.0:
+        return 1.0
+    return 0.0
+
+
+def xor_logits(input: Tensor) -> Tensor:
+    # First layer computes OR and NAND-ish features.
+    w1 = from_2x2(1.0, -1.0, 1.0, -1.0)
+    b1 = from_2x2(-0.5, 1.5, 0.0, 0.0)
+    h = map_values(add_row_bias(matmul(input, w1), b1), step)
+
+    # Second layer combines OR and NAND into XOR.
+    w2 = from_2x2(1.0, 0.0, 1.0, 0.0)
+    b2 = from_2x2(-1.5, 0.0, 0.0, 0.0)
+    return add_row_bias(matmul(h, w2), b2)
+
+
+def main() -> i32:
+    x = from_4x2(
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+    )
+    y = map_values(xor_logits(x), step)
+
+    if i32(y[0, 0]) != 0:
+        return 1
+    if i32(y[1, 0]) != 1:
+        return 2
+    if i32(y[2, 0]) != 1:
+        return 3
+    if i32(y[3, 0]) != 0:
+        return 4
+    return 42

@@ -123,6 +123,12 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
     }
     const Expr& callee = expr_callee(expr).front();
     if (callee.kind == ExprKind::Name) {
+        if (const auto local = local_type_refs.find(callee.name); local != local_type_refs.end()) {
+            FunctionSignature signature;
+            if (parse_function_type(local->second, signature)) {
+                return signature_return_type_ref(signature);
+            }
+        }
         return infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {

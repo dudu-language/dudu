@@ -1165,11 +1165,13 @@ push. They are not release packaging work.
    Dudu matmul; a slice hook fixture proves `slice` values can be passed to
    ordinary library indexing overloads; a tensor view fixture and example now
    prove Dudu-owned row, column, and patch views backed by original tensor
-   storage; the optional OpenBLAS fixture now proves CBLAS `sgemm` through
-   normal C interop. Continue by moving the tensor proof into reusable dogfood,
-   adding activation/map helpers, comparing BLAS matmul against the pure Dudu
-   path, and only then adding OpenCL or ROCm probes when local tooling is
-   available.
+   storage; `tests/fixtures/tensor_dogfood/tensor.dd` now provides a reusable
+   imported tensor module with elementwise ops, callback-based map activation,
+   row-bias add, and pure Dudu matmul; dogfood mains validate matrix/image-style
+   views, XOR classification, and an autograd-style graph; the optional
+   OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop. Continue
+   by comparing reusable tensor matmul against BLAS and only then adding OpenCL
+   or ROCm probes when local tooling is available.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
