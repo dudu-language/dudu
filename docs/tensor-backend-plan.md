@@ -416,7 +416,11 @@ Status:
   `tests/fixtures/bad_tensor_oindex.dd` and
   `tests/fixtures/bad_tensor_missing_index_hook.dd` and
   `tests/fixtures/bad_tensor_missing_index_set_hook.dd`.
-- Remaining: masks, scatter, and richer view objects.
+- Remaining: masks, scatter, richer view objects, and type-level tensor shape
+  annotations such as `tensor[f32][dyn, 784]`. Fixed `array[T][...]` shape
+  inference is implemented; arbitrary library tensor shape metadata still needs
+  a separate type-system design so it does not accidentally lower like
+  `std::array`.
 
 ### 2. CPU Tensor Library
 
