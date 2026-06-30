@@ -650,6 +650,9 @@ Status:
   resolve to the selected Dudu `@operator("[]")` hook, including its signature
   and docs. Clicking normal index variables inside the brackets remains normal
   symbol navigation.
+- Done: inferred tensor/view shaped types show up in LSP inlay hints and
+  tooltip payloads, including imported generic tensor hooks such as
+  `Tensor[f32][dyn, 2]`.
 
 ## Acceptance
 

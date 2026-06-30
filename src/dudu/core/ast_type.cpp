@@ -172,6 +172,10 @@ std::string substitute_type_ref_text(const TypeRef& type,
     const std::string key = substitution_lookup_key(type);
     if (!key.empty()) {
         if (const auto found = substitutions.find(key); found != substitutions.end()) {
+            if (type.kind == TypeKind::Template && !type.children.empty()) {
+                return found->second + "[" +
+                       join_substituted_types(type.children, 0, substitutions) + "]";
+            }
             return found->second;
         }
     }
@@ -452,6 +456,15 @@ TypeRef substitute_type_ref(const TypeRef& type,
     const std::string key = substitution_lookup_key(type);
     if (!key.empty()) {
         if (const auto found = substitutions.find(key); found != substitutions.end()) {
+            if (type.kind == TypeKind::Template && !type.children.empty()) {
+                TypeRef out = type;
+                out.name = type_ref_head_name(found->second);
+                out.location = type.location;
+                for (TypeRef& child : out.children) {
+                    child = substitute_type_ref(child, substitutions);
+                }
+                return out;
+            }
             TypeRef out = found->second;
             out.location = type.location;
             return out;

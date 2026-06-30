@@ -34,6 +34,7 @@
 #include <cctype>
 #include <exception>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -464,6 +465,17 @@ void test_type_ast_shape() {
     assert(shaped_tensor.kind == dudu::TypeKind::Shaped);
     assert(dudu::type_ref_text(shaped_tensor) == "Tensor[f32][dyn, 784]");
     assert(dudu::lower_cpp_type(shaped_tensor) == "Tensor<float>");
+    const std::map<std::string, dudu::TypeRef> module_type_substitutions{
+        {"Tensor", dudu::named_type_ref("tensor.Tensor")},
+        {"T", dudu::named_type_ref("f32")},
+    };
+    const dudu::TypeRef substituted_shaped_tensor =
+        dudu::substitute_type_ref(dudu::parse_type_text("Tensor[T][dyn, 2]"),
+                                  module_type_substitutions);
+    assert(dudu::type_ref_text(substituted_shaped_tensor) == "tensor.Tensor[f32][dyn, 2]");
+    assert(dudu::substitute_type_ref_text(dudu::parse_type_text("Tensor[T][dyn, 2]"),
+                                          {{"Tensor", "tensor.Tensor"}, {"T", "f32"}}) ==
+           "tensor.Tensor[f32][dyn, 2]");
     const dudu::TypeRef shaped_box = dudu::parse_type_text("Box[list[i32]][3]");
     assert(shaped_box.kind == dudu::TypeKind::Shaped);
     assert(dudu::lower_cpp_type(shaped_box) == "Box<std::vector<int32_t>>");

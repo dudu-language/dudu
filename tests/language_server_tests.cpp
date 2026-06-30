@@ -288,6 +288,49 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
     assert(quiet_hints.find("\"label\":\"left:\"") == std::string::npos);
 }
 
+void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_tensor_inlay_shape_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "tensor.dd", "class Mask:\n"
+                                  "    data: list[bool]\n"
+                                  "\n"
+                                  "    @operator(\"[]\")\n"
+                                  "    def at(self, index: i32) -> bool:\n"
+                                  "        return self.data[index]\n"
+                                  "\n"
+                                  "class Tensor[T]:\n"
+                                  "    rows: i32\n"
+                                  "    cols: i32\n"
+                                  "    data: list[T]\n"
+                                  "\n"
+                                  "    @operator(\"[]\")\n"
+                                  "    def masked_rows(self, mask: Mask, columns: slice) -> "
+                                  "Tensor[T][dyn, 2]:\n"
+                                  "        return Tensor[T](0, 2, [])\n"
+                                  "\n"
+                                  "def zeros[T](rows: i32, cols: i32) -> Tensor[T]:\n"
+                                  "    return Tensor[T](rows, cols, [])\n");
+    write_file(dir / "main.dd", "from tensor import Mask\n"
+                                "from tensor import Tensor\n"
+                                "from tensor import zeros\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    values: Tensor[f32] = zeros[f32](4, 2)\n"
+                                "    mask = Mask([True, False, True, False])\n"
+                                "    selected = values[mask, :]\n"
+                                "    return selected.rows\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = read_file(dir / "main.dd")};
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"line\":7") != std::string::npos);
+    assert(hints.find("Tensor[f32][dyn, 2]") != std::string::npos);
+    assert(hints.find("\"value\":\"dyn\"") != std::string::npos);
+}
+
 void test_lsp_signature_help_uses_visible_imported_functions() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_signature_test";
@@ -649,6 +692,7 @@ int main() {
         test_lsp_member_completion_includes_ast_docs();
         test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
+        test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_inlay_hints_include_native_parameter_names();

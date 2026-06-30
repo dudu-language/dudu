@@ -14,6 +14,10 @@ run passed all available non-heavy probes on this machine; `spdlog` remained
 the intentional default skip, and the manual
 `DUDU_PROBE_HEAVY=1` spdlog smoke passed separately.
 
+Last targeted tensor backend probe run: 2026-06-30 with
+`scripts/probe_optional.sh openblas_tensor_matmul opencl`. OpenBLAS tensor
+comparison and OpenCL tensor add/matmul probes passed locally.
+
 Last local dogfood run: 2026-06-27 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
