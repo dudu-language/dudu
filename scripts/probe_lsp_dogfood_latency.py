@@ -139,6 +139,26 @@ def require_nonempty_result(response, label):
         raise RuntimeError(f"{label} returned an empty object")
 
 
+def result_locations(response):
+    result = response.get("result")
+    if result is None:
+        return []
+    if isinstance(result, list):
+        return result
+    return [result]
+
+
+def require_definition_target(response, label, expected_uri_suffix):
+    if not expected_uri_suffix:
+        return
+    for location in result_locations(response):
+        if location.get("uri", "").endswith(expected_uri_suffix):
+            return
+    raise RuntimeError(
+        f"{label} did not jump to {expected_uri_suffix}: {response.get('result')!r}"
+    )
+
+
 def probe_workspace(lsp_bin, name, root, entry, needles):
     entry_text = entry.read_text()
     session = LspSession(lsp_bin, root)
@@ -157,6 +177,11 @@ def probe_workspace(lsp_bin, name, root, entry, needles):
             {**doc, "position": definition_pos},
         )
         require_nonempty_result(response, f"{name} definition")
+        require_definition_target(
+            response,
+            f"{name} definition",
+            needles.get("definition_uri_suffix", ""),
+        )
         rows.append((name, "warm_definition", elapsed))
 
         hover_pos = position_of(entry_text, needles["hover"], offset=1)
@@ -209,6 +234,7 @@ def main():
             Path("/home/vega/Coding/Graphics/raymarch-dd/src/main.dd"),
             {
                 "definition": "setup_monitor_rect()",
+                "definition_uri_suffix": "/src/windowing.dd",
                 "hover": "render_w =",
                 "references": "render_w =",
                 "completion": "SDL_",
@@ -220,6 +246,7 @@ def main():
             Path("/home/vega/Coding/Web/dudu-webserver/src/server.dd"),
             {
                 "definition": "parse_request(raw)",
+                "definition_uri_suffix": "/src/request.dd",
                 "hover": "std.string",
                 "references": "server",
                 "completion": "sock.",

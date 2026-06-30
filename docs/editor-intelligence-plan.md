@@ -41,9 +41,10 @@ JSON-RPC smoke fixtures. Dogfood latency probing exists in
 index across hover/symbol/semantic-token paths, warm editor requests in
 `raymarch-dd` and `dudu-webserver` are in the single-digit/tens-of-ms range on
 the current machine, while cold indexing remains the larger cost. The dogfood
-probe also covers same-file local references, and hover can now infer locals
-assigned from native C/C++ function calls through the native-enriched module
-view.
+probe asserts that project go-to-definition lands in expected source files, not
+only that it returns a nonempty result. It also covers same-file local
+references, and hover can now infer locals assigned from native C/C++ function
+calls through the native-enriched module view.
 Find-references for local variables now scopes same-named bindings to the
 selected function/method body in direct LSP tests, so unrelated locals with the
 same spelling are not reported together.
