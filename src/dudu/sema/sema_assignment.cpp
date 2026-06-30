@@ -93,13 +93,11 @@ void reject_const_member_assignment(const FunctionScope& scope, const Expr& targ
     }
 }
 
-void check_declared_index_assignment_operator_if_any(const FunctionScope& scope,
-                                                     const TypeRef& receiver_type,
-                                                     const std::string& label,
-                                                     const std::vector<Expr>& args,
-                                                     const SourceLocation& location) {
-    if (const auto signature = dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
-        check_call_args_ast(scope, label + "[]=", *signature, args, &location);
+void check_declared_index_assignment_operator_if_any(
+    const FunctionScope& scope, const TypeRef& receiver_type, const std::string& op,
+    const std::string& label, const std::vector<Expr>& args, const SourceLocation& location) {
+    if (const auto signature = dudu_operator_signature(scope.symbols, op, receiver_type)) {
+        check_call_args_ast(scope, label + op, *signature, args, &location);
     }
 }
 
@@ -136,7 +134,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
-            check_declared_index_assignment_operator_if_any(scope, receiver_type, name, args,
+            check_declared_index_assignment_operator_if_any(scope, receiver_type, "[]=", name, args,
                                                             target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
                 sema_fail(target_location,
@@ -150,25 +148,34 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
     if (stmt_target_expr(stmt).kind == ExprKind::Index &&
         stmt_target_expr(stmt).children.size() == 2) {
         const Expr& receiver = stmt_target_expr(stmt).children[0];
+        const IndexOperatorTarget target = index_operator_target(receiver);
+        const Expr& hook_receiver = *target.receiver;
         const TypeRef receiver_type =
-            member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location, receiver,
-                                 {}, scope.current_class);
+            member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
+                                 hook_receiver, {}, scope.current_class);
         if (has_type_ref(receiver_type)) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
             args.push_back(stmt.value_expr);
             if (const auto signature = dudu_operator_signature_for_args(
-                    scope.symbols, "[]=", receiver_type, args,
+                    scope.symbols, target.write_operator, receiver_type, args,
                     infer_assignment_arg_type_refs(scope, args, &target_location))) {
-                check_call_args_ast(scope, indexed_assignment_label(receiver) + "[]=", *signature,
-                                    args, &target_location);
+                check_call_args_ast(scope,
+                                    indexed_assignment_label(receiver) + target.write_operator,
+                                    *signature, args, &target_location);
                 return {};
             }
             check_declared_index_assignment_operator_if_any(
-                scope, receiver_type, indexed_assignment_label(receiver), args, target_location);
+                scope, receiver_type, target.write_operator, indexed_assignment_label(receiver),
+                args, target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-                sema_fail(target_location,
-                          "no matching @operator(\"[]=\") for indexed assignment to " +
-                              indexed_assignment_label(receiver));
+                sema_fail(target_location, "no matching @operator(\"" + target.write_operator +
+                                               "\") for indexed assignment to " +
+                                               indexed_assignment_label(receiver));
+            }
+            if (target.explicit_mode) {
+                sema_fail(target_location, "no matching @operator(\"" + target.write_operator +
+                                               "\") for indexed assignment to " +
+                                               indexed_assignment_label(receiver));
             }
             return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
                                               stmt_target_expr(stmt).children[1],
@@ -230,12 +237,15 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
     }
 
     const Expr& receiver = target.children[0];
+    const IndexOperatorTarget index_target = index_operator_target(receiver);
+    const Expr& hook_receiver = *index_target.receiver;
     TypeRef receiver_type;
-    if (receiver.kind == ExprKind::Name && scope.local_type_refs.contains(receiver.name)) {
-        receiver_type = local_type_ref(scope, receiver.name, target_location);
+    if (hook_receiver.kind == ExprKind::Name &&
+        scope.local_type_refs.contains(hook_receiver.name)) {
+        receiver_type = local_type_ref(scope, hook_receiver.name, target_location);
     } else {
         receiver_type = member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
-                                             receiver, {}, scope.current_class);
+                                             hook_receiver, {}, scope.current_class);
     }
     if (!has_type_ref(receiver_type) ||
         class_for_receiver_type(scope.symbols, receiver_type) == nullptr) {
@@ -250,10 +260,13 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
     std::vector<TypeRef> arg_types = infer_assignment_arg_type_refs(scope, args, &target_location);
     arg_types.push_back(indexed_type);
-    if (!dudu_operator_signature_for_arg_types(scope.symbols, "[]=", receiver_type, arg_types)) {
+    if (!dudu_operator_signature_for_arg_types(scope.symbols, index_target.write_operator,
+                                               receiver_type, arg_types)) {
         sema_fail(target_location,
-                  "compound indexed assignment requires @operator(\"[]=\") accepting the "
-                  "indexed value type; use an explicit read/modify value and []= assignment");
+                  "compound indexed assignment requires @operator(\"" +
+                      index_target.write_operator +
+                      "\") accepting the indexed value type; use an explicit read/modify value "
+                      "and indexed assignment");
     }
     return indexed_type;
 }

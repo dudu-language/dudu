@@ -84,6 +84,8 @@ compile_and_expect tensor_index_compound_hook 42
 compile_and_expect tensor_index_set_member_hook 42
 compile_and_expect tensor_multi_index_hook 42
 compile_and_expect tensor_slice_hook 42
+compile_and_expect tensor_vindex_hook 42
+compile_and_expect tensor_oindex_hook 42
 compile_and_expect tensor_slice_views 42
 compile_path_and_expect tensor_dogfood_views tests/fixtures/tensor_dogfood/views_main.dd 42
 compile_path_and_expect tensor_dogfood_xor tests/fixtures/tensor_dogfood/xor_main.dd 42

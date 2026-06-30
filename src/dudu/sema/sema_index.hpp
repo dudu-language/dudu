@@ -1,14 +1,23 @@
 #pragma once
 
-#include "dudu/sema/sema_context.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/sema/sema_context.hpp"
 
 #include <map>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace dudu {
 
+struct IndexOperatorTarget {
+    const Expr* receiver = nullptr;
+    std::string read_operator;
+    std::string write_operator;
+    bool explicit_mode = false;
+};
+
+IndexOperatorTarget index_operator_target(const Expr& receiver);
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const TypeRef& type, const Expr& index_expr,
                                    const std::string& label);

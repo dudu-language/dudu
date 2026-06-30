@@ -104,7 +104,8 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
 std::string operator_name(const FunctionDecl& method) {
     const std::string op = function_decorator_arg(method, "operator");
     if (!op.empty()) {
-        if (op == "[]" || op == "[]=") {
+        if (op == "[]" || op == "[]=" || op == "vindex[]" || op == "vindex[]=" ||
+            op == "oindex[]" || op == "oindex[]=") {
             return method.name;
         }
         return op == "bool" ? "operator bool" : "operator" + op;

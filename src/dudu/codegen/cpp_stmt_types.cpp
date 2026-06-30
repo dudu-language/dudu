@@ -1,8 +1,8 @@
 #include "dudu/codegen/cpp_stmt_types.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
@@ -70,13 +70,14 @@ std::vector<TypeRef> infer_emitted_arg_type_refs(
     std::vector<TypeRef> out;
     out.reserve(args.size());
     for (const Expr& arg : args) {
-        out.push_back(infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
+        out.push_back(
+            infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
     }
     return out;
 }
 
 std::optional<TypeRef> emitted_index_hook_type_ref(
-    const TypeRef& receiver_type, const Expr& index_expr,
+    const TypeRef& receiver_type, std::string_view op, const Expr& index_expr,
     const std::map<std::string, TypeRef>& local_type_refs,
     const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
     if (symbols == nullptr) {
@@ -84,7 +85,7 @@ std::optional<TypeRef> emitted_index_hook_type_ref(
     }
     const std::vector<Expr> args = index_arg_exprs(index_expr);
     const auto signature = dudu_operator_signature_for_args(
-        *symbols, "[]", receiver_type, args,
+        *symbols, op, receiver_type, args,
         infer_emitted_arg_type_refs(args, local_type_refs, function_returns, symbols));
     if (!signature) {
         return std::nullopt;
@@ -244,31 +245,38 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return infer_call_type_ref(expr, local_type_refs, function_returns, symbols);
     case ExprKind::Index:
         if (expr.children.size() == 2) {
-            if (expr.children[0].kind == ExprKind::Name) {
+            const IndexOperatorTarget target = index_operator_target(expr.children[0]);
+            const Expr& hook_receiver = *target.receiver;
+            if (hook_receiver.kind == ExprKind::Name) {
                 const TypeRef local_type = emitted_local_type_ref(
-                    local_type_refs, expr.children[0].name, expr.children[0].location);
+                    local_type_refs, hook_receiver.name, hook_receiver.location);
                 if (const auto hook_type = emitted_index_hook_type_ref(
-                        local_type, expr.children[1], local_type_refs, function_returns, symbols)) {
+                        local_type, target.read_operator, expr.children[1], local_type_refs,
+                        function_returns, symbols)) {
                     return *hook_type;
                 }
-                if (const TypeRef indexed_type =
-                        indexed_local_type_ref(local_type, expr.children[1], symbols);
-                    has_type_ref(indexed_type)) {
-                    return indexed_type;
+                if (!target.explicit_mode) {
+                    if (const TypeRef indexed_type =
+                            indexed_local_type_ref(local_type, expr.children[1], symbols);
+                        has_type_ref(indexed_type)) {
+                        return indexed_type;
+                    }
                 }
             }
             const TypeRef receiver_type = infer_emitted_local_type_ref(
-                expr.children[0], local_type_refs, function_returns, symbols);
+                hook_receiver, local_type_refs, function_returns, symbols);
             if (has_type_ref(receiver_type)) {
                 if (const auto hook_type = emitted_index_hook_type_ref(
-                        receiver_type, expr.children[1], local_type_refs, function_returns,
-                        symbols)) {
+                        receiver_type, target.read_operator, expr.children[1], local_type_refs,
+                        function_returns, symbols)) {
                     return *hook_type;
                 }
-                if (const TypeRef indexed_type =
-                        indexed_local_type_ref(receiver_type, expr.children[1], symbols);
-                    has_type_ref(indexed_type)) {
-                    return indexed_type;
+                if (!target.explicit_mode) {
+                    if (const TypeRef indexed_type =
+                            indexed_local_type_ref(receiver_type, expr.children[1], symbols);
+                        has_type_ref(indexed_type)) {
+                        return indexed_type;
+                    }
                 }
             }
         }

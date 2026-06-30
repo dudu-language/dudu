@@ -61,8 +61,9 @@ bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeR
 
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
-        "+",  "-",  "*", "/",  "%", "+=", "-=",   "*=", "/=",  "%=",
-        "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
+        "+",    "-",  "*",   "/",        "%",         "+=",       "-=",        "*=",
+        "/=",   "%=", "==",  "!=",       "<",         "<=",       ">",         ">=",
+        "bool", "[]", "[]=", "vindex[]", "vindex[]=", "oindex[]", "oindex[]=",
     };
     return operators.contains(op);
 }

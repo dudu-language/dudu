@@ -403,16 +403,19 @@ Status:
 - Done: reference-backed view structs can be aggregate-initialized without
   invalid default reference fields.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
-- Done: `.vindex[...]` and `.oindex[...]` are rejected with explicit diagnostics
-  describing the planned pairwise and orthogonal gather forms instead of
-  falling through to a misleading unknown-field error.
+- Done: `.vindex[...]` and `.oindex[...]` dispatch to library-owned
+  `@operator("vindex[]")` / `@operator("vindex[]=")` and
+  `@operator("oindex[]")` / `@operator("oindex[]=")` hooks. This gives
+  libraries explicit pairwise and orthogonal gather/scatter entry points
+  without compiler tensor-backend knowledge.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".
 - Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
   `tests/fixtures/tensor_slice_hook.dd` and
   `tests/fixtures/tensor_slice_views.dd` and `tests/fixtures/cpu_tensor_matmul.dd`
-  and `tests/fixtures/bad_tensor_vindex.dd` and
+  and `tests/fixtures/tensor_vindex_hook.dd` and
+  `tests/fixtures/tensor_oindex_hook.dd` and `tests/fixtures/bad_tensor_vindex.dd` and
   `tests/fixtures/bad_tensor_oindex.dd` and
   `tests/fixtures/bad_tensor_missing_index_hook.dd` and
   `tests/fixtures/bad_tensor_missing_index_set_hook.dd` and
