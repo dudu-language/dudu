@@ -602,9 +602,11 @@ through module aliases.
 Format and organize-imports code actions are covered. Formatter and LSP
 organize-imports behavior share the same structured leading-import block
 helper.
-Missing-import quick fixes are covered using an unopened workspace file, with
-an ambiguity guard that suppresses the fix when more than one workspace module
-exports the missing name.
+Missing-import quick fixes are covered through a `textDocument/codeAction`
+JSON-RPC request that asserts the returned WorkspaceEdit inserts the expected
+`from module import symbol` line. Direct unit coverage still checks unopened
+workspace files and the ambiguity guard that suppresses the fix when more than
+one workspace module exports the missing name.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
 Missing `pkg-config` package diagnostics are covered with a fixture

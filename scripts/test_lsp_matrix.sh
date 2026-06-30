@@ -115,6 +115,13 @@ def assert_completion_labels(result, expected):
         raise AssertionError(f"missing completions {missing}; got {sorted(labels)}")
 
 
+def item_with_title(result, title):
+    for item in result:
+        if item.get("title") == title:
+            return item
+    raise AssertionError(f"missing action {title}; got {[item.get('title') for item in result]}")
+
+
 def item_named(result, name):
     for item in result:
         if item.get("name") == name or item.get("label") == name:
@@ -490,6 +497,15 @@ def main() -> i32:
     return 0
 """
     (tmp / "missing_import.dd").write_text(missing_source)
+    available_symbol_source = """class MissingThing:
+    value: i32
+"""
+    (tmp / "available_symbol.dd").write_text(available_symbol_source)
+    missing_symbol_source = """def main() -> i32:
+    value: MissingThing = MissingThing(1)
+    return value.value
+"""
+    (tmp / "missing_symbol.dd").write_text(missing_symbol_source)
 
     main = tmp / "main.dd"
     entities = tmp / "entities.dd"
@@ -504,6 +520,12 @@ def main() -> i32:
     native_namespace_other = tmp / "native_namespace_other.dd"
     unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
+    available_symbol = tmp / "available_symbol.dd"
+    missing_symbol = tmp / "missing_symbol.dd"
+    missing_symbol_diag_range = {
+        "start": position(missing_symbol_source, "MissingThing"),
+        "end": position(missing_symbol_source, "MissingThing", add=len("MissingThing")),
+    }
     messages = [
         lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
         lsp_message({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
@@ -519,6 +541,8 @@ def main() -> i32:
         open_message(native_namespace_other),
         open_message(unresolved),
         open_message(missing),
+        open_message(available_symbol),
+        open_message(missing_symbol),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
         request(10, "textDocument/documentSymbol", {"textDocument": text_document(main)}),
         request(18, "textDocument/documentSymbol", {"textDocument": text_document(entities)}),
@@ -615,6 +639,20 @@ def main() -> i32:
         request(104, "textDocument/definition", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))}),
         request(105, "textDocument/references", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))}),
         request(106, "textDocument/signatureHelp", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity[i32](4)", add=len("matrix_space.identity[i32]("))}),
+        request(107, "textDocument/codeAction", {
+            "textDocument": text_document(missing_symbol),
+            "range": missing_symbol_diag_range,
+            "context": {
+                "diagnostics": [{
+                    "range": missing_symbol_diag_range,
+                    "severity": 1,
+                    "source": "dudu/sema",
+                    "code": "dudu.sema.unknown_identifier",
+                    "message": "unknown identifier: MissingThing",
+                    "data": {"name": "MissingThing"},
+                }]
+            },
+        }),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(900, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -1089,6 +1127,16 @@ def main() -> i32:
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")
+    missing_import_actions = response(messages, 107)
+    missing_import_action = item_with_title(missing_import_actions, "Import MissingThing from available_symbol")
+    missing_symbol_edits = missing_import_action.get("edit", {}).get("changes", {}).get(missing_symbol.as_uri(), [])
+    expected_import = "from available_symbol import MissingThing\n"
+    if not any(
+        edit.get("newText") == expected_import
+        and edit.get("range", {}).get("start", {}) == {"line": 0, "character": 0}
+        for edit in missing_symbol_edits
+    ):
+        raise AssertionError(f"missing import quick fix edit: {missing_import_action!r}")
 
     print("lsp matrix checks passed")
 finally:
