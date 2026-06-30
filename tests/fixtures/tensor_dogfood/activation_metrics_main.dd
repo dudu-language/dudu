@@ -1,0 +1,50 @@
+from tensor import Tensor
+from tensor import binary_accuracy
+from tensor import clamp
+from tensor import from_4x2
+from tensor import leaky_relu
+from tensor import mean_absolute_error
+from tensor import threshold
+
+
+def make_targets() -> Tensor:
+    return from_4x2(
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+    )
+
+
+def main() -> i32:
+    logits = from_4x2(
+        -2.0,
+        -0.25,
+        0.8,
+        -0.1,
+        1.4,
+        2.0,
+        -1.0,
+        0.7,
+    )
+    activated = leaky_relu(logits)
+    clipped = clamp(activated, 0.0, 1.0)
+    predicted = threshold(clipped, 0.5)
+    target = make_targets()
+
+    accuracy = binary_accuracy(predicted, target, 0.5)
+    error = mean_absolute_error(predicted, target)
+
+    if accuracy < 1.0:
+        return 1
+    if error > 0.0:
+        return 2
+    if clipped[0, 0] != 0.0:
+        return 3
+    if clipped[2, 1] != 1.0:
+        return 4
+    return 42

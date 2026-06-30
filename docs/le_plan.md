@@ -1167,8 +1167,10 @@ push. They are not release packaging work.
    prove Dudu-owned row, column, and patch views backed by original tensor
    storage; `tests/fixtures/tensor_dogfood/tensor.dd` now provides a reusable
    imported tensor module with elementwise ops, callback-based map activation,
-   row-bias add, and pure Dudu matmul; dogfood mains validate matrix/image-style
-   views, XOR classification, and an autograd-style graph; the optional
+   `relu`, `leaky_relu`, `clamp`, `threshold`, mean absolute error, binary
+   accuracy, row-bias add, and pure Dudu matmul; dogfood mains validate
+   matrix/image-style views, activation/metric helpers, XOR classification,
+   tiny batch training, and an autograd-style graph; the optional
    OpenBLAS fixture now proves CBLAS `sgemm` through normal C interop; the
    optional reusable tensor OpenBLAS fixture compares Dudu tensor `matmul`
    against CBLAS `sgemm`; the optional reusable tensor OpenCL fixture drives
