@@ -282,6 +282,7 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
                                         size_t statement_begin) {
     ImportDecl import;
     import.kind = kind;
+    import.native_include_style = NativeIncludeStyle::Path;
     import.location = start.location;
     const Token& header = consume(TokenKind::String, "expected quoted foreign header");
     import.module_path = header.text;
@@ -291,6 +292,7 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
     if (header.text.size() >= 2) {
         ++import.module_range.start.column;
         --import.module_range.end.column;
+        import.module_path = import.module_path.substr(1, import.module_path.size() - 2);
     }
     if (match_identifier("as")) {
         const Token& alias = consume_identifier("expected alias after as");
@@ -316,6 +318,22 @@ ImportDecl Parser::parse_from_import(const Token& start) {
     if (!match_identifier("import")) {
         fail_current("expected import after module path");
     }
+    if (import.module_path == "c" || import.module_path == "c.path" ||
+        import.module_path == "cxx" || import.module_path == "cxx.path" ||
+        import.module_path == "cpp" || import.module_path == "cpp.path") {
+        const bool path_mode = import.module_path.ends_with(".path");
+        ImportKind kind = ImportKind::ForeignCpp;
+        if (import.module_path == "c" || import.module_path == "c.path") {
+            kind = ImportKind::ForeignC;
+        } else if (import.module_path == "cxx" || import.module_path == "cxx.path") {
+            kind = ImportKind::ForeignCxx;
+        }
+        const size_t native_mode_index = path_mode ? module_begin + 2 : module_begin;
+        return parse_foreign_from_import(start, kind,
+                                         path_mode ? NativeIncludeStyle::Path
+                                                   : NativeIncludeStyle::System,
+                                         statement_begin, module_begin, native_mode_index);
+    }
     const Token& imported_name = consume_identifier("expected imported name");
     import.imported_name = imported_name.text;
     import.imported_name_range.start = imported_name.location;
@@ -332,6 +350,58 @@ ImportDecl Parser::parse_from_import(const Token& start) {
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after from import");
     return import;
+}
+
+ImportDecl Parser::parse_foreign_from_import(const Token& start, ImportKind kind,
+                                             NativeIncludeStyle include_style,
+                                             size_t statement_begin, size_t native_module_begin,
+                                             size_t native_mode_index) {
+    ImportDecl import;
+    import.kind = kind;
+    import.native_include_style = include_style;
+    import.location = start.location;
+    import.native_language_range = join_tokens(native_module_begin, native_module_begin + 1).range;
+    if (include_style == NativeIncludeStyle::Path) {
+        import.native_path_mode_range = join_tokens(native_mode_index, native_mode_index + 1).range;
+    }
+    const JoinedTokens header = parse_foreign_header_target();
+    import.module_path = trim_string(token_source_spelling(header.begin, header.end));
+    import.module_range = header.range;
+    if (import.module_path.size() >= 2 && import.module_path.front() == '"' &&
+        import.module_path.back() == '"') {
+        import.module_path = import.module_path.substr(1, import.module_path.size() - 2);
+        ++import.module_range.start.column;
+        --import.module_range.end.column;
+        import.native_include_style = NativeIncludeStyle::Path;
+    }
+    if (import.module_path.empty()) {
+        throw CompileError(current().location, "expected native header after import");
+    }
+    if (match_identifier("as")) {
+        const Token& alias = consume_identifier("expected alias after as");
+        import.alias = alias.text;
+        import.alias_range.start = alias.location;
+        import.alias_range.end = alias.location;
+        import.alias_range.end.column += static_cast<int>(alias.text.size());
+    }
+    const JoinedTokens source = join_tokens(statement_begin, cursor_);
+    import.range = source.range;
+    consume(TokenKind::Newline, "expected newline after native import");
+    return import;
+}
+
+Parser::JoinedTokens Parser::parse_foreign_header_target() {
+    const size_t begin = cursor_;
+    while (!at(TokenKind::End) && !at(TokenKind::Newline)) {
+        if (current().kind == TokenKind::Identifier && current().text == "as") {
+            break;
+        }
+        ++cursor_;
+    }
+    if (begin == cursor_) {
+        fail_current("expected native header after import");
+    }
+    return join_tokens(begin, cursor_);
 }
 
 std::string Parser::parse_path() {

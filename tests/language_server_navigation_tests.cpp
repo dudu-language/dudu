@@ -229,7 +229,7 @@ void test_lsp_hover_infers_local_from_native_call() {
                                      "    return 0\n"};
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
     const std::string hover = dudu::hover_json(doc, "", &params);
-    assert(hover.find("thing: *NativeThing") != std::string::npos);
+    assert(hover.find("thing: *native.NativeThing") != std::string::npos);
 }
 
 void test_lsp_references_keep_unbound_member_query_dotted() {

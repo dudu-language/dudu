@@ -37,11 +37,17 @@ std::string unquoted_source_file(std::string value) {
     return value;
 }
 bool requires_scan_success(const ImportDecl& import) {
+    if (import.native_include_style == NativeIncludeStyle::System) {
+        return false;
+    }
     const std::filesystem::path header = native_header_unquoted(import.module_path);
     const std::string text = header.string();
     return header.is_absolute() || starts_with(text, ".") || starts_with(text, "/");
 }
 bool import_needs_source_dir_include(const ImportDecl& import, const NativeHeaderOptions& options) {
+    if (import.native_include_style == NativeIncludeStyle::System) {
+        return false;
+    }
     const std::filesystem::path header = native_header_unquoted(import.module_path);
     if (header.is_absolute()) {
         return false;
@@ -285,6 +291,81 @@ std::vector<NativeFunctionDecl> alias_visible_functions(const NativeHeaderScan& 
     return out;
 }
 
+std::set<std::string> native_type_names(const NativeHeaderScan& scan) {
+    std::set<std::string> names;
+    for (const NativeTypeDecl& type : scan.types) {
+        names.insert(type.name);
+    }
+    for (const ClassDecl& klass : scan.classes) {
+        names.insert(klass.name);
+    }
+    return names;
+}
+
+void prefix_type_ref(TypeRef& type, const std::set<std::string>& names, const std::string& prefix) {
+    if (names.contains(type.name.str()) && !type.name.starts_with(prefix + ".")) {
+        type.name = prefix + "." + type.name.str();
+    }
+    for (TypeRef& child : type.children) {
+        prefix_type_ref(child, names, prefix);
+    }
+}
+
+void prefix_param_type_refs(std::vector<ParamDecl>& params, const std::set<std::string>& names,
+                            const std::string& prefix) {
+    for (ParamDecl& param : params) {
+        prefix_type_ref(param.type_ref, names, prefix);
+    }
+}
+
+void prefix_native_type_refs(NativeValueDecl& value, const std::set<std::string>& names,
+                             const std::string& prefix) {
+    prefix_type_ref(value.type_ref, names, prefix);
+}
+
+void prefix_native_type_refs(NativeTypeDecl& type, const std::set<std::string>& names,
+                             const std::string& prefix) {
+    prefix_type_ref(type.type_ref, names, prefix);
+}
+
+void prefix_native_type_refs(NativeFunctionDecl& fn, const std::set<std::string>& names,
+                             const std::string& prefix) {
+    for (TypeRef& param : fn.param_type_refs) {
+        prefix_type_ref(param, names, prefix);
+    }
+    prefix_type_ref(fn.return_type_ref, names, prefix);
+}
+
+void prefix_native_type_refs(ClassDecl& klass, const std::set<std::string>& names,
+                             const std::string& prefix) {
+    for (BaseClassDecl& base : klass.base_class_refs) {
+        prefix_type_ref(base.type_ref, names, prefix);
+    }
+    for (FieldDecl& field : klass.fields) {
+        prefix_type_ref(field.type_ref, names, prefix);
+    }
+    for (ConstDecl& constant : klass.constants) {
+        prefix_type_ref(constant.type_ref, names, prefix);
+    }
+    for (ConstDecl& field : klass.static_fields) {
+        prefix_type_ref(field.type_ref, names, prefix);
+    }
+    for (FunctionDecl& method : klass.methods) {
+        prefix_type_ref(method.receiver_type_ref, names, prefix);
+        prefix_param_type_refs(method.params, names, prefix);
+        prefix_type_ref(method.return_type_ref, names, prefix);
+    }
+}
+
+template <typename T>
+std::vector<T> prefixed_type_refs(std::vector<T> items, const std::set<std::string>& names,
+                                  const std::string& prefix) {
+    for (T& item : items) {
+        prefix_native_type_refs(item, names, prefix);
+    }
+    return items;
+}
+
 template <typename T>
 std::vector<T> filter_native_decls_to_header(const std::vector<T>& source, const ImportDecl& import,
                                              const NativeHeaderOptions& options) {
@@ -457,16 +538,27 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique_native_macros(out.macros, direct_macros(scan.macros));
             append_unique_native_namespaces(out.namespaces, scan.namespaces);
         } else {
-            append_unique_native_types(out.types, scan.types);
-            append_unique_native_classes(out.classes, scan.classes);
-            append_unique_native_types(out.types, prefixed_type_names(scan.types, import.alias));
-            append_unique_native_classes(out.classes, prefixed_names(scan.classes, import.alias));
-            append_unique_native_values(out.values, prefixed_names(scan.values, import.alias));
+            const std::set<std::string> type_names = native_type_names(scan);
+            append_unique_native_types(
+                out.types,
+                prefixed_type_refs(prefixed_type_names(scan.types, import.alias), type_names,
+                                   import.alias));
+            append_unique_native_classes(
+                out.classes,
+                prefixed_type_refs(prefixed_names(scan.classes, import.alias), type_names,
+                                   import.alias));
+            append_unique_native_values(
+                out.values,
+                prefixed_type_refs(prefixed_names(scan.values, import.alias), type_names,
+                                   import.alias));
             append_unique_native_functions(
                 out.functions,
-                prefixed_names(alias_visible_functions(scan, import, options), import.alias));
+                prefixed_type_refs(
+                    prefixed_names(alias_visible_functions(scan, import, options), import.alias),
+                    type_names, import.alias));
             append_unique_native_macros(out.macros, prefixed_names(scan.macros, import.alias));
-            append_unique_native_namespaces(out.namespaces, scan.namespaces);
+            append_unique_native_namespaces(out.namespaces,
+                                           prefixed_names(scan.namespaces, import.alias));
         }
     }
     return out;

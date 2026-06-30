@@ -65,8 +65,11 @@ std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& op
            std::to_string(mtime.time_since_epoch().count());
 }
 
-std::string include_line(const std::string& header) {
-    return "#include \"" + header + "\"\n";
+std::string include_line(const ImportDecl& import) {
+    if (import.native_include_style == NativeIncludeStyle::System) {
+        return "#include <" + native_header_unquoted(import.module_path) + ">\n";
+    }
+    return "#include \"" + native_header_unquoted(import.module_path) + "\"\n";
 }
 
 } // namespace
@@ -126,7 +129,10 @@ std::filesystem::path native_header_temp_base(const std::filesystem::path& sourc
 
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags) {
-    return "v6|" + native_header_unquoted(import.module_path) + "|" +
+    return "v7|" +
+           std::string(import.native_include_style == NativeIncludeStyle::System ? "system|"
+                                                                                 : "path|") +
+           native_header_unquoted(import.module_path) + "|" +
            native_header_clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
            header_stamp(import, options);
 }
@@ -147,7 +153,7 @@ std::string native_header_scanner_source_for_header(const ImportDecl& import, bo
     if (with_c_prelude) {
         source += "#include <stddef.h>\n#include <stdio.h>\n";
     }
-    source += include_line(native_header_unquoted(import.module_path));
+    source += include_line(import);
     source += "int dudu_probe = 0;\n";
     return source;
 }

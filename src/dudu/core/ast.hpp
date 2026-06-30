@@ -25,8 +25,14 @@ enum class ImportKind {
     ForeignCpp,
 };
 
+enum class NativeIncludeStyle {
+    System,
+    Path,
+};
+
 struct ImportDecl {
     ImportKind kind = ImportKind::Module;
+    NativeIncludeStyle native_include_style = NativeIncludeStyle::System;
     std::string module_path;
     std::string imported_name;
     std::string alias;
@@ -35,6 +41,8 @@ struct ImportDecl {
     SourceRange module_range;
     SourceRange imported_name_range;
     SourceRange alias_range;
+    SourceRange native_language_range;
+    SourceRange native_path_mode_range;
 };
 
 struct ModuleDependency {

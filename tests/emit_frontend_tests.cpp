@@ -76,15 +76,16 @@ void test_pointer_member_emission(const std::filesystem::path& root) {
 }
 
 void test_value_member_emission() {
-    const dudu::ModuleAst module = dudu::parse_source("import cpp \"cmath\" as std\n"
-                                                      "\n"
-                                                      "class Player:\n"
-                                                      "    health: i32\n"
-                                                      "\n"
-                                                      "def read(player: Player) -> i32:\n"
-                                                      "    wave = std.sin(1.0)\n"
-                                                      "    return player.health\n",
-                                                      "value_member_emission.dd");
+    dudu::ModuleAst module = dudu::parse_source("from cpp import cmath\n"
+                                                "\n"
+                                                "class Player:\n"
+                                                "    health: i32\n"
+                                                "\n"
+                                                "def read(player: Player) -> i32:\n"
+                                                "    wave = std.sin(1.0)\n"
+                                                "    return player.health\n",
+                                                "value_member_emission.dd");
+    dudu::merge_native_header_types(module, {});
     dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto wave = std::sin(1.0);") != std::string::npos);
@@ -92,16 +93,27 @@ void test_value_member_emission() {
 }
 
 void test_c_imports_emit_c_linkage() {
-    const dudu::ModuleAst module = dudu::parse_source("import c \"math.h\"\n"
-                                                      "import cxx \"libxml/parser.h\"\n"
-                                                      "import cpp \"vector\"\n",
+    const dudu::ModuleAst module = dudu::parse_source("from c import math.h\n"
+                                                      "from cxx import libxml/parser.h\n"
+                                                      "from cpp import vector\n",
                                                       "c_import_linkage.dd");
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("extern \"C\" {\n#include \"math.h\"\n}\n") != std::string::npos);
-    assert(cpp.find("#include \"libxml/parser.h\"") != std::string::npos);
-    assert(cpp.find("#include \"vector\"") != std::string::npos);
+    assert(cpp.find("extern \"C\" {\n#include <math.h>\n}\n") != std::string::npos);
+    assert(cpp.find("#include <libxml/parser.h>") != std::string::npos);
+    assert(cpp.find("#include <vector>") != std::string::npos);
     assert(cpp.find("extern \"C\" {\n#include \"libxml/parser.h\"") == std::string::npos);
     assert(cpp.find("extern \"C\" {\n#include \"vector\"") == std::string::npos);
+}
+
+void test_path_imports_emit_quoted_includes() {
+    const dudu::ModuleAst module = dudu::parse_source("from c.path import vendor/foo.h as foo\n"
+                                                      "from cpp.path import local/bar.hpp\n",
+                                                      "path_import_linkage.dd");
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("extern \"C\" {\n#include \"vendor/foo.h\"\n}\n") != std::string::npos);
+    assert(cpp.find("#include \"local/bar.hpp\"") != std::string::npos);
+    assert(cpp.find("#include <vendor/foo.h>") == std::string::npos);
+    assert(cpp.find("#include <local/bar.hpp>") == std::string::npos);
 }
 
 void test_templated_pointer_cast_emission() {
@@ -432,6 +444,7 @@ int main() {
         test_pointer_member_emission(root);
         test_value_member_emission();
         test_c_imports_emit_c_linkage();
+        test_path_imports_emit_quoted_includes();
         test_templated_pointer_cast_emission();
         test_template_pointer_cast_type_detection_uses_type_ast();
         test_pointer_to_const_binding_emission();

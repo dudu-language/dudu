@@ -54,6 +54,11 @@ class Parser {
     ImportDecl parse_import(const Token& start);
     ImportDecl parse_foreign_import(const Token& start, ImportKind kind, size_t statement_begin);
     ImportDecl parse_from_import(const Token& start);
+    ImportDecl parse_foreign_from_import(const Token& start, ImportKind kind,
+                                         NativeIncludeStyle include_style,
+                                         size_t statement_begin, size_t native_module_begin,
+                                         size_t native_mode_index);
+    JoinedTokens parse_foreign_header_target();
     std::string parse_path();
 
     ClassDecl parse_class(const Token& start, Visibility visibility,

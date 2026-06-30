@@ -9,9 +9,8 @@ namespace dudu {
 namespace {
 
 std::string include_path(const ImportDecl& import) {
-    if (import.module_path.size() >= 2 && import.module_path.front() == '"' &&
-        import.module_path.back() == '"') {
-        return import.module_path;
+    if (import.native_include_style == NativeIncludeStyle::System) {
+        return '<' + import.module_path + '>';
     }
     return '"' + import.module_path + '"';
 }
@@ -61,6 +60,12 @@ bool has_prefixed_native_symbol(const ModuleAst& module, const std::string& pref
            has_prefixed_native_symbol(module.native_macros, prefix);
 }
 
+bool stripped_native_import_alias(const ModuleAst& module, const ImportDecl& import) {
+    return import.kind == ImportKind::ForeignCpp && !import.alias.empty() &&
+           !has_native_namespace(module, import.alias) &&
+           has_prefixed_native_symbol(module, import.alias);
+}
+
 std::string build_type(const std::string& literal, bool freestanding) {
     if (literal == "true" || literal == "false") {
         return "bool";
@@ -99,10 +104,8 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     }
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignCpp && !import.alias.empty()) {
-            aliases.push_back(!has_native_namespace(module, import.alias) &&
-                                      has_prefixed_native_symbol(module, import.alias)
-                                  ? "!" + import.alias
-                                  : import.alias);
+            aliases.push_back(stripped_native_import_alias(module, import) ? "!" + import.alias
+                                                                           : import.alias);
         } else if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx) &&
                    !import.alias.empty()) {
             aliases.push_back("!" + import.alias);
@@ -113,6 +116,17 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     }
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
         aliases.push_back(ns.name);
+    }
+    for (const ImportDecl& import : module.imports) {
+        if (!stripped_native_import_alias(module, import)) {
+            continue;
+        }
+        const std::string marker = import.alias + ".";
+        for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+            if (ns.name.starts_with(marker)) {
+                aliases.push_back(ns.name.substr(marker.size()));
+            }
+        }
     }
     for (const ClassDecl& klass : module.classes) {
         aliases.push_back(klass.name);

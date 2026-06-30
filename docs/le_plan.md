@@ -461,10 +461,24 @@ class Math:
 
 ## 4. Harden Native Header Awareness
 
-Primary plans: [Native Header Awareness Plan](header-awareness-plan.md) and
-[Native Identity Plan](native-identity-plan.md).
+Primary plans: [Native Header Awareness Plan](header-awareness-plan.md),
+[Native Identity Plan](native-identity-plan.md), and
+[Import Semantics](import_semantics.md).
 
 The C/C++ interop promise depends on imported headers feeling reliable.
+
+Canonical native imports are Python-shaped:
+
+```python
+from cpp import thread
+from c import math.h
+from cpp.path import vendor/foo.hpp as vendor
+```
+
+System/header-search imports emit angle includes, `.path` imports emit quoted
+includes, and aliased native imports are hygienic collision boundaries. Normal
+C++ standard-library imports should expose the real `std` namespace rather than
+fake `as std` aliases.
 
 Drive this with real library stress tests:
 

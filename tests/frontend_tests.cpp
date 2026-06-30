@@ -91,9 +91,27 @@ void test_import_bindings() {
     assert(collided);
 
     const dudu::ModuleAst direct_native =
-        dudu::parse_source("import cpp \"imgui.h\"\n", "direct_native.dd");
-    assert(direct_native.imports.size() == 1);
+        dudu::parse_source("from cpp import thread\n"
+                           "from c import SDL3/SDL.h as sdl\n"
+                           "from cpp.path import vendor/foo.hpp as foo\n",
+                           "direct_native.dd");
+    assert(direct_native.imports.size() == 3);
+    assert(direct_native.imports[0].kind == dudu::ImportKind::ForeignCpp);
+    assert(direct_native.imports[0].native_include_style == dudu::NativeIncludeStyle::System);
+    assert(direct_native.imports[0].module_path == "thread");
     assert(direct_native.imports[0].alias.empty());
+    assert(dudu::render_import_decl(direct_native.imports[0]) == "from cpp import thread");
+    assert(direct_native.imports[1].kind == dudu::ImportKind::ForeignC);
+    assert(direct_native.imports[1].module_path == "SDL3/SDL.h");
+    assert(direct_native.imports[1].alias == "sdl");
+    assert(direct_native.imports[2].kind == dudu::ImportKind::ForeignCpp);
+    assert(direct_native.imports[2].native_include_style == dudu::NativeIncludeStyle::Path);
+    assert(direct_native.imports[2].module_path == "vendor/foo.hpp");
+    assert(direct_native.imports[2].alias == "foo");
+    assert(direct_native.imports[2].native_language_range.start.column > 0);
+    assert(direct_native.imports[2].native_path_mode_range.start.column > 0);
+    assert(dudu::render_import_decl(direct_native.imports[2]) ==
+           "from cpp.path import vendor/foo.hpp as foo");
 }
 
 void write_file(const std::filesystem::path& path, const std::string& text) {

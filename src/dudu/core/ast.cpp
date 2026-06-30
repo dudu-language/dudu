@@ -240,17 +240,24 @@ std::string bound_import_name(const ImportDecl& import) {
 
 std::string render_import_decl(const ImportDecl& import) {
     std::ostringstream out;
-    if (import.kind == ImportKind::From) {
+    if (import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx ||
+        import.kind == ImportKind::ForeignCpp) {
+        out << "from ";
+        if (import.kind == ImportKind::ForeignC) {
+            out << "c";
+        } else if (import.kind == ImportKind::ForeignCxx) {
+            out << "cxx";
+        } else {
+            out << "cpp";
+        }
+        if (import.native_include_style == NativeIncludeStyle::Path) {
+            out << ".path";
+        }
+        out << " import " << import.module_path;
+    } else if (import.kind == ImportKind::From) {
         out << "from " << import.module_path << " import " << import.imported_name;
     } else {
         out << "import ";
-        if (import.kind == ImportKind::ForeignC) {
-            out << "c ";
-        } else if (import.kind == ImportKind::ForeignCxx) {
-            out << "cxx ";
-        } else if (import.kind == ImportKind::ForeignCpp) {
-            out << "cpp ";
-        }
         out << import.module_path;
     }
     if (!import.alias.empty()) {

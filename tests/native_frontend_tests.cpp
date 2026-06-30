@@ -19,7 +19,7 @@
 namespace {
 void test_native_type_declaration_emission() {
     const dudu::ModuleAst module =
-        dudu::parse_source("import c \"SDL3/SDL.h\" as sdl\n"
+        dudu::parse_source("from c.path import SDL3/SDL.h as sdl\n"
                            "\n"
                            "type SDL_Event\n"
                            "\n"
@@ -203,7 +203,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
 
 void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesystem::path& root) {
     dudu::ModuleAst module =
-        dudu::parse_source("import cxx \"native_headers/simple_c.h\" as native\n"
+        dudu::parse_source("from cxx.path import native_headers/simple_c.h as native\n"
                            "\n"
                            "def main() -> i32:\n"
                            "    return native.dudu_native_add(20, 22)\n",
@@ -786,10 +786,10 @@ void test_native_scan_retries_with_c_prelude_for_context_headers(
                "};\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import c \"./needs_c_context.h\" as native\n"
+    dudu::ModuleAst module = dudu::parse_source("from c.path import ./needs_c_context.h as native\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
-                                                "    value: struct DuduNeedsContext\n"
+                                                "    value: native.DuduNeedsContext\n"
                                                 "    value.count = 7\n"
                                                 "    value.state = 35\n"
                                                 "    return i32(value.count) + value.state\n",
