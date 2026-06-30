@@ -1,7 +1,5 @@
 #include "dudu/codegen/cpp_emit.hpp"
 
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit_classes.hpp"
 #include "dudu/codegen/cpp_emit_enums.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
@@ -10,6 +8,8 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -218,7 +218,8 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, TypeRef>& function_returns,
                         const Symbols& symbols, const CppEmitOptions& options = {}) {
-    emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
+    emit_template_params(out, generic_cpp_params_for_function(fn),
+                         generic_cpp_value_params_for_function(fn));
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     CppLocalContext locals;
@@ -247,7 +248,8 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
         if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
+        emit_template_params(out, generic_cpp_params_for_function(fn),
+                             generic_cpp_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";
         emitted = true;
@@ -263,7 +265,8 @@ void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& m
         return;
     }
     for (const ClassDecl& klass : module.classes) {
-        emit_template_params(out, klass.generic_params, generic_value_params_for_class(klass));
+        emit_template_params(out, generic_cpp_params_for_class(klass),
+                             generic_cpp_value_params_for_class(klass));
         out << "struct " << emitted_name(klass, options) << ";\n";
     }
     out << '\n';
@@ -312,7 +315,8 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
         if (!visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
+        emit_template_params(out, generic_cpp_params_for_function(fn),
+                             generic_cpp_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";
     }

@@ -1,0 +1,36 @@
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+
+def filled[T](rows: i32, cols: i32, value: T) -> Tensor[T]:
+    return Tensor[T](rows, cols, value)
+
+
+def add_same_shape[Rows, Cols](
+    left: Tensor[f32][Rows, Cols],
+    right: Tensor[f32][Rows, Cols],
+) -> Tensor[f32][Rows, Cols]:
+    return left
+
+
+def matmul_shape[Rows, Inner, Cols](
+    left: Tensor[f32][Rows, Inner],
+    right: Tensor[f32][Inner, Cols],
+) -> Tensor[f32][Rows, Cols]:
+    return filled[f32](left.rows, right.cols, 0.0)
+
+
+def expect_2x4(value: Tensor[f32][2, 4]) -> i32:
+    return value.rows * 10 + value.cols
+
+
+def main() -> i32:
+    a: Tensor[f32][2, 3] = filled[f32](2, 3, 1.0)
+    b: Tensor[f32][2, 3] = filled[f32](2, 3, 2.0)
+    c: Tensor[f32][3, 4] = filled[f32](3, 4, 3.0)
+    sum = add_same_shape(a, b)
+    explicit_sum = add_same_shape[2, 3](sum, b)
+    product = matmul_shape(explicit_sum, c)
+    return expect_2x4(product) + 18

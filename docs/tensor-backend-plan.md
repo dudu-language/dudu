@@ -443,8 +443,12 @@ Status:
   The builtin is restricted to shaped target types and lowers to the value
   expression, so it carries only type metadata and does not add hidden tensor
   copies or backend behavior.
+- Done: generic functions can use shape parameters in library tensor metadata,
+  such as `Tensor[f32][Rows, Inner]`, and propagate composed result shapes like
+  matrix multiply without leaking erased shape-only parameters into generated
+  C++ templates. Conflicting shape inference is diagnosed in Dudu source.
 - Remaining: advanced mask semantics, repeated-index scatter policy, richer
-  view objects and propagation of shape facts through composed tensor
+  view objects and broader propagation of shape facts through composed tensor
   expressions.
 
 ### 2. CPU Tensor Library

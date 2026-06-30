@@ -14,8 +14,17 @@ namespace dudu {
 std::vector<TypeRef> template_type_refs(const Expr& expr);
 std::set<std::string> generic_value_params(const std::vector<std::string>& params,
                                            const std::vector<TypeRef>& type_refs);
+std::set<std::string> generic_cpp_value_params(const std::vector<std::string>& params,
+                                               const std::vector<TypeRef>& type_refs);
+std::vector<std::string> generic_cpp_params(const std::vector<std::string>& params,
+                                            const std::set<std::string>& semantic_value_params,
+                                            const std::set<std::string>& cpp_value_params);
 std::set<std::string> generic_value_params_for_function(const FunctionDecl& fn);
 std::set<std::string> generic_value_params_for_class(const ClassDecl& klass);
+std::set<std::string> generic_cpp_value_params_for_function(const FunctionDecl& fn);
+std::set<std::string> generic_cpp_value_params_for_class(const ClassDecl& klass);
+std::vector<std::string> generic_cpp_params_for_function(const FunctionDecl& fn);
+std::vector<std::string> generic_cpp_params_for_class(const ClassDecl& klass);
 std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
                                                                  const FunctionDecl& fn,
                                                                  const std::string& callee,

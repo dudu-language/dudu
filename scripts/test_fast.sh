@@ -90,6 +90,7 @@ compile_path_and_expect tensor_dogfood_xor tests/fixtures/tensor_dogfood/xor_mai
 compile_path_and_expect tensor_dogfood_autograd tests/fixtures/tensor_dogfood/autograd_main.dd 42
 compile_path_and_expect tensor_dogfood_shape_metadata tests/fixtures/tensor_dogfood/shape_metadata.dd 42
 compile_path_and_expect tensor_dogfood_shape_assume tests/fixtures/tensor_dogfood/shape_assume.dd 42
+compile_path_and_expect tensor_dogfood_shape_generics tests/fixtures/tensor_dogfood/shape_generics.dd 42
 compile_path_and_expect tensor_dogfood_mask_indexing tests/fixtures/tensor_dogfood/mask_indexing.dd 42
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/shape_metadata.dd" \
     --emit-cpp "$repo_root/build/tensor_dogfood_shape_metadata.cpp"
@@ -104,6 +105,13 @@ grep -Fq "set_at(1, (tensor.at(1) + 20))" "$repo_root/build/tensor_index_compoun
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/shape_assume.dd" \
     --emit-cpp "$repo_root/build/tensor_dogfood_shape_assume.cpp"
 grep -Fq "return value;" "$repo_root/build/tensor_dogfood_shape_assume.cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/tensor_dogfood/shape_generics.dd" \
+    --emit-cpp "$repo_root/build/tensor_dogfood_shape_generics.cpp"
+grep -Fq "Tensor<float> add_same_shape(Tensor<float> left, Tensor<float> right)" \
+    "$repo_root/build/tensor_dogfood_shape_generics.cpp"
+grep -Fq "Tensor<float> matmul_shape(Tensor<float> left, Tensor<float> right)" \
+    "$repo_root/build/tensor_dogfood_shape_generics.cpp"
+! grep -Fq "template <typename Rows" "$repo_root/build/tensor_dogfood_shape_generics.cpp"
 compile_and_expect static_fields 42
 compile_and_expect static_class_alias 42
 compile_and_expect static_class_method_alias 42

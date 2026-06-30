@@ -284,8 +284,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                  const CppEmitOptions& options) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    emit_template_params(out, method.generic_params, "    ",
-                         generic_value_params_for_function(method));
+    emit_template_params(out, generic_cpp_params_for_function(method), "    ",
+                         generic_cpp_value_params_for_function(method));
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
     } else if (is_destructor_method(method)) {
@@ -424,7 +424,8 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         if (header_only && !visible_in_header(klass.visibility)) {
             continue;
         }
-        emit_template_params(out, klass.generic_params, {}, generic_value_params_for_class(klass));
+        emit_template_params(out, generic_cpp_params_for_class(klass), {},
+                             generic_cpp_value_params_for_class(klass));
         out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;

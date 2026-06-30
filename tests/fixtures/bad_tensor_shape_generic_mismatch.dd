@@ -1,0 +1,22 @@
+class Tensor[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+
+def filled[T](rows: i32, cols: i32, value: T) -> Tensor[T]:
+    return Tensor[T](rows, cols, value)
+
+
+def matmul_shape[Rows, Inner, Cols](
+    left: Tensor[f32][Rows, Inner],
+    right: Tensor[f32][Inner, Cols],
+) -> Tensor[f32][Rows, Cols]:
+    return filled[f32](left.rows, right.cols, 0.0)
+
+
+def main() -> i32:
+    left: Tensor[f32][2, 3] = filled[f32](2, 3, 1.0)
+    right: Tensor[f32][4, 2] = filled[f32](4, 2, 1.0)
+    bad = matmul_shape(left, right)
+    return bad.rows

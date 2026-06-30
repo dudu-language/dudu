@@ -14,6 +14,7 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
 
 #include <algorithm>
@@ -284,11 +285,35 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             throw CompileError(expr.location,
                                "malformed template call: missing parsed type arguments");
         }
+        std::vector<TypeRef> template_type_args = expr_template_type_args(expr);
+        const std::string callee = direct_callee_name(expr);
+        if (symbols != nullptr) {
+            if (const auto decl = symbols->function_decls.find(callee);
+                decl != symbols->function_decls.end() && !decl->second->generic_params.empty()) {
+                const std::vector<std::string> cpp_params =
+                    generic_cpp_params_for_function(*decl->second);
+                if (cpp_params.size() < template_type_args.size()) {
+                    std::vector<TypeRef> filtered;
+                    filtered.reserve(cpp_params.size());
+                    for (const std::string& param : cpp_params) {
+                        const auto found = std::find(decl->second->generic_params.begin(),
+                                                     decl->second->generic_params.end(), param);
+                        if (found != decl->second->generic_params.end()) {
+                            const size_t index =
+                                static_cast<size_t>(found - decl->second->generic_params.begin());
+                            if (index < template_type_args.size()) {
+                                filtered.push_back(template_type_args[index]);
+                            }
+                        }
+                    }
+                    template_type_args = std::move(filtered);
+                }
+            }
+        }
         const std::string lowered_template_args =
-            join_lowered_type_args(expr_template_type_args(expr), aliases, options);
+            join_lowered_type_args(template_type_args, aliases, options);
         const std::string lowered_call_args = join_lowered_exprs(
             expr.children, aliases, locals, local_type_refs, ", ", symbols, options);
-        const std::string callee = direct_callee_name(expr);
         if (callee == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
         }
@@ -324,6 +349,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             const std::string type =
                 lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
+        }
+        if (lowered_template_args.empty()) {
+            return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) +
+                   "(" + lowered_call_args + ")";
         }
         return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) + "<" +
                lowered_template_args + ">(" + lowered_call_args + ")";

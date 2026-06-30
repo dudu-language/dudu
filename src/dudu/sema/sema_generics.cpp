@@ -1,8 +1,8 @@
 #include "dudu/sema/sema_generics.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_function_type.hpp"
@@ -44,6 +44,28 @@ bool same_name(std::string_view left, std::string_view right) {
 
 void collect_value_generic_params(const TypeRef& type, const std::vector<std::string>& params,
                                   std::set<std::string>& out) {
+    if (type.kind == TypeKind::FixedArray || type.kind == TypeKind::Shaped) {
+        std::vector<TypeRef> dims;
+        if (type.kind == TypeKind::FixedArray) {
+            dims = explicit_array_shape_refs(type);
+        } else if (type.children.size() > 1) {
+            dims.assign(type.children.begin() + 1, type.children.end());
+        }
+        for (const TypeRef& dim : dims) {
+            for (const std::string& param : params) {
+                if (same_name(type_ref_head_name(dim), param)) {
+                    out.insert(param);
+                }
+            }
+        }
+    }
+    for (const TypeRef& child : type.children) {
+        collect_value_generic_params(child, params, out);
+    }
+}
+
+void collect_cpp_value_generic_params(const TypeRef& type, const std::vector<std::string>& params,
+                                      std::set<std::string>& out) {
     if (type.kind == TypeKind::FixedArray) {
         for (const TypeRef& dim : explicit_array_shape_refs(type)) {
             for (const std::string& param : params) {
@@ -54,7 +76,7 @@ void collect_value_generic_params(const TypeRef& type, const std::vector<std::st
         }
     }
     for (const TypeRef& child : type.children) {
-        collect_value_generic_params(child, params, out);
+        collect_cpp_value_generic_params(child, params, out);
     }
 }
 
@@ -153,6 +175,28 @@ std::set<std::string> generic_value_params(const std::vector<std::string>& param
     return out;
 }
 
+std::set<std::string> generic_cpp_value_params(const std::vector<std::string>& params,
+                                               const std::vector<TypeRef>& type_refs) {
+    std::set<std::string> out;
+    for (const TypeRef& type : type_refs) {
+        collect_cpp_value_generic_params(type, params, out);
+    }
+    return out;
+}
+
+std::vector<std::string> generic_cpp_params(const std::vector<std::string>& params,
+                                            const std::set<std::string>& semantic_value_params,
+                                            const std::set<std::string>& cpp_value_params) {
+    std::vector<std::string> out;
+    out.reserve(params.size());
+    for (const std::string& param : params) {
+        if (!semantic_value_params.contains(param) || cpp_value_params.contains(param)) {
+            out.push_back(param);
+        }
+    }
+    return out;
+}
+
 std::set<std::string> generic_value_params_for_function(const FunctionDecl& fn) {
     std::vector<TypeRef> refs;
     refs.reserve(fn.params.size() + 1);
@@ -163,6 +207,24 @@ std::set<std::string> generic_value_params_for_function(const FunctionDecl& fn) 
         refs.push_back(param.type_ref);
     }
     return generic_value_params(fn.generic_params, refs);
+}
+
+std::set<std::string> generic_cpp_value_params_for_function(const FunctionDecl& fn) {
+    std::vector<TypeRef> refs;
+    refs.reserve(fn.params.size() + 1);
+    if (function_has_return_type(fn)) {
+        refs.push_back(fn.return_type_ref);
+    }
+    for (const ParamDecl& param : fn.params) {
+        refs.push_back(param.type_ref);
+    }
+    return generic_cpp_value_params(fn.generic_params, refs);
+}
+
+std::vector<std::string> generic_cpp_params_for_function(const FunctionDecl& fn) {
+    const std::set<std::string> value_params = generic_value_params_for_function(fn);
+    const std::set<std::string> cpp_value_params = generic_cpp_value_params_for_function(fn);
+    return generic_cpp_params(fn.generic_params, value_params, cpp_value_params);
 }
 
 std::set<std::string> generic_value_params_for_class(const ClassDecl& klass) {
@@ -188,6 +250,37 @@ std::set<std::string> generic_value_params_for_class(const ClassDecl& klass) {
         }
     }
     return generic_value_params(klass.generic_params, refs);
+}
+
+std::set<std::string> generic_cpp_value_params_for_class(const ClassDecl& klass) {
+    std::vector<TypeRef> refs;
+    for (const BaseClassDecl& base : klass.base_class_refs) {
+        refs.push_back(base.type_ref);
+    }
+    for (const FieldDecl& field : klass.fields) {
+        refs.push_back(field.type_ref);
+    }
+    for (const ConstDecl& field : klass.static_fields) {
+        refs.push_back(field.type_ref);
+    }
+    for (const ConstDecl& constant : klass.constants) {
+        refs.push_back(constant.type_ref);
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        if (function_has_return_type(method)) {
+            refs.push_back(method.return_type_ref);
+        }
+        for (const ParamDecl& param : method.params) {
+            refs.push_back(param.type_ref);
+        }
+    }
+    return generic_cpp_value_params(klass.generic_params, refs);
+}
+
+std::vector<std::string> generic_cpp_params_for_class(const ClassDecl& klass) {
+    const std::set<std::string> value_params = generic_value_params_for_class(klass);
+    const std::set<std::string> cpp_value_params = generic_cpp_value_params_for_class(klass);
+    return generic_cpp_params(klass.generic_params, value_params, cpp_value_params);
 }
 
 std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
