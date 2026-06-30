@@ -210,10 +210,12 @@ void test_native_import_semantic_token_ranges() {
         decoded_semantic_tokens(source, dudu::semantic_tokens_json(module));
 
     constexpr int token_namespace = 0;
+    constexpr int token_string = 13;
     constexpr int mod_declaration = 1;
     constexpr int mod_native = 16;
-    require_decoded_semantic_token(tokens, "thread", token_namespace,
-                                   mod_declaration | mod_native);
+    require_decoded_semantic_token(tokens, "thread", token_string, mod_native);
+    require_decoded_semantic_token(tokens, "SDL3/SDL_pixels.h", token_string, mod_native);
+    require_decoded_semantic_token(tokens, "vendor/foo.hpp", token_string, mod_native);
     require_decoded_semantic_token(tokens, "sdl", token_namespace, mod_declaration | mod_native);
     require_decoded_semantic_token(tokens, "foo", token_namespace, mod_declaration | mod_native);
 }

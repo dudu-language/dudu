@@ -495,10 +495,18 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         const bool native_import = import.kind == ImportKind::ForeignC ||
                                    import.kind == ImportKind::ForeignCxx ||
                                    import.kind == ImportKind::ForeignCpp;
+        if (native_import) {
+            add_semantic_token_range(tokens, import.module_range, token_string, mod_native);
+            if (!import.alias.empty()) {
+                add_semantic_token_range(tokens, import.alias_range, token_namespace,
+                                         mod_declaration | mod_native);
+            }
+            continue;
+        }
         const std::string bound = bound_import_name(import);
         int import_token_type = token_namespace;
-        int import_modifiers = mod_declaration | (native_import ? mod_native : 0);
-        if (import.kind == ImportKind::From && !native_import) {
+        int import_modifiers = mod_declaration;
+        if (import.kind == ImportKind::From) {
             if (dudu_index.classes.contains(bound)) {
                 import_token_type = token_class;
             } else if (dudu_index.enums.contains(bound)) {
