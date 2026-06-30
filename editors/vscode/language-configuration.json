@@ -22,6 +22,6 @@
     ["'", "'"]
   ],
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(def|class|enum|if|elif|else|while|for)\\b.*:\\s*$"
+    "increaseIndentPattern": "^\\s*(def|class|enum|if|elif|else|while|for|match|case|try|except)\\b.*:\\s*$"
   }
 }

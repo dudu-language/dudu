@@ -66,6 +66,8 @@ Implement this first:
   for x: &Thing in things:
       ...
   ```
+- condition headers do not take type annotations; in `if`, `while`, and `match`,
+  `:` opens the block.
 - no implicit casts across Dudu-native assignments and returns.
 
 Named function declarations replace Python `lambda`. A `def name(...)`

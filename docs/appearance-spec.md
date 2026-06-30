@@ -1031,6 +1031,24 @@ else:
 This keeps control flow statement-oriented and avoids expression-only special
 cases that do not materially improve systems code.
 
+Type annotations are for bindings and declarations, not for condition
+expressions. Write the condition directly:
+
+```python
+if fps_elapsed_ms >= 250:
+    update_fps()
+```
+
+Do not write:
+
+```python
+if fps_elapsed_ms: i32 >= 250:
+    update_fps()
+```
+
+The same rule applies to `while` and `match` headers. A `:` in those headers is
+the block opener.
+
 ## Rejected Python Sugar
 
 Dudu intentionally leaves out some compact Python expression forms:

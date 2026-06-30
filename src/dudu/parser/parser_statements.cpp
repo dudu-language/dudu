@@ -1,7 +1,7 @@
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/parser/parser_internal.hpp"
 #include "dudu/parser/parser_statement_ops.hpp"
 
@@ -56,6 +56,16 @@ bool has_statement_tokens_after(const std::span<const Token> tokens, size_t curs
         }
     }
     return false;
+}
+
+void reject_tokens_after_block_colon(std::span<const Token> tokens, size_t cursor,
+                                     size_t statement_end, std::string_view keyword) {
+    if (cursor < statement_end && cursor < tokens.size()) {
+        throw CompileError(tokens[cursor].location,
+                           "unexpected tokens after " + std::string(keyword) +
+                               " header; put the block body on the next indented line",
+                           "dudu.parser.syntax");
+    }
 }
 
 struct StatementOperatorScan {
@@ -241,6 +251,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             join_until_with_range({TokenKind::Colon, TokenKind::Newline});
         set_stmt_condition_expr(stmt, parse_expr_piece(condition));
         consume(TokenKind::Colon, "expected : after " + keyword + " condition");
+        reject_tokens_after_block_colon(tokens_, cursor_, statement_end, keyword);
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -249,6 +260,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const std::string keyword{previous().text};
         stmt.kind = keyword == "else" ? StmtKind::Else : StmtKind::Try;
         consume(TokenKind::Colon, "expected : after " + keyword);
+        reject_tokens_after_block_colon(tokens_, cursor_, statement_end, keyword);
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -268,6 +280,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const JoinedTokens iterable = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
         set_stmt_iterable_expr(stmt, parse_expr_piece(iterable));
         consume(TokenKind::Colon, "expected : after for loop iterable");
+        reject_tokens_after_block_colon(tokens_, cursor_, statement_end, "for");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -282,6 +295,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             set_stmt_guard_expr(stmt, parse_expr_piece(guard));
         }
         consume(TokenKind::Colon, "expected : after case pattern");
+        reject_tokens_after_block_colon(tokens_, cursor_, statement_end, "case");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -290,6 +304,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::Except;
         if (at(TokenKind::Colon)) {
             consume(TokenKind::Colon, "expected : after except");
+            reject_tokens_after_block_colon(tokens_, cursor_, statement_end, "except");
             attach_statement_range(stmt, join_tokens(begin, cursor_));
             return stmt;
         }
@@ -305,6 +320,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             set_stmt_condition_expr(stmt, parse_expr_piece(header));
         }
         consume(TokenKind::Colon, "expected : after except");
+        reject_tokens_after_block_colon(tokens_, cursor_, statement_end, "except");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }

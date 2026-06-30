@@ -170,7 +170,7 @@
           "beginCaptures": {
             "1": { "name": "punctuation.separator.type.dudu" }
           },
-          "end": "(?=$|[,)=:])",
+          "end": "(?=\\s+in\\b|\\s*=|$|[,)=:])",
           "patterns": [
             { "include": "#comments" },
             { "include": "#strings" },
@@ -199,7 +199,7 @@
     },
     "keywords": {
       "patterns": [
-        { "name": "keyword.control.dudu", "match": "\\b(if|elif|else|while|for|in|return|break|continue|and|or|not)\\b" },
+        { "name": "keyword.control.dudu", "match": "\\b(if|elif|else|while|for|in|match|case|try|except|return|break|continue|pass|raise|delete|assert|debug_assert|and|or|not)\\b" },
         { "name": "keyword.declaration.dudu", "match": "\\b(def|class|enum|type|import|from|as|public|private|static_assert)\\b" },
         { "name": "constant.language.dudu", "match": "\\b(True|False|None)\\b" }
       ]

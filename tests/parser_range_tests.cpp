@@ -85,6 +85,45 @@ void test_keyword_statements_keep_token_ranges() {
     assert(dudu::stmt_message_expr(call_assert).value == "in range");
 }
 
+void test_block_headers_reject_same_line_tokens_after_colon() {
+    struct Case {
+        std::string source;
+        std::string expected;
+        int expected_line = 0;
+        int expected_column = 0;
+    };
+    const std::vector<Case> cases = {
+        {"def main() -> i32:\n"
+         "    if fps_elapsed_ms: i32 >= 250:\n"
+         "        return 1\n"
+         "    return 0\n",
+         "unexpected tokens after if header", 2, 24},
+        {"def main() -> i32:\n"
+         "    while True: return 1\n"
+         "    return 0\n",
+         "unexpected tokens after while header", 2, 17},
+        {"def main() -> i32:\n"
+         "    for i: i32 in range(2): return i\n"
+         "    return 0\n",
+         "unexpected tokens after for header", 2, 29},
+        {"def main() -> i32:\n"
+         "    match 1: return 1\n"
+         "    return 0\n",
+         "unexpected tokens after match header", 2, 14},
+    };
+    for (const Case& item : cases) {
+        bool rejected = false;
+        try {
+            (void)dudu::parse_source(item.source, "bad_block_header.dd");
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(item.expected) != std::string::npos &&
+                       error.location().line == item.expected_line &&
+                       error.location().column == item.expected_column;
+        }
+        assert(rejected);
+    }
+}
+
 void test_docstrings_attach_and_do_not_emit_as_statements() {
     const dudu::ModuleAst module = dudu::parse_source("'''Module docs.'''\n"
                                                       "\n"
@@ -163,6 +202,7 @@ int main() {
         test_statement_source_range_uses_token_span();
         test_digit_suffixed_member_receiver();
         test_keyword_statements_keep_token_ranges();
+        test_block_headers_reject_same_line_tokens_after_colon();
         test_docstrings_attach_and_do_not_emit_as_statements();
         test_misplaced_docstrings_are_rejected();
     } catch (const std::exception& error) {

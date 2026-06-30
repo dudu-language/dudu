@@ -60,6 +60,21 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.front().code.starts_with("dudu.sema."));
 }
 
+void test_lsp_block_header_diagnostics_use_extra_token_location() {
+    const dudu::Document doc{.uri = "",
+                             .path = "bad_if_header.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    if fps_elapsed_ms: i32 >= 250:\n"
+                                     "        return 1\n"
+                                     "    return 0\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    assert(diags.size() == 1);
+    assert(diags.front().source == "dudu/parser");
+    assert(diags.front().message.find("unexpected tokens after if header") != std::string::npos);
+    assert(diags.front().location.line == 2);
+    assert(diags.front().location.column == 24);
+}
+
 void test_lsp_diagnostics_use_open_buffer_for_module_entry() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_open_buffer_module_test";
@@ -529,6 +544,7 @@ void test_lsp_project_index_cache_records_native_warm_hits() {
 int main() {
     try {
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_block_header_diagnostics_use_extra_token_location();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_lints_do_not_leak_from_dependency_modules();
         test_lsp_document_symbols_include_ast_doc_summary();
