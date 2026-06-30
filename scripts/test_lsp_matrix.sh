@@ -666,6 +666,7 @@ def main() -> i32:
         request(130, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "def main() -> i32", add=len("def main() -> "))}),
         request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
+        request(131, "textDocument/codeLens", {"textDocument": text_document(main)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
@@ -1089,6 +1090,14 @@ def main() -> i32:
     if not has_semantic(unresolved_tokens, "missing_value", "variable", unresolved_modifier):
         raise AssertionError(f"missing unresolved return variable token: {unresolved_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
+    main_code_lenses = response(messages, 131)
+    if not any(
+        item.get("command", {}).get("command") == "dudu.showReferences"
+        and "reference" in item.get("command", {}).get("title", "")
+        and len(item.get("command", {}).get("arguments", [])) == 3
+        for item in main_code_lenses
+    ):
+        raise AssertionError(f"missing reference CodeLens command: {main_code_lenses!r}")
     assert_nonempty(response(messages, 41), "operator method definition")
     operator_use_definition = response(messages, 94)
     operator_add_decl = position(ops_source, "add(self", add=0)

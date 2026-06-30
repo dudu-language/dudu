@@ -321,14 +321,16 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 
 } // namespace
 
-std::string references_json(const Document& doc, const Json* params,
-                            const std::map<std::string, Document>& workspace) {
-    const ProjectIndex* current_index = document_project_index(doc, true);
+std::vector<ReferenceLocation> reference_locations(const Document& doc, const Json* params,
+                                                   const std::map<std::string, Document>& workspace,
+                                                   bool include_native) {
+    const ProjectIndex* current_index = document_project_index(doc, include_native);
     const ModuleAst* current_unit = visible_document_unit(current_index, doc);
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::vector<Symbol> current_symbols_with_native =
-        current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, true);
+        current_unit == nullptr ? std::vector<Symbol>{}
+                                : symbols_for_module(*current_unit, include_native);
     const std::vector<Symbol> current_symbols_without_native =
         current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
     const std::string query =
@@ -337,17 +339,16 @@ std::string references_json(const Document& doc, const Json* params,
         reference_scope_at(doc, params, query, current_unit, current_symbols_without_native,
                            current_symbols_with_native);
     if (scope == ReferenceScope::None) {
-        return "[]";
+        return {};
     }
     const std::optional<std::string> module_target =
         scope == ReferenceScope::Workspace ? module_import_target_key(doc, query) : std::nullopt;
     const std::optional<ImportReferenceTarget> selective_target =
         scope == ReferenceScope::Workspace ? selective_import_target(doc, query) : std::nullopt;
     const std::optional<std::string> native_identity =
-        native_identity_for_query(current_symbols_with_native, query);
-    std::ostringstream out;
-    out << "[";
-    bool first = true;
+        include_native ? native_identity_for_query(current_symbols_with_native, query)
+                       : std::nullopt;
+    std::vector<ReferenceLocation> out;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
         if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
@@ -405,7 +406,7 @@ std::string references_json(const Document& doc, const Json* params,
         if (!module_target.has_value() && !selective_target.has_value() &&
             native_identity.has_value()) {
             const ProjectIndex* native_candidate_index =
-                workspace_candidate_index(current_index, candidate, true);
+                workspace_candidate_index(current_index, candidate, include_native);
             if (native_candidate_index == nullptr ||
                 !native_candidate_index->module_has_native_identity_for_query(
                     candidate.path, candidate_query, *native_identity)) {
@@ -413,12 +414,23 @@ std::string references_json(const Document& doc, const Json* params,
             }
         }
         for (const ReferenceLocation& location : locations) {
-            if (!first) {
-                out << ",";
-            }
-            first = false;
-            out << location_json(location.uri, location.range);
+            out.push_back(location);
         }
+    }
+    return out;
+}
+
+std::string references_json(const Document& doc, const Json* params,
+                            const std::map<std::string, Document>& workspace) {
+    const std::vector<ReferenceLocation> locations =
+        reference_locations(doc, params, workspace, true);
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < locations.size(); ++i) {
+        if (i > 0) {
+            out << ",";
+        }
+        out << location_json(locations[i].uri, locations[i].range);
     }
     out << "]";
     return out.str();

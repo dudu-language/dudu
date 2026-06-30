@@ -47,6 +47,18 @@ function runCommand(command) {
   terminal.sendText(`cd ${shellQuote(workspaceDirectory())} && ${command}`);
 }
 
+function toPosition(value) {
+  return new vscode.Position(value.line ?? 0, value.character ?? 0);
+}
+
+function toRange(value) {
+  return new vscode.Range(toPosition(value.start ?? {}), toPosition(value.end ?? {}));
+}
+
+function toLocation(value) {
+  return new vscode.Location(vscode.Uri.parse(value.uri), toRange(value.range ?? {}));
+}
+
 function lspStateText() {
   if (!client) {
     return "LSP stopped";
@@ -224,6 +236,17 @@ function activate(context) {
       runCommand(`${shellQuote(duduPath())} test`);
     }),
     vscode.commands.registerCommand("dudu.restartLsp", () => restartClient(context)),
+    vscode.commands.registerCommand("dudu.showReferences", async (uri, position, locations) => {
+      const sourceUri = vscode.Uri.parse(uri);
+      const sourcePosition = toPosition(position ?? {});
+      const sourceLocations = Array.isArray(locations) ? locations.map(toLocation) : [];
+      await vscode.commands.executeCommand(
+        "editor.action.showReferences",
+        sourceUri,
+        sourcePosition,
+        sourceLocations,
+      );
+    }),
   );
 
   startClient(context);
