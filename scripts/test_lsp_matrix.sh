@@ -707,6 +707,15 @@ def main() -> i32:
                 }]
             },
         }),
+        request(110, "completionItem/resolve", {
+            "label": "mix",
+            "kind": 3,
+            "detail": "def mix(left: i32, right: i32) -> i32",
+            "documentation": {
+                "kind": "markdown",
+                "value": "Mixes two numbers for signature docs.",
+            },
+        }),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(900, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -1212,6 +1221,14 @@ def main() -> i32:
         for edit in lint_edits
     ):
         raise AssertionError(f"missing lint quick fix edit: {lint_action!r}")
+    resolved_completion = response(messages, 110)
+    if resolved_completion.get("label") != "mix":
+        raise AssertionError(f"completion resolve lost label: {resolved_completion!r}")
+    if resolved_completion.get("detail") != "def mix(left: i32, right: i32) -> i32":
+        raise AssertionError(f"completion resolve lost detail: {resolved_completion!r}")
+    documentation = resolved_completion.get("documentation", {})
+    if documentation.get("kind") != "markdown" or "Mixes two numbers" not in documentation.get("value", ""):
+        raise AssertionError(f"completion resolve lost documentation: {resolved_completion!r}")
 
     print("lsp matrix checks passed")
 finally:

@@ -593,6 +593,8 @@ symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
+`completionItem/resolve` is covered through a JSON-RPC request that asserts the
+resolved item preserves label, detail, and markdown documentation.
 Common-form snippets for functions, classes, control flow, imports, enums, and
 exception handlers are covered.
 Hover for typed locals and simple inferred locals is covered.
