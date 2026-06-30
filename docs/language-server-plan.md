@@ -247,6 +247,8 @@ The extension should provide:
 - format on save support
 - command palette actions for `dudu check`, `dudu build`, `dudu run`, and
   `dudu test`
+- command palette/code-action entry for `Dudu: Show Generated C++ For Selection`
+  once codegen source maps exist
 - status item showing project target, compiler path, and whether native header
   awareness is active
 

@@ -16,6 +16,7 @@
 #include "dudu/project/module_names.hpp"
 
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -34,6 +35,33 @@ std::string hover_markdown(const Symbol& symbol) {
         markdown += "\n\n" + symbol.doc_comment;
     }
     return markdown;
+}
+
+std::optional<std::string> primitive_hover_json(const std::string& word) {
+    static const std::map<std::string, std::pair<std::string, std::string>> primitives = {
+        {"bool", {"bool", "Boolean value."}},
+        {"i8", {"std::int8_t", "Signed 8-bit integer."}},
+        {"i16", {"std::int16_t", "Signed 16-bit integer."}},
+        {"i32", {"std::int32_t", "Signed 32-bit integer."}},
+        {"i64", {"std::int64_t", "Signed 64-bit integer."}},
+        {"isize", {"std::ptrdiff_t", "Signed pointer-sized integer."}},
+        {"u8", {"std::uint8_t", "Unsigned 8-bit integer."}},
+        {"u16", {"std::uint16_t", "Unsigned 16-bit integer."}},
+        {"u32", {"std::uint32_t", "Unsigned 32-bit integer."}},
+        {"u64", {"std::uint64_t", "Unsigned 64-bit integer."}},
+        {"usize", {"std::size_t", "Unsigned pointer-sized integer."}},
+        {"f32", {"float", "32-bit floating-point value."}},
+        {"f64", {"double", "64-bit floating-point value."}},
+        {"str", {"std::string", "Owned UTF-8 string value."}},
+        {"None", {"std::nullptr_t", "Null pointer value."}},
+    };
+    const auto found = primitives.find(word);
+    if (found == primitives.end()) {
+        return std::nullopt;
+    }
+    const std::string markdown = "`type " + word + "`\n\n" + found->second.second +
+                                 "\n\nC++ lowering: `" + found->second.first + "`";
+    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) + "\"}}";
 }
 
 std::optional<std::string> imported_module_hover_json(const ProjectIndex& index,
@@ -314,6 +342,9 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         if (!selected_path.has_value()) {
             selected_path = selection.expr_path;
         }
+    }
+    if (const std::optional<std::string> primitive = primitive_hover_json(query)) {
+        return *primitive;
     }
     if (has_selection) {
         if (selection.operator_expr) {

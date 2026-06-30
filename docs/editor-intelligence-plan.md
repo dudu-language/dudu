@@ -233,6 +233,11 @@ For source in the current project or a Dudu library:
   or imported declaration
 - hover shows kind, type/signature, module path, visibility, docs, and relevant
   native identity if the symbol comes from native code
+- hover for primitive Dudu types should still be useful: `f64` should explain
+  that it is a Dudu primitive and show the exact C++ lowering such as `double`
+- hover should support Rust-Analyzer-style actions where the editor can expose
+  them: go to declaration, go to type definition, and inspect generated C++
+  for the hovered symbol or selected source range
 
 ### Native C/C++ Interop
 
@@ -266,6 +271,29 @@ can jump into installed Rust library source:
   project symbols
 - generated/compiler-only built-ins should clearly say they are built in and
   should not pretend to have a source file
+
+### Generated C++ Inspection
+
+Dudu should make its C++ lowering transparent. A user should be able to select a
+symbol, expression, function, class, or source range and ask the editor to show
+the generated C++ for that source. This is useful for learning, debugging
+interop, and checking whether Dudu is actually zero-cost.
+
+Target behavior:
+
+- code action or command: `Dudu: Show Generated C++ For Selection`
+- if no selection exists, use the symbol under the cursor
+- open a read-only virtual document containing the generated C++ fragment plus
+  enough surrounding context to compile mentally
+- include source comments such as `// from src/foo.dd:line` only when they help
+  navigation
+- preserve a mapping from Dudu AST nodes to generated C++ ranges so the command
+  is structural, not a substring search through emitted code
+- for native calls, show both the Dudu expression and the C++ call target when
+  it differs from the surface spelling
+
+This requires codegen source maps. It should not be implemented by grepping the
+merged output file.
 
 ## VS Code Client Work
 

@@ -663,6 +663,7 @@ def main() -> i32:
         request(47, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Mode.Play", add=len("Mode."))}),
         request(48, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
         request(62, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
+        request(130, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "def main() -> i32", add=len("def main() -> "))}),
         request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
@@ -1132,6 +1133,9 @@ def main() -> i32:
     generic_class_hover = response(messages, 102)["contents"]["value"]
     if "class Box[T]" not in generic_class_hover or "Generic box docs." not in generic_class_hover:
         raise AssertionError(f"missing generic class hover docs/signature: {generic_class_hover!r}")
+    primitive_hover = response(messages, 130)["contents"]["value"]
+    if "type i32" not in primitive_hover or "C++ lowering: `std::int32_t`" not in primitive_hover:
+        raise AssertionError(f"missing primitive type hover/lowering: {primitive_hover!r}")
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
