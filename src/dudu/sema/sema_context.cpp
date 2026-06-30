@@ -1,10 +1,10 @@
 #include "dudu/sema/sema_context.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -406,6 +406,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
+        symbols.native_function_decls[fn.name].push_back(&fn);
         add_native_path_prefix(symbols, fn.name);
     }
     for (const ConstDecl& constant : module.constants) {

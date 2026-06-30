@@ -14,6 +14,7 @@
 #include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -32,6 +33,18 @@ struct InlayHint {
 struct ParamHints {
     std::vector<std::string> names;
 };
+
+bool placeholder_param_name(std::string_view name) {
+    if (!name.starts_with("arg") || name.size() == 3) {
+        return false;
+    }
+    return std::all_of(name.begin() + 3, name.end(),
+                       [](const char ch) { return std::isdigit(static_cast<unsigned char>(ch)); });
+}
+
+bool hintable_param_name(const std::string& name) {
+    return !name.empty() && name != "self" && !placeholder_param_name(name);
+}
 
 bool hintable_type(const TypeRef& type) {
     return has_type_ref(type) && !type_ref_is_auto(type);
@@ -153,7 +166,7 @@ const ClassDecl* class_for_type(const Symbols& symbols, const TypeRef& type) {
 ParamHints constructor_param_hints(const ClassDecl& klass) {
     ParamHints hints;
     for (const ConstructorParam& param : constructor_params(klass)) {
-        hints.names.push_back(param.name);
+        hints.names.push_back(hintable_param_name(param.name) ? param.name : "");
     }
     return hints;
 }
@@ -162,9 +175,47 @@ ParamHints function_param_hints(const FunctionDecl& fn, bool skip_self) {
     ParamHints hints;
     size_t start = skip_self && !fn.params.empty() && fn.params.front().name == "self" ? 1 : 0;
     for (size_t i = start; i < fn.params.size(); ++i) {
-        hints.names.push_back(fn.params[i].name);
+        hints.names.push_back(hintable_param_name(fn.params[i].name) ? fn.params[i].name : "");
     }
     return hints;
+}
+
+ParamHints native_function_param_hints(const NativeFunctionDecl& fn) {
+    ParamHints hints;
+    hints.names.reserve(fn.param_names.size());
+    for (const std::string& name : fn.param_names) {
+        hints.names.push_back(hintable_param_name(name) ? name : "");
+    }
+    return hints;
+}
+
+ParamHints first_native_function_param_hints(const Symbols& symbols, const std::string& name,
+                                             size_t arg_count) {
+    const auto found = symbols.native_function_decls.find(name);
+    if (found == symbols.native_function_decls.end()) {
+        return {};
+    }
+    for (const NativeFunctionDecl* fn : found->second) {
+        if (fn == nullptr || fn->param_names.size() < arg_count) {
+            continue;
+        }
+        ParamHints hints = native_function_param_hints(*fn);
+        if (std::any_of(hints.names.begin(), hints.names.end(),
+                        [](const std::string& item) { return !item.empty(); })) {
+            return hints;
+        }
+    }
+    return {};
+}
+
+ParamHints builtin_member_param_hints(const std::string& method_name) {
+    if (method_name == "append" || method_name == "push") {
+        return {.names = {"value"}};
+    }
+    if (method_name == "insert") {
+        return {.names = {"index", "value"}};
+    }
+    return {};
 }
 
 ParamHints method_param_hints_for_class(const ClassDecl& klass, const std::string& method_name) {
@@ -187,6 +238,11 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
         if (const auto found = scope.symbols.function_decls.find(callee);
             found != scope.symbols.function_decls.end()) {
             return function_param_hints(*found->second, false);
+        }
+        if (ParamHints native =
+                first_native_function_param_hints(scope.symbols, callee, expr.children.size());
+            !native.names.empty()) {
+            return native;
         }
         if (const ClassDecl* klass = class_for_name(scope.symbols, callee)) {
             return constructor_param_hints(*klass);
@@ -216,7 +272,7 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
     if (const ClassDecl* klass = class_for_type(scope.symbols, receiver_type)) {
         return method_param_hints_for_class(*klass, callee_expr.name);
     }
-    return {};
+    return builtin_member_param_hints(callee_expr.name);
 }
 
 void collect_hints_for_expr(FunctionScope& scope, const Expr& expr, const InlayHintOptions& options,
@@ -419,7 +475,7 @@ std::string hint_json(const InlayHint& hint) {
 std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions options) {
     std::vector<InlayHint> hints;
     try {
-        const ProjectIndex& index = project_index_for_document(doc, false, false);
+        const ProjectIndex& index = project_index_for_document(doc, true, false);
         const ModuleAst& module = index.visible_unit_for_path(doc.path);
         const Symbols symbols = collect_symbols(module);
         for (const FunctionDecl& fn : module.functions) {

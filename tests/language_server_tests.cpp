@@ -349,7 +349,7 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     dudu::Json signature_params =
         dudu::JsonParser("{\"position\":{\"line\":6,\"character\":26}}").parse();
     const std::string help = dudu::signature_help_json(&doc, &signature_params);
-    assert(help.find("scaled(arg0: i32) -> i32") != std::string::npos);
+    assert(help.find("scaled(factor: i32) -> i32") != std::string::npos);
     assert(help.find("Scale docs for native member.") != std::string::npos);
 
     dudu::Json hover_params =
@@ -363,6 +363,49 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     const std::string alias_hover = dudu::hover_json(doc, "", &alias_hover_params);
     assert(alias_hover.find("native type = NativeWidget") != std::string::npos);
     assert(alias_hover.find("Native widget class docs.") != std::string::npos);
+}
+
+void test_lsp_inlay_hints_include_native_parameter_names() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() /
+        ("dudu_lsp_native_inlay_" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_widget.hpp", "#pragma once\n"
+                                          "class NativeWidget {\n"
+                                          "  public:\n"
+                                          "    void set_position(int x, int y) {}\n"
+                                          "};\n"
+                                          "inline int native_add(int left, int right) {\n"
+                                          "    return left + right;\n"
+                                          "}\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"native_widget.hpp\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    widget: NativeWidget\n"
+                                     "    widget.set_position(3, 4)\n"
+                                     "    return native_add(1, 2)\n"};
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"label\":\"x:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"y:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"left:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"right:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"arg0:\"") == std::string::npos);
+}
+
+void test_lsp_inlay_hints_include_builtin_method_parameter_names() {
+    const dudu::Document doc{.uri = "file:///inlay_builtin_method.dd",
+                             .path = "inlay_builtin_method.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    values: list[i32] = []\n"
+                                     "    values.append(7)\n"
+                                     "    return 0\n"};
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"label\":\"value:\"") != std::string::npos);
 }
 
 void test_lsp_module_completion_uses_loaded_module_units() {
@@ -597,6 +640,8 @@ int main() {
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
+        test_lsp_inlay_hints_include_native_parameter_names();
+        test_lsp_inlay_hints_include_builtin_method_parameter_names();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
         test_lsp_project_index_cache_invalidates_imported_file_changes();

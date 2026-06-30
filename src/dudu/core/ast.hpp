@@ -297,6 +297,7 @@ struct NativeValueDecl {
 struct NativeFunctionDecl {
     std::string name;
     std::vector<std::string> template_params;
+    std::vector<std::string> param_names;
     std::vector<std::string> param_native_spellings;
     std::vector<TypeRef> param_type_refs;
     std::string return_native_spelling;

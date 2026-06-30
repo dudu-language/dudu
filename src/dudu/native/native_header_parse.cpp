@@ -6,6 +6,7 @@
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"
 
+#include <cctype>
 #include <optional>
 #include <regex>
 #include <sstream>
@@ -33,6 +34,19 @@ struct CommentTarget {
     CommentTargetKind kind = CommentTargetKind::Function;
     size_t primary = 0;
     size_t secondary = 0;
+};
+
+enum class ParamTargetKind {
+    Function,
+    Method,
+};
+
+struct ParamTarget {
+    int depth = 0;
+    ParamTargetKind kind = ParamTargetKind::Function;
+    size_t primary = 0;
+    size_t secondary = 0;
+    size_t next_param = 0;
 };
 
 TypeRef normalize_native_type_ref(TypeRef type);
@@ -161,6 +175,67 @@ void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& lo
     klass.base_class_refs.push_back(std::move(decl));
 }
 
+bool native_param_name_token(std::string_view token) {
+    if (token.empty() ||
+        (!std::isalpha(static_cast<unsigned char>(token.front())) && token.front() != '_')) {
+        return false;
+    }
+    for (const char ch : token) {
+        if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_') {
+            return false;
+        }
+    }
+    return token != "used" && token != "referenced" && token != "invalid" && token != "cinit" &&
+           token != "implicit";
+}
+
+std::optional<std::string> parm_var_decl_name(const std::string& line) {
+    const size_t type_quote = line.find(" '");
+    if (type_quote == std::string::npos) {
+        return std::nullopt;
+    }
+    std::istringstream words(trim_copy(line.substr(0, type_quote)));
+    std::vector<std::string> tokens;
+    std::string token;
+    while (words >> token) {
+        tokens.push_back(std::move(token));
+    }
+    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
+        if (native_param_name_token(*it)) {
+            return *it;
+        }
+        if (it->starts_with("col:") || it->starts_with("line:")) {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
+}
+
+void apply_param_name(NativeHeaderScan& scan, ParamTarget& target, std::string name) {
+    if (name.empty()) {
+        ++target.next_param;
+        return;
+    }
+    if (target.kind == ParamTargetKind::Function) {
+        if (target.primary < scan.functions.size()) {
+            NativeFunctionDecl& fn = scan.functions[target.primary];
+            if (fn.param_names.size() < fn.param_native_spellings.size()) {
+                fn.param_names.resize(fn.param_native_spellings.size());
+            }
+            if (target.next_param < fn.param_names.size()) {
+                fn.param_names[target.next_param] = std::move(name);
+            }
+        }
+    } else if (target.primary < scan.classes.size() &&
+               target.secondary < scan.classes[target.primary].methods.size()) {
+        FunctionDecl& fn = scan.classes[target.primary].methods[target.secondary];
+        if (target.next_param < fn.params.size()) {
+            fn.params[target.next_param].name = std::move(name);
+        }
+    }
+    ++target.next_param;
+}
+
 void append_doc_text(std::string& doc, std::string text) {
     text = trim_copy(std::move(text));
     if (text.empty()) {
@@ -222,6 +297,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& enums,
                     std::vector<TemplateContext>& templates,
                     std::vector<std::pair<int, size_t>>& functions,
+                    std::vector<ParamTarget>& param_targets,
                     std::vector<CommentTarget>& comment_targets, const SourceLocation& location,
                     std::string& current_file) {
     const SourceLocation decl_location = ast_source_location(line, location, current_file);
@@ -272,6 +348,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!functions.empty() && functions.back().first >= depth) {
         functions.pop_back();
     }
+    while (!param_targets.empty() && param_targets.back().depth >= depth) {
+        param_targets.pop_back();
+    }
     if (line.find("FunctionTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth, .params = {}});
     }
@@ -285,6 +364,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         if (fn.min_params > 0) {
             --fn.min_params;
         }
+    }
+    if (!param_targets.empty() && line.find("ParmVarDecl") != std::string::npos) {
+        apply_param_name(scan, param_targets.back(), parm_var_decl_name(line).value_or(""));
     }
     if (line.find("NamespaceDecl") != std::string::npos &&
         std::regex_search(line, match, ns_decl)) {
@@ -378,6 +460,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         fn.param_native_spellings =
             qualify_scoped_types(scan, namespaces, signature_params(signature));
+        fn.param_names.resize(fn.param_native_spellings.size());
         fn.return_native_spelling =
             qualify_scoped_type(scan, namespaces, signature_return_type(signature));
         fn.param_type_refs.reserve(fn.param_native_spellings.size());
@@ -390,6 +473,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         fn.location = decl_location;
         scan.functions.push_back(std::move(fn));
         functions.push_back({depth, scan.functions.size() - 1});
+        param_targets.push_back({.depth = depth,
+                                 .kind = ParamTargetKind::Function,
+                                 .primary = scan.functions.size() - 1});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Function,
                                    .primary = scan.functions.size() - 1});
@@ -417,6 +503,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         method.location = decl_location;
         const size_t class_index = classes.back().second;
         scan.classes[class_index].methods.push_back(std::move(method));
+        param_targets.push_back({.depth = depth,
+                                 .kind = ParamTargetKind::Method,
+                                 .primary = class_index,
+                                 .secondary = scan.classes[class_index].methods.size() - 1});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Method,
                                    .primary = class_index,
@@ -439,6 +529,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         ctor.location = decl_location;
         const size_t class_index = classes.back().second;
         scan.classes[class_index].methods.push_back(std::move(ctor));
+        param_targets.push_back({.depth = depth,
+                                 .kind = ParamTargetKind::Method,
+                                 .primary = class_index,
+                                 .secondary = scan.classes[class_index].methods.size() - 1});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Method,
                                    .primary = class_index,
@@ -508,12 +602,13 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
     std::vector<std::pair<int, std::string>> enums;
     std::vector<TemplateContext> templates;
     std::vector<std::pair<int, size_t>> functions;
+    std::vector<ParamTarget> param_targets;
     std::vector<CommentTarget> comment_targets;
     std::string current_file;
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions,
+        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions, param_targets,
                        comment_targets, location, current_file);
     }
 }

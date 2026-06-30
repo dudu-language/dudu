@@ -1,8 +1,7 @@
-#include "dudu/native/native_header_parse.hpp"
-
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_header_identity.hpp"
+#include "dudu/native/native_header_parse.hpp"
 
 #include <regex>
 #include <sstream>
@@ -64,6 +63,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.functions.push_back(
                 {.name = name,
                  .template_params = {},
+                 .param_names = std::vector<std::string>(static_cast<size_t>(params.arity)),
                  .param_native_spellings =
                      std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .param_type_refs = std::vector<TypeRef>(static_cast<size_t>(params.arity),

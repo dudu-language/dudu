@@ -26,7 +26,8 @@ LSP-capable editors:
   symbols, macros, enum values, and snippets for common forms
 - signature help for Dudu and native C/C++ calls
 - inlay hints for inferred local types, inferred loop binding types, implicit
-  `self: &Self`, and later useful call parameter names
+  `self: &Self`, and useful call parameter names, including scanned native
+  C/C++ parameters when real names are available
 - document symbols and workspace symbols
 - code actions for simple fixes, such as adding missing imports or formatting
   the file

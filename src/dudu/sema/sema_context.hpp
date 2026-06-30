@@ -26,6 +26,7 @@ struct Symbols {
     std::map<std::string, FunctionSignature> function_signatures;
     std::map<std::string, const FunctionDecl*> function_decls;
     std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
+    std::map<std::string, std::vector<const NativeFunctionDecl*>> native_function_decls;
     std::set<std::string> native_path_prefixes;
     std::set<std::string> module_import_prefixes;
     std::set<std::string> native_explicit_template_prefixes;

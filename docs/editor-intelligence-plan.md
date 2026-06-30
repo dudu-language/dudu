@@ -271,7 +271,10 @@ High-value hints:
 - implicit receiver types, such as `def move(self, ...)` displayed as
   `def move(self: &Self, ...)`
 - positional call parameter-name hints, when argument names are not already
-  visible and the hint improves readability
+  visible and the hint improves readability. These include Dudu functions,
+  constructors, methods, language-level builtin methods such as
+  `list.append(value:)`, and native C/C++ functions or methods when the native
+  scanner sees real parameter names.
 - optional argument expression type hints for debugging inference-heavy code
 
 VS Code defaults should keep hints available but not visually permanent:
@@ -291,10 +294,12 @@ Dudu-specific categories should be independently configurable:
 - `dudu.inlayHints.argumentTypes`
 
 Argument expression type hints should default off because they are useful for
-debugging inference but noisy in normal code. This work should not expand into
-hover actions, generated-C++ inspection, layout facts, CodeLens, or native
-documentation scraping. Those remain part of the broader editor-intelligence
-work. Hints must come from AST and semantic facts, not regex guesses.
+debugging inference but noisy in normal code. Native parameter-name hints should
+skip unnamed or synthesized placeholder parameters rather than showing noise
+such as `arg0:`. This work should not expand into hover actions, generated-C++
+inspection, layout facts, CodeLens, or native documentation scraping. Those
+remain part of the broader editor-intelligence work. Hints must come from AST
+and semantic facts, not regex guesses.
 
 ### Native C/C++ Interop
 

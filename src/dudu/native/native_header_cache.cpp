@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v8";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v9";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -211,20 +211,21 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                    .identity = symbol_id(fields, 4, 5),
                                    .location = decl_location,
                                    .doc_comment = fields[6]});
-        } else if (tag == "NF" && fields.size() == 14) {
-            const SourceLocation decl_location = cached_location(fields, 11, location);
+        } else if (tag == "NF" && fields.size() == 15) {
+            const SourceLocation decl_location = cached_location(fields, 12, location);
             scan.functions.push_back(
                 {.name = fields[0],
                  .template_params = native_cache_split_strings(fields[1]),
-                 .param_native_spellings = native_cache_split_strings(fields[2]),
-                 .param_type_refs = cached_type_refs(fields[3], decl_location),
-                 .return_native_spelling = fields[4],
-                 .return_type_ref = cached_type_ref(fields[5], decl_location),
-                 .min_params = std::stoi(fields[6]),
-                 .variadic = fields[7] == "1",
-                 .identity = symbol_id(fields, 8, 9),
+                 .param_names = native_cache_split_strings(fields[2]),
+                 .param_native_spellings = native_cache_split_strings(fields[3]),
+                 .param_type_refs = cached_type_refs(fields[4], decl_location),
+                 .return_native_spelling = fields[5],
+                 .return_type_ref = cached_type_ref(fields[6], decl_location),
+                 .min_params = std::stoi(fields[7]),
+                 .variadic = fields[8] == "1",
+                 .identity = symbol_id(fields, 9, 10),
                  .location = decl_location,
-                 .doc_comment = fields[10]});
+                 .doc_comment = fields[11]});
         } else if (tag == "NM" && fields.size() == 9) {
             const SourceLocation decl_location = cached_location(fields, 6, location);
             scan.macros.push_back({.name = fields[0],
@@ -302,6 +303,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
         std::vector<std::string> fields = {
             item.name,
             native_cache_join_strings(item.template_params),
+            native_cache_join_strings(item.param_names),
             native_cache_join_strings(item.param_native_spellings),
             native_cache_join_strings(cached_type_texts(item.param_type_refs)),
             item.return_native_spelling,
