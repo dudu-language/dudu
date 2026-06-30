@@ -135,10 +135,10 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
 std::vector<TypeRef>
 infer_index_arg_type_refs(const std::vector<Expr>& args,
                           const std::map<std::string, TypeRef>& local_type_refs,
+                          const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols) {
     std::vector<TypeRef> out;
     out.reserve(args.size());
-    const std::map<std::string, TypeRef> function_returns;
     for (const Expr& arg : args) {
         out.push_back(
             infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols));
@@ -267,6 +267,7 @@ std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
+                            const std::map<std::string, TypeRef>& function_returns,
                             const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || stmt_target_expr(stmt).kind != ExprKind::Index ||
         stmt_target_expr(stmt).children.size() != 2) {
@@ -289,7 +290,7 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     args.push_back(stmt.value_expr);
     const auto method = dudu_operator_method_name_for_args(
         *symbols, target.write_operator, receiver_type, args,
-        infer_index_arg_type_refs(args, local_type_refs, symbols));
+        infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols));
     if (!method) {
         return std::nullopt;
     }
@@ -304,6 +305,7 @@ std::optional<std::string>
 lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                                      const CppLocalContext& locals,
                                      const std::map<std::string, TypeRef>& local_type_refs,
+                                     const std::map<std::string, TypeRef>& function_returns,
                                      const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || stmt_target_expr(stmt).kind != ExprKind::Index ||
         stmt_target_expr(stmt).children.size() != 2) {
@@ -331,7 +333,8 @@ lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::st
     }
 
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
-    std::vector<TypeRef> arg_types = infer_index_arg_type_refs(args, local_type_refs, symbols);
+    std::vector<TypeRef> arg_types =
+        infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols);
     const TypeRef indexed_type = infer_emitted_local_type_ref(target, local_type_refs, {}, symbols);
     if (!has_type_ref(indexed_type)) {
         return std::nullopt;
@@ -381,7 +384,7 @@ lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
     const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
     const auto method = dudu_operator_method_name_for_args(
         *symbols, target.read_operator, receiver_type, args,
-        infer_index_arg_type_refs(args, local_type_refs, symbols));
+        infer_index_arg_type_refs(args, local_type_refs, {}, symbols));
     if (!method) {
         return std::nullopt;
     }

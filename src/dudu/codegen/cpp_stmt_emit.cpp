@@ -234,7 +234,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 return;
             }
             if (const auto call = lower_index_assignment_hook(stmt, aliases, locals,
-                                                              local_type_refs, symbols, options)) {
+                                                              local_type_refs, function_returns,
+                                                              symbols, options)) {
                 out << indent(depth) << *call << ";\n";
                 return;
             }
@@ -257,7 +258,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
         if (const auto call = lower_compound_index_assignment_hook(
-                stmt, aliases, locals, local_type_refs, symbols, options)) {
+                stmt, aliases, locals, local_type_refs, function_returns, symbols, options)) {
             out << indent(depth) << *call << ";\n";
             return;
         }

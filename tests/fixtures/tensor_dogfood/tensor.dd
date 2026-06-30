@@ -17,6 +17,24 @@ class TensorView:
         self.data[index] = value
 
 
+class Mask:
+    data: list[bool]
+
+    @operator("[]")
+    def at(self, index: i32) -> bool:
+        return self.data[index]
+
+    def count_true(self) -> i32:
+        count = 0
+        index = 0
+        total = i32(len(self.data))
+        while index < total:
+            if self[index]:
+                count += 1
+            index += 1
+        return count
+
+
 class Tensor:
     rows: i32
     cols: i32
@@ -66,6 +84,36 @@ class Tensor:
             self.cols * slice_step(rows),
             slice_step(cols),
         )
+
+    @operator("[]")
+    def masked_rows(self, mask: Mask, cols: slice) -> Tensor:
+        out = zeros(mask.count_true(), slice_count(cols, self.cols))
+        out_row = 0
+        row = 0
+        while row < self.rows:
+            if mask[row]:
+                col = 0
+                col_start = slice_start(cols)
+                while col < out.cols:
+                    out[out_row, col] = self[row, col_start + col]
+                    col += 1
+                out_row += 1
+            row += 1
+        return out
+
+    @operator("[]=")
+    def set_masked_rows(self, mask: Mask, cols: slice, value: Tensor):
+        value_row = 0
+        row = 0
+        while row < self.rows:
+            if mask[row]:
+                col = 0
+                col_start = slice_start(cols)
+                while col < value.cols:
+                    self[row, col_start + col] = value[value_row, col]
+                    col += 1
+                value_row += 1
+            row += 1
 
 
 def slice_start(value: slice) -> i32:
@@ -179,6 +227,20 @@ def from_4x2(
     out[3, 0] = a30
     out[3, 1] = a31
     return out
+
+
+def row_sum_mask(input: Tensor, threshold: f32) -> Mask:
+    data: list[bool] = []
+    row = 0
+    while row < input.rows:
+        total: f32 = 0.0
+        col = 0
+        while col < input.cols:
+            total += input[row, col]
+            col += 1
+        data.append(total > threshold)
+        row += 1
+    return Mask(data)
 
 
 def add(a: Tensor, b: Tensor) -> Tensor:

@@ -1,0 +1,36 @@
+from tensor import Mask
+from tensor import Tensor
+from tensor import from_4x2
+from tensor import row_sum_mask
+from tensor import scale
+from tensor import sum_values
+
+
+def selected_score(selected: Tensor) -> f32:
+    return sum_values(selected)
+
+
+def selected_count(mask: Mask) -> i32:
+    return mask.count_true()
+
+
+def main() -> i32:
+    values = from_4x2(
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+    )
+    mask = row_sum_mask(values, 8.0)
+    selected = values[mask, :]
+    before = selected_score(selected)
+    values[mask, :] = scale(selected, 2.0)
+    after = values[2, 0] + values[2, 1] + values[3, 0] + values[3, 1]
+
+    if selected_count(mask) != 2:
+        return 1
+    return i32(before + after - 36.0)

@@ -492,10 +492,13 @@ Status:
 - `tests/fixtures/tensor_dogfood/tensor.dd` is a reusable Dudu tensor module
   with scalar indexing, indexed assignment, row/column/patch views, elementwise
   add/sub/mul, `scale`, transpose, reductions, mean squared error,
-  callback-based `map_values`, `relu`, view copy/fill/sum helpers, row-bias
-  add, and pure Dudu matmul.
+  callback-based `map_values`, `relu`, row-mask selection/scatter, view
+  copy/fill/sum helpers, row-bias add, and pure Dudu matmul.
 - `tests/fixtures/tensor_dogfood/views_main.dd` validates the reusable module's
   matrix/image-style view behavior through normal imports.
+- `tests/fixtures/tensor_dogfood/mask_rows_main.dd` validates reusable row-mask
+  read and explicit read/modify/write masked scatter. The separate generic
+  `mask_indexing.dd` fixture validates `dyn` shaped flow.
 - `tests/fixtures/tensor_dogfood/xor_main.dd` validates a tiny generated XOR
   classification path using `matmul`, row bias, and callback activation.
 - `tests/fixtures/tensor_dogfood/tiny_training_main.dd` validates a tiny
