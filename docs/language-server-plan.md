@@ -599,14 +599,14 @@ Hover for typed locals and simple inferred locals is covered.
 Hover for Dudu declaration doc comments is covered through AST-attached
 declaration docs, including same-file declarations and Dudu symbols imported
 through module aliases.
-Format and organize-imports code actions are covered. Formatter and LSP
-organize-imports behavior share the same structured leading-import block
-helper.
-Missing-import quick fixes are covered through a `textDocument/codeAction`
-JSON-RPC request that asserts the returned WorkspaceEdit inserts the expected
-`from module import symbol` line. Direct unit coverage still checks unopened
-workspace files and the ambiguity guard that suppresses the fix when more than
-one workspace module exports the missing name.
+Format, organize-imports, missing-import, and lint-removal code actions are
+covered. Formatter and LSP organize-imports behavior share the same structured
+leading-import block helper. The JSON-RPC matrix asserts concrete
+WorkspaceEdits for sorting imports, inserting the expected
+`from module import symbol` line, and removing an unused local line. Direct unit
+coverage still checks unopened workspace files and the ambiguity guard that
+suppresses the missing-import fix when more than one workspace module exports
+the missing name.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
 Missing `pkg-config` package diagnostics are covered with a fixture

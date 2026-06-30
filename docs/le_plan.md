@@ -2335,12 +2335,12 @@ push. They are not release packaging work.
    generic functions/classes/methods, overloaded operators, locals,
    module-qualified completion, native headers, native functions, native
    template functions, native types, native macros, missing import diagnostics,
-   and missing-import code actions that return concrete WorkspaceEdits.
-   `scripts/test_lsp.sh` runs that matrix after the older smoke suite. Generic
-   LSP symbol details now retain generic parameter lists for Dudu function,
-   method, and class signatures, and explicit native C++ template calls are
-   covered for hover, definition, references, signature help, semantic tokens,
-   and header documentation.
+   and code actions that return concrete WorkspaceEdits for missing imports,
+   organize imports, and lint quick fixes. `scripts/test_lsp.sh` runs that
+   matrix after the older smoke suite. Generic LSP symbol details now retain
+   generic parameter lists for Dudu function, method, and class signatures, and
+   explicit native C++ template calls are covered for hover, definition,
+   references, signature help, semantic tokens, and header documentation.
 
    Documentation hover needs a real documentation model, not only line scanning.
    Dudu should support Python-shaped contiguous `#` declaration comments and

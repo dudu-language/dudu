@@ -506,6 +506,28 @@ def main() -> i32:
     return value.value
 """
     (tmp / "missing_symbol.dd").write_text(missing_symbol_source)
+    (tmp / "alpha.dd").write_text(
+        """def alpha() -> i32:
+    return 1
+"""
+    )
+    (tmp / "zeta.dd").write_text(
+        """def zeta() -> i32:
+    return 2
+"""
+    )
+    disorganized_imports_source = """import zeta
+import alpha
+
+def main() -> i32:
+    return alpha.alpha() + zeta.zeta()
+"""
+    (tmp / "disorganized_imports.dd").write_text(disorganized_imports_source)
+    lint_quickfix_source = """def main() -> i32:
+    unused = 1
+    return 0
+"""
+    (tmp / "lint_quickfix.dd").write_text(lint_quickfix_source)
 
     main = tmp / "main.dd"
     entities = tmp / "entities.dd"
@@ -522,10 +544,19 @@ def main() -> i32:
     missing = tmp / "missing_import.dd"
     available_symbol = tmp / "available_symbol.dd"
     missing_symbol = tmp / "missing_symbol.dd"
+    alpha = tmp / "alpha.dd"
+    zeta = tmp / "zeta.dd"
+    disorganized_imports = tmp / "disorganized_imports.dd"
+    lint_quickfix = tmp / "lint_quickfix.dd"
     missing_symbol_diag_range = {
         "start": position(missing_symbol_source, "MissingThing"),
         "end": position(missing_symbol_source, "MissingThing", add=len("MissingThing")),
     }
+    lint_unused_range = {
+        "start": position(lint_quickfix_source, "unused = 1"),
+        "end": position(lint_quickfix_source, "unused = 1", add=len("unused")),
+    }
+    lint_unused_fix_range = {"start": {"line": 1, "character": 0}, "end": {"line": 2, "character": 0}}
     messages = [
         lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
         lsp_message({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
@@ -543,6 +574,10 @@ def main() -> i32:
         open_message(missing),
         open_message(available_symbol),
         open_message(missing_symbol),
+        open_message(alpha),
+        open_message(zeta),
+        open_message(disorganized_imports),
+        open_message(lint_quickfix),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
         request(10, "textDocument/documentSymbol", {"textDocument": text_document(main)}),
         request(18, "textDocument/documentSymbol", {"textDocument": text_document(entities)}),
@@ -650,6 +685,25 @@ def main() -> i32:
                     "code": "dudu.sema.unknown_identifier",
                     "message": "unknown identifier: MissingThing",
                     "data": {"name": "MissingThing"},
+                }]
+            },
+        }),
+        request(108, "textDocument/codeAction", {
+            "textDocument": text_document(disorganized_imports),
+            "range": {"start": {"line": 0, "character": 0}, "end": {"line": 1, "character": len("import alpha")}},
+            "context": {"diagnostics": []},
+        }),
+        request(109, "textDocument/codeAction", {
+            "textDocument": text_document(lint_quickfix),
+            "range": lint_unused_range,
+            "context": {
+                "diagnostics": [{
+                    "range": lint_unused_range,
+                    "severity": 2,
+                    "source": "dudu/lint",
+                    "code": "dudu.lint.unused",
+                    "message": "unused local: unused",
+                    "data": {"fixRange": lint_unused_fix_range},
                 }]
             },
         }),
@@ -1137,6 +1191,27 @@ def main() -> i32:
         for edit in missing_symbol_edits
     ):
         raise AssertionError(f"missing import quick fix edit: {missing_import_action!r}")
+    organize_actions = response(messages, 108)
+    organize_action = item_with_title(organize_actions, "Organize imports")
+    organize_edits = organize_action.get("edit", {}).get("changes", {}).get(disorganized_imports.as_uri(), [])
+    expected_organized = "import alpha\nimport zeta\n"
+    if not any(
+        edit.get("newText") == expected_organized
+        and edit.get("range", {}).get("start", {}) == {"line": 0, "character": 0}
+        and edit.get("range", {}).get("end", {}) == {"line": 2, "character": 0}
+        for edit in organize_edits
+    ):
+        raise AssertionError(f"missing organize-imports edit: {organize_action!r}")
+    lint_actions = response(messages, 109)
+    lint_action = item_with_title(lint_actions, "Remove unused local")
+    lint_edits = lint_action.get("edit", {}).get("changes", {}).get(lint_quickfix.as_uri(), [])
+    if not any(
+        edit.get("newText") == ""
+        and edit.get("range", {}).get("start", {}) == {"line": 1, "character": 0}
+        and edit.get("range", {}).get("end", {}) == {"line": 2, "character": 0}
+        for edit in lint_edits
+    ):
+        raise AssertionError(f"missing lint quick fix edit: {lint_action!r}")
 
     print("lsp matrix checks passed")
 finally:
