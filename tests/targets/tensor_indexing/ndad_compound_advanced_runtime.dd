@@ -1,0 +1,53 @@
+# Target: direct advanced indexed compound assignment lowers through ordinary
+# read/write hooks and library scalar tensor operators.
+
+from ndad import Tensor
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    values: Tensor[i32][4, 5] = zeros[i32](4, 5)
+    index = 0
+    while index < i32(len(values.data)):
+        values.data[index] = index
+        index += 1
+
+    rows = array[i32]([0, 2, 3])
+    cols = array[i32]([1, 4, 0])
+
+    values[rows, cols] += 10
+    if values[0, 1].item() != 11:
+        return 1
+    if values[2, 4].item() != 24:
+        return 2
+    if values[3, 0].item() != 25:
+        return 3
+
+    values[rows, cols] *= 2
+    if values[0, 1].item() != 22:
+        return 4
+    if values[2, 4].item() != 48:
+        return 5
+    if values[3, 0].item() != 50:
+        return 6
+
+    values[rows, cols] -= 3
+    if values[0, 1].item() != 19:
+        return 7
+    if values[2, 4].item() != 45:
+        return 8
+    if values[3, 0].item() != 47:
+        return 9
+
+    values[:, 0] += 100
+    if values[0, 0].item() != 100:
+        return 10
+    if values[1, 0].item() != 105:
+        return 11
+    if values[2, 0].item() != 110:
+        return 12
+    if values[3, 0].item() != 147:
+        return 13
+
+    return 0

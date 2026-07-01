@@ -295,11 +295,16 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
     if (!has_type_ref(indexed_type)) {
         return indexed_type;
     }
+    const Expr compound_value = compound_assignment_value_expr(stmt);
+    const TypeRef compound_type = infer_expr_type_ast(scope, compound_value, &target_location);
+    if (!has_type_ref(compound_type)) {
+        return compound_type;
+    }
 
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
     check_index_arg_exprs(args, &target_location);
     std::vector<TypeRef> arg_types = infer_assignment_arg_type_refs(scope, args, &target_location);
-    arg_types.push_back(indexed_type);
+    arg_types.push_back(compound_type);
     if (!dudu_operator_signature_for_arg_types(scope.symbols, index_target.write_operator,
                                                receiver_type, arg_types)) {
         sema_fail(target_location,
@@ -308,7 +313,7 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
                       "\") accepting the indexed value type; use an explicit read/modify value "
                       "and indexed assignment");
     }
-    return indexed_type;
+    return compound_type;
 }
 
 } // namespace dudu

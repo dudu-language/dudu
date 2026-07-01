@@ -363,22 +363,35 @@ lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::st
         return std::nullopt;
     }
 
-    const std::optional<std::string> read =
-        lower_index_read_hook(target, aliases, locals, local_type_refs, symbols, options);
-    if (!read) {
+    if (!lower_index_read_hook(target, aliases, locals, local_type_refs, symbols, options)) {
         return std::nullopt;
     }
 
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
     std::vector<TypeRef> arg_types =
         infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols);
-    const TypeRef indexed_type = infer_emitted_local_type_ref(target, local_type_refs, {}, symbols);
-    if (!has_type_ref(indexed_type)) {
+    const TypeRef indexed_type =
+        infer_emitted_local_type_ref(target, local_type_refs, function_returns, symbols);
+    const Expr compound_value = compound_assignment_value_expr(stmt);
+    const TypeRef compound_type =
+        infer_emitted_local_type_ref(compound_value, local_type_refs, function_returns, symbols);
+    if (!has_type_ref(compound_type)) {
         return std::nullopt;
     }
-    arg_types.push_back(indexed_type);
-    const auto method = dudu_operator_method_name_for_arg_types(
+    TypeRef selected_value_type = compound_type;
+    arg_types.push_back(compound_type);
+    auto signature = dudu_operator_signature_for_arg_types(
         *symbols, index_target.write_operator, receiver_type, arg_types);
+    auto method = dudu_operator_method_name_for_arg_types(
+        *symbols, index_target.write_operator, receiver_type, arg_types);
+    if (!method && has_type_ref(indexed_type)) {
+        arg_types.back() = indexed_type;
+        selected_value_type = indexed_type;
+        signature = dudu_operator_signature_for_arg_types(
+            *symbols, index_target.write_operator, receiver_type, arg_types);
+        method = dudu_operator_method_name_for_arg_types(
+            *symbols, index_target.write_operator, receiver_type, arg_types);
+    }
     if (!method) {
         return std::nullopt;
     }
@@ -390,9 +403,20 @@ lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::st
     for (const Expr& arg : args) {
         lowered_args.push_back(lower_expr(arg, aliases, locals, local_type_refs, symbols, options));
     }
-    lowered_args.push_back(
-        "(" + *read + " " + std::string(compound_assign_op_text(stmt.compound_op)) + " " +
-        lower_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols, options) + ")");
+    const std::string lowered_value =
+        lower_expr_as_type_ref(selected_value_type, compound_value, aliases, locals,
+                               local_type_refs, function_returns, symbols, options);
+    lowered_args.push_back(lowered_value);
+    if (signature && signature->variadic &&
+        signature_variadic_param_index(*signature) + 1 < signature_param_count(*signature) &&
+        !lowered_args.empty()) {
+        lowered_args.clear();
+        lowered_args.push_back(lowered_value);
+        for (const Expr& arg : args) {
+            lowered_args.push_back(
+                lower_expr(arg, aliases, locals, local_type_refs, symbols, options));
+        }
+    }
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
     return lowered_receiver + access + *method + "(" + join_names(lowered_args) + ")";
 }

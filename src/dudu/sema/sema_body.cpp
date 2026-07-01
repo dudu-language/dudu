@@ -217,7 +217,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::CompoundAssign) {
         const TypeRef target_type = compound_assignment_target_type_ref(scope, stmt);
         if (has_type_ref(target_type)) {
-            check_type_ref_match(scope, target_type, stmt.value_expr,
+            const Expr value = compound_assignment_value_expr(stmt);
+            check_type_ref_match(scope, target_type, value,
                                  diagnostic_location(stmt.location, stmt.value_expr));
         }
         return;

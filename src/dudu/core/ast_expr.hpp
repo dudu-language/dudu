@@ -46,6 +46,8 @@ bool has_expr_template_args(const Expr& expr);
 const std::vector<Expr>& expr_template_args(const Expr& expr);
 std::vector<Expr>& mutable_expr_template_args(Expr& expr);
 void set_expr_template_args(Expr& expr, std::vector<Expr> args);
+std::string_view compound_assign_expr_op_text(CompoundAssignOp op);
+Expr compound_assignment_value_expr(const Stmt& stmt);
 bool has_stmt_message_expr(const Stmt& stmt);
 const Expr& stmt_message_expr(const Stmt& stmt);
 void set_stmt_message_expr(Stmt& stmt, Expr expr);

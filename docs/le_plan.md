@@ -1311,7 +1311,11 @@ push. They are not release packaging work.
    targets now prove the explicit `dyn`-to-concrete shape boundary:
    concrete-shape APIs reject raw `dyn` tensors, `assume_shape` narrows only
    shape metadata, and the narrowing does not change tensor base types or add
-   backend behavior.
+   backend behavior. `ndad_compound_advanced_runtime.dd` now proves direct
+   advanced compound indexed assignment through ordinary read/write hooks:
+   pairwise `tensor[rows, cols] +=`, `*=`, and `-=` updates plus mixed
+   slice/scalar `tensor[:, 0] +=` updates select `[]=` using the computed
+   compound tensor value type, not a rank-specific compiler tensor path.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

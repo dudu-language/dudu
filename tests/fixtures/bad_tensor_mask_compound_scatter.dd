@@ -15,6 +15,10 @@ class Tensor[T]:
     def set_masked_rows(self, mask: Mask, cols: slice, value: T):
         self.data[0] = value
 
+    @operator("+")
+    def add_scalar(self, value: T) -> Tensor[T][dyn, 2]:
+        return self
+
 
 def main() -> i32:
     mask = Mask([])

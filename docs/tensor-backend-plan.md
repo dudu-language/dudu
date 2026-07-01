@@ -818,6 +818,13 @@ Status:
   through the same read/write hook pair as explicit indexing. For example,
   `tensor[i] += 1` calls `@operator("[]")` to read and `@operator("[]=")` to
   write the modified value.
+- Done: direct advanced compound indexed assignment is runtime-proved by
+  `ndad_compound_advanced_runtime.dd`. `tensor[rows, cols] += value`,
+  `tensor[rows, cols] *= value`, `tensor[rows, cols] -= value`, and
+  `tensor[:, 0] += value` lower through ordinary `[]` reads, normal tensor
+  scalar operators, and matching `[]=` writes. The compiler selects the write
+  hook from the computed compound value type rather than assuming the read view
+  type is directly assignable.
 - Done: compound scatter is rejected when the write hook does not accept the
   selected value type. For example, `tensor[mask, :] += 1` does not silently
   lower through a scalar-fill scatter hook; users must spell the read/modify

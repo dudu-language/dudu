@@ -198,7 +198,7 @@ expect_fail bad_dunder_operator --check "reserved Python-style dunder method nam
 expect_fail bad_dunder_init --check "reserved Python-style dunder method name: __init__"
 expect_fail bad_dunder_del --check "reserved Python-style dunder method name: __del__"
 expect_fail bad_dunder_free --check "reserved Python-style dunder function name: __add__"
-expect_fail bad_compound_assignment_type --emit-cpp "cannot assign bool to i32 without an explicit cast"
+expect_fail bad_compound_assignment_type --emit-cpp "operator + expects i32, got bool"
 expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an explicit cast"
 expect_fail bad_comparison_bool_order --emit-cpp "comparison < expects bool, got bool"
 expect_fail bad_logical_operand --emit-cpp "and expects bool, got i32"

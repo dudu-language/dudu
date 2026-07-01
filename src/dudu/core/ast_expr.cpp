@@ -256,6 +256,46 @@ void set_expr_template_args(Expr& expr, std::vector<Expr> args) {
     expr.template_args = std::make_unique<std::vector<Expr>>(std::move(args));
 }
 
+std::string_view compound_assign_expr_op_text(CompoundAssignOp op) {
+    switch (op) {
+    case CompoundAssignOp::None:
+        return "";
+    case CompoundAssignOp::Add:
+        return "+";
+    case CompoundAssignOp::Sub:
+        return "-";
+    case CompoundAssignOp::Mul:
+        return "*";
+    case CompoundAssignOp::Div:
+        return "/";
+    case CompoundAssignOp::Mod:
+        return "%";
+    case CompoundAssignOp::BitAnd:
+        return "&";
+    case CompoundAssignOp::BitOr:
+        return "|";
+    case CompoundAssignOp::BitXor:
+        return "^";
+    case CompoundAssignOp::ShiftLeft:
+        return "<<";
+    case CompoundAssignOp::ShiftRight:
+        return ">>";
+    }
+    return "";
+}
+
+Expr compound_assignment_value_expr(const Stmt& stmt) {
+    Expr expr;
+    expr.kind = ExprKind::Binary;
+    expr.location = stmt.location;
+    expr.range = stmt.range;
+    expr.op = compound_assign_expr_op_text(stmt.compound_op);
+    expr.op_location = stmt.location;
+    expr.children.push_back(stmt_target_expr(stmt));
+    expr.children.push_back(stmt.value_expr);
+    return expr;
+}
+
 bool has_stmt_message_expr(const Stmt& stmt) {
     return stmt.message_expr != nullptr && expr_present(*stmt.message_expr);
 }

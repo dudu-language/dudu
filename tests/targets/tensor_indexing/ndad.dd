@@ -99,6 +99,18 @@ class TensorView[T]:
     def item(self) -> T:
         return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
 
+    @operator("+")
+    def add_scalar(self: &TensorView[T], value: T) -> Tensor[T]:
+        return self.to_tensor() + value
+
+    @operator("-")
+    def sub_scalar(self: &TensorView[T], value: T) -> Tensor[T]:
+        return self.to_tensor() - value
+
+    @operator("*")
+    def mul_scalar(self: &TensorView[T], value: T) -> Tensor[T]:
+        return self.to_tensor() * value
+
     @operator(">")
     def greater_than(self, value: T) -> BoolMask:
         values: list[bool] = []
@@ -199,6 +211,17 @@ ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
         data: list[T] = cpp("ndad::binary_add_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
         return tensor_from_data_shape[T](data, shape)
 
+    @operator("+")
+    def add_scalar(self: &Tensor[T], value: T) -> Tensor[T]:
+        data: list[T] = []
+        index = 0
+        tensor = self.to_tensor()
+        total = i32(len(tensor.data))
+        while index < total:
+            data.append(tensor.data[index] + value)
+            index += 1
+        return tensor_from_data_shape[T](data, self.shape)
+
     @operator("-")
     def sub[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
@@ -212,6 +235,17 @@ ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
         data: list[T] = cpp("ndad::binary_sub_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
         return tensor_from_data_shape[T](data, shape)
 
+    @operator("-")
+    def sub_scalar(self: &Tensor[T], value: T) -> Tensor[T]:
+        data: list[T] = []
+        index = 0
+        tensor = self.to_tensor()
+        total = i32(len(tensor.data))
+        while index < total:
+            data.append(tensor.data[index] - value)
+            index += 1
+        return tensor_from_data_shape[T](data, self.shape)
+
     @operator("*")
     def mul[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
@@ -224,6 +258,17 @@ ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other_tensor.shape)")
         data: list[T] = cpp("ndad::binary_mul_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
         return tensor_from_data_shape[T](data, shape)
+
+    @operator("*")
+    def mul_scalar(self: &Tensor[T], value: T) -> Tensor[T]:
+        data: list[T] = []
+        index = 0
+        tensor = self.to_tensor()
+        total = i32(len(tensor.data))
+        while index < total:
+            data.append(tensor.data[index] * value)
+            index += 1
+        return tensor_from_data_shape[T](data, self.shape)
 
     @operator(">")
     def greater_than(self, value: T) -> BoolMask:
