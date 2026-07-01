@@ -1,0 +1,6 @@
+# Target diagnostic: fixed arrays report too many scalar dimensions in Dudu
+# source instead of falling through to generated C++ errors.
+
+def main() -> i32:
+    matrix: array[i32] = [[1, 2], [3, 4]]
+    return matrix[0, 1, 0]

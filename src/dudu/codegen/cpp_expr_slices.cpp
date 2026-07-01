@@ -11,12 +11,13 @@
 namespace dudu {
 namespace {
 
-bool contains_slice_expr(const Expr& expr) {
-    if (expr.kind == ExprKind::Slice) {
+bool contains_view_index_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Slice || expr.kind == ExprKind::Ellipsis ||
+        expr.kind == ExprKind::NewAxis) {
         return true;
     }
     for (const Expr& child : expr.children) {
-        if (contains_slice_expr(child)) {
+        if (contains_view_index_expr(child)) {
             return true;
         }
     }
@@ -92,6 +93,12 @@ std::string lower_slice_spec_expr(const Expr& expr, const std::vector<std::strin
                lower_slice_value_expr(expr, aliases, locals, local_type_refs, symbols, options) +
                ")";
     }
+    if (expr.kind == ExprKind::Ellipsis) {
+        return "dudu::SliceSpec::ellipsis()";
+    }
+    if (expr.kind == ExprKind::NewAxis) {
+        return "dudu::SliceSpec::new_axis()";
+    }
     return "dudu::SliceSpec::at(" +
            lower_expr(expr, aliases, locals, local_type_refs, symbols, options) + ")";
 }
@@ -157,11 +164,11 @@ std::optional<std::string> lower_generic_array_view_index_expr(
     }
 
     const std::vector<Expr> args = index_arg_exprs(index);
-    const bool has_slice = contains_slice_expr(index);
+    const bool has_view_index = contains_view_index_expr(index);
     const std::string lowered_base =
         lower_expr(base, aliases, locals, local_type_refs, symbols, options);
 
-    if (has_slice) {
+    if (has_view_index) {
         return "dudu::array_view_slice(" + lowered_base + ", " +
                lower_slice_specs(args, aliases, locals, local_type_refs, symbols, options) + ")";
     }

@@ -18,5 +18,6 @@ def main() -> i32:
     rgb = image[0, 1, 0:3]
     green = image[:, :, 1]
     all_values = image[..., :]
+    expanded = image[None, ..., 2]
 
-    return pixel + sum_view(rgb) + sum_view(green) + sum_view(all_values) - 88
+    return pixel + sum_view(rgb) + sum_view(green) + sum_view(all_values) + sum_view(expanded) - 233

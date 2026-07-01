@@ -1,7 +1,7 @@
 # file	status	expected diagnostic substring
 parser_index_items.dd	pass
 generic_pack_forwarding.dd	pass
-fixed_array_python_slices.dd	pass
+fixed_array_python_slices.dd	run	0
 library_fixed_arity_hooks.dd	pass	
 library_variadic_hooks.dd	pass
 ndad_core.dd	pass
@@ -15,6 +15,9 @@ ndad_assignment_broadcast_runtime.dd	run	0
 ndad_shape_preserving_helpers.dd	run	7
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
+bad_fixed_arity_ellipsis.dd	xfail	no matching @operator("[]") for indexed access to value
+bad_fixed_arity_new_axis.dd	xfail	no matching @operator("[]") for indexed access to value
+bad_fixed_array_too_many_indices.dd	xfail	too many indices for array: matrix
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
 bad_scatter_value_type.dd	xfail	expects Tensor[f32], got Tensor[i32][dyn, 784]
 bad_shape_preserving_helper_mismatch.dd	xfail	argument 2 for add_same[i32, 2, 3] expects Tensor[i32][2, 3], got Tensor[i32][3, 2]

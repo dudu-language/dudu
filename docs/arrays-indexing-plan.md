@@ -178,9 +178,9 @@ Partial indexing such as `mat[row]` now returns the remaining fixed-array row
 type, while over-indexing is diagnosed in Dudu source.
 
 Status: fixed-array slicing no longer uses rank-specific row, column, channel,
-or slab branches. Scalar and slice items lower through one shape/stride/offset
-view path, and tensor-library indexing is separately routed through ordinary
-operator hooks.
+or slab branches. Scalar, slice, ellipsis, and new-axis items lower through one
+shape/stride/offset view path when the index expression produces a view, and
+tensor-library indexing is separately routed through ordinary operator hooks.
 
 ## Slicing
 
@@ -219,10 +219,11 @@ shape/stride view model, not through a new compiler branch per rank or pattern.
 
 Target status: fixed-array slicing should produce `array_view[T]`, a generic
 runtime shape/stride view. The parser keeps generic `IndexExpr(base, args...)`
-and `SliceExpr(start, stop, step)` nodes. Sema recognizes fixed-array shape
-metadata and infers `array_view[T]` for any slice-containing fixed-array index.
-Codegen lowers all fixed-array slice forms through the same helper that builds
-slice specs and computes `shape`, `strides`, and `offset`.
+and structured slice, ellipsis, and new-axis item nodes. Sema recognizes
+fixed-array shape metadata and infers `array_view[T]` for fixed-array indexes
+containing `:`, `...`, or `None`. Codegen lowers those fixed-array view forms
+through the same helper that builds slice specs and computes `shape`,
+`strides`, and `offset`.
 
 Examples that must share the same path:
 

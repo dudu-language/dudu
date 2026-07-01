@@ -1158,16 +1158,17 @@ push. They are not release packaging work.
    pointer/count handoff.
    Fixed-array slicing has been corrected away from the prototype
    `span[T]`/`strided_span[T]`/`strided_span2[T]` branches. Any fixed-array
-   index expression containing a slice now produces `array_view[T]`, backed
-   by generic runtime shape, stride, and offset metadata. That single path
-   covers one-dimensional `start:end`, row views such as `mat[row, :]`, column
-   views such as `mat[:, col]`, full-rank slices such as `mat[:, :]`, rank-3
-   image channel slices such as `image[:, :, c]`, trailing channel ranges such
-   as `image[y, x, 0:3]`, and rank-4 or higher fixed-array fixtures. Low-level
-   `span[T]` and `strided_span[T]` may remain as explicit one-dimensional
-   helper/native interop types, but the language slice inference path must not
-   be rank-specific. The old `strided_span2[T]` helper and reslicing path have
-   been removed.
+   index expression containing a slice, ellipsis, or new-axis item now produces
+   `array_view[T]`, backed by generic runtime shape, stride, and offset
+   metadata. That single path covers one-dimensional `start:end`, row views
+   such as `mat[row, :]`, column views such as `mat[:, col]`, full-rank slices
+   such as `mat[:, :]`, rank-3 image channel slices such as `image[:, :, c]`,
+   trailing channel ranges such as `image[y, x, 0:3]`, ellipsis forms such as
+   `image[..., :]`, new-axis forms such as `image[None, ..., c]`, and rank-4
+   or higher fixed-array fixtures. Low-level `span[T]` and `strided_span[T]`
+   may remain as explicit one-dimensional helper/native interop types, but the
+   language slice inference path must not be rank-specific. The old
+   `strided_span2[T]` helper and reslicing path have been removed.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, including
    multi-scalar indices, member receivers such as `box.tensor[1, 2]`, member
@@ -1254,8 +1255,9 @@ push. They are not release packaging work.
    autograd-tracked values need explicit view/copy/move APIs.
    Status update: `tests/targets/tensor_indexing` now includes a fast runtime
    target for the in-repo `ndad` reference surface. It verifies row-major
-   strides, slice offsets, ellipsis, new-axis insertion, direct advanced
-   indexing, cartesian helper indexing, scalar point writes, scalar slice fill,
+   strides, fixed-array slice/ellipsis/new-axis views, tensor slice offsets,
+   ellipsis, new-axis insertion, direct advanced indexing, cartesian helper
+   indexing, scalar point writes, scalar slice fill,
    tensor-valued slice assignment, and mask construction by compiling and
    running generated C++. Expression-level pack forwarding such as `idx...` is
    parsed as AST and works through ordinary generic calls; variadic `[]=`

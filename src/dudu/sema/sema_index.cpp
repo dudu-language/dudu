@@ -30,13 +30,25 @@ size_t index_count_from_expr(const Expr& index_expr) {
     return 1;
 }
 
-bool is_slice_expr(const Expr& expr) {
-    if (expr.kind == ExprKind::Slice) {
+size_t consumed_axis_count_from_expr(const Expr& index_expr) {
+    if (index_expr.kind == ExprKind::TupleLiteral) {
+        size_t count = 0;
+        for (const Expr& child : index_expr.children) {
+            count += consumed_axis_count_from_expr(child);
+        }
+        return count;
+    }
+    return (index_expr.kind == ExprKind::Ellipsis || index_expr.kind == ExprKind::NewAxis) ? 0 : 1;
+}
+
+bool is_view_index_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Slice || expr.kind == ExprKind::Ellipsis ||
+        expr.kind == ExprKind::NewAxis) {
         return true;
     }
     if (expr.kind == ExprKind::TupleLiteral) {
         for (const Expr& child : expr.children) {
-            if (is_slice_expr(child)) {
+            if (is_view_index_expr(child)) {
                 return true;
             }
         }
@@ -75,7 +87,7 @@ TypeRef view_type_ref(const SourceLocation& location, std::string_view name,
 std::optional<TypeRef> fixed_array_view_type_ref(const SourceLocation& location,
                                                  const TypeRef& receiver_type,
                                                  const Expr& index_expr) {
-    if (!is_slice_expr(index_expr)) {
+    if (!is_view_index_expr(index_expr)) {
         return std::nullopt;
     }
     const TypeRef unwrapped = unwrap_reference_and_const(receiver_type);
@@ -86,7 +98,7 @@ std::optional<TypeRef> fixed_array_view_type_ref(const SourceLocation& location,
     const std::vector<size_t> shape = explicit_array_shape(unwrapped);
     const std::vector<std::string> shape_values = explicit_array_shape_values(unwrapped);
     const size_t rank = !shape.empty() ? shape.size() : shape_values.size();
-    if (rank == 0 || index_count_from_expr(index_expr) > rank) {
+    if (rank == 0 || consumed_axis_count_from_expr(index_expr) > rank) {
         return std::nullopt;
     }
     return view_type_ref(location, "array_view", element);
@@ -100,7 +112,7 @@ std::optional<TypeRef> indexed_array_view_type_ref(const SourceLocation& locatio
     if (args.size() != 1) {
         return std::nullopt;
     }
-    if (is_slice_expr(index_expr)) {
+    if (is_view_index_expr(index_expr)) {
         return view_type_ref(location, "array_view", args.front());
     }
     return args.front();
@@ -137,7 +149,7 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
             symbols, location, receiver_type, index_count_from_expr(index_expr),
-            is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
+            is_view_index_expr(index_expr), has_step_slice(index_expr), label)) {
         return *indexed_ref;
     }
     if (class_for_receiver_type(symbols, receiver_type) != nullptr) {

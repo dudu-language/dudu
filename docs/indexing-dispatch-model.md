@@ -274,13 +274,13 @@ The compiler work needed for this model is:
    `tests/targets/tensor_indexing/manifest.tsv`, checked by
    `scripts/check_targets.sh`.
 
-Current status: fixed-array slice inference and emission use the generic
-`array_view[T]` builder path. Prototype fixed-array branches for row views,
-columns, full matrices, matrix patches, image channels, and trailing channel
-ranges have been removed. Low-level explicit helper types such as
-`strided_span[T]` may still define its own one-dimensional helper behavior, but
-fixed arrays do not route through rank-specific branches. The old
-`strided_span2[T]` helper is removed.
+Current status: fixed-array view inference and emission use the generic
+`array_view[T]` builder path for slice, ellipsis, and new-axis index items.
+Prototype fixed-array branches for row views, columns, full matrices, matrix
+patches, image channels, and trailing channel ranges have been removed.
+Low-level explicit helper types such as `strided_span[T]` may still define
+their own one-dimensional helper behavior, but fixed arrays do not route
+through rank-specific branches. The old `strided_span2[T]` helper is removed.
 
 The tensor library work needed after that is:
 

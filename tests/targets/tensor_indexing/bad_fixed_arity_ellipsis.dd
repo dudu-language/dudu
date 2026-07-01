@@ -1,0 +1,12 @@
+# Target diagnostic: fixed-arity library hooks reject ellipsis unless the
+# library explicitly accepts an ellipsis index item.
+
+class ScalarOnly:
+    @operator("[]")
+    def at(self, index: i32) -> i32:
+        return index
+
+
+def main() -> i32:
+    value = ScalarOnly()
+    return value[...]
