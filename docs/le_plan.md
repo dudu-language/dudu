@@ -1262,7 +1262,15 @@ push. They are not release packaging work.
    hooks preserve Dudu source order while emitting a C++-deducible
    value-before-pack ABI. Mask-position gather and masked scalar scatter are
    now runtime-checked, including row-mask plus slice behavior, so the target
-   no longer passes by tracking only selected counts.
+   no longer passes by tracking only selected counts. Imported Dudu variadic
+   functions now preserve pack metadata through module aliases, which lets the
+   in-repo `ndad` reference surface expose one arbitrary-rank
+   `zeros[T, Dims...](*dims: Dims)` constructor instead of rank-specific
+   overloads. The runtime target constructs a rank-5 tensor through that path.
+   `ndad_broadcasting_runtime.dd` also proves library-owned broadcasting
+   through normal tensor operators by running
+   `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
+   compiler tensor-name special case.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

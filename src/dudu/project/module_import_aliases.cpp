@@ -94,9 +94,15 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
                                 : void_type_ref(location);
     alias.location = location;
     alias.doc_comment = fn.doc_comment;
-    for (const ParamDecl& param : fn.params) {
+    for (size_t index = 0; index < fn.params.size(); ++index) {
+        const ParamDecl& param = fn.params[index];
+        alias.param_names.push_back(param.name);
         TypeRef param_type = substitute_type_ref(param.type_ref, type_substitutions);
         alias.param_type_refs.push_back(std::move(param_type));
+        if (param.variadic) {
+            alias.variadic = true;
+            alias.min_params = static_cast<int>(index);
+        }
     }
     module.native_functions.push_back(std::move(alias));
 }

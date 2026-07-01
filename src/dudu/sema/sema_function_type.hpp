@@ -12,6 +12,7 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
 void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef> types);
 void set_signature_return_type(FunctionSignature& signature, TypeRef type);
 size_t signature_param_count(const FunctionSignature& signature);
+size_t signature_min_arg_count(const FunctionSignature& signature);
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index);
 TypeRef signature_return_type_ref(const FunctionSignature& signature);
 size_t signature_variadic_param_index(const FunctionSignature& signature);

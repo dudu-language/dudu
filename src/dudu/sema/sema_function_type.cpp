@@ -44,6 +44,11 @@ size_t signature_param_count(const FunctionSignature& signature) {
     return signature.param_type_refs.size();
 }
 
+size_t signature_min_arg_count(const FunctionSignature& signature) {
+    const size_t param_count = signature_param_count(signature);
+    return signature.variadic && param_count > 0 ? param_count - 1 : param_count;
+}
+
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
     if (index < signature.param_type_refs.size() &&
         has_type_ref(signature.param_type_refs[index])) {

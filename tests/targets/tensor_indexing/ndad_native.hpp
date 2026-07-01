@@ -116,6 +116,11 @@ inline std::vector<i64> contiguous_strides(const std::vector<i64>& shape) {
     return strides;
 }
 
+template <class... Dims>
+std::vector<i64> shape_from_dims(const Dims&... dims) {
+    return {static_cast<i64>(dims)...};
+}
+
 inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& strides, i64 offset,
                        i64 flat) {
     i64 source = offset;
@@ -127,6 +132,89 @@ inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& st
         source += coord * strides[axis];
     }
     return source;
+}
+
+inline std::vector<i64> unravel_index(const std::vector<i64>& shape, i64 flat);
+
+inline std::vector<i64> broadcast_shape(const std::vector<i64>& left,
+                                        const std::vector<i64>& right) {
+    const std::size_t rank = std::max(left.size(), right.size());
+    std::vector<i64> out(rank, 1);
+    for (std::size_t i = 0; i < rank; ++i) {
+        const std::size_t result_axis = rank - 1 - i;
+        const i64 left_dim = i < left.size() ? left[left.size() - 1 - i] : 1;
+        const i64 right_dim = i < right.size() ? right[right.size() - 1 - i] : 1;
+        out[result_axis] = std::max(left_dim, right_dim);
+    }
+    return out;
+}
+
+inline i64 broadcast_flat_offset(const std::vector<i64>& source_shape,
+                                 const std::vector<i64>& source_strides, i64 offset,
+                                 const std::vector<i64>& result_shape, i64 flat) {
+    std::vector<i64> result_coords = unravel_index(result_shape, flat);
+    i64 source = offset;
+    const std::size_t result_rank = result_shape.size();
+    const std::size_t source_rank = source_shape.size();
+    for (std::size_t source_axis = 0; source_axis < source_rank; ++source_axis) {
+        const std::size_t result_axis = result_rank - source_rank + source_axis;
+        const i64 coord = source_shape[source_axis] == 1 ? 0 : result_coords[result_axis];
+        source += coord * source_strides[source_axis];
+    }
+    return source;
+}
+
+template <class Data, class Shape, class Strides, class Op>
+Data binary_data(const Data& left_data, const Shape& left_shape_ref,
+                 const Strides& left_strides_ref, i64 left_offset, const Data& right_data,
+                 const Shape& right_shape_ref, const Strides& right_strides_ref, i64 right_offset,
+                 Op op) {
+    const std::vector<i64> left_shape = as_i64_shape(left_shape_ref);
+    const std::vector<i64> right_shape = as_i64_shape(right_shape_ref);
+    const std::vector<i64> result_shape = broadcast_shape(left_shape, right_shape);
+    const std::vector<i64> left_strides = as_i64_shape(left_strides_ref);
+    const std::vector<i64> right_strides = as_i64_shape(right_strides_ref);
+    Data out;
+    const i64 count = element_count(result_shape);
+    out.reserve(static_cast<std::size_t>(count));
+    for (i64 flat = 0; flat < count; ++flat) {
+        const i64 left = broadcast_flat_offset(left_shape, left_strides, left_offset, result_shape, flat);
+        const i64 right =
+            broadcast_flat_offset(right_shape, right_strides, right_offset, result_shape, flat);
+        out.push_back(op(left_data[static_cast<std::size_t>(left)],
+                         right_data[static_cast<std::size_t>(right)]));
+    }
+    return out;
+}
+
+template <class Data, class Shape, class Strides>
+Data binary_add_data(const Data& left_data, const Shape& left_shape_ref,
+                     const Strides& left_strides_ref, i64 left_offset, const Data& right_data,
+                     const Shape& right_shape_ref, const Strides& right_strides_ref,
+                     i64 right_offset) {
+    return binary_data(left_data, left_shape_ref, left_strides_ref, left_offset, right_data,
+                       right_shape_ref, right_strides_ref, right_offset,
+                       [](const auto& left, const auto& right) { return left + right; });
+}
+
+template <class Data, class Shape, class Strides>
+Data binary_sub_data(const Data& left_data, const Shape& left_shape_ref,
+                     const Strides& left_strides_ref, i64 left_offset, const Data& right_data,
+                     const Shape& right_shape_ref, const Strides& right_strides_ref,
+                     i64 right_offset) {
+    return binary_data(left_data, left_shape_ref, left_strides_ref, left_offset, right_data,
+                       right_shape_ref, right_strides_ref, right_offset,
+                       [](const auto& left, const auto& right) { return left - right; });
+}
+
+template <class Data, class Shape, class Strides>
+Data binary_mul_data(const Data& left_data, const Shape& left_shape_ref,
+                     const Strides& left_strides_ref, i64 left_offset, const Data& right_data,
+                     const Shape& right_shape_ref, const Strides& right_strides_ref,
+                     i64 right_offset) {
+    return binary_data(left_data, left_shape_ref, left_strides_ref, left_offset, right_data,
+                       right_shape_ref, right_strides_ref, right_offset,
+                       [](const auto& left, const auto& right) { return left * right; });
 }
 
 template <class T>

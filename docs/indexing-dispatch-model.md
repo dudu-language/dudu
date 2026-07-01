@@ -187,6 +187,12 @@ the C++ parameter pack while preserving Dudu source syntax as
 `def set_at[Idx...](self, *idx: Idx, value: T)`. This keeps C++ template
 deduction valid without changing the Dudu surface.
 
+Implementation status: imported Dudu functions and methods preserve variadic
+metadata through the module-alias/native-signature boundary. A library module
+can expose a single pack-based API such as `zeros[T, Dims...](*dims: Dims)`,
+and callers importing that symbol still get true variable arity instead of a
+fake one-parameter native signature.
+
 ## Python Numeric Target
 
 The following forms are target Dudu syntax. They should be accepted by the

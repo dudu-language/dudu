@@ -7,6 +7,16 @@ from ndad import zeros
 
 
 def main() -> i32:
+    rank5: Tensor[i32][2, 1, 2, 1, 2] = zeros[i32](2, 1, 2, 1, 2)
+    if rank5.shape[0] != 2:
+        return 51
+    if rank5.shape[2] != 2:
+        return 52
+    if rank5.shape[4] != 2:
+        return 53
+    if len(rank5.data) != 8:
+        return 54
+
     tensor: Tensor[i32][2, 3, 4] = zeros[i32](2, 3, 4)
     fill_index = 0
     fill_total = i32(len(tensor.data))

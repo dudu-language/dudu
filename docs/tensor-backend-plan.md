@@ -107,6 +107,19 @@ also checks mask-position gather and masked scalar scatter, including a
 row-mask plus slice case, so masks must carry selected element positions rather
 than only a selected count.
 
+Status: `ndad` construction now uses one variadic `zeros[T, Dims...](*dims:
+Dims)` path rather than rank-specific overloads, and `ndad_runtime_checks.dd`
+constructs a rank-5 tensor to prove arbitrary-rank shape construction.
+Imported Dudu functions preserve variadic pack metadata through module aliases,
+so a library can define the pack once and consumers can import it normally.
+
+Status: `ndad_broadcasting_runtime.dd` proves broadcasting is library-owned
+behavior behind ordinary Dudu operators. The fixture runs
+`(x - mean[None, :]) * inv_std[None, :]` and a row-bias add using normal
+`@operator("-")`, `@operator("*")`, and `@operator("+")` methods on
+`Tensor[T]`. Shape selection and element loops live in `ndad_native.hpp`, not
+in compiler tensor-name branches.
+
 ## Backend Choice
 
 Use the most portable useful stack first:
@@ -155,7 +168,10 @@ now stores rank-independent `shape`, `strides`, and `offset` on `Tensor[T]` and
 `TensorView[T]`. Arbitrary-rank index normalization is implemented as ordinary
 library/native-boundary code in `ndad_native.hpp`; the compiler does not know
 the tensor names and only dispatches the normal `@operator("[]")` /
-`@operator("[]=")` hooks.
+`@operator("[]=")` hooks. Construction and broadcasting are also library code:
+`zeros[T, Dims...]` forwards arbitrary-rank dimensions through a variadic pack,
+and elementwise tensor operators use the same runtime shape/stride metadata for
+right-aligned broadcasting.
 
 ## External Baseline
 

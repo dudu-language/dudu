@@ -209,8 +209,9 @@ std::optional<DuduOperatorCandidate> dudu_operator_candidate_for_arg_types(
 bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature& signature,
                                  const std::vector<TypeRef>& arg_types) {
     const size_t param_count = signature_param_count(signature);
+    const size_t min_arg_count = signature_min_arg_count(signature);
     if ((!signature.variadic && param_count != arg_types.size()) ||
-        (signature.variadic && arg_types.size() < param_count)) {
+        (signature.variadic && arg_types.size() < min_arg_count)) {
         return false;
     }
     for (size_t i = 0; i < arg_types.size(); ++i) {
@@ -232,8 +233,9 @@ bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature
 bool signature_matches_args(const Symbols& symbols, const FunctionSignature& signature,
                             const std::vector<Expr>& args, const std::vector<TypeRef>& arg_types) {
     const size_t param_count = signature_param_count(signature);
+    const size_t min_arg_count = signature_min_arg_count(signature);
     if (((!signature.variadic && param_count != args.size()) ||
-         (signature.variadic && args.size() < param_count)) ||
+         (signature.variadic && args.size() < min_arg_count)) ||
         args.size() != arg_types.size()) {
         return false;
     }

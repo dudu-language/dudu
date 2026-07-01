@@ -1,0 +1,3 @@
+def count_args[T...](*items: T) -> i32:
+    count: i32 = cpp("sizeof...(items)")
+    return count

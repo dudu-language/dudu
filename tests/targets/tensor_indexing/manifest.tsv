@@ -9,6 +9,7 @@ ndad_runtime_checks.dd	run	0
 ndad_direct_pytorch_indexing.dd	pass
 ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass
+ndad_broadcasting_runtime.dd	run	0
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
