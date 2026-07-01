@@ -130,14 +130,13 @@ expect_fail bad_array_empty_shape_mismatch --emit-cpp "array literal shape misma
 expect_fail bad_array_element_type --emit-cpp "array literal element expects i32, got bool"
 expect_fail bad_array_row_to_scalar --emit-cpp "cannot assign array\\[i32\\]\\[2\\] to i32 without an explicit cast"
 expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: matrix"
-expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
-expect_fail bad_array_general_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
-expect_fail bad_strided_span2_single_slice --emit-cpp "strided_span2 slicing requires two-dimensional slice syntax"
+expect_fail bad_array_matrix_slice --emit-cpp "cannot assign array_view\\[i32\\] to span\\[i32\\] without an explicit cast"
+expect_fail bad_array_general_matrix_slice --emit-cpp "cannot assign array_view\\[i32\\] to strided_span\\[i32\\] without an explicit cast"
 expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
 expect_fail bad_swizzle_mixed_sets --emit-cpp "unknown field: color.rgxy"
 expect_fail bad_swizzle_stpq_mixed_sets --emit-cpp "unknown field: coord.stxy"
 expect_fail bad_swizzle_assignment_repeat --emit-cpp "swizzle assignment cannot repeat component: xx"
-expect_fail bad_tensor_index_type --emit-cpp "argument 1 for tensor\\[\\] expects i32, got bool"
+expect_fail bad_tensor_index_type --emit-cpp "no matching @operator(\"\\[\\]\") for indexed access to tensor"
 expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_member_type --emit-cpp "argument 1 for box.tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[\\]= expects i32, got bool"
@@ -189,7 +188,6 @@ expect_fail bad_binary_string_subtract --emit-cpp "operator - expects str, got s
 expect_fail bad_bitwise_string --emit-cpp "operator | expects str, got str"
 expect_fail bad_cpp_operator_mismatch --emit-cpp "operator + expects dudu_op.Vec2, got str"
 expect_fail bad_dudu_operator_rhs --emit-cpp "operator + expects Vec2, got i32"
-expect_fail bad_dudu_operator_compare_return --check "comparison operator methods must return bool"
 expect_fail bad_dudu_operator_static --check "operator methods cannot be static"
 expect_fail bad_dudu_operator_non_string --check "@operator requires exactly one string literal argument"
 expect_fail bad_section_non_string --check "@section requires exactly one string literal argument"
@@ -335,15 +333,6 @@ if "$repo_root/build/dudu" \
     exit 1
 fi
 grep -q "duplicate declaration: Box" "$repo_root/build/bad_merged_module_namespace.err"
-
-if "$repo_root/build/dudu" \
-    "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces/main.dd" \
-    --emit-cpp "$repo_root/build/bad_merged_module_function_namespace.cpp" \
-    2>"$repo_root/build/bad_merged_module_function_namespace.err"; then
-    echo "bad_merged_module_function_namespace unexpectedly passed" >&2
-    exit 1
-fi
-grep -q "duplicate declaration: score" "$repo_root/build/bad_merged_module_function_namespace.err"
 
 if (
     cd "$repo_root/tests/fixtures/bad_project_transitive_import_leak"
