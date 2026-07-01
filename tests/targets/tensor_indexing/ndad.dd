@@ -91,24 +91,24 @@ ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
         cpp("ndad::assign_scalar(self.data, self.shape, self.strides, self.offset, value, idx...);")
 
     @operator("+")
-    def add(self, other: Tensor[T]) -> Tensor[T]:
-        shape: list[i64] = cpp("ndad::broadcast_shape(self.shape, other.shape)")
+    def add[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
+        shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_add_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
         strides = contiguous_strides(shape)
         cartesian = CartesianIndexer[T](data, shape, strides, 0)
         return Tensor[T](data, shape, strides, 0, cartesian)
 
     @operator("-")
-    def sub(self, other: Tensor[T]) -> Tensor[T]:
-        shape: list[i64] = cpp("ndad::broadcast_shape(self.shape, other.shape)")
+    def sub[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
+        shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_sub_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
         strides = contiguous_strides(shape)
         cartesian = CartesianIndexer[T](data, shape, strides, 0)
         return Tensor[T](data, shape, strides, 0, cartesian)
 
     @operator("*")
-    def mul(self, other: Tensor[T]) -> Tensor[T]:
-        shape: list[i64] = cpp("ndad::broadcast_shape(self.shape, other.shape)")
+    def mul[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
+        shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_mul_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
         strides = contiguous_strides(shape)
         cartesian = CartesianIndexer[T](data, shape, strides, 0)

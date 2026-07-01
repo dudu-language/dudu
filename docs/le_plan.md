@@ -1272,9 +1272,12 @@ push. They are not release packaging work.
    `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
    compiler tensor-name special case. Shape-only variadic packs now remain in
    Dudu's type system without leaking into emitted C++ template argument lists:
-   `ndad_shape_preserving_helpers.dd` compiles and runs a same-shape tensor
-   helper using `Dims...`, while the paired negative target diagnoses a
-   mismatched right-hand tensor in Dudu source. Imported/native generic
+   `ndad_shape_preserving_helpers.dd` compiles and runs direct shaped tensor
+   operators and helper calls using `Dims...`, while the paired negative target
+   diagnoses a mismatched right-hand tensor in Dudu source. Generic method
+   inference now binds method packs from receiver shape metadata, so an
+   operator declared as `self: &Tensor[T][Dims...]` can return
+   `Tensor[T][Dims...]` without helper-only shape preservation. Imported/native generic
    matching now peels shaped metadata for unshaped generic parameters, so
    library helpers such as `can_broadcast(left: Tensor[T], right: Tensor[T])`
    infer `T` from `Tensor[i32][2, 3]` without explicit type arguments.

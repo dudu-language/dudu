@@ -40,11 +40,12 @@ std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionS
 std::optional<std::vector<TypeRef>>
 infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
                                const std::string& callee, const std::vector<Expr>& args,
-                               size_t first_param, const SourceLocation* location);
+                               size_t first_param, const SourceLocation* location,
+                               const TypeRef* receiver_type = nullptr);
 std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_refs(
     const FunctionDecl& method, const std::string& callee, const std::vector<TypeRef>& arg_types,
     size_t first_param, const std::optional<TypeRef>& expected_return,
-    const SourceLocation* location);
+    const SourceLocation* location, const TypeRef* receiver_type = nullptr);
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args);
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,

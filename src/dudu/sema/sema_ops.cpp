@@ -196,7 +196,8 @@ std::optional<DuduOperatorCandidate> dudu_operator_candidate_for_arg_types(
     if (!method.generic_params.empty()) {
         const std::string display = klass.name + "." + method.name;
         const auto inferred = infer_generic_method_type_args_from_type_refs(
-            method, display, arg_types, method_first_argument_param(method), std::nullopt, nullptr);
+            method, display, arg_types, method_first_argument_param(method), std::nullopt, nullptr,
+            &left);
         if (!inferred) {
             return std::nullopt;
         }
@@ -424,15 +425,13 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->methods) {
-        if (!method_has_operator(method, op)) {
+        const auto candidate =
+            dudu_operator_candidate_for_arg_types(symbols, op, left, *klass, method, {right});
+        if (!candidate) {
             continue;
         }
-        FunctionSignature signature = operator_method_signature(symbols, left, *klass, method);
-        if (signature_param_count(signature) == 0 ||
-            assignment_type_allowed(
-                resolve_alias_ref(symbols, signature_param_type_ref(signature, 0)), right_expr,
-                resolve_alias_ref(symbols, right))) {
-            return signature;
+        if (signature_matches_args(symbols, candidate->signature, {right_expr}, {right})) {
+            return candidate->signature;
         }
     }
     return std::nullopt;

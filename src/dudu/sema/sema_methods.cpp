@@ -236,7 +236,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         const auto inferred = infer_generic_method_type_args(
-            scope, method, type + "." + method_name, args, first_param, location);
+            scope, method, type + "." + method_name, args, first_param, location, &receiver_type);
         if (!inferred) {
             return std::nullopt;
         }
@@ -274,7 +274,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
             arg_types.push_back(infer_expr_type_ast(scope, arg, location));
         }
         const auto inferred = infer_generic_method_type_args_from_type_refs(
-            method, type + "." + method_name, arg_types, first_param, expected_return, location);
+            method, type + "." + method_name, arg_types, first_param, expected_return, location,
+            &receiver_type);
         if (!inferred) {
             return std::nullopt;
         }

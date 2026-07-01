@@ -1,4 +1,4 @@
-# Target: library helpers can preserve tensor shape metadata through operators.
+# Target: direct tensor operators can preserve receiver shape metadata.
 
 from ndad import Tensor
 from ndad import zeros
@@ -14,5 +14,6 @@ def add_same[T, Dims...](
 def main() -> i32:
     a: Tensor[i32][2, 3] = zeros[i32](2, 3)
     b: Tensor[i32][2, 3] = zeros[i32](2, 3)
-    c: Tensor[i32][2, 3] = add_same[i32, 2, 3](a, b)
-    return i32(c.shape[0] + c.shape[1])
+    c: Tensor[i32][2, 3] = a + b
+    d: Tensor[i32][2, 3] = add_same[i32, 2, 3](a, b)
+    return i32(c.shape[0] + c.shape[1] + d.shape[0])

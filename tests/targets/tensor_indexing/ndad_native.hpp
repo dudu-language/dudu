@@ -78,9 +78,7 @@ template <class T>
 concept NewAxisLike = std::is_same_v<std::decay_t<T>, dudu::NewAxis>;
 
 template <class T>
-concept ShapedIndexLike = requires(const T& value) {
-    value.shape;
-};
+concept ShapedIndexLike = requires(const T& value) { value.shape; };
 
 template <class T>
 concept MaskIndexLike = requires(T& value) {
@@ -88,8 +86,7 @@ concept MaskIndexLike = requires(T& value) {
     value.count_true();
 };
 
-template <class T>
-std::vector<i64> as_i64_shape(const T& shape) {
+template <class T> std::vector<i64> as_i64_shape(const T& shape) {
     std::vector<i64> out;
     out.reserve(shape.size());
     for (const auto& dim : shape) {
@@ -117,8 +114,7 @@ inline std::vector<i64> contiguous_strides(const std::vector<i64>& shape) {
     return strides;
 }
 
-template <class... Dims>
-std::vector<i64> shape_from_dims(const Dims&... dims) {
+template <class... Dims> std::vector<i64> shape_from_dims(const Dims&... dims) {
     return {static_cast<i64>(dims)...};
 }
 
@@ -165,6 +161,15 @@ inline std::vector<i64> broadcast_shape(const std::vector<i64>& left,
     return out;
 }
 
+inline std::vector<i64> left_broadcast_shape(const std::vector<i64>& left,
+                                             const std::vector<i64>& right) {
+    const std::vector<i64> out = broadcast_shape(left, right);
+    if (out != left) {
+        throw std::runtime_error("right-hand tensor does not broadcast into left-hand shape");
+    }
+    return out;
+}
+
 inline i64 broadcast_flat_offset(const std::vector<i64>& source_shape,
                                  const std::vector<i64>& source_strides, i64 offset,
                                  const std::vector<i64>& result_shape, i64 flat) {
@@ -194,7 +199,8 @@ Data binary_data(const Data& left_data, const Shape& left_shape_ref,
     const i64 count = element_count(result_shape);
     out.reserve(static_cast<std::size_t>(count));
     for (i64 flat = 0; flat < count; ++flat) {
-        const i64 left = broadcast_flat_offset(left_shape, left_strides, left_offset, result_shape, flat);
+        const i64 left =
+            broadcast_flat_offset(left_shape, left_strides, left_offset, result_shape, flat);
         const i64 right =
             broadcast_flat_offset(right_shape, right_strides, right_offset, result_shape, flat);
         out.push_back(op(left_data[static_cast<std::size_t>(left)],
@@ -233,8 +239,7 @@ Data binary_mul_data(const Data& left_data, const Shape& left_shape_ref,
                        [](const auto& left, const auto& right) { return left * right; });
 }
 
-template <class T>
-std::vector<i64> tensor_index_values(const T& value) {
+template <class T> std::vector<i64> tensor_index_values(const T& value) {
     std::vector<i64> values;
     const std::vector<i64> shape = as_i64_shape(value.shape);
     const std::vector<i64> strides = as_i64_shape(value.strides);
@@ -247,8 +252,7 @@ std::vector<i64> tensor_index_values(const T& value) {
     return values;
 }
 
-template <class T>
-std::vector<i64> mask_index_values(const T& value) {
+template <class T> std::vector<i64> mask_index_values(const T& value) {
     std::vector<i64> values;
     for (std::size_t index = 0; index < value.data.size(); ++index) {
         if (value.data[index]) {
@@ -258,8 +262,7 @@ std::vector<i64> mask_index_values(const T& value) {
     return values;
 }
 
-template <class T>
-IndexItem make_index_item(const T& value) {
+template <class T> IndexItem make_index_item(const T& value) {
     using Value = std::decay_t<T>;
     if constexpr (EllipsisLike<Value>) {
         return {.kind = IndexKind::Ellipsis};
@@ -417,7 +420,8 @@ inline void build_explicit_offsets(IndexPlan& out, const std::vector<i64>& shape
                         local % static_cast<i64>(contribution.values.size()))];
                 }
             }
-            source += normalize_scalar(coord, shape[contribution.axis]) * strides[contribution.axis];
+            source +=
+                normalize_scalar(coord, shape[contribution.axis]) * strides[contribution.axis];
         }
         out.explicit_offsets.push_back(source);
     }
@@ -551,8 +555,7 @@ IndexPlan cartesian_index_plan(const Shape& shape, const Strides& strides, i64 o
                            true);
 }
 
-template <class Data>
-Data result_data(const Data& data, const IndexPlan& plan) {
+template <class Data> Data result_data(const Data& data, const IndexPlan& plan) {
     if (plan.explicit_offsets.empty()) {
         return data;
     }
@@ -602,9 +605,8 @@ void assign_tensor(DestData& dest_data, const DestShape& dest_shape,
         const i64 dest_offset_value = dest.explicit_offsets.empty()
                                           ? flat_offset(dest.shape, dest.strides, dest.offset, flat)
                                           : dest.explicit_offsets[static_cast<std::size_t>(flat)];
-        dest_data[static_cast<std::size_t>(dest_offset_value)] =
-            src_data[static_cast<std::size_t>(
-                broadcast_flat_offset(source_shape, source_strides, src_offset, dest.shape, flat))];
+        dest_data[static_cast<std::size_t>(dest_offset_value)] = src_data[static_cast<std::size_t>(
+            broadcast_flat_offset(source_shape, source_strides, src_offset, dest.shape, flat))];
     }
 }
 

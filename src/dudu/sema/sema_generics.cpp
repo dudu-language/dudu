@@ -223,6 +223,43 @@ bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_ty
     if (param_type.kind != arg_type.kind) {
         return true;
     }
+    if ((param_type.kind == TypeKind::FixedArray || param_type.kind == TypeKind::Shaped) &&
+        !param_type.children.empty() && !arg_type.children.empty()) {
+        if (!infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
+                                        params, bindings, error)) {
+            return false;
+        }
+        size_t arg_index = 1;
+        for (size_t i = 1; i < param_type.children.size(); ++i) {
+            std::string pack_name;
+            if (pack_expansion_name(param_type.children[i], pack_name)) {
+                const size_t fixed_after = param_type.children.size() - i - 1;
+                if (arg_type.children.size() < arg_index + fixed_after) {
+                    return true;
+                }
+                const size_t pack_count = arg_type.children.size() - arg_index - fixed_after;
+                std::vector<TypeRef> pack_args;
+                pack_args.reserve(pack_count);
+                for (size_t j = 0; j < pack_count; ++j) {
+                    pack_args.push_back(arg_type.children[arg_index + j]);
+                }
+                if (!bind_pack_generic(pack_name, pack_args, bindings.packs, error)) {
+                    return false;
+                }
+                arg_index += pack_count;
+                continue;
+            }
+            if (arg_index >= arg_type.children.size()) {
+                return true;
+            }
+            if (!infer_generic_binding_pack(param_type.children[i], arg_type.children[arg_index],
+                                            params, bindings, error)) {
+                return false;
+            }
+            ++arg_index;
+        }
+        return true;
+    }
     if (param_type.kind == TypeKind::Template) {
         if (trim(param_type.name) != trim(arg_type.name)) {
             return true;
@@ -538,7 +575,8 @@ std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionS
 std::optional<std::vector<TypeRef>>
 infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
                                const std::string& callee, const std::vector<Expr>& args,
-                               size_t first_param, const SourceLocation* location) {
+                               size_t first_param, const SourceLocation* location,
+                               const TypeRef* receiver_type) {
     if (method.generic_params.empty()) {
         return std::nullopt;
     }
@@ -567,13 +605,13 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
         arg_types.push_back(infer_expr_type_ast(scope, args[i], location));
     }
     return infer_generic_method_type_args_from_type_refs(method, callee, arg_types, first_param,
-                                                         std::nullopt, location);
+                                                         std::nullopt, location, receiver_type);
 }
 
 std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_refs(
     const FunctionDecl& method, const std::string& callee, const std::vector<TypeRef>& arg_types,
     size_t first_param, const std::optional<TypeRef>& expected_return,
-    const SourceLocation* location) {
+    const SourceLocation* location, const TypeRef* receiver_type) {
     if (method.generic_params.empty()) {
         return std::nullopt;
     }
@@ -603,6 +641,28 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
         return std::nullopt;
     }
     GenericTypeBindings bindings;
+    if (receiver_type != nullptr && first_param > 0 && !method.params.empty() &&
+        method.params.front().name == "self") {
+        TypeRef receiver_arg = *receiver_type;
+        const TypeRef& self_param = method.params.front().type_ref;
+        if (self_param.kind == TypeKind::Reference && self_param.children.size() == 1) {
+            TypeRef receiver_inner = *receiver_type;
+            if (self_param.children.front().kind == TypeKind::Const) {
+                receiver_inner = wrapped_type_ref(TypeKind::Const, std::move(receiver_inner),
+                                                  self_param.location);
+            }
+            receiver_arg = wrapped_type_ref(TypeKind::Reference, std::move(receiver_inner),
+                                            self_param.location);
+        }
+        std::string error;
+        if (!infer_generic_binding_pack(self_param, receiver_arg, method.generic_params, bindings,
+                                        error)) {
+            if (location != nullptr) {
+                sema_fail(*location, error + " for " + callee);
+            }
+            return std::nullopt;
+        }
+    }
     std::map<size_t, std::vector<TypeRef>> variadic_args;
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (method.params[i].variadic) {
@@ -686,8 +746,8 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     param_types.reserve(fn.params.size());
     for (const ParamDecl& param : fn.params) {
         TypeRef param_type = substitute_generic_type_ref(param.type_ref, substitutions);
-        if (param.variadic && generic_pack_param_named(fn.generic_params,
-                                                       type_ref_head_name(param.type_ref))) {
+        if (param.variadic &&
+            generic_pack_param_named(fn.generic_params, type_ref_head_name(param.type_ref))) {
             param_type = named_type_ref("auto", param.location);
         }
         param_types.push_back(std::move(param_type));

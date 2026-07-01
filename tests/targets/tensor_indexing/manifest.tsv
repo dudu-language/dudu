@@ -12,7 +12,7 @@ ndad_cartesian_helper.dd	pass
 ndad_broadcasting_runtime.dd	run	0
 ndad_broadcast_compatibility_runtime.dd	run	0
 ndad_assignment_broadcast_runtime.dd	run	0
-ndad_shape_preserving_helpers.dd	run	5
+ndad_shape_preserving_helpers.dd	run	7
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]

@@ -125,10 +125,9 @@ same-shape tensor metadata through a variadic shape pack, compile the generated
 C++, and run it. The matching negative target proves mismatched shape metadata
 is diagnosed in Dudu source. Shape-only packs such as `Dims...` participate in
 Dudu sema but are erased from generated C++ template argument lists unless the
-parameter is required by emitted C++ types. Shape-preserving `x + y` directly
-on a method receiver remains a separate receiver-typing design item; this
-fixture uses an ordinary helper function so it does not pretend that method
-receiver shape inference is done.
+parameter is required by emitted C++ types. Direct tensor operators can now
+bind method generic packs from receiver shape metadata, so `a + b` can return
+`Tensor[T][Dims...]` from `self: &Tensor[T][Dims...]` without a helper-only API.
 
 Status: `ndad_broadcast_compatibility_runtime.dd` proves broadcasting
 compatibility is checked by the tensor library. `can_broadcast(matrix, row)`
