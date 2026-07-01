@@ -87,7 +87,7 @@ periodically because they catch whole-project friction that small fixtures miss.
 | --- | --- | --- | --- |
 | `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
 | `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
-| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, and BLAS backend examples. | local dogfood via `scripts/test_dogfood.sh`; target API checker passed on 2026-07-01 |
+| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / OpenCL / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, BLAS backend, and OpenCL GPU backend examples. | local dogfood via `scripts/test_dogfood.sh`; target API checker passed on 2026-07-01 |
 
 ## Planned Matrix Targets
 

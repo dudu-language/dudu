@@ -1,0 +1,14 @@
+class Device:
+    id: i32
+
+
+class Tensor:
+    def to(self, device: Device) -> i32:
+        return device.id
+
+    def to(self, other: Device) -> i32:
+        return other.id
+
+
+def main() -> i32:
+    return Tensor().to(Device(1))

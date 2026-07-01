@@ -62,6 +62,7 @@ fi
 compile_and_expect named_callback 42
 compile_and_expect function_values 42
 compile_and_expect function_overloads 44
+compile_and_expect class_method_overloads 42
 compile_path_and_expect project_function_overloads tests/fixtures/project_function_overloads/main.dd 42
 compile_and_expect shaped_generic_method_return 42
 compile_and_expect generic_back_pointer_view 42

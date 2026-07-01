@@ -354,8 +354,19 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                                         generic_value_params_for_function(method));
                 method_symbols = &*method_symbol_storage;
             }
-            if (!fields.insert(method.name).second) {
+            if (fields.contains(method.name)) {
                 fail(method.location, "duplicate class member: " + method.name);
+            }
+            const FunctionSignature method_signature = method_signature_without_self(method);
+            for (const FunctionDecl& previous : klass.methods) {
+                if (&previous == &method) {
+                    break;
+                }
+                if (previous.name == method.name &&
+                    same_signature(method_signature, method_signature_without_self(previous))) {
+                    fail(method.location, "duplicate method overload: " + klass.name + "." +
+                                              method.name);
+                }
             }
             const bool is_static = method.params.empty() || method.params.front().name != "self";
             const bool is_abstract = has_decorator(method, "abstract");

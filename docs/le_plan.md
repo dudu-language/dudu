@@ -1237,10 +1237,12 @@ push. They are not release packaging work.
    `.reshape(...)`, and `.to_tensor()` through shape/stride/offset metadata.
    `ndad_reduction_shape_runtime.dd` validates those helpers on rank-3 tensors
    and non-contiguous views without rank-2 rows/cols storage. Continue with
-   optional backend BLAS probes when local tooling is available, then
-   out-of-line method emission where broader mutually referential value/view
-   APIs demand it, and explicit proof/conversion diagnostics for `dyn` values
-   flowing into concrete shape assertions.
+   optional backend BLAS probes when local tooling is available. Non-template
+   Dudu class methods now emit out-of-line definitions in source artifacts, so
+   mutually referential value/view APIs can return complete owning types without
+   fake pointer APIs; template class/method bodies remain inline for normal C++
+   template visibility. Continue with explicit proof/conversion diagnostics for
+   `dyn` values flowing into concrete shape assertions.
    Prototype row/column/channel/full-matrix fixed-array lowering helpers have
    been deleted from sema and C++ emission. Fixed arrays no longer infer
    `span[T]`, `strided_span[T]`, `strided_span2[T]`, or other rank-specific
@@ -1323,10 +1325,12 @@ push. They are not release packaging work.
    The external `dudu-datascience` dogfood target API is now tracked by
    `spec/target_api/manifest.tsv` and verified by
    `scripts/check_target_api.sh`: `tensor_surface.dd`,
-   `advanced_indexing.dd`, and `blas_backend.dd` have graduated into named
-   runnable `dudu` targets, while `gpu_backend.dd` and
-   `autograd_training.dd` remain explicitly pending for real OpenCL device
-   storage/backend dispatch and PyTorch-like autograd modules/optimizers.
+   `advanced_indexing.dd`, `blas_backend.dd`, and `gpu_backend.dd` have
+   graduated into named runnable `dudu` targets. The GPU target uses normal
+   method overloads for `tensor.to(device)`, OpenCL device buffers, a tiny
+   matmul kernel, device row slicing, and explicit `.cpu()` download.
+   `autograd_training.dd` remains explicitly pending for PyTorch-like autograd
+   modules, parameters, backward, and optimizers.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

@@ -330,40 +330,55 @@ std::string_view class_section_for_method(Visibility visibility) {
     return visibility == Visibility::Private ? "private" : "public";
 }
 
+bool inline_method_body(const ClassDecl& klass, const FunctionDecl& method) {
+    return !generic_cpp_params_for_class(klass).empty() ||
+           !cpp_emit_template_params_for_function(method).empty();
+}
+
 void emit_method(std::ostringstream& out, const std::string& class_name,
                  const std::string& source_class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
                  const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
-                 const CppEmitOptions& options) {
+                 const CppEmitOptions& options, bool declaration_only = false,
+                 bool qualified_definition = false) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    emit_template_params(out, cpp_emit_template_params_for_function(method), "    ",
+    const std::string_view prefix = qualified_definition ? "" : "    ";
+    emit_template_params(out, cpp_emit_template_params_for_function(method), prefix,
                          generic_cpp_value_params_for_function(method));
     if (is_constructor_method(method)) {
-        out << "    " << class_name << '(';
+        out << prefix << (qualified_definition ? class_name + "::" : std::string{}) << class_name
+            << '(';
     } else if (is_destructor_method(method)) {
         const auto klass = symbols.classes.find(source_class_name);
-        if (klass != symbols.classes.end() && class_is_polymorphic(symbols, *klass->second)) {
+        if (!qualified_definition && klass != symbols.classes.end() &&
+            class_is_polymorphic(symbols, *klass->second)) {
             out << "    virtual ";
         } else {
-            out << "    ";
+            out << prefix;
         }
-        out << "~" << class_name << '(';
+        out << (qualified_definition ? class_name + "::" : std::string{}) << "~" << class_name
+            << '(';
     } else {
-        out << "    ";
-        if (first_param == 0) {
+        out << prefix;
+        if (!qualified_definition && first_param == 0) {
             out << "static ";
         }
-        if (first_param == 1 &&
+        if (!qualified_definition && first_param == 1 &&
             (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
             out << "virtual ";
         }
         const std::string lowered_name = method_emit_name(source_class_name, method, options);
         if (lowered_name == "operator bool") {
-            out << "explicit " << lowered_name << '(';
+            if (!qualified_definition) {
+                out << "explicit ";
+            }
+            out << (qualified_definition ? class_name + "::" : std::string{}) << lowered_name
+                << '(';
         } else {
             out << lower_cpp_type(method_return_type_for_emit(method, class_name), aliases, options)
-                << ' ' << lowered_name << '(';
+                << ' ' << (qualified_definition ? class_name + "::" : std::string{})
+                << lowered_name << '(';
         }
     }
     const std::vector<size_t> param_order = emitted_method_param_order(method, first_param);
@@ -405,6 +420,17 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         self_receiver_is_const(method, class_name)) {
         out << " const";
     }
+    if (!qualified_definition && method_has_decorator(method, "override")) {
+        out << " override";
+    }
+    if (method_has_decorator(method, "abstract")) {
+        out << " = 0;\n";
+        return;
+    }
+    if (declaration_only) {
+        out << ";\n";
+        return;
+    }
     if (is_constructor_method(method)) {
         if (const Expr* super_init = super_init_expr(method)) {
             if (const BaseClassDecl* base = super_init_base_decl(symbols, class_name)) {
@@ -412,13 +438,6 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                     << join_lowered_args(super_init->children, aliases, locals) << ")";
             }
         }
-    }
-    if (method_has_decorator(method, "override")) {
-        out << " override";
-    }
-    if (method_has_decorator(method, "abstract")) {
-        out << " = 0;\n";
-        return;
     }
     out << " {\n";
     if (first_param == 1) {
@@ -439,6 +458,29 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                    options);
     }
     out << "    }\n";
+}
+
+void emit_out_of_line_methods(std::ostringstream& out, const ClassDecl& klass,
+                              const std::string& class_name,
+                              const std::vector<std::string>& aliases,
+                              const std::map<std::string, TypeRef>& function_returns,
+                              const Symbols& symbols, const CppEmitOptions& options) {
+    if (!generic_cpp_params_for_class(klass).empty()) {
+        return;
+    }
+    bool emitted = false;
+    for (const FunctionDecl& method : klass.methods) {
+        if (inline_method_body(klass, method) || method_has_decorator(method, "abstract")) {
+            continue;
+        }
+        emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols,
+                    options, false, true);
+        out << '\n';
+        emitted = true;
+    }
+    if (emitted) {
+        out << '\n';
+    }
 }
 
 void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant,
@@ -515,7 +557,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                 current_section = method_section;
             }
             emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols,
-                        options);
+                        options, !inline_method_body(klass, method));
         }
         out << "};\n\n";
         for (const ConstDecl& constant : klass.constants) {
@@ -523,6 +565,13 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         if (!klass.constants.empty()) {
             out << '\n';
+        }
+    }
+    if (!header_only) {
+        for (const size_t index : class_emit_order(module.classes)) {
+            const ClassDecl& klass = module.classes[index];
+            emit_out_of_line_methods(out, klass, emitted_name(klass, options), aliases,
+                                     function_returns, symbols, options);
         }
     }
 }

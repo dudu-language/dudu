@@ -870,12 +870,13 @@ Status:
   `zeros[i32](...)` can still lower scalar `@operator("[]=")` writes through
   the write hook instead of falling back to read-accessor assignment.
 - Done: reusable tensor views now own common non-allocating behavior such as
-  fill, sum, mean, and max. Owning view materialization remains an explicit
-  helper call because methods returning the owning tensor currently run into
-  the compiler's C++ incomplete-type emission boundary.
-- Remaining: out-of-line method emission if libraries need mutually referential
-  value/view methods returning complete owning types, plus broader shape
-  propagation only as future examples demand it.
+  fill, sum, mean, and max. Owning view materialization remains explicit.
+- Done: non-template Dudu class methods emit out-of-line definitions in source
+  artifacts, so mutually referential value/view APIs can return complete owning
+  types without forcing fake pointer APIs or rank-specific wrappers. Template
+  class/method bodies remain inline because C++ template definitions must stay
+  visible.
+- Remaining: broader shape propagation only as future examples demand it.
 
 ### 2. CPU Tensor Library
 
@@ -957,14 +958,13 @@ Status:
 - Dogfood target API status is now tracked by
   `/home/vega/Coding/ML/dudu-datascience/spec/target_api/manifest.tsv` and
   verified by `/home/vega/Coding/ML/dudu-datascience/scripts/check_target_api.sh`.
-  The graduated specs `tensor_surface.dd`, `advanced_indexing.dd`, and
-  `blas_backend.dd` have named runnable `dudu` targets. The pending specs
-  `gpu_backend.dd` and `autograd_training.dd` stay listed with explicit
-  missing implementation reasons instead of silently rotting.
+  The graduated specs `tensor_surface.dd`, `advanced_indexing.dd`,
+  `blas_backend.dd`, and `gpu_backend.dd` have named runnable `dudu` targets.
+  The pending spec `autograd_training.dd` stays listed with an explicit missing
+  implementation reason instead of silently rotting.
 - Remaining for the actual target API: finish the reusable `dudu_tensor`
-  library and optional backend/autograd modules so the pending target files
-  graduate too, including real OpenCL device storage, backend dispatch,
-  autograd parameters/modules, backward, optimizers, and diagnostics.
+  library and autograd modules so the pending target file graduates too,
+  including autograd parameters/modules, backward, optimizers, and diagnostics.
 
 ### 3. Optional OpenBLAS Probe
 
@@ -1036,6 +1036,11 @@ Status:
 - Done: `scripts/probe_optional.sh opencl` runs the existing host API probe and
   the tensor add/matmul probes when OpenCL is discoverable through
   `pkg-config`.
+- Done: `/home/vega/Coding/ML/dudu-datascience/src/target_gpu_backend.dd`
+  graduates the target API shape for `tensor.to(opencl.default())`, device
+  `matmul`, device row indexing, explicit `.cpu()` transfer, and comparison
+  against CPU tensor math. This uses ordinary method overloads and a local
+  OpenCL helper, not compiler tensor policy.
 - Remaining: backend BLAS probes such as rocBLAS/cuBLAS are optional follow-up
   work when local hardware and tooling make them practical.
 

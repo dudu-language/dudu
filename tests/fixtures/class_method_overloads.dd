@@ -1,0 +1,21 @@
+class CpuDevice:
+    id: i32
+
+
+class GpuDevice:
+    id: i32
+
+
+class Tensor:
+    value: i32
+
+    def to(self, device: CpuDevice) -> i32:
+        return self.value + device.id
+
+    def to(self, device: GpuDevice) -> i32:
+        return self.value + device.id + 10
+
+
+def main() -> i32:
+    tensor = Tensor(10)
+    return tensor.to(CpuDevice(1)) + tensor.to(GpuDevice(11))
