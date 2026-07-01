@@ -120,6 +120,16 @@ behavior behind ordinary Dudu operators. The fixture runs
 `Tensor[T]`. Shape selection and element loops live in `ndad_native.hpp`, not
 in compiler tensor-name branches.
 
+Status: `ndad_shape_preserving_helpers.dd` proves library code can preserve
+same-shape tensor metadata through a variadic shape pack, compile the generated
+C++, and run it. The matching negative target proves mismatched shape metadata
+is diagnosed in Dudu source. Shape-only packs such as `Dims...` participate in
+Dudu sema but are erased from generated C++ template argument lists unless the
+parameter is required by emitted C++ types. Shape-preserving `x + y` directly
+on a method receiver remains a separate receiver-typing design item; this
+fixture uses an ordinary helper function so it does not pretend that method
+receiver shape inference is done.
+
 ## Backend Choice
 
 Use the most portable useful stack first:

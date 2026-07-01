@@ -1270,7 +1270,11 @@ push. They are not release packaging work.
    `ndad_broadcasting_runtime.dd` also proves library-owned broadcasting
    through normal tensor operators by running
    `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
-   compiler tensor-name special case.
+   compiler tensor-name special case. Shape-only variadic packs now remain in
+   Dudu's type system without leaking into emitted C++ template argument lists:
+   `ndad_shape_preserving_helpers.dd` compiles and runs a same-shape tensor
+   helper using `Dims...`, while the paired negative target diagnoses a
+   mismatched right-hand tensor in Dudu source.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

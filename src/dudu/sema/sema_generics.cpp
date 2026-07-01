@@ -114,6 +114,17 @@ bool same_name(std::string_view left, std::string_view right) {
     return trim_copy(std::string(left)) == trim_copy(std::string(right));
 }
 
+bool same_generic_param_name(const TypeRef& dim, const std::string& param) {
+    const std::string base = generic_param_base_name(param);
+    if (same_name(type_ref_head_name(dim), base)) {
+        return true;
+    }
+    if (dim.kind == TypeKind::PackExpansion && dim.children.size() == 1) {
+        return same_name(type_ref_head_name(dim.children.front()), base);
+    }
+    return false;
+}
+
 void collect_value_generic_params(const TypeRef& type, const std::vector<std::string>& params,
                                   std::set<std::string>& out) {
     if (type.kind == TypeKind::FixedArray || type.kind == TypeKind::Shaped) {
@@ -125,8 +136,8 @@ void collect_value_generic_params(const TypeRef& type, const std::vector<std::st
         }
         for (const TypeRef& dim : dims) {
             for (const std::string& param : params) {
-                if (same_name(type_ref_head_name(dim), param)) {
-                    out.insert(param);
+                if (same_generic_param_name(dim, param)) {
+                    out.insert(generic_param_base_name(param));
                 }
             }
         }
@@ -141,8 +152,8 @@ void collect_cpp_value_generic_params(const TypeRef& type, const std::vector<std
     if (type.kind == TypeKind::FixedArray) {
         for (const TypeRef& dim : explicit_array_shape_refs(type)) {
             for (const std::string& param : params) {
-                if (same_name(type_ref_head_name(dim), param)) {
-                    out.insert(param);
+                if (same_generic_param_name(dim, param)) {
+                    out.insert(generic_param_base_name(param));
                 }
             }
         }
@@ -331,7 +342,8 @@ std::vector<std::string> generic_cpp_params(const std::vector<std::string>& para
     std::vector<std::string> out;
     out.reserve(params.size());
     for (const std::string& param : params) {
-        if (!semantic_value_params.contains(param) || cpp_value_params.contains(param)) {
+        const std::string base = generic_param_base_name(param);
+        if (!semantic_value_params.contains(base) || cpp_value_params.contains(base)) {
             out.push_back(param);
         }
     }

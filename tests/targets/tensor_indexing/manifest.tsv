@@ -10,7 +10,9 @@ ndad_direct_pytorch_indexing.dd	pass
 ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass
 ndad_broadcasting_runtime.dd	run	0
+ndad_shape_preserving_helpers.dd	run	5
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
 bad_scatter_value_type.dd	xfail	expects Tensor[f32], got Tensor[i32][dyn, 784]
+bad_shape_preserving_helper_mismatch.dd	xfail	argument 2 for add_same[i32, 2, 3] expects Tensor[i32][2, 3], got Tensor[i32][3, 2]
