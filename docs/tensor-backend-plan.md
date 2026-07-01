@@ -112,6 +112,11 @@ Dims)` path rather than rank-specific overloads, and `ndad_runtime_checks.dd`
 constructs a rank-5 tensor to prove arbitrary-rank shape construction.
 Imported Dudu functions preserve variadic pack metadata through module aliases,
 so a library can define the pack once and consumers can import it normally.
+`ndad_arbitrary_rank_runtime.dd` additionally compiles and runs rank-4 and
+rank-5 direct indexing through the normal `ndad` operator hooks. It checks
+mixed scalar/slice views, all-scalar `.item()` extraction, view
+materialization, and mixed advanced indexing without adding tensor-name or
+rank-specific compiler policy.
 
 Status: `ndad_broadcasting_runtime.dd` proves broadcasting is library-owned
 behavior behind ordinary Dudu operators. The fixture runs

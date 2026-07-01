@@ -1,0 +1,69 @@
+# Target: arbitrary-rank direct tensor indexing stays on the generic ndad path.
+
+from ndad import Tensor
+from ndad import arange
+from ndad import zeros
+
+
+def main() -> i32:
+    hyper: Tensor[i32][2, 2, 2, 2] = zeros[i32](2, 2, 2, 2)
+    index = 0
+    total = i32(len(hyper.data))
+    while index < total:
+        hyper.data[index] = index
+        index += 1
+
+    slab = hyper[:, 1, :, 0]
+    if slab.shape[0] != 2:
+        return 1
+    if slab.shape[1] != 2:
+        return 2
+    if slab.offset != 4:
+        return 3
+
+    materialized = slab.to_tensor()
+    if materialized.data[0] != 4:
+        return 4
+    if materialized.data[1] != 6:
+        return 5
+    if materialized.data[2] != 12:
+        return 6
+    if materialized.data[3] != 14:
+        return 7
+
+    rank5: Tensor[i32][2, 1, 2, 1, 2] = zeros[i32](2, 1, 2, 1, 2)
+    index = 0
+    while index < i32(len(rank5.data)):
+        rank5.data[index] = index
+        index += 1
+
+    point = rank5[1, 0, 0, 0, 1]
+    if point.item() != 5:
+        return 8
+
+    rank5_view = rank5[1, :, 0, :, :]
+    if rank5_view.shape[0] != 1:
+        return 9
+    if rank5_view.shape[1] != 1:
+        return 10
+    if rank5_view.shape[2] != 2:
+        return 11
+    if rank5_view.offset != 4:
+        return 12
+
+    ids = arange(2)
+    gathered = hyper[ids, :, ids, 1]
+    if gathered.shape[0] != 2:
+        return 13
+    if gathered.shape[1] != 2:
+        return 14
+    if gathered.data[0] != 1:
+        return 15
+    if gathered.data[1] != 5:
+        return 16
+    if gathered.data[2] != 11:
+        return 17
+    if gathered.data[3] != 15:
+        return 18
+
+    return 0

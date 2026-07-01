@@ -7,6 +7,7 @@ library_variadic_hooks.dd	pass
 library_index_category_hooks.dd	run	30
 ndad_core.dd	pass
 ndad_runtime_checks.dd	run	0
+ndad_arbitrary_rank_runtime.dd	run	0
 ndad_direct_pytorch_indexing.dd	pass
 ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass

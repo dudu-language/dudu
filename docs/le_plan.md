@@ -1272,6 +1272,10 @@ push. They are not release packaging work.
    in-repo `ndad` reference surface expose one arbitrary-rank
    `zeros[T, Dims...](*dims: Dims)` constructor instead of rank-specific
    overloads. The runtime target constructs a rank-5 tensor through that path.
+   `ndad_arbitrary_rank_runtime.dd` now separately proves rank-4 and rank-5
+   direct tensor indexing through ordinary `ndad` hooks, covering mixed
+   scalar/slice views, all-scalar `.item()` extraction, materialized views, and
+   mixed advanced indexing without tensor-name compiler policy.
    `ndad_broadcasting_runtime.dd` also proves library-owned broadcasting
    through normal tensor operators by running
    `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
