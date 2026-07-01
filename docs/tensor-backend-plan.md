@@ -721,6 +721,10 @@ Status:
   explicit reference mutation.
 - `tests/fixtures/tensor_dogfood/openblas_compare.dd` compares reusable Dudu
   tensor `matmul` against CBLAS `sgemm` through normal C interop.
+- `/home/vega/Coding/ML/dudu-datascience/src/blas_demos.dd` is a separate
+  dogfood repo demo that links `openblas` through `dudu.toml`, imports
+  `cblas.h`, compares pure Dudu row-major matmul against `cblas_sgemm`, and
+  prints verifiable results.
 - Remaining: no more CPU helper work is required for this slice; later examples
   can add library helpers when they need more tensor behavior.
 
@@ -747,6 +751,8 @@ Status:
   normal C header interop, alongside the existing `openblas_ddot` probe.
 - Done: `tests/fixtures/tensor_dogfood/openblas_compare.dd` validates reusable
   tensor `matmul` against CBLAS `sgemm`.
+- Done: `dudu-datascience` includes a user-facing OpenBLAS matmul demo that
+  exercises the same boundary outside the compiler repo.
 - Done: `scripts/probe_optional.sh` runs ddot, sgemm, and reusable tensor
   compare probes when OpenBLAS is discoverable through `pkg-config`.
 - Done: native enum/type compatibility now handles the qualified CBLAS enum
