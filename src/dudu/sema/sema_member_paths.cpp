@@ -98,8 +98,15 @@ std::string receiver_class_name(const Symbols& symbols, const TypeRef& type) {
 }
 
 const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& type) {
-    const auto klass = symbols.classes.find(receiver_class_name(symbols, type));
-    return klass == symbols.classes.end() ? nullptr : klass->second;
+    const std::string name = receiver_class_name(symbols, type);
+    if (const auto klass = symbols.classes.find(name); klass != symbols.classes.end()) {
+        return klass->second;
+    }
+    if (const auto imported = symbols.native_classes.find(name);
+        imported != symbols.native_classes.end()) {
+        return &imported->second;
+    }
+    return nullptr;
 }
 
 std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const ClassDecl& klass,

@@ -88,6 +88,24 @@ compile_and_expect tensor_vindex_hook 42
 compile_and_expect tensor_vindex_compound_hook 42
 compile_and_expect tensor_oindex_hook 42
 compile_and_expect tensor_oindex_compound_hook 42
+imported_generic_index_dir="$repo_root/build/project_imported_generic_index"
+rm -rf "$imported_generic_index_dir"
+mkdir -p "$imported_generic_index_dir/generated"
+"$repo_root/build/duc" emit-modules \
+    "$repo_root/tests/fixtures/project_imported_generic_index/main.dd" \
+    -o "$imported_generic_index_dir/generated" >/dev/null
+grep -Fq 'tensor.set_at(1, 22);' "$imported_generic_index_dir/generated/main.cpp"
+grep -Fq 'tensor.at(0) + tensor.at(1)' "$imported_generic_index_dir/generated/main.cpp"
+"${CXX:-c++}" -std=c++20 -I"$imported_generic_index_dir/generated" \
+    "$imported_generic_index_dir"/generated/*.cpp -o "$imported_generic_index_dir/app"
+set +e
+"$imported_generic_index_dir/app"
+imported_generic_index_status=$?
+set -e
+if [[ "$imported_generic_index_status" -ne 42 ]]; then
+    echo "project_imported_generic_index returned $imported_generic_index_status, expected 42" >&2
+    exit 1
+fi
 compile_and_expect custom_indexer_objects 42
 compile_and_expect tensor_slice_views 42
 compile_path_and_expect tensor_dogfood_views tests/fixtures/tensor_dogfood/views_main.dd 42

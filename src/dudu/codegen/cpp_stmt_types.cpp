@@ -15,6 +15,7 @@
 #include "dudu/sema/type_compat.hpp"
 
 #include <cstddef>
+#include <map>
 #include <vector>
 
 namespace dudu {
@@ -107,6 +108,37 @@ TypeRef infer_call_type_ref(const std::string& callee,
     return {};
 }
 
+TypeRef instantiate_native_function_return_type_ref(const NativeFunctionDecl& fn,
+                                                    const std::vector<TypeRef>& type_args) {
+    const std::vector<std::string>& params = fn.template_params;
+    if (params.size() != type_args.size()) {
+        return {};
+    }
+    std::map<std::string, TypeRef> substitutions;
+    for (size_t i = 0; i < params.size(); ++i) {
+        substitutions.emplace(params[i], type_args[i]);
+    }
+    return substitute_type_ref(native_function_return_type_ref(fn), substitutions);
+}
+
+TypeRef infer_native_template_call_type_ref(const Symbols& symbols, const std::string& callee,
+                                            const std::vector<TypeRef>& type_args) {
+    const auto native = symbols.native_function_decls.find(callee);
+    if (native == symbols.native_function_decls.end()) {
+        return {};
+    }
+    for (const NativeFunctionDecl* fn : native->second) {
+        if (fn == nullptr || fn->template_params.empty()) {
+            continue;
+        }
+        if (const TypeRef type = instantiate_native_function_return_type_ref(*fn, type_args);
+            has_type_ref(type)) {
+            return type;
+        }
+    }
+    return {};
+}
+
 TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                                const std::string& name, SourceLocation location) {
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
@@ -132,22 +164,44 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
             }
         }
         if (symbols != nullptr && expr.kind == ExprKind::TemplateCall) {
+            const std::vector<TypeRef> type_args = template_type_refs(expr);
             if (const auto decl = symbols->function_decls.find(callee.name);
                 decl != symbols->function_decls.end() && !decl->second->generic_params.empty()) {
-                const std::vector<TypeRef> type_args = template_type_refs(expr);
                 if (type_args.size() == decl->second->generic_params.size()) {
                     const FunctionSignature signature =
                         instantiate_generic_signature(*decl->second, type_args);
                     return signature_return_type_ref(signature);
                 }
             }
+            if (const TypeRef native =
+                    infer_native_template_call_type_ref(*symbols, callee.name, type_args);
+                has_type_ref(native)) {
+                return native;
+            }
         }
-        return infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
+        if (const TypeRef direct =
+                infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
+            has_type_ref(direct)) {
+            return direct;
+        }
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
         const TypeRef receiver_type = infer_emitted_local_type_ref(
             callee.children.front(), local_type_refs, function_returns, symbols);
         if (has_type_ref(receiver_type)) {
+            if (symbols != nullptr) {
+                FunctionSignature signature;
+                if (method_signature_for_type(*symbols, receiver_type, callee.name, signature,
+                                              nullptr)) {
+                    return signature_return_type_ref(signature);
+                }
+                FunctionScope scope{*symbols};
+                scope.local_type_refs = local_type_refs;
+                if (const auto inferred = inferred_generic_method_signature_for_type(
+                        scope, receiver_type, callee.name, expr.children, nullptr)) {
+                    return signature_return_type_ref(*inferred);
+                }
+            }
             const std::string key = receiver_base_type(receiver_type) + "." + callee.name;
             if (const auto method = function_returns.find(key); method != function_returns.end()) {
                 return method->second;
@@ -186,6 +240,13 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
         infer_emitted_local_type_ref(expr.children[0], local_type_refs, function_returns, symbols);
     const TypeRef right_ref =
         infer_emitted_local_type_ref(expr.children[1], local_type_refs, function_returns, symbols);
+    if (symbols != nullptr) {
+        if (const auto signature =
+                binary_operator_signature(*symbols, expr.op, left_ref, expr.children[1],
+                                          right_ref)) {
+            return signature_return_type_ref(*signature);
+        }
+    }
     if (!has_type_ref(left_ref) && has_type_ref(right_ref)) {
         return right_ref;
     }

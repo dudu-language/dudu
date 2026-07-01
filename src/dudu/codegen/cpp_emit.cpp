@@ -94,6 +94,10 @@ bool emit_before_constants(const FunctionDecl& fn) {
     return cpp_emit_function_has_decorator(fn, "constexpr");
 }
 
+bool generic_function(const FunctionDecl& fn) {
+    return !generic_cpp_params_for_function(fn).empty();
+}
+
 void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params,
                           const std::set<std::string>& value_params = {}) {
     if (params.empty()) {
@@ -288,6 +292,19 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
     }
 }
 
+void emit_header_generic_function_bodies(std::ostringstream& out, const ModuleAst& module,
+                                         const std::vector<std::string>& aliases,
+                                         const std::map<std::string, TypeRef>& function_returns,
+                                         const Symbols& symbols,
+                                         const CppEmitOptions& options = {}) {
+    for (const FunctionDecl& fn : module.functions) {
+        if (!generic_function(fn) || !visible_function_in_header(fn, options)) {
+            continue;
+        }
+        emit_function_body(out, fn, aliases, function_returns, symbols, options);
+    }
+}
+
 } // namespace
 
 std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& options) {
@@ -303,23 +320,13 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
 
     emit_aliases(out, module, options);
     emit_enum_forward_declarations(out, module, options);
+    emit_class_forward_declarations(out, module, options);
+    emit_function_declarations(out, module, aliases, true, false, options);
     emit_classes(out, module, aliases, function_returns, symbols, true, options);
     emit_enums(out, module, aliases, options);
     emit_early_functions(out, module, aliases, function_returns, symbols, true, false, options);
     emit_constants(out, module, aliases, options);
-
-    for (const FunctionDecl& fn : module.functions) {
-        if (emit_before_constants(fn)) {
-            continue;
-        }
-        if (!visible_function_in_header(fn, options)) {
-            continue;
-        }
-        emit_template_params(out, generic_cpp_params_for_function(fn),
-                             generic_cpp_value_params_for_function(fn));
-        emit_function_signature(out, fn, aliases, options);
-        out << ";\n";
-    }
+    emit_header_generic_function_bodies(out, module, aliases, function_returns, symbols, options);
     emit_static_asserts(out, module, aliases);
     return out.str();
 }
