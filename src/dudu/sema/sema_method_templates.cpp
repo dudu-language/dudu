@@ -40,6 +40,9 @@ receiver_template_ref_substitutions(const std::vector<TypeRef>& receiver_args) {
 } // namespace
 
 std::vector<TypeRef> template_arg_refs_from_type(const TypeRef& type) {
+    if (type.kind == TypeKind::Shaped && !type.children.empty()) {
+        return template_arg_refs_from_type(type.children.front());
+    }
     return type.kind == TypeKind::Template ? type.children : std::vector<TypeRef>{};
 }
 

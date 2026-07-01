@@ -270,6 +270,28 @@ void test_method_signature_lookup_uses_type_ast_receiver() {
     assert(dudu::signature_return_type_ref(signature).name == "f32");
 }
 
+void test_method_signature_lookup_uses_shaped_receiver_template_args() {
+    dudu::ClassDecl box;
+    box.name = "Box";
+    box.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "value";
+    method.params.push_back({"self", dudu::parse_type_text("Box[T]"), {}});
+    method.return_type_ref = dudu::parse_type_text("T");
+    box.methods.push_back(method);
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &box);
+
+    dudu::FunctionSignature signature;
+    assert(dudu::method_signature_for_type(symbols, dudu::parse_type_text("Box[f32][2, 2]"),
+                                           "value", signature, nullptr));
+    assert(dudu::signature_param_count(signature) == 0);
+    assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(signature), {}) ==
+           "f32");
+}
+
 void test_method_signature_list_uses_type_ast_receiver() {
     dudu::ClassDecl box;
     box.name = "Box";
@@ -429,6 +451,7 @@ int main() {
         test_result_field_lookup_resolves_alias_type_refs();
         test_swizzle_lookup_uses_type_ast_receiver();
         test_method_signature_lookup_uses_type_ast_receiver();
+        test_method_signature_lookup_uses_shaped_receiver_template_args();
         test_method_signature_list_uses_type_ast_receiver();
         test_static_method_signature_lookup_uses_type_ast_receiver();
         test_inferred_generic_method_uses_type_ast_receiver();

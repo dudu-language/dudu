@@ -8,6 +8,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_index.hpp"
+#include "dudu/sema/sema_inheritance.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_native.hpp"
 #include "dudu/sema/sema_ops.hpp"
@@ -139,6 +140,39 @@ TypeRef infer_native_template_call_type_ref(const Symbols& symbols, const std::s
     return {};
 }
 
+std::optional<TypeRef>
+infer_overloaded_function_return_type_ref(const Symbols& symbols, const std::string& callee,
+                                          const std::vector<Expr>& args,
+                                          const std::map<std::string, TypeRef>& local_type_refs,
+                                          const std::map<std::string, TypeRef>& function_returns) {
+    const auto overloads = symbols.function_overload_signatures.find(callee);
+    if (overloads == symbols.function_overload_signatures.end()) {
+        return std::nullopt;
+    }
+    const std::vector<TypeRef> arg_types =
+        infer_emitted_arg_type_refs(args, local_type_refs, function_returns, &symbols);
+    for (const FunctionSignature& signature : overloads->second) {
+        if (signature.variadic || arg_types.size() != signature_param_count(signature)) {
+            continue;
+        }
+        bool matches = true;
+        for (size_t i = 0; i < arg_types.size(); ++i) {
+            const TypeRef expected =
+                resolve_alias_ref(symbols, signature_param_type_ref(signature, i));
+            const TypeRef got = resolve_alias_ref(symbols, arg_types[i]);
+            if (!type_assignment_allowed(expected, got) &&
+                !native_base_assignable(symbols, expected, got)) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return signature_return_type_ref(signature);
+        }
+    }
+    return std::nullopt;
+}
+
 TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                                const std::string& name, SourceLocation location) {
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
@@ -177,6 +211,12 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
                     infer_native_template_call_type_ref(*symbols, callee.name, type_args);
                 has_type_ref(native)) {
                 return native;
+            }
+        }
+        if (symbols != nullptr) {
+            if (const auto overloaded_return = infer_overloaded_function_return_type_ref(
+                    *symbols, callee.name, expr.children, local_type_refs, function_returns)) {
+                return *overloaded_return;
             }
         }
         if (const TypeRef direct =
@@ -241,9 +281,8 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
     const TypeRef right_ref =
         infer_emitted_local_type_ref(expr.children[1], local_type_refs, function_returns, symbols);
     if (symbols != nullptr) {
-        if (const auto signature =
-                binary_operator_signature(*symbols, expr.op, left_ref, expr.children[1],
-                                          right_ref)) {
+        if (const auto signature = binary_operator_signature(*symbols, expr.op, left_ref,
+                                                             expr.children[1], right_ref)) {
             return signature_return_type_ref(*signature);
         }
     }

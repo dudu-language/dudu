@@ -278,11 +278,15 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
             return;
         }
     }
+    bool added_function = false;
     for (const FunctionDecl& fn : dependency.functions) {
         if (fn.name == import.imported_name) {
             add_function_alias(module, fn, exposed_name, type_substitutions, import.location);
-            return;
+            added_function = true;
         }
+    }
+    if (added_function) {
+        return;
     }
 }
 

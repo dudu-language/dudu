@@ -1,0 +1,6 @@
+def pick(value: i32) -> i32:
+    return value + 1
+
+
+def pick(value: str) -> i32:
+    return 20

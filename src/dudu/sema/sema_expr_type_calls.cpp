@@ -267,10 +267,16 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         }
         return std::nullopt;
     }
-    if (const auto fn = scope.symbols.function_signatures.find(callee);
-        fn != scope.symbols.function_signatures.end()) {
-        check_call_args_ast(scope, callee, fn->second, expr.children, location);
-        return signature_return_type_ref(fn->second);
+    if (const auto overloads = scope.symbols.function_overload_signatures.find(callee);
+        overloads != scope.symbols.function_overload_signatures.end()) {
+        if (const auto match = matching_signature_ast(scope, overloads->second, expr.children)) {
+            check_call_args_ast(scope, callee, *match, expr.children, location);
+            return signature_return_type_ref(*match);
+        }
+        if (location != nullptr && !overloads->second.empty()) {
+            check_call_args_ast(scope, callee, overloads->second.front(), expr.children, location);
+        }
+        return std::nullopt;
     }
     if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
         return signature_return_type_ref(*signature);

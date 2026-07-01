@@ -1,12 +1,12 @@
 #include "dudu/project/module_loader.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/file_io.hpp"
+#include "dudu/core/source.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/parser/parser.hpp"
 #include "dudu/project/module_import_aliases.hpp"
 #include "dudu/project/module_names.hpp"
-#include "dudu/parser/parser.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <map>
@@ -259,7 +259,6 @@ void add_from_import_aliases(ModuleAst& module) {
                 alias.location = import.location;
                 function_aliases.push_back(std::move(alias));
                 added = true;
-                break;
             }
         }
         if (!added) {
@@ -291,10 +290,9 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
     stack.push_back(canonical);
 
     const auto source_override = source_overrides.find(canonical);
-    ModuleAst parsed = parse_source(source_override == source_overrides.end()
-                                        ? read_text_file(path)
-                                        : source_override->second,
-                                    path);
+    ModuleAst parsed = parse_source(
+        source_override == source_overrides.end() ? read_text_file(path) : source_override->second,
+        path);
     stamp_module_origin(parsed, canonical, module_name_from_file(root, canonical));
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {

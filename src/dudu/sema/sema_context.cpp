@@ -398,7 +398,9 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        add_name(names, fn.name, fn.location);
+        if (!symbols.function_overload_decls.contains(fn.name)) {
+            add_name(names, fn.name, fn.location);
+        }
         FunctionSignature signature;
         std::vector<TypeRef> param_types;
         param_types.reserve(fn.params.size());
@@ -407,8 +409,12 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         set_signature_param_types(signature, std::move(param_types));
         set_signature_return_type(signature, function_return_type_ref(fn));
-        symbols.function_signatures[fn.name] = std::move(signature);
-        symbols.function_decls[fn.name] = &fn;
+        if (!symbols.function_signatures.contains(fn.name)) {
+            symbols.function_signatures[fn.name] = signature;
+            symbols.function_decls[fn.name] = &fn;
+        }
+        symbols.function_overload_signatures[fn.name].push_back(std::move(signature));
+        symbols.function_overload_decls[fn.name].push_back(&fn);
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
         FunctionSignature signature;
