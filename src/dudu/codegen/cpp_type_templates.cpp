@@ -62,9 +62,6 @@ std::string lower_template_type(const TypeRef& type) {
     if (name == "strided_span") {
         return "dudu::StridedSpan<" + join_lowered_type_args(type.children) + ">";
     }
-    if (name == "strided_span2") {
-        return "dudu::StridedSpan2<" + join_lowered_type_args(type.children) + ">";
-    }
     if (name == "array_view") {
         return "dudu::ArrayView<" + join_lowered_type_args(type.children) + ">";
     }
@@ -110,10 +107,6 @@ std::string lower_template_type(const TypeRef& type,
     }
     if (name == "strided_span") {
         return "dudu::StridedSpan<" + join_lowered_type_args(type.children, namespace_aliases) +
-               ">";
-    }
-    if (name == "strided_span2") {
-        return "dudu::StridedSpan2<" + join_lowered_type_args(type.children, namespace_aliases) +
                ">";
     }
     if (name == "array_view") {
@@ -167,10 +160,6 @@ std::string lower_template_type(const TypeRef& type,
     }
     if (name == "strided_span") {
         return "dudu::StridedSpan<" +
-               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
-    }
-    if (name == "strided_span2") {
-        return "dudu::StridedSpan2<" +
                join_lowered_type_args(type.children, namespace_aliases, options) + ">";
     }
     if (name == "array_view") {

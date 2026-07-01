@@ -53,8 +53,8 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
     }
 
     // Fixed-array and array_view slicing belongs above in the generic shape/stride path.
-    // The remaining span/strided_span lowerers are only explicit low-level view helpers
-    // and strided_span2 reslicing compatibility, not the built-in slice architecture.
+    // The remaining span/strided_span lowerer is only an explicit low-level view helper,
+    // not the built-in slice architecture.
     if (const std::optional<SliceParts> slice = slice_parts(expr.children[1])) {
         const std::string start =
             expr_missing(*slice->start)
@@ -76,11 +76,6 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
     }
 
     if (expr.children[1].kind == ExprKind::TupleLiteral) {
-        if (const auto span2_slice =
-                lower_strided_span2_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                               local_type_refs, symbols, options)) {
-            return *span2_slice;
-        }
         for (const Expr& index : expr.children[1].children) {
             out +=
                 "[" + lower_expr(index, aliases, locals, local_type_refs, symbols, options) + "]";

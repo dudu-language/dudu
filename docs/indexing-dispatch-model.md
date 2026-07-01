@@ -272,8 +272,9 @@ Current status: fixed-array slice inference and emission use the generic
 `array_view[T]` builder path. Prototype fixed-array branches for row views,
 columns, full matrices, matrix patches, image channels, and trailing channel
 ranges have been removed. Low-level explicit helper types such as
-`strided_span2[T]` may still define their own helper behavior, but fixed arrays
-do not route through those rank-specific branches.
+`strided_span[T]` may still define its own one-dimensional helper behavior, but
+fixed arrays do not route through rank-specific branches. The old
+`strided_span2[T]` helper is removed.
 
 The tensor library work needed after that is:
 

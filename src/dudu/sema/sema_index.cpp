@@ -62,24 +62,6 @@ bool has_step_slice(const Expr& expr) {
     return false;
 }
 
-bool is_full_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
-           missing_expr(expr.children[0]) && missing_expr(expr.children[1]);
-}
-
-bool is_simple_range_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
-           expr.children[1].kind != ExprKind::Slice;
-}
-
-std::optional<TypeRef> single_template_child(const TypeRef& type, std::string_view name) {
-    const std::vector<TypeRef> args = template_type_arg_refs(type, name);
-    if (args.size() == 1) {
-        return args.front();
-    }
-    return std::nullopt;
-}
-
 TypeRef view_type_ref(const SourceLocation& location, std::string_view name,
                       const TypeRef& element) {
     TypeRef out;
@@ -124,30 +106,6 @@ std::optional<TypeRef> indexed_array_view_type_ref(const SourceLocation& locatio
     return args.front();
 }
 
-std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& location,
-                                                      const TypeRef& receiver_type,
-                                                      const Expr& index_expr) {
-    const std::optional<TypeRef> element =
-        single_template_child(unwrap_reference_and_const(receiver_type), "strided_span2");
-    if (!element || index_expr.kind != ExprKind::TupleLiteral || index_expr.children.size() != 2) {
-        return std::nullopt;
-    }
-    const Expr& row = index_expr.children[0];
-    const Expr& col = index_expr.children[1];
-    if ((is_full_slice_expr(row) && is_full_slice_expr(col)) ||
-        (is_simple_range_slice_expr(row) && is_full_slice_expr(col)) ||
-        (is_simple_range_slice_expr(row) && is_simple_range_slice_expr(col))) {
-        return view_type_ref(location, "strided_span2", *element);
-    }
-    if ((is_full_slice_expr(row) && !is_slice_expr(col)) ||
-        (!is_slice_expr(row) && is_full_slice_expr(col)) ||
-        (!is_slice_expr(row) && is_simple_range_slice_expr(col)) ||
-        (is_simple_range_slice_expr(row) && !is_slice_expr(col))) {
-        return view_type_ref(location, "strided_span", *element);
-    }
-    return std::nullopt;
-}
-
 } // namespace
 
 IndexOperatorTarget index_operator_target(const Expr& receiver) {
@@ -176,10 +134,6 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     if (const std::optional<TypeRef> array_view_type =
             fixed_array_view_type_ref(location, receiver_type, index_expr)) {
         return *array_view_type;
-    }
-    if (const std::optional<TypeRef> span2_type =
-            indexed_strided_span2_type_ref(location, receiver_type, index_expr)) {
-        return *span2_type;
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
             symbols, location, receiver_type, index_count_from_expr(index_expr),

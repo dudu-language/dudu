@@ -1164,9 +1164,10 @@ push. They are not release packaging work.
    views such as `mat[:, col]`, full-rank slices such as `mat[:, :]`, rank-3
    image channel slices such as `image[:, :, c]`, trailing channel ranges such
    as `image[y, x, 0:3]`, and rank-4 or higher fixed-array fixtures. Low-level
-   `span[T]`, `strided_span[T]`, and `strided_span2[T]` may remain as explicit
+   `span[T]` and `strided_span[T]` may remain as explicit one-dimensional
    helper/native interop types, but the language slice inference path must not
-   be rank-specific.
+   be rank-specific. The old `strided_span2[T]` helper and reslicing path have
+   been removed.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, including
    multi-scalar indices, member receivers such as `box.tensor[1, 2]`, member
@@ -1236,7 +1237,8 @@ push. They are not release packaging work.
    diagnostics for `dyn` values flowing into concrete shape assertions.
    Prototype row/column/channel/full-matrix fixed-array lowering helpers have
    been deleted from sema and C++ emission. Fixed arrays no longer infer
-   `span[T]`, `strided_span[T]`, or `strided_span2[T]` from slice shape.
+   `span[T]`, `strided_span[T]`, `strided_span2[T]`, or other rank-specific
+   helper types from slice shape.
    Before expanding further, de-opinionate advanced tensor indexing: remove
    compiler-owned `vindex[]` / `oindex[]` operator names, keep helper indexer
    objects such as `.cartesian[...]` or `.window[...]` as ordinary library

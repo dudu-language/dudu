@@ -235,9 +235,10 @@ channel = image[:, :, channel_index]
 whole = image[:, :, :]
 ```
 
-`span[T]`, `strided_span[T]`, and `strided_span2[T]` may remain as low-level
+`span[T]` and `strided_span[T]` may remain as low-level one-dimensional
 interop/helper types, but fixed-array slicing should not infer them directly.
-They are not the core indexing architecture.
+The old `strided_span2[T]` rank-2 helper is removed; two-dimensional and
+higher-rank views use `array_view[T]`.
 
 ## Advanced Indexing Syntax
 
