@@ -1232,13 +1232,15 @@ push. They are not release packaging work.
    annotations. Codegen-side local type inference preserves explicit generic
    function return substitutions, so generic tensor locals inferred from
    `zeros[i32](...)` still lower scalar `@operator("[]=")` writes through the
-   write hook. Reusable tensor views now own non-allocating behavior such as
-   fill, sum, mean, and max; owning view materialization still uses an explicit
-   helper because methods returning the owning tensor expose the current C++
-   incomplete-type emission boundary. Continue with optional backend BLAS
-   probes when local tooling is available, then out-of-line method emission
-   where needed, repeated-index scatter policy, and explicit proof/conversion
-   diagnostics for `dyn` values flowing into concrete shape assertions.
+   write hook. The in-repo `ndad` reference surface now proves rank-generic
+   tensor and view helpers for `.count()`, `.sum()`, `.mean()`, `.flatten()`,
+   `.reshape(...)`, and `.to_tensor()` through shape/stride/offset metadata.
+   `ndad_reduction_shape_runtime.dd` validates those helpers on rank-3 tensors
+   and non-contiguous views without rank-2 rows/cols storage. Continue with
+   optional backend BLAS probes when local tooling is available, then
+   out-of-line method emission where broader mutually referential value/view
+   APIs demand it, and explicit proof/conversion diagnostics for `dyn` values
+   flowing into concrete shape assertions.
    Prototype row/column/channel/full-matrix fixed-array lowering helpers have
    been deleted from sema and C++ emission. Fixed arrays no longer infer
    `span[T]`, `strided_span[T]`, `strided_span2[T]`, or other rank-specific
@@ -1298,7 +1300,10 @@ push. They are not release packaging work.
    singleton-axis assignment into rank-2 and rank-3 selections through normal
    `[]=` hooks. `ndad_repeated_scatter_runtime.dd` now fixes the current
    repeated advanced scatter policy as library-owned, index-order writes where
-   later repeated destinations win.
+   later repeated destinations win. `ndad_reduction_shape_runtime.dd` now
+   fixes rank-generic materialization/reduction expectations for `ndad`
+   tensors and views, including view `.sum()`, `.mean()`, `.flatten()`, and
+   `.reshape(...)`.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

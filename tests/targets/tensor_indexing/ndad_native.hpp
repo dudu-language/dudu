@@ -621,6 +621,33 @@ auto item_value(const Data& data, const Shape& shape_ref, const Strides& strides
     return data[static_cast<std::size_t>(source)];
 }
 
+template <class Data, class Shape, class Strides>
+auto sum_value(const Data& data, const Shape& shape_ref, const Strides& strides_ref, i64 offset)
+    -> typename Data::value_type {
+    const std::vector<i64> shape = as_i64_shape(shape_ref);
+    const std::vector<i64> strides = as_i64_shape(strides_ref);
+    typename Data::value_type total{};
+    const i64 count = element_count(shape);
+    for (i64 flat = 0; flat < count; ++flat) {
+        const i64 source = flat_offset(shape, strides, offset, flat);
+        total += data[static_cast<std::size_t>(source)];
+    }
+    return total;
+}
+
+template <class Data, class Shape, class Strides>
+double mean_value(const Data& data, const Shape& shape_ref, const Strides& strides_ref,
+                  i64 offset) {
+    const std::vector<i64> shape = as_i64_shape(shape_ref);
+    const std::vector<i64> strides = as_i64_shape(strides_ref);
+    const i64 count = element_count(shape);
+    if (count == 0) {
+        return 0.0;
+    }
+    return static_cast<double>(sum_value(data, shape, strides, offset)) /
+           static_cast<double>(count);
+}
+
 inline std::vector<i64> result_strides(const IndexPlan& plan) {
     return plan.explicit_offsets.empty() ? plan.strides : contiguous_strides(plan.shape);
 }

@@ -168,6 +168,13 @@ alias the base. This remains ordinary library overload behavior: the compiler
 only knows `basic_index` as a general scalar/slice/ellipsis/new-axis category
 and does not know tensor names.
 
+Status: `ndad_reduction_shape_runtime.dd` proves rank-generic tensor and view
+helpers on the in-repo `ndad` surface. `Tensor[T]` and `TensorView[T]` expose
+`.count()`, `.sum()`, `.mean()`, `.flatten()`, and `.reshape(...)` through
+shape/stride/offset metadata and normal materialization helpers. The fixture
+checks rank-3 tensors and non-contiguous views so reductions and reshape do
+not depend on rank-2 `rows`/`cols` storage.
+
 ## Backend Choice
 
 Use the most portable useful stack first:

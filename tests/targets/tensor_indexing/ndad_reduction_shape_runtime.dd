@@ -1,0 +1,64 @@
+# Target: rank-generic tensor reductions and materialization helpers work on
+# tensors and non-contiguous views without rank-specific rows/cols shortcuts.
+
+from ndad import Tensor
+from ndad import zeros
+
+
+def main() -> i32:
+    x: Tensor[i32][2, 2, 2] = zeros[i32](2, 2, 2)
+    index = 0
+    while index < 8:
+        x.data[index] = index + 1
+        index += 1
+
+    if x.count() != 8:
+        return 1
+    if x.sum() != 36:
+        return 2
+    if x.mean() != 4.5:
+        return 3
+
+    high_rows = x[:, 1, :]
+    if high_rows.shape[0] != 2:
+        return 4
+    if high_rows.shape[1] != 2:
+        return 5
+    if high_rows.count() != 4:
+        return 6
+    if high_rows.sum() != 22:
+        return 7
+    if high_rows.mean() != 5.5:
+        return 8
+
+    flat = high_rows.flatten()
+    if flat.shape[0] != 4:
+        return 9
+    if flat.data[0] != 3:
+        return 10
+    if flat.data[1] != 4:
+        return 11
+    if flat.data[2] != 7:
+        return 12
+    if flat.data[3] != 8:
+        return 13
+
+    reshaped = flat.reshape(2, 2)
+    if reshaped.shape[0] != 2:
+        return 14
+    if reshaped.shape[1] != 2:
+        return 15
+    if reshaped.data[0] != 3:
+        return 16
+    if reshaped.data[3] != 8:
+        return 17
+
+    full_reshaped = x.reshape(4, 2)
+    if full_reshaped.shape[0] != 4:
+        return 18
+    if full_reshaped.shape[1] != 2:
+        return 19
+    if full_reshaped.data[7] != 8:
+        return 20
+
+    return 0

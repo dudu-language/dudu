@@ -72,12 +72,31 @@ class TensorView[T]:
     def fill(self, value: T):
         cpp("ndad::assign_scalar(self.data, self.shape, self.strides, self.offset, value);")
 
+    def count(self) -> i64:
+        return element_count(self.shape)
+
+    def sum(self) -> T:
+        return cpp("ndad::sum_value(self.data, self.shape, self.strides, self.offset)")
+
+    def mean(self) -> f64:
+        return cpp("ndad::mean_value(self.data, self.shape, self.strides, self.offset)")
+
     def to_tensor(self) -> Tensor[T]:
         data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
-        shape = self.shape
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, self.shape)
+
+    def flatten(self) -> Tensor[T]:
+        data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
+        shape: list[i64] = []
+        shape.append(i64(len(data)))
+        return tensor_from_data_shape[T](data, shape)
+
+    def reshape[Dims...](self, *dims: Dims) -> Tensor[T]:
+        data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
+        shape: list[i64] = cpp("ndad::shape_from_dims(dims...)")
+        if element_count(shape) != i64(len(data)):
+            cpp("""throw std::runtime_error("reshape element count mismatch");""")
+        return tensor_from_data_shape[T](data, shape)
 
     def item(self) -> T:
         return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
@@ -132,6 +151,32 @@ class Tensor[T]:
 
     def item(self) -> T:
         return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
+
+    def count(self) -> i64:
+        return element_count(self.shape)
+
+    def sum(self) -> T:
+        return cpp("ndad::sum_value(self.data, self.shape, self.strides, self.offset)")
+
+    def mean(self) -> f64:
+        return cpp("ndad::mean_value(self.data, self.shape, self.strides, self.offset)")
+
+    def to_tensor(self) -> Tensor[T]:
+        data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
+        return tensor_from_data_shape[T](data, self.shape)
+
+    def flatten(self) -> Tensor[T]:
+        data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
+        shape: list[i64] = []
+        shape.append(i64(len(data)))
+        return tensor_from_data_shape[T](data, shape)
+
+    def reshape[Dims...](self, *dims: Dims) -> Tensor[T]:
+        data: list[T] = cpp("ndad::materialize_view(self.data, self.shape, self.strides, self.offset)")
+        shape: list[i64] = cpp("ndad::shape_from_dims(dims...)")
+        if element_count(shape) != i64(len(data)):
+            cpp("""throw std::runtime_error("reshape element count mismatch");""")
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("[]=")
     def set_tensor[Idx...](self, *idx: Idx, value: Tensor[T]):
@@ -242,6 +287,12 @@ def element_count(shape: list[i64]) -> i64:
     return count
 
 
+def tensor_from_data_shape[T](data: list[T], shape: list[i64]) -> Tensor[T]:
+    strides = contiguous_strides(shape)
+    cartesian = CartesianIndexer[T](data, shape, strides, 0)
+    return Tensor[T](data, shape, strides, 0, cartesian)
+
+
 def tensor_from_shape[T](shape: list[i64]) -> Tensor[T]:
     data: list[T] = []
     count = element_count(shape)
@@ -249,9 +300,7 @@ def tensor_from_shape[T](shape: list[i64]) -> Tensor[T]:
     while index < count:
         data.append(cpp("T{}"))
         index += 1
-    cartesian = CartesianIndexer[T](data, shape, contiguous_strides(shape), 0)
-    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
-    return tensor
+    return tensor_from_data_shape[T](data, shape)
 
 
 def zeros[T, Dims...](*dims: Dims) -> Tensor[T]:
@@ -271,9 +320,7 @@ def arange(count: i64) -> Tensor[i64]:
 def array[T](values: list[T]) -> Tensor[T]:
     shape: list[i64] = []
     shape.append(i64(len(values)))
-    cartesian = CartesianIndexer[T](values, shape, contiguous_strides(shape), 0)
-    tensor = Tensor[T](values, shape, contiguous_strides(shape), 0, cartesian)
-    return tensor
+    return tensor_from_data_shape[T](values, shape)
 
 
 def can_broadcast[T](left: Tensor[T], right: Tensor[T]) -> bool:
