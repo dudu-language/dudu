@@ -336,6 +336,9 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             if (!has_type_ref(child)) {
                 return {};
             }
+            if (child.kind == TypeKind::Reference && child.children.size() == 1) {
+                return wrapped_type_ref(TypeKind::Pointer, child.children.front(), expr.location);
+            }
             return wrapped_type_ref(TypeKind::Pointer, child, expr.location);
         }
         if (expr.op == "*") {

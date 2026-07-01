@@ -1,0 +1,25 @@
+class View[T]:
+    data: *list[T]
+
+    @operator("[]")
+    def at(self, index: i32) -> T:
+        return (*self.data)[index]
+
+    @operator("[]=")
+    def set_at(self, index: i32, value: T):
+        (*self.data)[index] = value
+
+
+class Box[T]:
+    data: list[T]
+    view: View[T]
+
+    def init(self, data: list[T]):
+        self.data = data
+        self.view = View[T](&self.data)
+
+
+def main() -> i32:
+    box = Box[i32]([1, 2, 3])
+    box.view[1] = 40
+    return box.data[1] + box.view[1] - 38

@@ -1,0 +1,23 @@
+class View[T]:
+    owner: *Box[T]
+
+    def get(self) -> T:
+        return self.owner.value
+
+    def set(self, value: T):
+        self.owner.value = value
+
+
+class Box[T]:
+    value: T
+    view: View[T]
+
+    def init(self, value: T):
+        self.value = value
+        self.view = View[T](&self)
+
+
+def main() -> i32:
+    box = Box[i32](40)
+    box.view.set(box.view.get() + 2)
+    return box.value

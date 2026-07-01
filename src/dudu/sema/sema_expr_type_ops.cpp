@@ -162,9 +162,13 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
         return std::nullopt;
     }
     if (expr.op == "&") {
-        return has_type_ref(got_ref)
-                   ? std::optional<TypeRef>{pointer_type_ref(got_ref, expr.location)}
-                   : std::nullopt;
+        if (!has_type_ref(got_ref)) {
+            return std::nullopt;
+        }
+        if (got_ref.kind == TypeKind::Reference && got_ref.children.size() == 1) {
+            return pointer_type_ref(got_ref.children.front(), expr.location);
+        }
+        return pointer_type_ref(got_ref, expr.location);
     }
     if (location != nullptr) {
         sema_expr_fail(*location, "unsupported unary operator: " + std::string(expr.op));

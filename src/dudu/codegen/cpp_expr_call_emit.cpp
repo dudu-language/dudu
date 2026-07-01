@@ -295,13 +295,25 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     const auto method = dudu_operator_method_name_for_args(
         *symbols, target.write_operator, receiver_type, args,
         infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols));
-    if (!method) {
+    std::optional<std::string> selected_method = method;
+    if (!selected_method) {
+        std::vector<TypeRef> arg_types =
+            infer_index_arg_type_refs(index_arg_exprs(stmt_target_expr(stmt).children[1]),
+                                      local_type_refs, function_returns, symbols);
+        if (const auto read_signature = dudu_operator_signature_for_arg_types(
+                *symbols, target.read_operator, receiver_type, arg_types)) {
+            arg_types.push_back(signature_return_type_ref(*read_signature));
+            selected_method = dudu_operator_method_name_for_arg_types(
+                *symbols, target.write_operator, receiver_type, arg_types);
+        }
+    }
+    if (!selected_method) {
         return std::nullopt;
     }
     const std::string lowered_receiver =
         lower_expr(hook_receiver, aliases, locals, local_type_refs, symbols, options);
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
-    return lowered_receiver + access + *method + "(" +
+    return lowered_receiver + access + *selected_method + "(" +
            join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
 }
 

@@ -34,6 +34,26 @@ void reject_standalone_slice_value(const Expr& expr) {
     }
 }
 
+TypeRef generic_self_type_ref(const ClassDecl& klass, SourceLocation location) {
+    if (klass.generic_params.empty()) {
+        return named_type_ref(klass.name, location);
+    }
+    TypeRef out = named_type_ref(klass.name, location);
+    out.kind = TypeKind::Template;
+    for (const std::string& param : klass.generic_params) {
+        out.children.push_back(named_type_ref(param, location));
+    }
+    return out;
+}
+
+TypeRef substitute_method_self_type(const ClassDecl& klass, const TypeRef& type,
+                                    SourceLocation location) {
+    if (klass.generic_params.empty()) {
+        return type;
+    }
+    return substitute_type_ref(type, {{"Self", generic_self_type_ref(klass, location)}});
+}
+
 void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
                  const TypeRef& return_type_ref, int loop_depth) {
     const bool allow_super_init_at_start = scope.allow_super_init;
@@ -378,9 +398,10 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             scope.allow_super_init = method.name == "init";
             scope.return_type_ref = function_return_type_ref(method);
             for (const ParamDecl& param : method.params) {
-                bind_local(scope, param.name, param.type_ref);
+                bind_local(scope, param.name,
+                           substitute_method_self_type(klass, param.type_ref, param.location));
             }
-            const TypeRef return_type_ref = function_return_type_ref(method);
+            const TypeRef return_type_ref = scope.return_type_ref;
             check_block(scope, method.statements, return_type_ref, 0);
             if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
                 !block_guarantees_return(method.statements)) {

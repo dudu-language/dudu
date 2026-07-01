@@ -1,0 +1,16 @@
+class Grid[T]:
+    data: list[T]
+
+    @operator("[]")
+    def at(self, index: i32) -> T:
+        return self.data[index]
+
+    @operator("[]=")
+    def set_at(self, index: i32, value: T):
+        self.data[index] = value
+
+
+def main() -> i32:
+    grid: Grid[f32][dyn, 4] = Grid[f32]([32.0])
+    grid[0] = grid[0] + 10.0
+    return i32(grid[0])

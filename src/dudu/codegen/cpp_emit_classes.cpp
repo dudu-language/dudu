@@ -31,6 +31,21 @@ bool type_ref_mentions_class(const TypeRef& type, const std::string& name) {
     return false;
 }
 
+bool type_ref_requires_complete_class(const TypeRef& type, const std::string& name) {
+    if (type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference) {
+        return false;
+    }
+    if (type_ref_head_name(type) == name) {
+        return true;
+    }
+    for (const TypeRef& child : type.children) {
+        if (type_ref_requires_complete_class(child, name)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string class_lookup_name(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     return type_ref_head_name(type);
@@ -53,7 +68,8 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
 
     for (const FieldDecl& field : classes[index].fields) {
         for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index && type_ref_mentions_class(field.type_ref, classes[dep].name)) {
+            if (dep != index &&
+                type_ref_requires_complete_class(field.type_ref, classes[dep].name)) {
                 visit_class(classes, dep, visiting, emitted, order);
             }
         }
