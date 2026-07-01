@@ -116,6 +116,60 @@ void add_reserved_method_generated_names(CppEmitOptions& options, const std::str
     }
 }
 
+std::vector<std::string> stripped_alias_prefixes(const ModuleAst& unit) {
+    std::vector<std::string> out;
+    for (const std::string& alias : namespace_aliases(unit)) {
+        if (!alias.empty() && alias.front() == '!') {
+            out.push_back(alias.substr(1));
+        }
+    }
+    return out;
+}
+
+std::optional<std::string> strip_native_alias_prefix(const std::string& name,
+                                                     const std::vector<std::string>& aliases) {
+    for (const std::string& alias : aliases) {
+        const std::string marker = alias + ".";
+        if (name.starts_with(marker)) {
+            return name.substr(marker.size());
+        }
+    }
+    return std::nullopt;
+}
+
+void add_native_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
+    const std::vector<std::string> aliases = stripped_alias_prefixes(unit);
+    if (aliases.empty()) {
+        return;
+    }
+    for (const NativeTypeDecl& type : unit.native_types) {
+        if (const auto name = strip_native_alias_prefix(type.name, aliases)) {
+            options.generated_type_names[type.name] = *name;
+        }
+    }
+    for (const ClassDecl& klass : unit.native_classes) {
+        if (const auto name = strip_native_alias_prefix(klass.name, aliases)) {
+            options.generated_type_names[klass.name] = *name;
+            options.generated_value_names[klass.name] = *name;
+        }
+    }
+    for (const NativeValueDecl& value : unit.native_values) {
+        if (const auto name = strip_native_alias_prefix(value.name, aliases)) {
+            options.generated_value_names[value.name] = *name;
+        }
+    }
+    for (const NativeFunctionDecl& fn : unit.native_functions) {
+        if (const auto name = strip_native_alias_prefix(fn.name, aliases)) {
+            options.generated_value_names[fn.name] = *name;
+        }
+    }
+    for (const NativeMacroDecl& macro : unit.native_macros) {
+        if (const auto name = strip_native_alias_prefix(macro.name, aliases)) {
+            options.generated_value_names[macro.name] = *name;
+        }
+    }
+}
+
 const ClassDecl* dependency_class_named(const ModuleAst& dependency, const std::string& name) {
     for (const ClassDecl& klass : dependency.classes) {
         if (klass.name == name) {
@@ -200,6 +254,7 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
     options.test_source = test_source;
     options.expose_test_functions = test_source;
     add_local_generated_names(options, unit, public_abi, test_source);
+    add_native_generated_names(options, unit);
     for (const ImportDecl& import : unit.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;

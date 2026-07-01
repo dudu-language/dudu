@@ -1,0 +1,10 @@
+from c import string.h as c
+from helper import fill_value
+
+
+def main() -> i32:
+    bytes: array[u8][4]
+    c.memset(&bytes[0], fill_value(), 4)
+    if bytes[0] == 7 and bytes[3] == 7:
+        return 42
+    return 1

@@ -170,19 +170,19 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
     if (starts_with(receiver, "shader::")) {
         return receiver + "." + member;
     }
+    const std::string dotted = receiver + "." + member;
+    const std::string generated = emitted_value_name(dotted, options);
+    if (generated != dotted) {
+        return generated;
+    }
+    const std::string qualified = qualify_namespace_aliases(dotted, aliases);
+    if (qualified != dotted) {
+        return qualified;
+    }
     if (scoped_receiver) {
-        const std::string dotted = receiver + "." + member;
-        const std::string generated = emitted_value_name(dotted, options);
-        if (generated != dotted) {
-            return generated;
-        }
-        const std::string qualified = qualify_namespace_aliases(dotted, aliases);
-        if (qualified != dotted) {
-            return qualified;
-        }
         return receiver + "::" + member;
     }
-    return receiver + "." + member;
+    return dotted;
 }
 
 bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
