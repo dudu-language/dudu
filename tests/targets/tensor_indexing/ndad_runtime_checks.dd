@@ -23,7 +23,6 @@ def main() -> i32:
     while fill_index < fill_total:
         tensor.data[fill_index] = fill_index
         fill_index += 1
-    tensor.cartesian.data = tensor.data
 
     if tensor.strides[0] != 12:
         return 1

@@ -774,6 +774,11 @@ Status:
   scatter/assignment, and symbolic dimensions is covered by the current
   `tests/targets/tensor_indexing` manifest through ordinary fixed-arity and
   variadic `@operator("[]")` / `@operator("[]=")` hooks.
+- Done: `ndad_direct_pairwise_runtime.dd` proves the policy split at runtime:
+  direct `tensor[rows, cols]` is PyTorch-style pairwise gather/scatter, while
+  `tensor.cartesian[rows, cols]` is an explicit helper object for orthogonal
+  cartesian gather. The helper stores a pointer to the owning tensor storage so
+  it observes later tensor mutation instead of carrying a stale copied list.
 - Done: `basic_index` and `scalar_index` category types allow libraries to
   separate basic view-safe indexing from advanced materializing indexing without
   compiler tensor-name policy. `ndad_view_copy_runtime.dd` proves basic direct

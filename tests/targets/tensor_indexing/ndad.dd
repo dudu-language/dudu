@@ -29,7 +29,7 @@ class TensorAssignable[T, Idx...]:
 
 
 class CartesianIndexer[T]:
-    data: list[T]
+    data: *list[T]
     shape: list[i64]
     strides: list[i64]
     offset: i64
@@ -37,12 +37,11 @@ class CartesianIndexer[T]:
     @operator("[]")
     def at[Idx...](self, *idx: Idx) -> Tensor[T]:
         plan = cpp("ndad::cartesian_index_plan(self.shape, self.strides, self.offset, idx...)")
-        data: list[T] = cpp("ndad::result_data(self.data, plan)")
+        data: list[T] = cpp("ndad::result_data((*self.data), plan)")
         shape: list[i64] = cpp("plan.shape")
         strides: list[i64] = cpp("ndad::result_strides(plan)")
         offset: i64 = cpp("ndad::result_offset(plan)")
-        cartesian = CartesianIndexer[T](data, shape, strides, offset)
-        return Tensor[T](data, shape, strides, offset, cartesian)
+        return tensor_from_data_shape_strides[T](data, shape, strides, offset)
 
 
 class TensorView[T]:
@@ -66,8 +65,7 @@ class TensorView[T]:
         shape: list[i64] = cpp("plan.shape")
         strides: list[i64] = cpp("ndad::result_strides(plan)")
         offset: i64 = cpp("ndad::result_offset(plan)")
-        cartesian = CartesianIndexer[T](data, shape, strides, offset)
-        return Tensor[T](data, shape, strides, offset, cartesian)
+        return tensor_from_data_shape_strides[T](data, shape, strides, offset)
 
     def fill(self, value: T):
         cpp("ndad::assign_scalar(self.data, self.shape, self.strides, self.offset, value);")
@@ -146,8 +144,7 @@ class Tensor[T]:
         shape: list[i64] = cpp("plan.shape")
         strides: list[i64] = cpp("ndad::result_strides(plan)")
         offset: i64 = cpp("ndad::result_offset(plan)")
-        cartesian = CartesianIndexer[T](data, shape, strides, offset)
-        return Tensor[T](data, shape, strides, offset, cartesian)
+        return tensor_from_data_shape_strides[T](data, shape, strides, offset)
 
     def item(self) -> T:
         return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
@@ -193,52 +190,40 @@ ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
     def add[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_add_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("+")
     def add_view[Dims...](self: &Tensor[T][Dims...], other: TensorView[T]) -> Tensor[T][Dims...]:
         other_tensor = other.to_tensor()
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other_tensor.shape)")
         data: list[T] = cpp("ndad::binary_add_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("-")
     def sub[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_sub_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("-")
     def sub_view[Dims...](self: &Tensor[T][Dims...], other: TensorView[T]) -> Tensor[T][Dims...]:
         other_tensor = other.to_tensor()
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other_tensor.shape)")
         data: list[T] = cpp("ndad::binary_sub_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("*")
     def mul[Dims...](self: &Tensor[T][Dims...], other: Tensor[T]) -> Tensor[T][Dims...]:
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other.shape)")
         data: list[T] = cpp("ndad::binary_mul_data(self.data, self.shape, self.strides, self.offset, other.data, other.shape, other.strides, other.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator("*")
     def mul_view[Dims...](self: &Tensor[T][Dims...], other: TensorView[T]) -> Tensor[T][Dims...]:
         other_tensor = other.to_tensor()
         shape: list[i64] = cpp("ndad::left_broadcast_shape(self.shape, other_tensor.shape)")
         data: list[T] = cpp("ndad::binary_mul_data(self.data, self.shape, self.strides, self.offset, other_tensor.data, other_tensor.shape, other_tensor.strides, other_tensor.offset)")
-        strides = contiguous_strides(shape)
-        cartesian = CartesianIndexer[T](data, shape, strides, 0)
-        return Tensor[T](data, shape, strides, 0, cartesian)
+        return tensor_from_data_shape[T](data, shape)
 
     @operator(">")
     def greater_than(self, value: T) -> BoolMask:
@@ -289,8 +274,19 @@ def element_count(shape: list[i64]) -> i64:
 
 def tensor_from_data_shape[T](data: list[T], shape: list[i64]) -> Tensor[T]:
     strides = contiguous_strides(shape)
-    cartesian = CartesianIndexer[T](data, shape, strides, 0)
-    return Tensor[T](data, shape, strides, 0, cartesian)
+    return tensor_from_data_shape_strides[T](data, shape, strides, 0)
+
+
+def tensor_from_data_shape_strides[T](
+    data: list[T],
+    shape: list[i64],
+    strides: list[i64],
+    offset: i64,
+) -> Tensor[T]:
+    cartesian = CartesianIndexer[T](&data, shape, strides, offset)
+    tensor = Tensor[T](data, shape, strides, offset, cartesian)
+    tensor.cartesian = CartesianIndexer[T](&tensor.data, tensor.shape, tensor.strides, tensor.offset)
+    return tensor
 
 
 def tensor_from_shape[T](shape: list[i64]) -> Tensor[T]:
@@ -337,6 +333,4 @@ def matmul[T, M, K, N](
     if len(right.shape) > 1:
         shape.append(right.shape[1])
     data: list[T] = []
-    cartesian = CartesianIndexer[T](data, shape, contiguous_strides(shape), 0)
-    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
-    return tensor
+    return tensor_from_data_shape[T](data, shape)

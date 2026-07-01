@@ -1,0 +1,61 @@
+# Target: direct advanced indexing is PyTorch-style pairwise gather/scatter,
+# while cartesian indexing is an explicit library helper.
+
+from ndad import Tensor
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    logits: Tensor[i32][4, 5] = zeros[i32](4, 5)
+    index = 0
+    while index < i32(len(logits.data)):
+        logits.data[index] = index
+        index += 1
+
+    rows = array[i32]([0, 2, 3])
+    cols = array[i32]([1, 4, 0])
+
+    pairwise = logits[rows, cols]
+    if pairwise.shape[0] != 3:
+        return 1
+    if pairwise.data[0] != 1:
+        return 2
+    if pairwise.data[1] != 14:
+        return 3
+    if pairwise.data[2] != 15:
+        return 4
+
+    logits[rows, cols] = array[i32]([100, 200, 300])
+    if logits[0, 1].item() != 100:
+        return 5
+    if logits[2, 4].item() != 200:
+        return 6
+    if logits[3, 0].item() != 300:
+        return 7
+
+    grid = logits.cartesian[rows, cols]
+    if grid.shape[0] != 3:
+        return 8
+    if grid.shape[1] != 3:
+        return 9
+    if grid.data[0] != 100:
+        return 10
+    if grid.data[1] != 4:
+        return 11
+    if grid.data[2] != 0:
+        return 12
+    if grid.data[3] != 11:
+        return 13
+    if grid.data[4] != 200:
+        return 14
+    if grid.data[5] != 10:
+        return 15
+    if grid.data[6] != 16:
+        return 16
+    if grid.data[7] != 19:
+        return 17
+    if grid.data[8] != 300:
+        return 18
+
+    return 0

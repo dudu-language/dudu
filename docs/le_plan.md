@@ -1278,6 +1278,10 @@ push. They are not release packaging work.
    direct tensor indexing through ordinary `ndad` hooks, covering mixed
    scalar/slice views, all-scalar `.item()` extraction, materialized views, and
    mixed advanced indexing without tensor-name compiler policy.
+   `ndad_direct_pairwise_runtime.dd` now proves direct `tensor[rows, cols]`
+   pairwise gather/scatter and explicit `tensor.cartesian[rows, cols]`
+   cartesian gather at runtime. The reference helper now points at the owning
+   tensor storage so helper objects do not hide stale copied data.
    `ndad_broadcasting_runtime.dd` also proves library-owned broadcasting
    through normal tensor operators by running
    `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
