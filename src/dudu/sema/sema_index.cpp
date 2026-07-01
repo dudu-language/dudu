@@ -165,6 +165,40 @@ TypeRef view_type_ref(const SourceLocation& location, std::string_view name,
     return out;
 }
 
+std::optional<TypeRef> fixed_array_view_type_ref(const SourceLocation& location,
+                                                 const TypeRef& receiver_type,
+                                                 const Expr& index_expr) {
+    if (!is_slice_expr(index_expr)) {
+        return std::nullopt;
+    }
+    const TypeRef unwrapped = unwrap_reference_and_const(receiver_type);
+    const TypeRef element = explicit_array_element_type_ref(unwrapped);
+    if (!has_type_ref(element)) {
+        return std::nullopt;
+    }
+    const std::vector<size_t> shape = explicit_array_shape(unwrapped);
+    const std::vector<std::string> shape_values = explicit_array_shape_values(unwrapped);
+    const size_t rank = !shape.empty() ? shape.size() : shape_values.size();
+    if (rank == 0 || index_count_from_expr(index_expr) > rank) {
+        return std::nullopt;
+    }
+    return view_type_ref(location, "array_view", element);
+}
+
+std::optional<TypeRef> indexed_array_view_type_ref(const SourceLocation& location,
+                                                   const TypeRef& receiver_type,
+                                                   const Expr& index_expr) {
+    const TypeRef unwrapped = unwrap_reference_and_const(receiver_type);
+    const std::vector<TypeRef> args = template_type_arg_refs(unwrapped, "array_view");
+    if (args.size() != 1) {
+        return std::nullopt;
+    }
+    if (is_slice_expr(index_expr)) {
+        return view_type_ref(location, "array_view", args.front());
+    }
+    return args.front();
+}
+
 std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& location,
                                                       const TypeRef& receiver_type,
                                                       const Expr& index_expr) {
@@ -193,9 +227,8 @@ std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& loca
 } // namespace
 
 IndexOperatorTarget index_operator_target(const Expr& receiver) {
-    return IndexOperatorTarget{.receiver = &receiver,
-                               .read_operator = "[]",
-                               .write_operator = "[]="};
+    return IndexOperatorTarget{
+        .receiver = &receiver, .read_operator = "[]", .write_operator = "[]="};
 }
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,
@@ -213,6 +246,14 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
                                    const TypeRef& receiver_type, const Expr& index_expr,
                                    const std::string& label) {
     const TypeRef unwrapped_type_ref = unwrap_reference_and_const(receiver_type);
+    if (const std::optional<TypeRef> array_view_index_type =
+            indexed_array_view_type_ref(location, receiver_type, index_expr)) {
+        return *array_view_index_type;
+    }
+    if (const std::optional<TypeRef> array_view_type =
+            fixed_array_view_type_ref(location, receiver_type, index_expr)) {
+        return *array_view_type;
+    }
     if (const std::optional<TypeRef> span2_type =
             indexed_strided_span2_type_ref(location, receiver_type, index_expr)) {
         return *span2_type;

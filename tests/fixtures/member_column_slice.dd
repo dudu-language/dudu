@@ -2,7 +2,7 @@ class MatrixBox[Rows, Cols]:
     items: array[i32][Rows, Cols]
 
     def column_sum(self, column_index: i32) -> i32:
-        column: strided_span[i32] = self.items[:, column_index]
+        column: array_view[i32] = self.items[:, column_index]
         total: i32 = 0
         for value: i32 in column:
             total += value

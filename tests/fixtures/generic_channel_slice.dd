@@ -1,4 +1,4 @@
-def sum_view(values: strided_span[i32]) -> i32:
+def sum_view(values: array_view[i32]) -> i32:
     total: i32 = 0
     for value: i32 in values:
         total += value
@@ -6,7 +6,7 @@ def sum_view(values: strided_span[i32]) -> i32:
 
 
 def sum_channel[Rows, Cols, Channels](image: &array[i32][Rows, Cols, Channels], channel_index: i32) -> i32:
-    channel: strided_span[i32] = image[:, :, channel_index]
+    channel: array_view[i32] = image[:, :, channel_index]
     return sum_view(channel)
 
 

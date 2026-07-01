@@ -1,15 +1,15 @@
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/format/format_path.hpp"
-#include "dudu/parser/lexer.hpp"
-#include "dudu/project/module_loader.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema.hpp"
@@ -166,14 +166,14 @@ void test_index_type_inference_uses_type_ast() {
     const dudu::TypeRef column_type = dudu::indexed_type_ref_from_type(
         symbols, location, dense_matrix_type, dudu::parse_expr_text(":, 1", location), "matrix");
     assert(column_type.kind == dudu::TypeKind::Template);
-    assert(column_type.name == "strided_span");
-    assert(dudu::substitute_type_ref_text(column_type, {}) == "strided_span[i32]");
+    assert(column_type.name == "array_view");
+    assert(dudu::substitute_type_ref_text(column_type, {}) == "array_view[i32]");
 
     const dudu::TypeRef row_span_type = dudu::indexed_type_ref_from_type(
         symbols, location, dense_matrix_type, dudu::parse_expr_text("1, :", location), "matrix");
     assert(row_span_type.kind == dudu::TypeKind::Template);
-    assert(row_span_type.name == "span");
-    assert(dudu::substitute_type_ref_text(row_span_type, {}) == "span[i32]");
+    assert(row_span_type.name == "array_view");
+    assert(dudu::substitute_type_ref_text(row_span_type, {}) == "array_view[i32]");
 
     const std::map<std::string, dudu::TypeRef> local_type_refs = {
         {"bag", dudu::parse_type_text("Bag[Item]", location)},
@@ -183,17 +183,16 @@ void test_index_type_inference_uses_type_ast() {
     assert(bag_item);
     assert(dudu::substitute_type_ref_text(*bag_item, {}) == "Item");
 
-    const dudu::ModuleAst module =
-        dudu::parse_source("class Tensor:\n"
-                           "    @operator(\"[]\")\n"
-                           "    def get(self, index: i32) -> f32:\n"
-                           "        return 1.0\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    tensor = Tensor()\n"
-                           "    value: f32 = tensor[0]\n"
-                           "    return i32(value)\n",
-                           "index_types.dd");
+    const dudu::ModuleAst module = dudu::parse_source("class Tensor:\n"
+                                                      "    @operator(\"[]\")\n"
+                                                      "    def get(self, index: i32) -> f32:\n"
+                                                      "        return 1.0\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    tensor = Tensor()\n"
+                                                      "    value: f32 = tensor[0]\n"
+                                                      "    return i32(value)\n",
+                                                      "index_types.dd");
     dudu::analyze_module(module, {.check_bodies = true});
 }
 

@@ -311,9 +311,9 @@ heatmap: array[i32] = [
 center: i32 = heatmap[1, 2]
 heatmap[2, 3] = heatmap[2, 3] + center
 
-middle_row: span[i32] = heatmap[1, :]
-second_column: strided_span[i32] = heatmap[:, 1]
-bright_patch: strided_span2[i32] = heatmap[1:3, 2:4]
+middle_row: array_view[i32] = heatmap[1, :]
+second_column: array_view[i32] = heatmap[:, 1]
+bright_patch: array_view[i32] = heatmap[1:3, 2:4]
 ```
 
 Rank-3 image/tensor indexing should also stay concrete:
@@ -325,9 +325,9 @@ pixels: array[i32] = [
 ]
 
 green: i32 = pixels[1, 1, 1]
-first_rgb: span[i32] = pixels[0, 0, 0:3]
-all_green: strided_span[i32] = pixels[:, :, 1]
-all_values: span[i32] = pixels[:, :, :]
+first_rgb: array_view[i32] = pixels[0, 0, 0:3]
+all_green: array_view[i32] = pixels[:, :, 1]
+all_values: array_view[i32] = pixels[:, :, :]
 ```
 
 ### Pairwise Integer Gather

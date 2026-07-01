@@ -1,4 +1,4 @@
-def sum_view(values: span[i32]) -> i32:
+def sum_view(values: array_view[i32]) -> i32:
     total: i32 = 0
     for value: i32 in values:
         total += value
@@ -10,5 +10,5 @@ def main() -> i32:
         [1, 2, 3],
         [10, 20, 12],
     ]
-    row: span[i32] = matrix[1, :]
+    row: array_view[i32] = matrix[1, :]
     return sum_view(row)

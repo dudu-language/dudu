@@ -1,9 +1,9 @@
 #include "dudu/codegen/cpp_expr_index.hpp"
 
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
+#include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_expr_slices.hpp"
+#include "dudu/core/ast_expr.hpp"
 
 #include <optional>
 
@@ -45,6 +45,13 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
 
     std::string out =
         lower_expr(expr.children[0], aliases, locals, local_type_refs, symbols, options);
+
+    if (const auto generic_view =
+            lower_generic_array_view_index_expr(expr.children[0], expr.children[1], aliases, locals,
+                                                local_type_refs, symbols, options)) {
+        return *generic_view;
+    }
+
     if (const std::optional<SliceParts> slice = slice_parts(expr.children[1])) {
         const std::string start =
             expr_missing(*slice->start)

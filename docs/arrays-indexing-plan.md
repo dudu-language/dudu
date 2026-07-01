@@ -172,11 +172,11 @@ every_other = samples[::2]
 The key rule: slicing should produce a view by default where possible, not an
 implicit owning copy.
 
-Proposed spellings:
+Target spellings:
 
 ```python
-row: span[f32] = mat[row_index, :]
-patch: strided_span2[f32] = image[y0:y1, x0:x1]
+row: array_view[f32] = mat[row_index, :]
+patch: array_view[f32] = image[y0:y1, x0:x1]
 copy: list[f32] = list(row)
 ```
 
@@ -187,31 +187,33 @@ explicit copy:
 copy = list(items[a:b])
 ```
 
-Status: one-dimensional fixed arrays support `start:end`, `:end`, `start:`,
-and `:` slices as `span[T]` views. One-dimensional stepped fixed-array slices
-such as `values[start:end:step]`, `values[start::step]`, and `values[::step]`
-produce `strided_span[T]` views. Fixed multidimensional arrays also support a
-trailing full row slice such as `mat[row, :]`, which produces `span[T]` over the
-selected row. Contiguous leading-axis slab ranges such as `mat[start:end, :]`
-and `volume[start:end, :, :]` also produce `span[T]` views over the selected
-storage. Matrix column slices such as `mat[:, col]` produce `strided_span[T]`
-views so non-contiguous views are not misrepresented as contiguous spans,
-including generic non-type extents such as `array[T][Rows, Cols]` and
-member-backed fixed arrays such as `self.items[:, col]`.
-Three-dimensional channel slices such as `image[:, :, c]` also produce
-`strided_span[T]` views over interleaved channel data, including generic
-non-type extents and member-backed fixed arrays. Two-dimensional patch
-rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
-explicit row stride, so row gaps are not misrepresented as contiguous storage.
-`strided_span2[T]` views are iterable in row-major order and can be resliced
-with full, row, column, row-range, column-range, and subpatch forms such as
-`patch[:, :]`, `patch[row, :]`, `patch[:, col]`, `patch[row0:row1, :]`,
-`patch[row, col0:col1]`, and `patch[row0:row1, col0:col1]`.
-Full-rank fixed-array slices such as `mat[:, :]` and `image[:, :, :]` produce
-contiguous `span[T]` views over the whole backing storage, including generic
-non-type extents such as `array[T][Rows, Cols]` and member-backed fixed arrays
-such as `self.items[:, :]`. Higher-rank non-contiguous patch views remain out
-of scope until the compiler has rank-generic view types.
+Architecture correction: the prototype compiler grew separate slice-lowering
+paths for one-dimensional spans, two-dimensional patches, two-dimensional
+columns, three-dimensional channels, and `strided_span2` reslicing. That is the
+wrong architecture. Built-in fixed arrays must lower through one generic
+shape/stride view model, not through a new compiler branch per rank or pattern.
+
+Target status: fixed-array slicing should produce `array_view[T]`, a generic
+runtime shape/stride view. The parser keeps generic `IndexExpr(base, args...)`
+and `SliceExpr(start, stop, step)` nodes. Sema recognizes fixed-array shape
+metadata and infers `array_view[T]` for any slice-containing fixed-array index.
+Codegen lowers all fixed-array slice forms through the same helper that builds
+slice specs and computes `shape`, `strides`, and `offset`.
+
+Examples that must share the same path:
+
+```python
+row = mat[row_index, :]
+col = mat[:, col_index]
+patch = mat[y0:y1, x0:x1]
+rgb = image[y, x, 0:3]
+channel = image[:, :, channel_index]
+whole = image[:, :, :]
+```
+
+`span[T]`, `strided_span[T]`, and `strided_span2[T]` may remain as low-level
+interop/helper types, but fixed-array slicing should not infer them directly.
+They are not the core indexing architecture.
 
 ## Advanced Indexing
 
@@ -226,9 +228,11 @@ tile = image[y:y + 8, x:x + 8]
 Do not add NumPy-style arbitrary gather/scatter indexing until normal slices,
 views, and tensor shapes are solid.
 
-Status: fixed arrays support contiguous trailing-dimension range slices after
-scalar prefixes, such as `image[y, x, 0:3]`, as `span[T]` views. This includes
-generic non-type extents and member-backed fixed arrays.
+Status target: fixed arrays should support trailing-dimension range slices
+after scalar prefixes, such as `image[y, x, 0:3]`, through the same
+`array_view[T]` path as every other slice. This includes generic non-type
+extents and member-backed fixed arrays. There should be no separate
+`image[y, x, 0:3]` compiler lowering branch.
 
 ## Tensor Policy Boundary
 

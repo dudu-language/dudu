@@ -2,7 +2,7 @@ class ImageBox[Rows, Cols, Channels]:
     pixels: array[i32][Rows, Cols, Channels]
 
     def pixel_tail_sum(self, row: i32, col: i32) -> i32:
-        channels: span[i32] = self.pixels[row, col, 1:]
+        channels: array_view[i32] = self.pixels[row, col, 1:]
         total: i32 = 0
         for value: i32 in channels:
             total += value

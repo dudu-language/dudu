@@ -1,4 +1,4 @@
-def sum_view(values: strided_span[i32]) -> i32:
+def sum_view(values: array_view[i32]) -> i32:
     total: i32 = 0
     for value: i32 in values:
         total += value
@@ -6,7 +6,7 @@ def sum_view(values: strided_span[i32]) -> i32:
 
 
 def sum_column[Rows, Cols](matrix: &array[i32][Rows, Cols], column_index: i32) -> i32:
-    column: strided_span[i32] = matrix[:, column_index]
+    column: array_view[i32] = matrix[:, column_index]
     return sum_view(column)
 
 

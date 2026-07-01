@@ -1,6 +1,6 @@
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_type_internal.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <sstream>
 #include <string_view>
@@ -65,6 +65,9 @@ std::string lower_template_type(const TypeRef& type) {
     if (name == "strided_span2") {
         return "dudu::StridedSpan2<" + join_lowered_type_args(type.children) + ">";
     }
+    if (name == "array_view") {
+        return "dudu::ArrayView<" + join_lowered_type_args(type.children) + ">";
+    }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children) + ">";
     }
@@ -112,6 +115,9 @@ std::string lower_template_type(const TypeRef& type,
     if (name == "strided_span2") {
         return "dudu::StridedSpan2<" + join_lowered_type_args(type.children, namespace_aliases) +
                ">";
+    }
+    if (name == "array_view") {
+        return "dudu::ArrayView<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
     }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children, namespace_aliases) +
@@ -167,6 +173,10 @@ std::string lower_template_type(const TypeRef& type,
         return "dudu::StridedSpan2<" +
                join_lowered_type_args(type.children, namespace_aliases, options) + ">";
     }
+    if (name == "array_view") {
+        return "dudu::ArrayView<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
     if (name == "dict") {
         return "std::unordered_map<" +
                join_lowered_type_args(type.children, namespace_aliases, options) + ">";
@@ -194,9 +204,8 @@ std::string lower_template_type(const TypeRef& type,
                ">";
     }
     std::ostringstream out;
-    out << replace_dots(
-               emitted_type_name(strip_c_import_type_aliases(std::string{name}, namespace_aliases),
-                                 options))
+    out << replace_dots(emitted_type_name(
+               strip_c_import_type_aliases(std::string{name}, namespace_aliases), options))
         << "<" << join_lowered_type_args(type.children, namespace_aliases, options) << ">";
     return out.str();
 }

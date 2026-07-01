@@ -90,6 +90,41 @@ This pass should run after each major architecture slice and before claiming a
 phase complete. The goal is not cosmetic churn. The goal is to keep Dudu from
 turning into a compiler made of successful experiments glued together forever.
 
+## Tensor And Indexing Architecture Correction
+
+The current tensor/indexing dogfood exposed a serious shortcut that must be
+fixed before more numeric stack work builds on it.
+
+Wrong architecture to remove:
+
+- built-in fixed-array slicing lowered through pattern-specific compiler paths
+  such as one-dimensional spans, two-dimensional column slices,
+  two-dimensional patch slices, three-dimensional channel slices, and
+  `strided_span2` reslicing
+- sema inferring different view types by recognizing those same rank-specific
+  slice patterns
+- `dudu-datascience` treating a rank-2 `TensorView[T]` with `rows`, `cols`,
+  `row_stride`, and `col_stride` as the reusable tensor view foundation
+
+Required architecture:
+
+- parser keeps generic `IndexExpr(base, args...)` and
+  `SliceExpr(start, stop, step)` forms
+- sema resolves indexing through either generic fixed-array shape/stride rules
+  or user-defined `@operator("[]")` / `@operator("[]=")` hooks
+- built-in fixed arrays lower slice-containing indexes through one generic
+  `array_view[T]` / slice-spec / shape / stride mechanism
+- `dudu_tensor` uses `shape`, `strides`, and `offset` metadata as its core
+  representation; `rows` and `cols` are only optional rank-2 conveniences
+- rank 1, 2, 3, and 4 tensor/view demos must use the same library/compiler
+  path, not separate shortcuts
+- tests must prove arbitrary-rank indexing and slicing without adding
+  tensor-name or library-name special cases
+
+Do this before autograd, OpenCL, or more PyTorch-like API work. A passing demo
+that depends on rank-specific compiler code or rank-2 tensor storage is not a
+valid tensor foundation.
+
 ## Proper AST And Compiler Pipeline
 
 Destringing sequence: [Destringing Goals](destringing-goals.md).
@@ -1111,28 +1146,17 @@ push. They are not release packaging work.
    diagnosed.
    Fixed arrays work with `len(values)` and `&values[0]` for native
    pointer/count handoff.
-   One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
-   produce `span[T]` views. Fixed multidimensional arrays support trailing row
-   views such as `mat[row, :]`, and contiguous leading-axis slab ranges such as
-   `mat[start:end, :]` and `volume[start:end, :, :]` produce `span[T]` views
-   over the selected storage. Matrix column slices such as `mat[:, col]`
-   produce `strided_span[T]` views so non-contiguous views are explicit,
-   including generic non-type extents and member-backed arrays.
-   Three-dimensional channel slices such as `image[:, :, c]` also produce
-   `strided_span[T]` views over interleaved channel data, including generic
-   non-type extents and member-backed arrays. Trailing-dimension range slices
-   such as `image[y, x, 0:3]` produce contiguous `span[T]` views, including
-   generic non-type extents and member-backed arrays. Two-dimensional
-   patch rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]`
-   views with explicit row stride, and `strided_span2[T]` views are iterable in
-   row-major order. Existing `strided_span2[T]` patch views can also be
-   resliced into full patch, row, column, row-range, column-range, and subpatch
-   views, so matrix patches can be reused instead of immediately copied.
-   Full-rank fixed-array slices such as `mat[:, :]` and
-   `image[:, :, :]` produce contiguous `span[T]` views over the whole backing
-   storage, including generic non-type extents such as
-   `array[T][Rows, Cols]` and member-backed fixed arrays such as
-   `self.items[:, :]`.
+   Fixed-array slicing is being corrected away from the prototype
+   `span[T]`/`strided_span[T]`/`strided_span2[T]` branches. Any fixed-array
+   index expression containing a slice should produce `array_view[T]`, backed
+   by generic runtime shape, stride, and offset metadata. That single path must
+   cover one-dimensional `start:end`, row views such as `mat[row, :]`, column
+   views such as `mat[:, col]`, full-rank slices such as `mat[:, :]`, rank-3
+   image channel slices such as `image[:, :, c]`, trailing channel ranges such
+   as `image[y, x, 0:3]`, and rank-4 or higher library tests. Low-level
+   `span[T]`, `strided_span[T]`, and `strided_span2[T]` may remain as explicit
+   helper/native interop types, but the language slice inference path must not
+   be rank-specific.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, including
    multi-scalar indices, member receivers such as `box.tensor[1, 2]`, member
@@ -1141,7 +1165,8 @@ push. They are not release packaging work.
    indexing hooks are now selected by argument types, so a single Dudu class can
    expose scalar element access plus row, column, and patch slice views.
    One-dimensional fixed-array step slices such as `values[start:end:step]`
-   produce `strided_span[T]` views.
+   should also produce `array_view[T]`, with the step represented in the view
+   stride.
    This is enough to play with fixed arrays, row/column/full-storage views,
    channel views, basic step slices, and library indexing hooks, but it is not
    full NumPy-style indexing yet. Non-contiguous multidimensional patch

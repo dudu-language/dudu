@@ -1,6 +1,6 @@
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_type_internal.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -12,18 +12,19 @@ namespace {
 
 bool known_structured_template_root(std::string_view name) {
     return name == "list" || name == "span" || name == "strided_span" || name == "strided_span2" ||
-           name == "dict" || name == "set" || name == "Option" || name == "Result" ||
-           name == "tuple" || name == "variant" || name == "std.function" ||
+           name == "array_view" || name == "dict" || name == "set" || name == "Option" ||
+           name == "Result" || name == "tuple" || name == "variant" || name == "std.function" ||
            name == "std::function";
 }
 
 const std::map<std::string, std::string>& builtin_cpp_type_names() {
     static const std::map<std::string, std::string> builtins = {
-        {"bool", "bool"},       {"char", "char"},    {"i8", "int8_t"},      {"i16", "int16_t"},
-        {"i32", "int32_t"},     {"i64", "int64_t"},  {"u8", "uint8_t"},     {"u16", "uint16_t"},
-        {"u32", "uint32_t"},    {"u64", "uint64_t"}, {"isize", "intptr_t"}, {"usize", "size_t"},
-        {"f32", "float"},       {"f64", "double"},   {"void", "void"},      {"str", "std::string"},
-        {"cstr", "const char*"}, {"slice", "dudu::Slice"}};
+        {"bool", "bool"},       {"char", "char"},        {"i8", "int8_t"},
+        {"i16", "int16_t"},     {"i32", "int32_t"},      {"i64", "int64_t"},
+        {"u8", "uint8_t"},      {"u16", "uint16_t"},     {"u32", "uint32_t"},
+        {"u64", "uint64_t"},    {"isize", "intptr_t"},   {"usize", "size_t"},
+        {"f32", "float"},       {"f64", "double"},       {"void", "void"},
+        {"str", "std::string"}, {"cstr", "const char*"}, {"slice", "dudu::Slice"}};
     return builtins;
 }
 

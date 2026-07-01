@@ -1,0 +1,21 @@
+def sum_view(values: array_view[i32]) -> i32:
+    total = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+
+def main() -> i32:
+    values: array[i32] = [
+        [
+            [[1, 2], [3, 4]],
+            [[5, 6], [7, 8]],
+        ],
+        [
+            [[10, 20], [30, 40]],
+            [[50, 60], [70, 80]],
+        ],
+    ]
+
+    hyper: array_view[i32] = values[:, 1, :, 0]
+    return sum_view(hyper)

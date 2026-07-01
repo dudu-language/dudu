@@ -1,8 +1,8 @@
 #include "dudu/sema/sema_index_type_ref.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_ops.hpp"
@@ -168,7 +168,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     if (pointer_index) {
         return *type;
     }
-    for (std::string_view name : {"list", "span", "strided_span", "set"}) {
+    for (std::string_view name : {"list", "span", "strided_span", "array_view", "set"}) {
         const std::vector<TypeRef> args = template_type_arg_refs(*type, name);
         if (args.size() == 1) {
             return args.front();

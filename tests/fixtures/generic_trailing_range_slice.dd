@@ -1,11 +1,11 @@
-def sum_view(values: span[i32]) -> i32:
+def sum_view(values: array_view[i32]) -> i32:
     total: i32 = 0
     for value: i32 in values:
         total += value
     return total
 
 
-def pixel_tail[Rows, Cols, Channels](image: &array[i32][Rows, Cols, Channels], row: i32, col: i32) -> span[i32]:
+def pixel_tail[Rows, Cols, Channels](image: &array[i32][Rows, Cols, Channels], row: i32, col: i32) -> array_view[i32]:
     return image[row, col, 1:]
 
 
