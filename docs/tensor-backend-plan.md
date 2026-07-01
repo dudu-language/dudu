@@ -29,9 +29,9 @@ is not completion of first-class tensor indexing.
 
 Autograd target ergonomics should feel closer to PyTorch than TensorFlow:
 ordinary imperative model code, parameters used directly in tensor operations,
-`loss.backward()`, `opt.step()`, and `opt.zero_grad()`. Tape/graph machinery may
-exist inside the library, but the target API should not require user code to
-instantiate a public `Tape`.
+callable modules such as `model(x)`, `loss.backward()`, `opt.step()`, and
+`opt.zero_grad()`. Tape/graph machinery may exist inside the library, but the
+target API should not require user code to instantiate a public `Tape`.
 
 ## Non-Goals
 
@@ -131,7 +131,7 @@ author wants a shape assertion:
 
 ```python
 def classify(x: tensor[f32][32, 784]) -> tensor[f32][32, 10]:
-    return model.forward(x)
+    return model(x)
 
 logits: tensor[f32][32, 10] = classify(batch)
 ```
@@ -209,7 +209,7 @@ CPU-contiguous view or copy when the storage makes that honest:
 ```python
 cpu_view = tensor.as_array_view()   # zero-copy only if already CPU contiguous
 cpu_copy = tensor.to_array()        # explicit materialization/copy
-gpu_tensor = tensor.to_gpu()        # explicit device move/copy
+gpu_tensor = tensor.to(opencl.default()) # explicit device move/copy
 ```
 
 Implicit passing to `array[T][...]`-like APIs is only acceptable when the
@@ -794,9 +794,9 @@ storage movement must remain explicit:
 
 ```python
 cpu = tensor.zeros[f32](32, 784)
-gpu = cpu.to_gpu()
+gpu = cpu.to(opencl.default())
 result = gpu.matmul(weights_gpu)
-back = result.to_cpu()
+back = result.cpu()
 ```
 
 Indexing a GPU tensor may return a GPU view, a lazy gather expression, or a
@@ -829,9 +829,19 @@ Implement a small autograd graph in Dudu using ordinary classes:
 - backward pass
 - operations: add, mul, matmul, relu, mean squared error
 
-User-facing training code should use `loss.backward()` rather than a public
-`Tape` object. A tape or graph can be an internal implementation detail of the
-tensor/autograd library.
+User-facing training code should use callable modules and `loss.backward()`
+rather than a public `Tape` object:
+
+```python
+pred = model(x)
+loss = mse_loss(pred, y)
+loss.backward()
+opt.step()
+opt.zero_grad()
+```
+
+A tape or graph can be an internal implementation detail of the tensor/autograd
+library.
 
 This primarily stresses:
 
