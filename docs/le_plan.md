@@ -1303,7 +1303,11 @@ push. They are not release packaging work.
    later repeated destinations win. `ndad_reduction_shape_runtime.dd` now
    fixes rank-generic materialization/reduction expectations for `ndad`
    tensors and views, including view `.sum()`, `.mean()`, `.flatten()`, and
-   `.reshape(...)`.
+   `.reshape(...)`. `ndad_assume_shape_runtime.dd` and its paired negative
+   targets now prove the explicit `dyn`-to-concrete shape boundary:
+   concrete-shape APIs reject raw `dyn` tensors, `assume_shape` narrows only
+   shape metadata, and the narrowing does not change tensor base types or add
+   backend behavior.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

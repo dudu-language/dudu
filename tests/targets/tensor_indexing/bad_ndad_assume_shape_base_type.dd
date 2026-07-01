@@ -1,0 +1,22 @@
+# Target diagnostic: assume_shape only narrows shape metadata; it cannot change
+# the tensor's element/base type.
+
+from ndad import Tensor
+from ndad import BoolMask
+from ndad import zeros
+
+
+def make_mask() -> BoolMask:
+    values: list[bool] = []
+    values.append(True)
+    values.append(False)
+    values.append(True)
+    values.append(False)
+    return BoolMask(values)
+
+
+def main() -> i32:
+    x: Tensor[i32][4, 2] = zeros[i32](4, 2)
+    selected: Tensor[i32][dyn, 2] = x[make_mask(), :]
+    checked = assume_shape[Tensor[f32][2, 2]](selected)
+    return i32(checked.shape[0])

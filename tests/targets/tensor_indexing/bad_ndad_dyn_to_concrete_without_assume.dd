@@ -1,0 +1,25 @@
+# Target diagnostic: dyn-shaped tensor results cannot flow into concrete shape
+# APIs without an explicit assume_shape proof.
+
+from ndad import Tensor
+from ndad import BoolMask
+from ndad import zeros
+
+
+def expect_concrete(value: Tensor[i32][2, 2]) -> i32:
+    return i32(value.shape[0] + value.shape[1])
+
+
+def make_mask() -> BoolMask:
+    values: list[bool] = []
+    values.append(True)
+    values.append(False)
+    values.append(True)
+    values.append(False)
+    return BoolMask(values)
+
+
+def main() -> i32:
+    x: Tensor[i32][4, 2] = zeros[i32](4, 2)
+    selected: Tensor[i32][dyn, 2] = x[make_mask(), :]
+    return expect_concrete(selected)

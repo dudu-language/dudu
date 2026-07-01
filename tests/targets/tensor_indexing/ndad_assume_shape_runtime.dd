@@ -1,0 +1,40 @@
+# Target: dyn-shaped tensor results require an explicit shape proof before
+# flowing into concrete-shape APIs, and assume_shape is metadata-only.
+
+from ndad import Tensor
+from ndad import BoolMask
+from ndad import zeros
+
+
+def require_2_by_2(value: Tensor[i32][dyn, 2]) -> Tensor[i32][2, 2]:
+    if value.shape[0] != 2:
+        cpp("""throw std::runtime_error("expected first dimension 2");""")
+    if value.shape[1] != 2:
+        cpp("""throw std::runtime_error("expected second dimension 2");""")
+    return assume_shape[Tensor[i32][2, 2]](value)
+
+
+def expect_concrete(value: Tensor[i32][2, 2]) -> i32:
+    return i32(value.shape[0] + value.shape[1]) + value.data[0] + value.data[3]
+
+
+def make_mask() -> BoolMask:
+    values: list[bool] = []
+    values.append(True)
+    values.append(False)
+    values.append(True)
+    values.append(False)
+    return BoolMask(values)
+
+
+def main() -> i32:
+    x: Tensor[i32][4, 2] = zeros[i32](4, 2)
+    index = 0
+    while index < 8:
+        x.data[index] = index + 1
+        index += 1
+
+    selected: Tensor[i32][dyn, 2] = x[make_mask(), :]
+    checked = require_2_by_2(selected)
+
+    return expect_concrete(checked)

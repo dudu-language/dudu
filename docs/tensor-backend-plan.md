@@ -830,7 +830,10 @@ Status:
   `dyn` shaped value to a concrete shaped type after explicit runtime checks.
   The builtin is restricted to shaped target types and lowers to the value
   expression, so it carries only type metadata and does not add hidden tensor
-  copies or backend behavior.
+  copies or backend behavior. `ndad_assume_shape_runtime.dd` proves the
+  positive tensor path, while `bad_ndad_dyn_to_concrete_without_assume.dd` and
+  `bad_ndad_assume_shape_base_type.dd` prove that concrete APIs reject raw
+  `dyn` values and that `assume_shape` cannot change the tensor base type.
 - Done: generic functions can use shape parameters in library tensor metadata,
   such as `Tensor[f32][Rows, Inner]`, and propagate composed result shapes like
   matrix multiply without leaking erased shape-only parameters into generated
