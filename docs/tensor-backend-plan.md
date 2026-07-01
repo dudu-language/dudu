@@ -21,6 +21,12 @@ Build a small Dudu numeric stack that demonstrates:
 This is a dogfood and language-validation slice. It should not turn the Dudu
 compiler into a tensor framework.
 
+The implementation target is the code in
+`/home/vega/Coding/ML/dudu-datascience/spec/target_api`. Those files are
+allowed to be aspirational and not build yet. They are the API contract we are
+working toward. A small passing BLAS demo is only a proof of native interop; it
+is not completion of first-class tensor indexing.
+
 ## Non-Goals
 
 - Do not special-case OpenBLAS, OpenCL, ROCm, CUDA, Eigen, PyTorch, or any
@@ -725,8 +731,12 @@ Status:
   dogfood repo demo that links `openblas` through `dudu.toml`, imports
   `cblas.h`, compares pure Dudu row-major matmul against `cblas_sgemm`, and
   prints verifiable results.
-- Remaining: no more CPU helper work is required for this slice; later examples
-  can add library helpers when they need more tensor behavior.
+- Done for proof only: the compiler repo and `dudu-datascience` prove CBLAS
+  interop with tiny row-major tensors.
+- Remaining for the actual target API: build a reusable `dudu_tensor` library
+  that satisfies the target files in `dudu-datascience/spec/target_api`,
+  including owning tensors, view types, explicit materialization, shape
+  metadata, broadcasting, backend dispatch, and diagnostics.
 
 ### 3. Optional OpenBLAS Probe
 
@@ -870,6 +880,11 @@ This slice is done when:
   fixtures
 - no compiler code special-cases a specific numeric library
 - docs and the native compatibility matrix list the new probes and their status
+
+The broader first-class tensor-indexing goal is done only when the
+`dudu-datascience/spec/target_api` examples either compile as written or have
+been replaced by equivalent built examples with the same user-facing semantics.
+Passing toy demos alone does not satisfy that goal.
 
 ## Suggested Overnight Goal
 
