@@ -51,8 +51,13 @@ void check_declared_index_operator_if_any(const FunctionScope& scope, const Type
                                           const std::string& op, const std::string& label,
                                           const std::vector<Expr>& args,
                                           const SourceLocation* location) {
+    (void)args;
     if (const auto signature = dudu_operator_signature(scope.symbols, op, receiver_type)) {
-        check_call_args_ast(scope, label + op, *signature, args, location);
+        (void)signature;
+        if (location != nullptr) {
+            sema_expr_fail(*location,
+                           "no matching @operator(\"" + op + "\") for indexed access to " + label);
+        }
     }
 }
 

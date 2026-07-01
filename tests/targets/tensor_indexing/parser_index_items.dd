@@ -3,6 +3,10 @@
 class Tensor:
     marker: i32
 
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> Tensor:
+        return self
+
 
 def main() -> i32:
     ids: list[i32] = [0, 2, 4]
