@@ -99,10 +99,12 @@ generated C++ for behavior that must not be fakeable by successful emission.
 
 Status: `ndad_runtime_checks.dd` is a fast runtime fixture for the reference
 tensor surface. It checks row-major strides, slice offsets, ellipsis, new-axis
-insertion, direct advanced indexing, cartesian helper indexing, scalar
-assignment through `[]=` and boolean-mask construction. This is intentionally
-inside the Dudu repo so a fake rank-2 or ignored-index implementation cannot
-claim completion.
+insertion, direct advanced indexing, cartesian helper indexing, scalar point
+writes, scalar slice fill, tensor-valued slice assignment, and boolean-mask
+construction. This is intentionally inside the Dudu repo so a fake rank-2 or
+ignored-index implementation cannot claim completion. True mask-position
+gather/scatter is still a required follow-up; the current boolean-mask runtime
+check proves mask construction, not correct masked element placement.
 
 ## Backend Choice
 

@@ -1253,11 +1253,14 @@ push. They are not release packaging work.
    Status update: `tests/targets/tensor_indexing` now includes a fast runtime
    target for the in-repo `ndad` reference surface. It verifies row-major
    strides, slice offsets, ellipsis, new-axis insertion, direct advanced
-   indexing, cartesian helper indexing, scalar `[]=` writes, and mask
-   construction by compiling and running generated C++. Expression-level pack
-   forwarding such as `idx...` is parsed as AST and works through ordinary
-   generic calls; variadic `[]=` hooks preserve Dudu source order while
-   emitting a C++-deducible value-before-pack ABI.
+   indexing, cartesian helper indexing, scalar point writes, scalar slice fill,
+   tensor-valued slice assignment, and mask construction by compiling and
+   running generated C++. Expression-level pack forwarding such as `idx...` is
+   parsed as AST and works through ordinary generic calls; variadic `[]=`
+   hooks preserve Dudu source order while emitting a C++-deducible
+   value-before-pack ABI. True mask-position gather/scatter is not complete
+   until the runtime fixture proves selected element positions, not only mask
+   counts and hook dispatch.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

@@ -78,14 +78,14 @@ class Tensor[T]:
 
     @operator("[]=")
     def set_tensor[Idx...](self, *idx: Idx, value: Tensor[T]):
-        plan = cpp("ndad::index_plan(self.shape, self.strides, self.offset, idx...)")
-        self.offset = self.offset
+        cpp("""
+ndad::assign_tensor(self.data, self.shape, self.strides, self.offset,
+                    value.data, value.shape, value.strides, value.offset, idx...);
+""")
 
     @operator("[]=")
     def set_scalar[Idx...](self, *idx: Idx, value: T):
-        plan = cpp("ndad::index_plan(self.shape, self.strides, self.offset, idx...)")
-        if len(cpp("plan.shape")) == 0:
-            self.data[cpp("static_cast<std::size_t>(plan.offset)")] = value
+        cpp("ndad::assign_scalar(self.data, self.shape, self.strides, self.offset, value, idx...);")
 
     @operator(">")
     def greater_than(self, value: T) -> BoolMask:

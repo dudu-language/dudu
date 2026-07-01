@@ -2,6 +2,7 @@
 
 from ndad import Tensor
 from ndad import arange
+from ndad import array
 from ndad import zeros
 
 
@@ -60,10 +61,23 @@ def main() -> i32:
     if writable.data[5] != 7:
         return 19
 
+    writable[:, 2] = 9
+    if writable.data[2] != 9:
+        return 20
+    if writable.data[5] != 9:
+        return 21
+
+    column = array[i32]([0, 1])
+    writable[:, 1] = column
+    if writable.data[1] != 0:
+        return 22
+    if writable.data[4] != 1:
+        return 23
+
     mask_source = zeros[i32](4)
     mask_source.data[1] = -1
     mask = mask_source < 0
     if mask.count_true() != 1:
-        return 20
+        return 24
 
     return 0

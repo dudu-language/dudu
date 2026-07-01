@@ -234,6 +234,27 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
     return out;
 }
 
+inline i64 element_count(const std::vector<i64>& shape) {
+    i64 total = 1;
+    for (const i64 dim : shape) {
+        total *= dim;
+    }
+    return shape.empty() ? 1 : total;
+}
+
+inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& strides, i64 offset,
+                       i64 flat) {
+    i64 source = offset;
+    for (std::size_t dim = shape.size(); dim > 0; --dim) {
+        const std::size_t axis = dim - 1;
+        const i64 extent = shape[axis];
+        const i64 coord = extent == 0 ? 0 : flat % extent;
+        flat = extent == 0 ? 0 : flat / extent;
+        source += coord * strides[axis];
+    }
+    return source;
+}
+
 template <class Shape, class Strides, class... Idx>
 IndexPlan index_plan(const Shape& shape, const Strides& strides, i64 offset, const Idx&... idx) {
     std::vector<IndexItem> items{make_index_item(idx)...};
@@ -247,6 +268,37 @@ IndexPlan cartesian_index_plan(const Shape& shape, const Strides& strides, i64 o
     std::vector<IndexItem> items{make_index_item(idx)...};
     return normalize_index(as_i64_shape(shape), as_i64_shape(strides), offset, std::move(items),
                            true);
+}
+
+template <class Data, class Shape, class Strides, class T, class... Idx>
+void assign_scalar(Data& data, const Shape& shape, const Strides& strides, i64 offset,
+                   const T& value, const Idx&... idx) {
+    const IndexPlan plan = index_plan(shape, strides, offset, idx...);
+    const i64 total = element_count(plan.shape);
+    for (i64 flat = 0; flat < total; ++flat) {
+        data[static_cast<std::size_t>(flat_offset(plan.shape, plan.strides, plan.offset, flat))] =
+            value;
+    }
+}
+
+template <class DestData, class DestShape, class DestStrides, class SrcData, class SrcShape,
+          class SrcStrides, class... Idx>
+void assign_tensor(DestData& dest_data, const DestShape& dest_shape,
+                   const DestStrides& dest_strides, i64 dest_offset, const SrcData& src_data,
+                   const SrcShape& src_shape, const SrcStrides& src_strides, i64 src_offset,
+                   const Idx&... idx) {
+    const IndexPlan dest = index_plan(dest_shape, dest_strides, dest_offset, idx...);
+    const std::vector<i64> source_shape = as_i64_shape(src_shape);
+    const std::vector<i64> source_strides = as_i64_shape(src_strides);
+    const i64 dest_count = element_count(dest.shape);
+    const i64 source_count = element_count(source_shape);
+    for (i64 flat = 0; flat < dest_count; ++flat) {
+        const i64 source_flat = source_count <= 1 ? 0 : flat % source_count;
+        dest_data[static_cast<std::size_t>(
+            flat_offset(dest.shape, dest.strides, dest.offset, flat))] =
+            src_data[static_cast<std::size_t>(
+                flat_offset(source_shape, source_strides, src_offset, source_flat))];
+    }
 }
 
 } // namespace ndad
