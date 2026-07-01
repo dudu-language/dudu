@@ -130,6 +130,14 @@ on a method receiver remains a separate receiver-typing design item; this
 fixture uses an ordinary helper function so it does not pretend that method
 receiver shape inference is done.
 
+Status: `ndad_broadcast_compatibility_runtime.dd` proves broadcasting
+compatibility is checked by the tensor library. `can_broadcast(matrix, row)`
+infers through shaped metadata on imported Dudu functions, while
+`can_broadcast(matrix, bad)` rejects incompatible right-aligned dimensions.
+Imported/native generic matching now peels shaped metadata when the expected
+parameter is an unshaped generic library type, so helper APIs such as
+`Tensor[T]` can accept `Tensor[i32][2, 3]` without explicit type arguments.
+
 ## Backend Choice
 
 Use the most portable useful stack first:

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -136,8 +137,23 @@ inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& st
 
 inline std::vector<i64> unravel_index(const std::vector<i64>& shape, i64 flat);
 
+inline bool broadcast_compatible(const std::vector<i64>& left, const std::vector<i64>& right) {
+    const std::size_t rank = std::max(left.size(), right.size());
+    for (std::size_t i = 0; i < rank; ++i) {
+        const i64 left_dim = i < left.size() ? left[left.size() - 1 - i] : 1;
+        const i64 right_dim = i < right.size() ? right[right.size() - 1 - i] : 1;
+        if (left_dim != right_dim && left_dim != 1 && right_dim != 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
 inline std::vector<i64> broadcast_shape(const std::vector<i64>& left,
                                         const std::vector<i64>& right) {
+    if (!broadcast_compatible(left, right)) {
+        throw std::runtime_error("incompatible tensor broadcast shapes");
+    }
     const std::size_t rank = std::max(left.size(), right.size());
     std::vector<i64> out(rank, 1);
     for (std::size_t i = 0; i < rank; ++i) {

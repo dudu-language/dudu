@@ -95,6 +95,11 @@ bool same_native_template_name(const std::string& expected, const std::string& g
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             NativeTemplateBindings& bindings) {
+    if (got.kind == TypeKind::Shaped && expected.kind != TypeKind::Shaped &&
+        !got.children.empty()) {
+        return bind_template_type_ref(expected, got.children.front(), bindings);
+    }
+
     const std::string expected_name = type_ref_head_name(expected);
     if ((expected.kind == TypeKind::Named || expected.kind == TypeKind::Qualified ||
          expected.kind == TypeKind::Value) &&

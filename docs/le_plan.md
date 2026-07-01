@@ -1274,7 +1274,13 @@ push. They are not release packaging work.
    Dudu's type system without leaking into emitted C++ template argument lists:
    `ndad_shape_preserving_helpers.dd` compiles and runs a same-shape tensor
    helper using `Dims...`, while the paired negative target diagnoses a
-   mismatched right-hand tensor in Dudu source.
+   mismatched right-hand tensor in Dudu source. Imported/native generic
+   matching now peels shaped metadata for unshaped generic parameters, so
+   library helpers such as `can_broadcast(left: Tensor[T], right: Tensor[T])`
+   infer `T` from `Tensor[i32][2, 3]` without explicit type arguments.
+   `ndad_broadcast_compatibility_runtime.dd` proves compatible row/column and
+   higher-rank broadcasting while rejecting incompatible dimensions in the
+   library layer.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

@@ -197,6 +197,12 @@ bool bind_pack_generic(const std::string& param, const std::vector<TypeRef>& arg
 bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_type,
                                 const std::vector<std::string>& params,
                                 GenericTypeBindings& bindings, std::string& error) {
+    if (arg_type.kind == TypeKind::Shaped && param_type.kind != TypeKind::Shaped &&
+        !arg_type.children.empty()) {
+        return infer_generic_binding_pack(param_type, arg_type.children.front(), params, bindings,
+                                          error);
+    }
+
     const std::string param = type_ref_head_name(param_type);
     if (generic_param_named(params, param)) {
         if (std::any_of(params.begin(), params.end(), [&](const std::string& candidate) {

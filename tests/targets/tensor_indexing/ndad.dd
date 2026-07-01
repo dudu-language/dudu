@@ -195,6 +195,10 @@ def array[T](values: list[T]) -> Tensor[T]:
     return tensor
 
 
+def can_broadcast[T](left: Tensor[T], right: Tensor[T]) -> bool:
+    return cpp("ndad::broadcast_compatible(left.shape, right.shape)")
+
+
 def matmul[T, M, K, N](
     left: Tensor[T][M, K],
     right: Tensor[T][K, N],
