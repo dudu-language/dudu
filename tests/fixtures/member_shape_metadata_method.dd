@@ -1,0 +1,17 @@
+class Box[T]:
+    rows: i32
+    cols: i32
+    value: T
+
+    def assume_shape[Rows, Cols](self) -> Box[T][Rows, Cols]:
+        return Box[T](self.rows, self.cols, self.value)
+
+
+def needs_static_shape(value: Box[i32][2, 2]) -> i32:
+    return value.rows + value.cols + 38
+
+
+def main() -> i32:
+    box = Box[i32](2, 2, 38)
+    shaped: Box[i32][2, 2] = box.assume_shape[2, 2]()
+    return needs_static_shape(shaped)

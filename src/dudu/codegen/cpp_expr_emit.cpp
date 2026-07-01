@@ -16,6 +16,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -25,6 +26,55 @@
 #include <vector>
 
 namespace dudu {
+namespace {
+
+std::vector<TypeRef> filter_template_type_args(const std::vector<TypeRef>& type_args,
+                                               const std::vector<std::string>& generic_params,
+                                               const std::vector<std::string>& cpp_params) {
+    if (cpp_params.size() >= type_args.size()) {
+        return type_args;
+    }
+    std::vector<TypeRef> filtered;
+    filtered.reserve(cpp_params.size());
+    for (const std::string& param : cpp_params) {
+        const auto found = std::find(generic_params.begin(), generic_params.end(), param);
+        if (found != generic_params.end()) {
+            const size_t index = static_cast<size_t>(found - generic_params.begin());
+            if (index < type_args.size()) {
+                filtered.push_back(type_args[index]);
+            }
+        }
+    }
+    return filtered;
+}
+
+std::vector<TypeRef>
+filter_member_template_type_args(const Expr& expr, std::vector<TypeRef> type_args,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
+                                 const Symbols& symbols) {
+    if (!has_expr_callee(expr) || expr_callee(expr).front().kind != ExprKind::Member ||
+        expr_callee(expr).front().children.size() != 1) {
+        return type_args;
+    }
+    const Expr& member = expr_callee(expr).front();
+    const TypeRef receiver_type =
+        infer_emitted_local_type_ref(member.children.front(), local_type_refs, {}, &symbols);
+    const ClassDecl* klass =
+        has_type_ref(receiver_type) ? class_for_receiver_type(symbols, receiver_type) : nullptr;
+    if (klass == nullptr) {
+        return type_args;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        if (method.name == member.name && !method.generic_params.empty()) {
+            return filter_template_type_args(type_args, method.generic_params,
+                                             generic_cpp_params_for_function(method));
+        }
+    }
+    return type_args;
+}
+
+} // namespace
+
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options);
@@ -290,25 +340,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         if (symbols != nullptr) {
             if (const auto decl = symbols->function_decls.find(callee);
                 decl != symbols->function_decls.end() && !decl->second->generic_params.empty()) {
-                const std::vector<std::string> cpp_params =
-                    generic_cpp_params_for_function(*decl->second);
-                if (cpp_params.size() < template_type_args.size()) {
-                    std::vector<TypeRef> filtered;
-                    filtered.reserve(cpp_params.size());
-                    for (const std::string& param : cpp_params) {
-                        const auto found = std::find(decl->second->generic_params.begin(),
-                                                     decl->second->generic_params.end(), param);
-                        if (found != decl->second->generic_params.end()) {
-                            const size_t index =
-                                static_cast<size_t>(found - decl->second->generic_params.begin());
-                            if (index < template_type_args.size()) {
-                                filtered.push_back(template_type_args[index]);
-                            }
-                        }
-                    }
-                    template_type_args = std::move(filtered);
-                }
+                template_type_args =
+                    filter_template_type_args(template_type_args, decl->second->generic_params,
+                                              generic_cpp_params_for_function(*decl->second));
             }
+            template_type_args = filter_member_template_type_args(
+                expr, std::move(template_type_args), local_type_refs, *symbols);
         }
         const std::string lowered_template_args =
             join_lowered_type_args(template_type_args, aliases, options);
