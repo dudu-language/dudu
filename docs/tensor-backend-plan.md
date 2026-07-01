@@ -93,8 +93,16 @@ Current target fixtures live in `tests/targets/tensor_indexing`. The manifest
 there records which examples already pass and which are intentional expected
 failures. Run `scripts/check_targets.sh` to verify that no target silently
 regressed and no expected-failure accidentally became a passing example without
-being promoted into the normal fixture suite. The checker uses `--emit-cpp`,
-not only semantic checking, so parser, sema, and codegen gaps remain visible.
+being promoted into the normal fixture suite. The checker uses `--emit-cpp`
+for normal pass/xfail cases, and `run` manifest entries compile and execute the
+generated C++ for behavior that must not be fakeable by successful emission.
+
+Status: `ndad_runtime_checks.dd` is a fast runtime fixture for the reference
+tensor surface. It checks row-major strides, slice offsets, ellipsis, new-axis
+insertion, direct advanced indexing, cartesian helper indexing, scalar
+assignment through `[]=` and boolean-mask construction. This is intentionally
+inside the Dudu repo so a fake rank-2 or ignored-index implementation cannot
+claim completion.
 
 ## Backend Choice
 
@@ -138,6 +146,13 @@ The exact API can evolve, but the important rule is that
 The core representation is rank-independent: `shape`, `strides`, and `offset`.
 `rows` and `cols` are allowed convenience methods on rank-2 values, not the
 foundation.
+
+Status: the in-repo `tests/targets/tensor_indexing/ndad.dd` reference surface
+now stores rank-independent `shape`, `strides`, and `offset` on `Tensor[T]` and
+`TensorView[T]`. Arbitrary-rank index normalization is implemented as ordinary
+library/native-boundary code in `ndad_native.hpp`; the compiler does not know
+the tensor names and only dispatches the normal `@operator("[]")` /
+`@operator("[]=")` hooks.
 
 ## External Baseline
 

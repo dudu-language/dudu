@@ -70,6 +70,14 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             }
             continue;
         }
+        if (match(TokenKind::Ellipsis)) {
+            const SourceLocation start = expr.range.start;
+            Expr pack = make_node_from_start(ExprKind::PackExpansion, start, cursor_);
+            pack.children.reserve(1);
+            pack.children.push_back(std::move(expr));
+            expr = std::move(pack);
+            continue;
+        }
         break;
     }
     return expr;

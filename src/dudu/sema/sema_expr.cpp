@@ -117,6 +117,15 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             sema_expr_fail(*location, "None new-axis item must be used inside an index");
         }
         return named_type_ref("new_axis", type_location);
+    case ExprKind::PackExpansion:
+        if (expr.children.size() != 1) {
+            if (location != nullptr) {
+                sema_expr_fail(*location, "malformed pack expansion");
+            }
+            return {};
+        }
+        return pack_expansion_type_ref(infer_expr_type_ast(scope, expr.children.front(), location),
+                                       type_location);
     case ExprKind::SetLiteral:
         return named_type_ref("set", type_location);
     case ExprKind::Name:

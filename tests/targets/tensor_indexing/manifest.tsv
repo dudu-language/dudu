@@ -1,9 +1,11 @@
 # file	status	expected diagnostic substring
 parser_index_items.dd	pass
+generic_pack_forwarding.dd	pass
 fixed_array_python_slices.dd	pass
 library_fixed_arity_hooks.dd	pass	
 library_variadic_hooks.dd	pass
 ndad_core.dd	pass
+ndad_runtime_checks.dd	run	0
 ndad_direct_pytorch_indexing.dd	pass
 ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass

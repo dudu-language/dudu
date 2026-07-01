@@ -1250,6 +1250,14 @@ push. They are not release packaging work.
    CPU-contiguous array compatibility should be zero-copy only when a library
    can prove it; GPU tensors, strided views, lazy expressions, and
    autograd-tracked values need explicit view/copy/move APIs.
+   Status update: `tests/targets/tensor_indexing` now includes a fast runtime
+   target for the in-repo `ndad` reference surface. It verifies row-major
+   strides, slice offsets, ellipsis, new-axis insertion, direct advanced
+   indexing, cartesian helper indexing, scalar `[]=` writes, and mask
+   construction by compiling and running generated C++. Expression-level pack
+   forwarding such as `idx...` is parsed as AST and works through ordinary
+   generic calls; variadic `[]=` hooks preserve Dudu source order while
+   emitting a C++-deducible value-before-pack ABI.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

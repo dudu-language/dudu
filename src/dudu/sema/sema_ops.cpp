@@ -60,6 +60,34 @@ bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeR
     return assignment_type_allowed(left, right_expr, right) || type_assignment_allowed(right, left);
 }
 
+bool pack_expansion_type_matches(const Symbols& symbols, const FunctionSignature& signature,
+                                 size_t arg_index, size_t arg_count, const TypeRef& expected,
+                                 const TypeRef& got) {
+    if (!signature.variadic || got.kind != TypeKind::PackExpansion || got.children.size() != 1) {
+        return false;
+    }
+    const size_t param_index = signature_param_index_for_arg(signature, arg_index, arg_count);
+    if (param_index != signature_variadic_param_index(signature)) {
+        return false;
+    }
+    return type_assignment_allowed(resolve_alias_ref(symbols, expected),
+                                   resolve_alias_ref(symbols, got.children.front()));
+}
+
+bool pack_expansion_arg_matches(const Symbols& symbols, const FunctionSignature& signature,
+                                size_t arg_index, const std::vector<Expr>& args,
+                                const TypeRef& expected, const TypeRef& got) {
+    if (args[arg_index].kind != ExprKind::PackExpansion || args[arg_index].children.size() != 1) {
+        return false;
+    }
+    if (!pack_expansion_type_matches(symbols, signature, arg_index, args.size(), expected, got)) {
+        return false;
+    }
+    return assignment_type_allowed(resolve_alias_ref(symbols, expected),
+                                   args[arg_index].children.front(),
+                                   resolve_alias_ref(symbols, got.children.front()));
+}
+
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
         "+",  "-",  "*", "/",  "%", "+=", "-=",   "*=", "/=",  "%=",
@@ -192,7 +220,9 @@ bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, arg_types.size()));
         if (!type_assignment_allowed(resolve_alias_ref(symbols, expected),
-                                     resolve_alias_ref(symbols, arg_types[i]))) {
+                                     resolve_alias_ref(symbols, arg_types[i])) &&
+            !pack_expansion_type_matches(symbols, signature, i, arg_types.size(), expected,
+                                         arg_types[i])) {
             return false;
         }
     }
@@ -214,7 +244,8 @@ bool signature_matches_args(const Symbols& symbols, const FunctionSignature& sig
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, args.size()));
         if (!assignment_type_allowed(resolve_alias_ref(symbols, expected), args[i],
-                                     resolve_alias_ref(symbols, arg_types[i]))) {
+                                     resolve_alias_ref(symbols, arg_types[i])) &&
+            !pack_expansion_arg_matches(symbols, signature, i, args, expected, arg_types[i])) {
             return false;
         }
     }

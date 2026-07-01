@@ -180,6 +180,13 @@ The compiler does not decide whether `tensor[rows, cols]` is pairwise gather,
 cartesian gather, a view, a lazy expression, or an owning result. The selected
 library operator decides that through its return type and implementation.
 
+Implementation status: expression-level pack expansion such as `idx...` is now
+parsed as structured AST and can be forwarded through ordinary generic calls.
+The code generator emits variadic `[]=` methods with the assigned value before
+the C++ parameter pack while preserving Dudu source syntax as
+`def set_at[Idx...](self, *idx: Idx, value: T)`. This keeps C++ template
+deduction valid without changing the Dudu surface.
+
 ## Python Numeric Target
 
 The following forms are target Dudu syntax. They should be accepted by the

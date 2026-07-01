@@ -1,0 +1,12 @@
+# Target: generic type packs can be forwarded through normal calls.
+
+def count[Idx...](*idx: Idx) -> i32:
+    return helper[Idx...](idx...)
+
+
+def helper[Idx...](*idx: Idx) -> i32:
+    return 2
+
+
+def main() -> i32:
+    return count(1, 2)

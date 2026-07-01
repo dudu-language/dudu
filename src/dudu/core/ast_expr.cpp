@@ -459,6 +459,9 @@ std::string display_expr(const Expr& expr) {
         return "...";
     case ExprKind::NewAxis:
         return "None";
+    case ExprKind::PackExpansion:
+        return expr.children.size() == 1 ? display_expr(expr.children.front()) + "..."
+                                         : malformed_expr_display("pack expansion");
     case ExprKind::Conditional:
     case ExprKind::DefExpression:
     case ExprKind::Comprehension:

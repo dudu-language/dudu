@@ -507,6 +507,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return "dudu::Ellipsis{}";
     case ExprKind::NewAxis:
         return "dudu::NewAxis{}";
+    case ExprKind::PackExpansion:
+        if (expr.children.size() == 1) {
+            return lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                              options) +
+                   "...";
+        }
+        break;
     case ExprKind::DictLiteral:
         return "{" +
                join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,

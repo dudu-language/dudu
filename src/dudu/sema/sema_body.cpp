@@ -450,11 +450,10 @@ void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
         return;
     }
 
-    const std::map<std::string, TypeRef> substitutions =
-        body_type_substitutions(fn.generic_params, type_args);
+    const BodyTypeSubstitutions substitutions = body_type_substitutions(fn.generic_params, type_args);
     std::vector<Stmt> body = substitute_body_types(fn.statements, substitutions);
     TypeRef return_type_ref = function_has_return_type(fn)
-                                  ? substitute_type_ref(fn.return_type_ref, substitutions)
+                                  ? substitute_type_ref(fn.return_type_ref, substitutions.scalar)
                                   : void_type_ref(fn.location);
 
     FunctionScope scope{caller_scope.symbols};
@@ -462,7 +461,7 @@ void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
     scope.target_mode = caller_scope.target_mode;
     scope.return_type_ref = return_type_ref;
     for (const ParamDecl& param : fn.params) {
-        bind_local(scope, param.name, substitute_type_ref(param.type_ref, substitutions));
+        bind_local(scope, param.name, substitute_type_ref(param.type_ref, substitutions.scalar));
     }
 
     active_instantiations.insert(instantiation);

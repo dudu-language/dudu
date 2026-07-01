@@ -132,6 +132,33 @@ std::string method_emit_name(const std::string& source_class_name, const Functio
     return emitted_reserved_member_name(source_class_name, method.name, options);
 }
 
+bool variadic_index_assignment_method(const FunctionDecl& method) {
+    if (function_decorator_arg(method, "operator") != "[]=" || method.params.empty()) {
+        return false;
+    }
+    for (size_t i = 0; i < method.params.size(); ++i) {
+        if (method.params[i].variadic && i + 1 < method.params.size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<size_t> emitted_method_param_order(const FunctionDecl& method, size_t first_param) {
+    std::vector<size_t> order;
+    if (variadic_index_assignment_method(method) && method.params.size() > first_param) {
+        order.push_back(method.params.size() - 1);
+        for (size_t i = first_param; i + 1 < method.params.size(); ++i) {
+            order.push_back(i);
+        }
+        return order;
+    }
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        order.push_back(i);
+    }
+    return order;
+}
+
 std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases,
                           const CppEmitOptions& options) {
     const std::string& class_name = emitted_name(klass, options);
@@ -338,14 +365,15 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                 << ' ' << lowered_name << '(';
         }
     }
-    for (size_t i = first_param; i < method.params.size(); ++i) {
-        if (i > first_param) {
+    const std::vector<size_t> param_order = emitted_method_param_order(method, first_param);
+    for (size_t i = 0; i < param_order.size(); ++i) {
+        if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(method_type_for_emit(method.params[i].type_ref, class_name,
-                                                   method.params[i].location),
+        const ParamDecl& param = method.params[param_order[i]];
+        out << lower_cpp_type(method_type_for_emit(param.type_ref, class_name, param.location),
                               aliases, options)
-            << (method.params[i].variadic ? "... " : " ") << method.params[i].name;
+            << (param.variadic ? "... " : " ") << param.name;
     }
     CppLocalContext locals;
     std::map<std::string, TypeRef> local_type_refs;

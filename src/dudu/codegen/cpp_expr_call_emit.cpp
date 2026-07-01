@@ -292,9 +292,14 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     }
     std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
     args.push_back(stmt.value_expr);
-    const auto method = dudu_operator_method_name_for_args(
-        *symbols, target.write_operator, receiver_type, args,
-        infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols));
+    const std::vector<TypeRef> arg_types =
+        infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols);
+    const auto signature =
+        dudu_operator_signature_for_args(*symbols, target.write_operator, receiver_type, args,
+                                         arg_types);
+    const auto method =
+        dudu_operator_method_name_for_args(*symbols, target.write_operator, receiver_type, args,
+                                           arg_types);
     std::optional<std::string> selected_method = method;
     if (!selected_method) {
         std::vector<TypeRef> arg_types =
@@ -310,11 +315,21 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (!selected_method) {
         return std::nullopt;
     }
+    std::vector<Expr> emitted_args = args;
+    if (signature && signature->variadic &&
+        signature_variadic_param_index(*signature) + 1 < signature_param_count(*signature) &&
+        !args.empty()) {
+        emitted_args.clear();
+        emitted_args.push_back(args.back());
+        emitted_args.insert(emitted_args.end(), args.begin(), args.end() - 1);
+    }
     const std::string lowered_receiver =
         lower_expr(hook_receiver, aliases, locals, local_type_refs, symbols, options);
     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
     return lowered_receiver + access + *selected_method + "(" +
-           join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
+           join_lowered_exprs(emitted_args, aliases, locals, local_type_refs, ", ", symbols,
+                              options) +
+           ")";
 }
 
 std::optional<std::string>

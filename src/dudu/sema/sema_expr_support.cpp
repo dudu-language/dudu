@@ -33,6 +33,28 @@ std::optional<TypeRef> index_marker_type_ref(const Expr& expr) {
     return std::nullopt;
 }
 
+bool pack_expansion_arg_matches(const FunctionScope& scope, const FunctionSignature& signature,
+                                size_t arg_index, size_t arg_count, const Expr& arg,
+                                const TypeRef& expected, const TypeRef& got) {
+    if (!signature.variadic || arg.kind != ExprKind::PackExpansion || arg.children.size() != 1 ||
+        got.kind != TypeKind::PackExpansion || got.children.size() != 1) {
+        return false;
+    }
+    const size_t param_index = signature_param_index_for_arg(signature, arg_index, arg_count);
+    if (param_index != signature_variadic_param_index(signature)) {
+        return false;
+    }
+    return can_assign_ast(scope, expected, arg.children.front(), got.children.front());
+}
+
+bool call_arg_matches_ast(const FunctionScope& scope, const FunctionSignature& signature,
+                          size_t arg_index, const std::vector<Expr>& args,
+                          const TypeRef& expected, const TypeRef& got) {
+    return can_assign_ast(scope, expected, args[arg_index], got) ||
+           pack_expansion_arg_matches(scope, signature, arg_index, args.size(), args[arg_index],
+                                      expected, got);
+}
+
 std::string template_args_label(const Expr& expr) {
     std::ostringstream out;
     const std::vector<TypeRef> args = template_type_refs(expr);
@@ -133,7 +155,7 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
         const std::optional<TypeRef> marker_type = index_marker_type_ref(args[i]);
         const TypeRef got_ref =
             marker_type ? *marker_type : infer_expr_type_ast(scope, args[i], location);
-        if (!can_assign_ast(scope, expected, args[i], got_ref)) {
+        if (!call_arg_matches_ast(scope, signature, i, args, expected, got_ref)) {
             const std::string expected_display = substitute_type_ref_text(expected, {});
             const std::string got_display = substitute_type_ref_text(got_ref, {});
             sema_expr_fail(*location, "argument " + std::to_string(i + 1) + " for " + callee +
@@ -197,7 +219,7 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
             marker_type ? *marker_type : infer_expr_type_ast(scope, args[i], nullptr);
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, args.size()));
-        if (!can_assign_ast(scope, expected, args[i], got)) {
+        if (!call_arg_matches_ast(scope, signature, i, args, expected, got)) {
             return false;
         }
     }

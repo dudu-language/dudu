@@ -177,6 +177,11 @@ parameters, comma indexing, member calls, and indexed mutation together.
 Partial indexing such as `mat[row]` now returns the remaining fixed-array row
 type, while over-indexing is diagnosed in Dudu source.
 
+Status: fixed-array slicing no longer uses rank-specific row, column, channel,
+or slab branches. Scalar and slice items lower through one shape/stride/offset
+view path, and tensor-library indexing is separately routed through ordinary
+operator hooks.
+
 ## Slicing
 
 Python slicing is valuable for numeric code:

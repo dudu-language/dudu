@@ -364,6 +364,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "ellipsis";
     case ExprKind::NewAxis:
         return "new_axis";
+    case ExprKind::PackExpansion:
+        return "pack_expansion";
     case ExprKind::SetLiteral:
         return "set_literal";
     case ExprKind::TupleLiteral:

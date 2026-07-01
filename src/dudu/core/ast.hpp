@@ -167,6 +167,7 @@ enum class ExprKind {
     Slice,
     Ellipsis,
     NewAxis,
+    PackExpansion,
     SetLiteral,
     TupleLiteral,
     DefExpression,

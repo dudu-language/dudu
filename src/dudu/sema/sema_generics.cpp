@@ -667,7 +667,12 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     std::vector<TypeRef> param_types;
     param_types.reserve(fn.params.size());
     for (const ParamDecl& param : fn.params) {
-        param_types.push_back(substitute_generic_type_ref(param.type_ref, substitutions));
+        TypeRef param_type = substitute_generic_type_ref(param.type_ref, substitutions);
+        if (param.variadic && generic_pack_param_named(fn.generic_params,
+                                                       type_ref_head_name(param.type_ref))) {
+            param_type = named_type_ref("auto", param.location);
+        }
+        param_types.push_back(std::move(param_type));
     }
     set_signature_param_types(signature, std::move(param_types));
     for (size_t i = 0; i < fn.params.size(); ++i) {

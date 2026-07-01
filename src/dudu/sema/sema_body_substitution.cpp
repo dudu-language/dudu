@@ -2,26 +2,83 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 
 #include <sstream>
 
 namespace dudu {
 namespace {
 
-void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& substitutions) {
-    if (const auto replacement = substitutions.find(expr.name);
-        expr.kind == ExprKind::Name && replacement != substitutions.end()) {
+TypeRef substitute_type_ref_pack_aware(const TypeRef& type,
+                                       const BodyTypeSubstitutions& substitutions);
+
+bool pack_expansion_name(const TypeRef& type, std::string& out) {
+    if (type.kind != TypeKind::PackExpansion || type.children.size() != 1) {
+        return false;
+    }
+    out = type_ref_head_name(type.children.front());
+    return !out.empty();
+}
+
+std::vector<TypeRef>
+substitute_type_ref_list_pack_aware(const std::vector<TypeRef>& types,
+                                    const BodyTypeSubstitutions& substitutions) {
+    std::vector<TypeRef> out;
+    for (const TypeRef& type : types) {
+        std::string pack_name;
+        if (pack_expansion_name(type, pack_name)) {
+            if (const auto pack = substitutions.packs.find(pack_name);
+                pack != substitutions.packs.end()) {
+                out.insert(out.end(), pack->second.begin(), pack->second.end());
+                continue;
+            }
+        }
+        out.push_back(substitute_type_ref_pack_aware(type, substitutions));
+    }
+    return out;
+}
+
+TypeRef substitute_type_ref_pack_aware(const TypeRef& type,
+                                       const BodyTypeSubstitutions& substitutions) {
+    const std::string key = type_ref_head_name(type);
+    if (!key.empty()) {
+        if (const auto found = substitutions.scalar.find(key); found != substitutions.scalar.end()) {
+            if (type.kind == TypeKind::Template && !type.children.empty()) {
+                TypeRef out = type;
+                out.name = type_ref_head_name(found->second);
+                out.location = type.location;
+                out.children = substitute_type_ref_list_pack_aware(type.children, substitutions);
+                return out;
+            }
+            TypeRef out = found->second;
+            out.location = type.location;
+            return out;
+        }
+    }
+    TypeRef out = type;
+    out.children = substitute_type_ref_list_pack_aware(out.children, substitutions);
+    return out;
+}
+
+BodyTypeSubstitutions scalar_body_type_substitutions(
+    const std::map<std::string, TypeRef>& substitutions) {
+    BodyTypeSubstitutions out;
+    out.scalar = substitutions;
+    return out;
+}
+
+void substitute_expr_types(Expr& expr, const BodyTypeSubstitutions& substitutions) {
+    if (const auto replacement = substitutions.scalar.find(expr.name);
+        expr.kind == ExprKind::Name && replacement != substitutions.scalar.end()) {
         expr.name = substitute_type_ref_text(replacement->second, {});
     }
     if (has_expr_type_ref(expr)) {
-        set_expr_type_ref(expr, substitute_type_ref(expr_type_ref(expr), substitutions));
+        set_expr_type_ref(expr, substitute_type_ref_pack_aware(expr_type_ref(expr), substitutions));
     }
     if (has_expr_template_type_args(expr)) {
         std::vector<TypeRef> type_args = expr_template_type_args(expr);
-        for (TypeRef& type_arg : type_args) {
-            type_arg = substitute_type_ref(type_arg, substitutions);
-        }
-        set_expr_template_type_args(expr, std::move(type_args));
+        set_expr_template_type_args(
+            expr, substitute_type_ref_list_pack_aware(type_args, substitutions));
     }
     for (Expr& child : expr.children) {
         substitute_expr_types(child, substitutions);
@@ -34,9 +91,9 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
     }
 }
 
-void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& substitutions) {
+void substitute_stmt_types(Stmt& stmt, const BodyTypeSubstitutions& substitutions) {
     if (has_stmt_type_ref(stmt)) {
-        set_stmt_type_ref(stmt, substitute_type_ref(stmt_type_ref(stmt), substitutions));
+        set_stmt_type_ref(stmt, substitute_type_ref_pack_aware(stmt_type_ref(stmt), substitutions));
     }
     substitute_expr_types(stmt.expr, substitutions);
     substitute_expr_types(stmt.value_expr, substitutions);
@@ -77,11 +134,19 @@ void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& sub
 
 } // namespace
 
-std::map<std::string, TypeRef> body_type_substitutions(const std::vector<std::string>& params,
-                                                       const std::vector<TypeRef>& args) {
-    std::map<std::string, TypeRef> out;
-    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], args[i]);
+BodyTypeSubstitutions body_type_substitutions(const std::vector<std::string>& params,
+                                              const std::vector<TypeRef>& args) {
+    BodyTypeSubstitutions out;
+    size_t arg_index = 0;
+    for (size_t i = 0; i < params.size() && arg_index < args.size(); ++i) {
+        const std::string name = generic_param_base_name(params[i]);
+        if (generic_param_is_pack(params[i])) {
+            out.scalar.emplace(name, named_type_ref("auto"));
+            out.packs.emplace(name, std::vector<TypeRef>(args.begin() + arg_index, args.end()));
+            break;
+        }
+        out.scalar.emplace(name, args[arg_index]);
+        ++arg_index;
     }
     return out;
 }
@@ -101,6 +166,11 @@ std::string body_instantiated_label(const std::string& name, const std::vector<T
 
 std::vector<Stmt> substitute_body_types(std::vector<Stmt> body,
                                         const std::map<std::string, TypeRef>& substitutions) {
+    return substitute_body_types(std::move(body), scalar_body_type_substitutions(substitutions));
+}
+
+std::vector<Stmt> substitute_body_types(std::vector<Stmt> body,
+                                        const BodyTypeSubstitutions& substitutions) {
     for (Stmt& stmt : body) {
         substitute_stmt_types(stmt, substitutions);
     }

@@ -427,6 +427,12 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return named_type_ref("ellipsis", expr.location);
     case ExprKind::NewAxis:
         return named_type_ref("new_axis", expr.location);
+    case ExprKind::PackExpansion:
+        if (expr.children.size() != 1) {
+            return {};
+        }
+        return pack_expansion_type_ref(infer_emitted_local_type_ref(
+            expr.children.front(), local_type_refs, function_returns, symbols));
     case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:

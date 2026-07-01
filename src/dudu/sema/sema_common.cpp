@@ -37,6 +37,9 @@ void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& ty
 }
 
 bool explicit_generic_arg_known(const Symbols& symbols, const TypeRef& type_arg) {
+    if (type_arg.kind == TypeKind::PackExpansion && type_arg.children.size() == 1) {
+        return explicit_generic_arg_known(symbols, type_arg.children.front());
+    }
     const std::string name = type_ref_head_name(type_arg);
     if (!name.empty() && type_arg.children.empty() && symbols.generic_params.contains(name)) {
         return true;
