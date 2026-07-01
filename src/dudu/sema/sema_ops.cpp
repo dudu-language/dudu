@@ -88,11 +88,30 @@ TypeRef operator_self_type_ref(const Symbols& symbols, const TypeRef& receiver,
     return has_type_ref(self) ? self : named_type_ref(klass.name, receiver.location);
 }
 
+std::vector<TypeRef> receiver_template_args(const Symbols& symbols, TypeRef receiver) {
+    receiver = resolve_alias_ref(symbols, std::move(receiver));
+    while (true) {
+        if (receiver.kind == TypeKind::Template) {
+            return receiver.children;
+        }
+        if (!receiver.children.empty() &&
+            (receiver.kind == TypeKind::Pointer || receiver.kind == TypeKind::Reference ||
+             receiver.kind == TypeKind::Const || receiver.kind == TypeKind::Volatile ||
+             receiver.kind == TypeKind::Atomic || receiver.kind == TypeKind::Storage ||
+             receiver.kind == TypeKind::Shared || receiver.kind == TypeKind::Device ||
+             receiver.kind == TypeKind::Shaped)) {
+            receiver = resolve_alias_ref(symbols, receiver.children.front());
+            continue;
+        }
+        return {};
+    }
+}
+
 TypeRef operator_method_type_ref(const Symbols& symbols, const TypeRef& receiver,
                                  const ClassDecl& klass, const TypeRef& type) {
     std::map<std::string, TypeRef> substitutions;
     substitutions.emplace("Self", operator_self_type_ref(symbols, receiver, klass));
-    const std::vector<TypeRef> receiver_args = template_type_arg_refs(receiver, klass.name);
+    const std::vector<TypeRef> receiver_args = receiver_template_args(symbols, receiver);
     for (size_t i = 0; i < klass.generic_params.size() && i < receiver_args.size(); ++i) {
         substitutions.emplace(klass.generic_params[i], receiver_args[i]);
     }
@@ -141,7 +160,7 @@ dudu_operator_candidates(const Symbols& symbols, const std::string& op, const Ty
     return out;
 }
 
-bool signature_matches_arg_types(const FunctionSignature& signature,
+bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature& signature,
                                  const std::vector<TypeRef>& arg_types) {
     if (signature_param_count(signature) != arg_types.size()) {
         return false;
@@ -150,15 +169,16 @@ bool signature_matches_arg_types(const FunctionSignature& signature,
         if (!has_type_ref(arg_types[i])) {
             return false;
         }
-        if (!type_assignment_allowed(signature_param_type_ref(signature, i), arg_types[i])) {
+        if (!type_assignment_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, i)),
+                                     resolve_alias_ref(symbols, arg_types[i]))) {
             return false;
         }
     }
     return true;
 }
 
-bool signature_matches_args(const FunctionSignature& signature, const std::vector<Expr>& args,
-                            const std::vector<TypeRef>& arg_types) {
+bool signature_matches_args(const Symbols& symbols, const FunctionSignature& signature,
+                            const std::vector<Expr>& args, const std::vector<TypeRef>& arg_types) {
     if (signature_param_count(signature) != args.size() || args.size() != arg_types.size()) {
         return false;
     }
@@ -166,8 +186,8 @@ bool signature_matches_args(const FunctionSignature& signature, const std::vecto
         if (!has_type_ref(arg_types[i])) {
             return false;
         }
-        if (!assignment_type_allowed(signature_param_type_ref(signature, i), args[i],
-                                     arg_types[i])) {
+        if (!assignment_type_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, i)),
+                                     args[i], resolve_alias_ref(symbols, arg_types[i]))) {
             return false;
         }
     }
@@ -253,7 +273,7 @@ dudu_operator_signature_for_args(const Symbols& symbols, std::string_view op, co
     const std::string op_text(op);
     for (const DuduOperatorCandidate& candidate :
          dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_args(candidate.signature, args, arg_types)) {
+        if (signature_matches_args(symbols, candidate.signature, args, arg_types)) {
             return candidate.signature;
         }
     }
@@ -266,7 +286,7 @@ dudu_operator_signature_for_arg_types(const Symbols& symbols, std::string_view o
     const std::string op_text(op);
     for (const DuduOperatorCandidate& candidate :
          dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_arg_types(candidate.signature, arg_types)) {
+        if (signature_matches_arg_types(symbols, candidate.signature, arg_types)) {
             return candidate.signature;
         }
     }
@@ -280,7 +300,7 @@ dudu_operator_method_name_for_arg_types(const Symbols& symbols, std::string_view
     const std::string op_text(op);
     for (const DuduOperatorCandidate& candidate :
          dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_arg_types(candidate.signature, arg_types)) {
+        if (signature_matches_arg_types(symbols, candidate.signature, arg_types)) {
             return candidate.method_name;
         }
     }
@@ -294,7 +314,7 @@ dudu_operator_method_name_for_args(const Symbols& symbols, std::string_view op, 
     const std::string op_text(op);
     for (const DuduOperatorCandidate& candidate :
          dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_args(candidate.signature, args, arg_types)) {
+        if (signature_matches_args(symbols, candidate.signature, args, arg_types)) {
             return candidate.method_name;
         }
     }
@@ -317,7 +337,8 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
         }
         FunctionSignature signature = operator_method_signature(symbols, left, *klass, method);
         if (signature_param_count(signature) == 0 ||
-            assignment_type_allowed(signature_param_type_ref(signature, 0), right_expr, right)) {
+            assignment_type_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, 0)),
+                                    right_expr, resolve_alias_ref(symbols, right))) {
             return signature;
         }
     }

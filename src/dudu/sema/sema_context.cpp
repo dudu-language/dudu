@@ -209,7 +209,8 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
 TypeRef resolve_alias_ref_impl(const Symbols& symbols, TypeRef type, std::set<std::string>& seen) {
     std::vector<std::string> inserted_names;
     while (true) {
-        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified &&
+            type.kind != TypeKind::Template) {
             break;
         }
         const std::string name = type.name;
@@ -219,6 +220,10 @@ TypeRef resolve_alias_ref_impl(const Symbols& symbols, TypeRef type, std::set<st
         inserted_names.push_back(name);
         const auto found = symbols.alias_type_refs.find(name);
         if (found == symbols.alias_type_refs.end()) {
+            break;
+        }
+        if (type.kind == TypeKind::Template) {
+            type.name = type_ref_head_name(found->second);
             break;
         }
         type = found->second;

@@ -2,7 +2,11 @@ from tensor import Tensor
 from tensor import make_tensor
 
 
+def make_local() -> Tensor[i32]:
+    return make_tensor[i32](20, 2)
+
+
 def main() -> i32:
-    tensor = make_tensor[i32](20, 2)
+    tensor: Tensor[i32] = make_local()
     tensor[1] = 22
     return tensor[0] + tensor[1]

@@ -1,0 +1,30 @@
+class Box[T]:
+    values: list[T]
+
+    @operator("[]")
+    def at(self, index: i32) -> T:
+        return self.values[index]
+
+    @operator("[]=")
+    def set_at(self, index: i32, value: T):
+        self.values[index] = value
+
+    @operator("+")
+    def add(self, other: Box[T]) -> Box[T]:
+        values: list[T] = []
+        values.append(self[0] + other[0])
+        values.append(self[1] + other[1])
+        return Box[T](values)
+
+    def clone(self) -> Box[T]:
+        values: list[T] = []
+        values.append(self[0])
+        values.append(self[1])
+        return Box[T](values)
+
+
+def make_box[T](a: T, b: T) -> Box[T]:
+    values: list[T] = []
+    values.append(a)
+    values.append(b)
+    return Box[T](values)

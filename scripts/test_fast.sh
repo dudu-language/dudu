@@ -106,6 +106,24 @@ if [[ "$imported_generic_index_status" -ne 42 ]]; then
     echo "project_imported_generic_index returned $imported_generic_index_status, expected 42" >&2
     exit 1
 fi
+imported_generic_method_dir="$repo_root/build/project_imported_generic_method_return"
+rm -rf "$imported_generic_method_dir"
+mkdir -p "$imported_generic_method_dir/generated"
+"$repo_root/build/duc" emit-modules \
+    "$repo_root/tests/fixtures/project_imported_generic_method_return/main.dd" \
+    -o "$imported_generic_method_dir/generated" >/dev/null
+grep -Fq 'summed.set_at(0, (summed.at(0) + 1));' "$imported_generic_method_dir/generated/main.cpp"
+grep -Fq 'summed.at(0) + summed.at(1)' "$imported_generic_method_dir/generated/main.cpp"
+"${CXX:-c++}" -std=c++20 -I"$imported_generic_method_dir/generated" \
+    "$imported_generic_method_dir"/generated/*.cpp -o "$imported_generic_method_dir/app"
+set +e
+"$imported_generic_method_dir/app"
+imported_generic_method_status=$?
+set -e
+if [[ "$imported_generic_method_status" -ne 42 ]]; then
+    echo "project_imported_generic_method_return returned $imported_generic_method_status, expected 42" >&2
+    exit 1
+fi
 compile_and_expect custom_indexer_objects 42
 compile_and_expect tensor_slice_views 42
 compile_path_and_expect tensor_dogfood_views tests/fixtures/tensor_dogfood/views_main.dd 42

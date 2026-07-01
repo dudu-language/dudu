@@ -1,0 +1,11 @@
+from box import Box
+from box import make_box
+
+
+def main() -> i32:
+    left = make_box[i32](10, 10)
+    right = make_box[i32](7, 14)
+    cloned = left.clone()
+    summed = cloned + right
+    summed[0] = summed[0] + 1
+    return summed[0] + summed[1]
