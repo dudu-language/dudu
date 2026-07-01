@@ -1,0 +1,6 @@
+from backends import cpu
+
+
+def main() -> i32:
+    device = cpu.default()
+    return device.id + 1

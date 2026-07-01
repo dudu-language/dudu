@@ -429,9 +429,9 @@ Support class-scoped constants, static data, and static functions.
 
 Status: class-scoped `ALL_CAPS` constants are static constants,
 `name: static[T] = value` is mutable class-shared state, and functions inside a
-class with no `self` are class-scoped functions. Broader module and namespace
-constants remain a candidate if real examples need cleaner organization than
-file-level constants.
+class with no `self` are class-scoped functions. Module-scope `ALL_CAPS`
+bindings remain constants; module-scope snake_case typed bindings are supported
+for exported singleton-style values such as backend marker objects.
 
 Python, Rust, C, and C++ all have ways to hang values off a type or namespace.
 Dudu needs that so constants and helpers do not all live in the global module

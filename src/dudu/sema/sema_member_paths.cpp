@@ -1,6 +1,7 @@
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
@@ -9,7 +10,6 @@
 #include "dudu/sema/sema_native.hpp"
 #include "dudu/sema/sema_scan.hpp"
 #include "dudu/sema/sema_scope.hpp"
-#include "dudu/core/source.hpp"
 
 namespace dudu {
 namespace {
@@ -152,6 +152,10 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         if (const TypeRef local = local_type_ref(local_type_refs, expr.name, type_location);
             has_type_ref(local)) {
             return local;
+        }
+        if (const auto value = symbols.native_value_type_refs.find(expr.name);
+            value != symbols.native_value_type_refs.end()) {
+            return value->second;
         }
         if (symbols.classes.contains(expr.name)) {
             return named_type_ref(expr.name, expr.location);

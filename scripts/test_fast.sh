@@ -40,6 +40,24 @@ compile_and_expect literal_symbol_context 20
 compile_and_expect member_expr_receiver 42
 compile_and_expect method_expr_receiver 42
 compile_path_and_expect project_keyword_method tests/fixtures/project_keyword_method/main.dd 42
+lowercase_const_dir="$repo_root/build/project_lowercase_const_import"
+rm -rf "$lowercase_const_dir"
+mkdir -p "$lowercase_const_dir/generated"
+"$repo_root/build/duc" emit-modules \
+    "$repo_root/tests/fixtures/project_lowercase_const_import/main.dd" \
+    -o "$lowercase_const_dir/generated" >/dev/null
+grep -Fq 'dudu_backends_cpu.dudu_backends_CpuBackend_default()' \
+    "$lowercase_const_dir/generated/main.cpp"
+"${CXX:-c++}" -std=c++20 -I"$lowercase_const_dir/generated" \
+    "$lowercase_const_dir"/generated/*.cpp -o "$lowercase_const_dir/app"
+set +e
+"$lowercase_const_dir/app"
+lowercase_const_status=$?
+set -e
+if [[ "$lowercase_const_status" -ne 42 ]]; then
+    echo "project_lowercase_const_import returned $lowercase_const_status, expected 42" >&2
+    exit 1
+fi
 compile_and_expect named_callback 42
 compile_and_expect function_values 42
 compile_and_expect fixed_arrays 42

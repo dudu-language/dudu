@@ -5,6 +5,12 @@
 namespace dudu {
 namespace {
 
+bool typed_value_receiver(const FunctionScope& scope, const Expr& expr) {
+    return expr.kind == ExprKind::Name &&
+           (scope.local_type_refs.contains(expr.name) ||
+            scope.symbols.native_value_type_refs.contains(expr.name));
+}
+
 std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                               const std::string& callee,
                                               const std::string& method_name,
@@ -31,7 +37,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         return signature_return_type_ref(signature);
     }
     const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver_expr.name);
+        receiver_expr.kind == ExprKind::Name && !typed_value_receiver(scope, receiver_expr);
     if (bare_nonlocal_receiver) {
         return std::nullopt;
     }
@@ -75,7 +81,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
     const Expr& member = expr_callee(expr).front();
     const Expr& receiver_expr = member.children.front();
     const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver_expr.name);
+        receiver_expr.kind == ExprKind::Name && !typed_value_receiver(scope, receiver_expr);
     const bool static_class_receiver =
         receiver_expr.kind == ExprKind::Name &&
         (receiver_expr.name == "class" || scope.symbols.classes.contains(receiver_expr.name));

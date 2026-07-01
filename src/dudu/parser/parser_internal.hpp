@@ -29,6 +29,7 @@ class Parser {
     const Token& current() const;
     const Token& previous() const;
     bool at(TokenKind kind) const;
+    bool at_next(TokenKind kind) const;
     bool check_text(std::string_view text) const;
     template <size_t N> bool check_text(const char (&text)[N]) const {
         return token_text_is(current(), TokenKind::Identifier, text);
@@ -55,9 +56,8 @@ class Parser {
     ImportDecl parse_foreign_import(const Token& start, ImportKind kind, size_t statement_begin);
     ImportDecl parse_from_import(const Token& start);
     ImportDecl parse_foreign_from_import(const Token& start, ImportKind kind,
-                                         NativeIncludeStyle include_style,
-                                         size_t statement_begin, size_t native_module_begin,
-                                         size_t native_mode_index);
+                                         NativeIncludeStyle include_style, size_t statement_begin,
+                                         size_t native_module_begin, size_t native_mode_index);
     JoinedTokens parse_foreign_header_target();
     std::string parse_path();
 

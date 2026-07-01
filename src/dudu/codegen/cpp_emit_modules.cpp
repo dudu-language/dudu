@@ -106,6 +106,25 @@ void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, b
     }
 }
 
+void add_reserved_method_generated_names(CppEmitOptions& options, const std::string& type_name,
+                                         const ClassDecl& klass) {
+    for (const FunctionDecl& method : klass.methods) {
+        if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
+            !cpp_emit_function_has_decorator(method, "operator")) {
+            options.generated_value_names[type_name + "." + method.name] = method.cpp_name;
+        }
+    }
+}
+
+const ClassDecl* dependency_class_named(const ModuleAst& dependency, const std::string& name) {
+    for (const ClassDecl& klass : dependency.classes) {
+        if (klass.name == name) {
+            return &klass;
+        }
+    }
+    return nullptr;
+}
+
 void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& dependency,
                                   const ImportDecl& import, bool public_abi, bool test_source) {
     const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
@@ -143,6 +162,11 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
     for (const ConstDecl& constant : dependency.constants) {
         if ((!selective || constant.name == import.imported_name) && !constant.cpp_name.empty()) {
             options.generated_value_names[expose(constant.name)] = constant.cpp_name;
+            const std::string type_name = type_ref_head_name(constant.type_ref);
+            if (const ClassDecl* klass = dependency_class_named(dependency, type_name)) {
+                add_reserved_method_generated_names(options, import.module_path + "." + type_name,
+                                                    *klass);
+            }
         }
     }
     for (const FunctionDecl& fn : dependency.functions) {

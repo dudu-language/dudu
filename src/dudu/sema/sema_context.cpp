@@ -20,8 +20,7 @@ namespace {
 bool is_builtin_type(const std::string& type) {
     static const std::set<std::string> builtins = {"bool", "char", "i8",   "i16", "i32",   "i64",
                                                    "u8",   "u16",  "u32",  "u64", "isize", "usize",
-                                                   "f32",  "f64",  "void", "str", "cstr",
-                                                   "slice"};
+                                                   "f32",  "f64",  "void", "str", "cstr",  "slice"};
     return builtins.contains(type);
 }
 
@@ -425,6 +424,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const ConstDecl& constant : module.constants) {
         add_name(names, constant.name, constant.location);
+        symbols.native_value_type_refs[constant.name] = constant.type_ref;
     }
     return symbols;
 }

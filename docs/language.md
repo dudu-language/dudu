@@ -18,6 +18,7 @@ Core forms:
 - `def name(args...) -> Return:`
 - typed locals: `name: Type = value`
 - constants: `ALL_CAPS: Type = value`
+- module values/singletons: `name: Type = value`
 - pointers: `*T`
 - references: `&T`
 - const-qualified types: `const[T]`

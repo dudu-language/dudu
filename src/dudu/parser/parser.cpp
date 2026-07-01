@@ -145,7 +145,7 @@ ModuleAst Parser::parse() {
                 attach_out_of_line_method(module, std::move(fn));
             }
             decorators.clear();
-        } else if (is_all_caps_identifier(current())) {
+        } else if (current().kind == TokenKind::Identifier && at_next(TokenKind::Colon)) {
             require_no_decorators(decorators, "constant");
             module.constants.push_back(parse_constant());
         } else if (check_text("static_assert")) {
@@ -171,6 +171,10 @@ const Token& Parser::previous() const {
 
 bool Parser::at(TokenKind kind) const {
     return current().kind == kind;
+}
+
+bool Parser::at_next(TokenKind kind) const {
+    return cursor_ + 1 < tokens_.size() && tokens_[cursor_ + 1].kind == kind;
 }
 
 bool Parser::check_text(std::string_view text) const {
@@ -329,10 +333,9 @@ ImportDecl Parser::parse_from_import(const Token& start) {
             kind = ImportKind::ForeignCxx;
         }
         const size_t native_mode_index = path_mode ? module_begin + 2 : module_begin;
-        return parse_foreign_from_import(start, kind,
-                                         path_mode ? NativeIncludeStyle::Path
-                                                   : NativeIncludeStyle::System,
-                                         statement_begin, module_begin, native_mode_index);
+        return parse_foreign_from_import(
+            start, kind, path_mode ? NativeIncludeStyle::Path : NativeIncludeStyle::System,
+            statement_begin, module_begin, native_mode_index);
     }
     const Token& imported_name = consume_identifier("expected imported name");
     import.imported_name = imported_name.text;

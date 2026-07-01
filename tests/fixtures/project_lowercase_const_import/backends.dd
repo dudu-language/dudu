@@ -1,0 +1,10 @@
+class CpuDevice:
+    id: i32
+
+
+class CpuBackend:
+    def default() -> CpuDevice:
+        return CpuDevice(41)
+
+
+cpu: CpuBackend = CpuBackend()

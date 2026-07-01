@@ -56,7 +56,8 @@ Implement this first:
 - labeled `for`/`while` loops with `break label` and `continue label`.
 - typed local annotations: `x: i32 = 0`.
 - local type inference from clear initializers.
-- constants via mandatory `ALL_CAPS` bindings.
+- constants via mandatory `ALL_CAPS` bindings and snake_case module values for
+  exported singleton-style objects.
 - compile-time build flags through `build.NAME`.
 - static assertions with `static_assert(...)`.
 - compile-time functions with `@constexpr`.
@@ -549,6 +550,7 @@ Warn/error on naming for Dudu-native declarations:
 
 - types: `PascalCase`
 - constants: `ALL_CAPS`
+- module values/singletons: `snake_case`
 - functions, locals, fields: `snake_case`
 - imported names: preserved
 

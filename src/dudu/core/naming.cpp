@@ -140,8 +140,9 @@ void check_naming(const ModuleAst& module) {
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        if (!is_dudu_all_caps(constant.name)) {
-            fail_naming(constant.location, "constant names must be ALL_CAPS", constant.name);
+        if (!is_dudu_all_caps(constant.name) && !is_dudu_snake_case(constant.name)) {
+            fail_naming(constant.location, "module values must be snake_case or ALL_CAPS",
+                        constant.name);
         }
     }
     for (const ClassDecl& klass : module.classes) {

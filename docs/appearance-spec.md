@@ -63,8 +63,9 @@ GL_TEXTURE_2D
 ```
 
 For Dudu-native declarations, uppercase spelling is semantic. An `ALL_CAPS`
-binding is a constant and cannot be reassigned. Non-constant bindings must not
-use all-caps names.
+binding is a constant and cannot be reassigned. Snake_case module-scope typed
+bindings are allowed for exported values and singleton-style module objects.
+Non-constant bindings must not use all-caps names.
 
 ## Imports
 
@@ -236,12 +237,15 @@ scale = 2.0
 player = make_player()
 ```
 
-Constants use mandatory `ALL_CAPS` names.
+Constants use mandatory `ALL_CAPS` names. Module-scope exported values that are
+not intended to read as compile-time constants use snake_case.
 
 ```python
 MAX_PLAYERS: i32 = 64
 PI: f32 = 3.14159265
 TITLE = "Dudu"
+
+cpu: CpuBackend = CpuBackend()
 ```
 
 An `ALL_CAPS` binding cannot be reassigned. At module scope, compile-time
