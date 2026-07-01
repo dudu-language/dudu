@@ -954,10 +954,17 @@ Status:
   prints verifiable results.
 - Done for proof only: the compiler repo and `dudu-datascience` prove CBLAS
   interop with tiny row-major tensors.
-- Remaining for the actual target API: build a reusable `dudu_tensor` library
-  that satisfies the target files in `dudu-datascience/spec/target_api`,
-  including owning tensors, view types, explicit materialization, shape
-  metadata, broadcasting, backend dispatch, and diagnostics.
+- Dogfood target API status is now tracked by
+  `/home/vega/Coding/ML/dudu-datascience/spec/target_api/manifest.tsv` and
+  verified by `/home/vega/Coding/ML/dudu-datascience/scripts/check_target_api.sh`.
+  The graduated specs `tensor_surface.dd`, `advanced_indexing.dd`, and
+  `blas_backend.dd` have named runnable `dudu` targets. The pending specs
+  `gpu_backend.dd` and `autograd_training.dd` stay listed with explicit
+  missing implementation reasons instead of silently rotting.
+- Remaining for the actual target API: finish the reusable `dudu_tensor`
+  library and optional backend/autograd modules so the pending target files
+  graduate too, including real OpenCL device storage, backend dispatch,
+  autograd parameters/modules, backward, optimizers, and diagnostics.
 
 ### 3. Optional OpenBLAS Probe
 

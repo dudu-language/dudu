@@ -1320,6 +1320,13 @@ push. They are not release packaging work.
    pairwise `tensor[rows, cols] +=`, `*=`, and `-=` updates plus mixed
    slice/scalar `tensor[:, 0] +=` updates select `[]=` using the computed
    compound tensor value type, not a rank-specific compiler tensor path.
+   The external `dudu-datascience` dogfood target API is now tracked by
+   `spec/target_api/manifest.tsv` and verified by
+   `scripts/check_target_api.sh`: `tensor_surface.dd`,
+   `advanced_indexing.dd`, and `blas_backend.dd` have graduated into named
+   runnable `dudu` targets, while `gpu_backend.dd` and
+   `autograd_training.dd` remain explicitly pending for real OpenCL device
+   storage/backend dispatch and PyTorch-like autograd modules/optimizers.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
