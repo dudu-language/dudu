@@ -93,7 +93,8 @@ Current target fixtures live in `tests/targets/tensor_indexing`. The manifest
 there records which examples already pass and which are intentional expected
 failures. Run `scripts/check_targets.sh` to verify that no target silently
 regressed and no expected-failure accidentally became a passing example without
-being promoted into the normal fixture suite.
+being promoted into the normal fixture suite. The checker uses `--emit-cpp`,
+not only semantic checking, so parser, sema, and codegen gaps remain visible.
 
 ## Backend Choice
 

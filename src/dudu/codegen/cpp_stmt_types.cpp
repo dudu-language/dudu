@@ -407,6 +407,10 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return {};
     case ExprKind::Slice:
         return named_type_ref("slice", expr.location);
+    case ExprKind::Ellipsis:
+        return named_type_ref("ellipsis", expr.location);
+    case ExprKind::NewAxis:
+        return named_type_ref("new_axis", expr.location);
     case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:

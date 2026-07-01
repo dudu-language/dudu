@@ -91,9 +91,7 @@ bool TypeTokenParser::at_identifier(std::string_view text) const {
 }
 
 bool TypeTokenParser::at_ellipsis() const {
-    return cursor_ + 2 < tokens_.size() && tokens_[cursor_].kind == TokenKind::Dot &&
-           tokens_[cursor_ + 1].kind == TokenKind::Dot &&
-           tokens_[cursor_ + 2].kind == TokenKind::Dot;
+    return at(TokenKind::Ellipsis);
 }
 
 bool TypeTokenParser::stop_at(std::initializer_list<TokenKind> stops) const {
@@ -151,7 +149,7 @@ bool TypeTokenParser::match_ellipsis() {
     if (!at_ellipsis()) {
         return false;
     }
-    cursor_ += 3;
+    ++cursor_;
     return true;
 }
 

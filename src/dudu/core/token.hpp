@@ -27,6 +27,7 @@ enum class TokenKind : uint8_t {
     Comma,
     Colon,
     Dot,
+    Ellipsis,
     Arrow,
     Operator,
     Assign,

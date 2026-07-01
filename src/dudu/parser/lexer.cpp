@@ -161,6 +161,14 @@ class Lexer {
             push(TokenKind::Arrow, source_.substr(start, 2), line_, column);
             return 2;
         }
+        if (peek() == '.' && peek(1) == '.' && peek(2) == '.') {
+            const size_t start = cursor_;
+            take();
+            take();
+            take();
+            push(TokenKind::Ellipsis, source_.substr(start, 3), line_, column);
+            return 3;
+        }
         const std::string_view three = source_.substr(cursor_, 3);
         if (three == "<<=" || three == ">>=") {
             const size_t start = cursor_;

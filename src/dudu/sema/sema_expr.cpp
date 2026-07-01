@@ -34,6 +34,14 @@ std::vector<TypeRef> infer_arg_type_refs(const FunctionScope& scope, const std::
     std::vector<TypeRef> out;
     out.reserve(args.size());
     for (const Expr& arg : args) {
+        if (arg.kind == ExprKind::Ellipsis) {
+            out.push_back(named_type_ref("ellipsis", arg.location));
+            continue;
+        }
+        if (arg.kind == ExprKind::NewAxis) {
+            out.push_back(named_type_ref("new_axis", arg.location));
+            continue;
+        }
         out.push_back(infer_expr_type_ast(scope, arg, location));
     }
     return out;
@@ -94,6 +102,16 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             }
         }
         return named_type_ref("slice", type_location);
+    case ExprKind::Ellipsis:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "ellipsis must be used inside an index");
+        }
+        return named_type_ref("ellipsis", type_location);
+    case ExprKind::NewAxis:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "None new-axis item must be used inside an index");
+        }
+        return named_type_ref("new_axis", type_location);
     case ExprKind::SetLiteral:
         return named_type_ref("set", type_location);
     case ExprKind::Name:

@@ -87,6 +87,7 @@ class ExprTokenParser {
                                            std::initializer_list<TokenKind> stops);
     std::vector<Expr> parse_arg_list(TokenKind close);
     Expr parse_index_argument();
+    Expr parse_index_item();
     Expr parse_primary(std::initializer_list<TokenKind> stops);
     Expr parse_brace_literal(size_t begin);
     bool pointer_cast_call_ahead() const;

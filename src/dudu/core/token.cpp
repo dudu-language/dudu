@@ -36,6 +36,8 @@ std::string token_kind_name(TokenKind kind) {
         return ":";
     case TokenKind::Dot:
         return ".";
+    case TokenKind::Ellipsis:
+        return "...";
     case TokenKind::Arrow:
         return "->";
     case TokenKind::Operator:

@@ -164,6 +164,8 @@ enum class ExprKind {
     DictEntry,
     NamedArg,
     Slice,
+    Ellipsis,
+    NewAxis,
     SetLiteral,
     TupleLiteral,
     DefExpression,

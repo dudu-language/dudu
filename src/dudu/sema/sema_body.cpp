@@ -32,6 +32,12 @@ void reject_standalone_slice_value(const Expr& expr) {
     if (expr.kind == ExprKind::Slice) {
         sema_fail(expr.location, "slice expression must be used inside an index");
     }
+    if (expr.kind == ExprKind::Ellipsis) {
+        sema_fail(expr.location, "ellipsis must be used inside an index");
+    }
+    if (expr.kind == ExprKind::NewAxis) {
+        sema_fail(expr.location, "None new-axis item must be used inside an index");
+    }
 }
 
 TypeRef generic_self_type_ref(const ClassDecl& klass, SourceLocation location) {

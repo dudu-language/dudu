@@ -360,6 +360,10 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "named_arg";
     case ExprKind::Slice:
         return "slice";
+    case ExprKind::Ellipsis:
+        return "ellipsis";
+    case ExprKind::NewAxis:
+        return "new_axis";
     case ExprKind::SetLiteral:
         return "set_literal";
     case ExprKind::TupleLiteral:

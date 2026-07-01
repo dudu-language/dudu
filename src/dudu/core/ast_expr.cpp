@@ -455,6 +455,10 @@ std::string display_expr(const Expr& expr) {
                    (expr_missing(expr.children[1]) ? "" : display_expr(expr.children[1]));
         }
         return malformed_expr_display("slice");
+    case ExprKind::Ellipsis:
+        return "...";
+    case ExprKind::NewAxis:
+        return "None";
     case ExprKind::Conditional:
     case ExprKind::DefExpression:
     case ExprKind::Comprehension:

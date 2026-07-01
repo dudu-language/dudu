@@ -230,7 +230,31 @@ Expr ExprTokenParser::parse_index_argument() {
     if (at(TokenKind::RBracket)) {
         return make_expr(ExprKind::Missing, "", current().location);
     }
-    return parse_comma_expr({TokenKind::RBracket});
+    const size_t begin = cursor_;
+    std::vector<Expr> items;
+    while (!at(TokenKind::RBracket) && !at_end()) {
+        items.push_back(parse_index_item());
+        if (!match(TokenKind::Comma)) {
+            break;
+        }
+    }
+    if (items.size() == 1) {
+        return std::move(items.front());
+    }
+    Expr tuple = make_node(ExprKind::TupleLiteral, begin, cursor_);
+    tuple.children = std::move(items);
+    return tuple;
+}
+
+Expr ExprTokenParser::parse_index_item() {
+    const size_t begin = cursor_;
+    if (match(TokenKind::Ellipsis)) {
+        return make_node(ExprKind::Ellipsis, begin, cursor_);
+    }
+    if (match_identifier("None")) {
+        return make_node(ExprKind::NewAxis, begin, cursor_);
+    }
+    return parse_named_or_binary({TokenKind::Comma, TokenKind::RBracket});
 }
 
 Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
@@ -261,6 +285,9 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
     }
     if (match_identifier("None")) {
         return make_node(ExprKind::NoneLiteral, begin, cursor_);
+    }
+    if (match(TokenKind::Ellipsis)) {
+        return make_node(ExprKind::Ellipsis, begin, cursor_);
     }
     if (at(TokenKind::Identifier)) {
         const Token& token = current();

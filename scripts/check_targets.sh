@@ -18,7 +18,9 @@ while IFS=$'\t' read -r file status expected; do
     [[ -z "${file:-}" || "$file" == \#* ]] && continue
 
     path="$target_dir/$file"
-    log="$repo_root/build/target_${file//[\/.]/_}.log"
+    base_name="target_${file//[\/.]/_}"
+    log="$repo_root/build/$base_name.log"
+    cpp="$repo_root/build/$base_name.cpp"
 
     if [[ ! -f "$path" ]]; then
         echo "missing target fixture: $path" >&2
@@ -27,7 +29,7 @@ while IFS=$'\t' read -r file status expected; do
     fi
 
     set +e
-    "$dudu_bin" check "$path" >"$log" 2>&1
+    "$dudu_bin" "$path" --emit-cpp "$cpp" >"$log" 2>&1
     code=$?
     set -e
 

@@ -504,6 +504,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         break;
     case ExprKind::Slice:
         return lower_slice_value_expr(expr, aliases, locals, local_type_refs, symbols, options);
+    case ExprKind::Ellipsis:
+        throw CompileError(expr.location, "ellipsis must be used inside an index");
+    case ExprKind::NewAxis:
+        throw CompileError(expr.location, "None new-axis item must be used inside an index");
     case ExprKind::DictLiteral:
         return "{" +
                join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
