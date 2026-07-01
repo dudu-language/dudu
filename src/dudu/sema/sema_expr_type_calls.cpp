@@ -6,6 +6,7 @@
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_ops.hpp"
 
 #include <utility>
 
@@ -186,6 +187,39 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
     return std::nullopt;
 }
 
+std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const Expr& expr,
+                                               const std::string& callee,
+                                               const SourceLocation* location) {
+    if (!scope.local_type_refs.contains(callee)) {
+        return std::nullopt;
+    }
+
+    FunctionSignature function_signature;
+    if (parse_local_function_type(scope, callee, function_signature)) {
+        check_call_args_ast(scope, callee, function_signature, expr.children, location);
+        return signature_return_type_ref(function_signature);
+    }
+
+    const TypeRef receiver_type = local_type_ref(scope, callee);
+    std::vector<TypeRef> arg_types;
+    arg_types.reserve(expr.children.size());
+    for (const Expr& arg : expr.children) {
+        arg_types.push_back(infer_expr_type_ast(scope, arg, location));
+    }
+    if (const auto signature =
+            dudu_operator_signature_for_args(scope.symbols, "()", receiver_type, expr.children,
+                                             arg_types)) {
+        check_call_args_ast(scope, callee, *signature, expr.children, location);
+        return signature_return_type_ref(*signature);
+    }
+
+    if (location != nullptr && class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
+        sema_expr_fail(*location, type_ref_text(receiver_type) +
+                                      " is not callable; define @operator(\"()\")");
+    }
+    return std::nullopt;
+}
+
 std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, const Expr& expr,
                                                     const std::string& callee,
                                                     const SourceLocation* location) {
@@ -282,12 +316,8 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
         return signature_return_type_ref(*signature);
     }
-    if (scope.local_type_refs.contains(callee)) {
-        FunctionSignature signature;
-        if (parse_local_function_type(scope, callee, signature)) {
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature_return_type_ref(signature);
-        }
+    if (const auto callable = callable_value_type_ref(scope, expr, callee, location)) {
+        return *callable;
     }
     if (is_builtin_call(callee)) {
         return direct_builtin_call_type_ref(scope, expr, callee, location);

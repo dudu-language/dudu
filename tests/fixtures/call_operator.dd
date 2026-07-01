@@ -1,0 +1,18 @@
+class Doubler:
+    @operator("()")
+    def call(self, value: i32) -> i32:
+        return value * 2
+
+
+class Bias:
+    amount: i32
+
+    @operator("()")
+    def apply(self, value: i32) -> i32:
+        return value + self.amount
+
+
+def main() -> i32:
+    doubler = Doubler()
+    bias = Bias(2)
+    return doubler(20) + bias(0)

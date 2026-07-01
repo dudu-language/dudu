@@ -398,9 +398,14 @@ Indexing operators belong with the array/tensor plan:
 - `@operator("[]")`
 - `@operator("[]=")`
 
-Status: implemented for the first operator set. `@operator("[]")` read hooks
-and `@operator("[]=")` indexed assignment hooks are implemented for
-library-style tensor wrappers.
+Callable object operators use normal method syntax:
+
+- `@operator("()")`
+
+Status: implemented for the first operator set. `@operator("[]")` read hooks,
+`@operator("[]=")` indexed assignment hooks, and `@operator("()")` callable
+object hooks are implemented for library-style tensor wrappers and PyTorch-like
+modules.
 
 ## Inheritance
 

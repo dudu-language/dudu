@@ -50,6 +50,9 @@ ordinary imperative model code, parameters used directly in tensor operations,
 callable modules such as `model(x)`, `loss.backward()`, `opt.step()`, and
 `opt.zero_grad()`. Tape/graph machinery may exist inside the library, but the
 target API should not require user code to instantiate a public `Tape`.
+Callable modules are ordinary Dudu call-operator values: a module type defines
+`@operator("()")`, and `model(x)` dispatches through that overload. The compiler
+does not special-case `Module`, `forward`, or any tensor-library class name.
 
 ## Non-Goals
 

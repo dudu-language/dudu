@@ -708,6 +708,19 @@ class Tensor[T]:
 The compiler passes structured index items. It does not decide tensor gather,
 scatter, broadcasting, CPU/GPU movement, or view/copy policy.
 
+Callable values dispatch through `@operator("()")`. This is the normal way for
+library types such as modules, functors, and callback objects to support
+Python-shaped calls:
+
+```python
+class Model:
+    @operator("()")
+    def forward(self, x: Tensor[f32]) -> Tensor[f32]:
+        ...
+
+pred = model(x)
+```
+
 Vector-like types can support GLSL-style swizzling when the type opts into
 known components:
 

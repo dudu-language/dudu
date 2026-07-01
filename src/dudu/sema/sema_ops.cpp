@@ -91,7 +91,7 @@ bool pack_expansion_arg_matches(const Symbols& symbols, const FunctionSignature&
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
         "+",  "-",  "*", "/",  "%", "+=", "-=",   "*=", "/=",  "%=",
-        "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
+        "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=", "()",
     };
     return operators.contains(op);
 }

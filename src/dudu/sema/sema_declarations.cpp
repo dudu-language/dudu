@@ -418,6 +418,10 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                         fail(method.location,
                              "indexed assignment operator methods must return void");
                     }
+                } else if (op == "()") {
+                    if (method.params.empty() || method.params.front().name != "self") {
+                        fail(method.location, "call operator methods require self");
+                    }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
                 }
