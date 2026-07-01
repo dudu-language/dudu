@@ -564,6 +564,7 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
         append_full_axis(out, shape, strides, axis, contributions);
     }
     if (needs_explicit_offsets) {
+        out.offset = offset;
         build_explicit_offsets(out, shape, strides, contributions);
     }
     return out;
@@ -606,6 +607,18 @@ template <class Data> Data materialize_view(const Data& data, const std::vector<
         out.push_back(data[static_cast<std::size_t>(source)]);
     }
     return out;
+}
+
+template <class Data, class Shape, class Strides>
+auto item_value(const Data& data, const Shape& shape_ref, const Strides& strides_ref, i64 offset)
+    -> typename Data::value_type {
+    const std::vector<i64> shape = as_i64_shape(shape_ref);
+    const std::vector<i64> strides = as_i64_shape(strides_ref);
+    if (element_count(shape) != 1) {
+        throw std::runtime_error("item() expects exactly one tensor element");
+    }
+    const i64 source = flat_offset(shape, strides, offset, 0);
+    return data[static_cast<std::size_t>(source)];
 }
 
 inline std::vector<i64> result_strides(const IndexPlan& plan) {

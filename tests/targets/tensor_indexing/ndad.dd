@@ -79,6 +79,9 @@ class TensorView[T]:
         cartesian = CartesianIndexer[T](data, shape, strides, 0)
         return Tensor[T](data, shape, strides, 0, cartesian)
 
+    def item(self) -> T:
+        return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
+
     @operator(">")
     def greater_than(self, value: T) -> BoolMask:
         values: list[bool] = []
@@ -126,6 +129,9 @@ class Tensor[T]:
         offset: i64 = cpp("ndad::result_offset(plan)")
         cartesian = CartesianIndexer[T](data, shape, strides, offset)
         return Tensor[T](data, shape, strides, offset, cartesian)
+
+    def item(self) -> T:
+        return cpp("ndad::item_value(self.data, self.shape, self.strides, self.offset)")
 
     @operator("[]=")
     def set_tensor[Idx...](self, *idx: Idx, value: Tensor[T]):

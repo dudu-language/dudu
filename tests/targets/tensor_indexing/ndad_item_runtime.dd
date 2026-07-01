@@ -1,0 +1,29 @@
+# Target: PyTorch-like scalar extraction uses item() on one-element tensor or
+# view selections instead of compiler-owned direct scalar shortcuts.
+
+from ndad import Tensor
+from ndad import arange
+from ndad import zeros
+
+
+def main() -> i32:
+    x: Tensor[i32][3, 4] = zeros[i32](3, 4)
+    index = 0
+    while index < 12:
+        x.data[index] = index
+        index += 1
+
+    scalar_view = x[1, 2]
+    if scalar_view.item() != 6:
+        return 1
+
+    one_cell_view = x[1:2, 2:3]
+    if one_cell_view.item() != 6:
+        return 2
+
+    row_ids = arange(1)
+    gathered = x[row_ids, 2]
+    if gathered.item() != 2:
+        return 3
+
+    return 0

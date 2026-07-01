@@ -210,10 +210,12 @@ the C++ parameter pack while preserving Dudu source syntax as
 `def set_at[Idx...](self, *idx: Idx, value: T)`. This keeps C++ template
 deduction valid without changing the Dudu surface.
 
-Current limitation: returning a plain scalar only when a scalar-only index pack
-fully consumes a tensor's rank needs rank/pack-count constraints. Until that
-type-system feature exists, tensor libraries should expose scalar materializing
-helpers or honest rank-specific conveniences, not compiler rank shortcuts.
+Current limitation: returning a plain scalar directly from `tensor[i, j]` only
+when a scalar-only index pack fully consumes a tensor's rank needs rank/pack-
+count constraints. Until that type-system feature exists, tensor libraries
+should keep scalar-looking selections as tensor/view values and expose an
+explicit materializer such as PyTorch-style `.item()` for one-element results.
+`tests/targets/tensor_indexing/ndad_item_runtime.dd` tracks that behavior.
 
 Implementation status: imported Dudu functions and methods preserve variadic
 metadata through the module-alias/native-signature boundary. A library module

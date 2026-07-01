@@ -217,11 +217,12 @@ right-aligned broadcasting.
 
 Basic direct indexing now routes through `*idx: basic_index` overloads and
 returns `TensorView[T]`; advanced direct indexing routes through generic
-`Idx...` overloads and returns materialized `Tensor[T]`. Returning a scalar only
-when scalar indexes consume every tensor axis still needs a rank/pack-count
-constraint feature; until that exists, scalar extraction should be explicit or
-provided as honest rank-specific library convenience rather than compiler
-policy.
+`Idx...` overloads and returns materialized `Tensor[T]`. One-element tensor or
+view results expose PyTorch-style `.item()`; `ndad_item_runtime.dd` covers
+scalar-looking basic selections, one-element slices, and one-element advanced
+gathers. Returning a scalar directly when scalar indexes consume every tensor
+axis still needs a rank/pack-count constraint feature; until that exists,
+scalar extraction stays explicit rather than compiler policy.
 
 ## External Baseline
 
@@ -743,6 +744,8 @@ Status:
   slice views.
 - Done: reference-backed view structs can be aggregate-initialized without
   invalid default reference fields.
+- Done: one-element `Tensor[T]` and `TensorView[T]` values expose `.item()`
+  for PyTorch-style scalar extraction without compiler rank shortcuts.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
 - Done: `.pairwise[...]`, `.cartesian[...]`, and other custom indexing spellings
   dispatch through ordinary member lookup to library-owned indexer objects

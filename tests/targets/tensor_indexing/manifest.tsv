@@ -14,6 +14,7 @@ ndad_broadcasting_runtime.dd	run	0
 ndad_broadcast_compatibility_runtime.dd	run	0
 ndad_assignment_broadcast_runtime.dd	run	0
 ndad_view_copy_runtime.dd	run	0
+ndad_item_runtime.dd	run	0
 ndad_shape_preserving_helpers.dd	run	7
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
