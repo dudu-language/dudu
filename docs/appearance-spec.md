@@ -663,6 +663,10 @@ x = values[3]
 cell = grid[y, x]
 values[3] = 10
 scores["bob"] = 42
+row = matrix[y, :]
+patch = image[y0:y1, x0:x1, :]
+last = logits[..., -1]
+expanded = bias[None, :]
 ```
 
 Multidimensional fixed arrays and tensor-like values should support comma
@@ -687,7 +691,22 @@ copy = list(row)
 ```
 
 The detailed indexing and slicing design is tracked in
-[Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md).
+[Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md) and
+[Indexing Dispatch Model](indexing-dispatch-model.md).
+
+For user/library types, bracket syntax dispatches through `@operator("[]")`
+and `@operator("[]=")`. Simple containers may use fixed-arity hooks, while
+arbitrary-rank tensor libraries use variadic typed hooks:
+
+```python
+class Tensor[T]:
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        ...
+```
+
+The compiler passes structured index items. It does not decide tensor gather,
+scatter, broadcasting, CPU/GPU movement, or view/copy policy.
 
 Vector-like types can support GLSL-style swizzling when the type opts into
 known components:

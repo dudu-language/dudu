@@ -1,9 +1,10 @@
 # Tensor Backend And Numeric Stack Plan
 
-Dudu already has enough array/indexing surface to start proving real numeric
-workloads. The next goal is to make the fancy indexing useful with actual CPU
-and GPU-backed tensor libraries without baking BLAS, OpenCL, ROCm, CUDA, or
-PyTorch special cases into the compiler.
+Dudu has enough fixed-array and basic indexing surface to start proving real
+numeric workloads, but the tensor indexing model must stay Python-shaped and
+library-owned. The next goal is to make NumPy/PyTorch-style indexing useful
+with actual CPU and GPU-backed tensor libraries without baking BLAS, OpenCL,
+ROCm, CUDA, PyTorch, or rank-specific tensor behavior into the compiler.
 
 ## Goal
 
@@ -13,7 +14,8 @@ Build a small Dudu numeric stack that demonstrates:
 - library-owned tensor values for dynamic CPU arrays
 - BLAS-backed matrix/vector ops through normal C imports
 - GPU-backed tensor storage through a portable backend on this machine
-- indexing and slicing syntax lowering through ordinary Dudu hooks
+- Python-shaped indexing and slicing syntax lowering through ordinary Dudu
+  hooks
 - an autograd-style graph written in Dudu
 - a small neural-network example, ideally MNIST-scale, that can run as an
   optional dogfood/probe
@@ -21,11 +23,27 @@ Build a small Dudu numeric stack that demonstrates:
 This is a dogfood and language-validation slice. It should not turn the Dudu
 compiler into a tensor framework.
 
-The implementation target is the code in
-`/home/vega/Coding/ML/dudu-datascience/spec/target_api`. Those files are
-allowed to be aspirational and not build yet. They are the API contract we are
-working toward. A small passing BLAS demo is only a proof of native interop; it
-is not completion of first-class tensor indexing.
+Required language/compiler fixtures live in this repository. They are the
+source of truth for parser, sema, codegen, diagnostics, and LSP behavior.
+Heavy backend checks such as BLAS, OpenCL, ROCm, CUDA, LibTorch, or dataset
+training can be optional probes, but they should still be tracked as Dudu
+validation work rather than hidden in unrelated scratch repos.
+
+Dogfood repos such as `/home/vega/Coding/ML/dudu-datascience` are useful real
+usage pressure and can contain aspirational API sketches, but they are not the
+compiler suite. Once a dogfood sketch clarifies a language requirement, move
+the required behavior into Dudu fixtures or optional probes.
+
+A small passing BLAS demo is only a proof of native interop; it is not
+completion of first-class tensor indexing.
+
+The compiler/language indexing contract is defined in
+[Indexing Dispatch Model](indexing-dispatch-model.md). This tensor plan must
+follow that model. In particular, `tensor[rows, cols]`, `tensor[:, :, 0]`,
+`tensor[..., -1]`, and `tensor[None, :]` are ordinary language syntax routed to
+library hooks. `vindex`, `oindex`, `window`, or similar names may be ordinary
+library members, but they are not Dudu syntax and must not be compiler
+special-cased.
 
 Autograd target ergonomics should feel closer to PyTorch than TensorFlow:
 ordinary imperative model code, parameters used directly in tensor operations,
@@ -42,6 +60,40 @@ target API should not require user code to instantiate a public `Tape`.
 - Do not build a full PyTorch clone in the compiler repo.
 - Do not make the always-on fast test loop download datasets or compile heavy
   native libraries.
+
+## Fixture Strategy
+
+Add target fixtures before compiler/library implementation. The fixture suite
+should make the intended language shape obvious and prevent another rank-2
+shortcut from looking complete.
+
+Required fixture groups:
+
+- parser/AST fixtures for `x[:, ids, None, ...]`, nested index expressions,
+  index assignment, and source ranges for each item
+- fixed-array fixtures for scalar indexing, partial indexing, rank-independent
+  slicing, `array_view[T]`, and shape inference
+- library-hook fixtures for fixed-arity `[]`, fixed-arity `[]=`, variadic
+  typed `[]`, variadic typed `[]=`, and overload diagnostics
+- tensor API fixtures showing NumPy/PyTorch-like direct indexing:
+  `tensor[rows, cols]`, `tensor[mask, :]`, `tensor[..., -1]`,
+  `tensor[None, :]`, and `tensor[:, :, 0]`
+- negative fixtures for unsupported item types, too many fixed-array indices,
+  missing hooks, unsupported `ellipsis`, unsupported `new_axis`, bad scatter
+  value types, and bad shape narrowing
+- optional native probes for BLAS, OpenCL, ROCm/CUDA/LibTorch, and dataset
+  examples when the local machine/tooling supports them
+
+Before a feature compiles, target fixtures can live in an excluded
+`target`/`spec` fixture folder or be represented as expected-failure cases if
+the harness supports that cleanly. They should not be silently skipped without
+being listed in this plan.
+
+Current target fixtures live in `tests/targets/tensor_indexing`. The manifest
+there records which examples already pass and which are intentional expected
+failures. Run `scripts/check_targets.sh` to verify that no target silently
+regressed and no expected-failure accidentally became a passing example without
+being promoted into the normal fixture suite.
 
 ## Backend Choice
 
@@ -65,22 +117,26 @@ Create a Dudu library module or dogfood repo, not compiler built-ins:
 from c import cblas.h
 
 class Tensor[T]:
-    rows: i32
-    cols: i32
+    shape: list[i64]
+    strides: list[i64]
+    offset: i64
     data: list[T]
 
     @operator("[]")
-    def index(self, row: i32, col: i32) -> T:
-        return self.data[row * self.cols + col]
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        ...
 
     @operator("[]=")
-    def set_index(self, row: i32, col: i32, value: T):
-        self.data[row * self.cols + col] = value
+    def set_at[Idx...](self, *idx: Idx, value: TensorAssignable[T, Idx...]):
+        ...
 ```
 
-The exact API can evolve, but the important rule is that `tensor[row, col]`
-and `tensor[y0:y1, x0:x1]` are just normal Dudu operator/language hooks on a
-library-defined type.
+The exact API can evolve, but the important rule is that
+`tensor[row, col]`, `tensor[y0:y1, x0:x1]`, `tensor[mask, :]`, and
+`tensor[..., -1]` are normal Dudu operator calls on a library-defined type.
+The core representation is rank-independent: `shape`, `strides`, and `offset`.
+`rows` and `cols` are allowed convenience methods on rank-2 values, not the
+foundation.
 
 ## External Baseline
 
@@ -92,9 +148,13 @@ Useful baseline rules:
 - NumPy and PyTorch make normal slicing view-like, while advanced indexing is
   not a simple view. Dudu should keep that distinction explicit in types and
   hovers.
-- NumPy's mixed advanced indexing has a long-known ambiguity between pairwise
-  and cartesian selection. Dudu should provide explicit `.vindex[...]` and
-  `.oindex[...]` forms instead of inventing marker expressions inside `[]`.
+- NumPy and PyTorch both accept rich Python indexing directly in brackets.
+  Dudu should provide that syntax and let each tensor library choose the
+  policy for mixed advanced indexing.
+- If a library wants more than one policy, such as pairwise gather and
+  cartesian gather, it can expose ordinary members like `.pairwise[...]`,
+  `.cartesian[...]`, `.vindex[...]`, or `.oindex[...]`. Those names are not
+  language features.
 - Julia's array model is a useful reminder that indexing, views, broadcasting,
   and array traits can be library-extensible. Dudu should make tensor indexing
   a library capability, not a compiler patch for one tensor library.
@@ -147,6 +207,35 @@ train_x: tensor[f32][dyn, 784] = x_norm[train_row, :]
 at runtime, usually because a mask or data-dependent gather selected an unknown
 number of elements.
 
+Each `dyn` is unrelated to every other `dyn`. Use symbolic dimensions when the
+relationship matters:
+
+```python
+def matmul[M, K, N](
+    a: tensor[f32][M, K],
+    b: tensor[f32][K, N],
+) -> tensor[f32][M, N]:
+    ...
+
+def classify[B, C](
+    x: tensor[f32][B, 784],
+    w: tensor[f32][784, C],
+) -> tensor[f32][B, C]:
+    ...
+```
+
+`M`, `K`, `N`, `B`, and `C` are user-chosen symbolic dimensions. They can be
+compile-time-known or runtime-known; the type checker only needs to know that
+the same symbol means the same dimension within the generic/type context.
+Math-heavy code can use letters. Domain-heavy code can use names if they are
+clearer, such as `Batch` or `Classes`.
+
+The reference numeric stack names are:
+
+- `ndad`: ndarray/tensor storage, indexing, BLAS, and GPU backends
+- `mald`: ML/autograd/modules/optimizers built on top of `ndad`
+- `ddtorch`: optional PyTorch-shaped frontend name if that split proves useful
+
 ## Copy Vs View Rules
 
 Normal slice syntax should be view-like when the library can represent the
@@ -166,8 +255,8 @@ explicit with an ordinary call such as `view.to_tensor()` or `tensor.copy(view)`
 Advanced indexing is not assumed to be view-like:
 
 ```python
-pairwise = logits.vindex[rows, cols]   # gather/lazy gather/owning result
-grid = logits.oindex[rows, cols]       # orthogonal/cartesian selection
+pairwise = logits[rows, cols]          # library-defined gather policy
+grid = logits.cartesian[rows, cols]    # explicit helper if the library wants one
 masked = values[mask, :]               # runtime-sized selection
 ```
 
@@ -226,62 +315,45 @@ their destructor. The compiler should improve diagnostics around illegal view
 escape, incompatible storage conversion, and `dyn` to concrete shape
 assertions; it should not hard-code tensor allocation or freeing policy.
 
-## De-Opinionated Indexer Model
+## De-Opinionated Indexing Model
 
-The preferred design for pairwise and orthogonal advanced indexing is ordinary
-member access plus ordinary `[]` hooks:
-
-```python
-pairwise = logits.vindex[rows, cols]
-grid = logits.oindex[rows, cols]
-```
-
-Here `vindex` and `oindex` are not special indexing operators. They are
-library-defined fields/properties/method values that return indexer objects.
-Those indexer objects implement normal `@operator("[]")` and
-`@operator("[]=")`:
+The preferred design is direct Python-style indexing routed to ordinary
+library hooks:
 
 ```python
-class Tensor[T]:
-    vindex: VIndex[T]
-    oindex: OIndex[T]
-
-class VIndex[T]:
-    @operator("[]")
-    def get(self, rows: IndexArray, cols: IndexArray) -> Tensor[T][dyn]:
-        ...
-
-class OIndex[T]:
-    @operator("[]")
-    def get(self, rows: IndexArray, cols: IndexArray) -> Tensor[T][dyn, dyn]:
-        ...
-```
-
-This keeps Dudu flexible. A library can also expose `masked`, `window`,
-`blocks`, `csr`, `coo`, or backend-specific indexer objects without compiler
-patches:
-
-```python
+pairwise = logits[rows, cols]
+masked = values[mask, :]
+last = logits[..., -1]
 tiles = image.window[8, 8][y, x]
 values = sparse.coo[rows, cols]
 ```
 
+The compiler parses all of these as member/call/index expressions and resolves
+the bracket operation through normal `@operator("[]")` and `@operator("[]=")`
+overload dispatch. A library can expose helper members such as `window`, `coo`,
+`cartesian`, `pairwise`, `vindex`, or `oindex`; those are normal members whose
+returned objects implement normal indexing hooks.
+
 Compiler-owned `@operator("vindex[]")`, `@operator("oindex[]")`, or other
-named advanced-index operators should be removed. They solve one tensor-family
-case but make the language too opinionated. The migration target is:
+named advanced-index operators are invalid architecture. They solve one
+tensor-family case but make the language too opinionated.
 
-- `tensor.vindex[...]` parses as member access followed by normal index.
-- sema resolves `tensor.vindex` like any other member.
-- sema resolves `[...]` on the returned indexer type through `[]` hooks.
+The migration target is:
+
+- `tensor[rows, cols]` routes to a tensor library's normal `[]` hook.
+- `tensor.cartesian[rows, cols]` parses as member access followed by normal
+  index if the library provides that helper.
+- sema resolves each member and index step like any other expression.
 - `[]=` and compound assignment use the same normal read/write hook rules.
-- diagnostics mention missing `vindex`/`oindex` members or missing `[]` hooks,
-  not missing special compiler operators.
-- existing dogfood examples are rewritten to indexer objects.
+- diagnostics mention missing members or missing `[]` hooks, not missing
+  special compiler operators.
+- existing dogfood examples are rewritten to direct tensor indexing unless the
+  example is specifically proving a helper indexer object.
 
-Plain `tensor[rows, cols]` can still be supported by a library's normal
-`@operator("[]")` overload if that library chooses a policy. The compiler must
-not globally decide whether that means PyTorch-style pairwise gather,
-NumPy-style mixed advanced indexing, or cartesian selection.
+The compiler must not globally decide whether `tensor[rows, cols]` means
+PyTorch-style pairwise gather, NumPy-style mixed advanced indexing, or
+cartesian selection. The selected library hook decides through its return type
+and implementation.
 
 ## Fancy Indexing Target Forms
 
@@ -330,16 +402,17 @@ all_green: array_view[i32] = pixels[:, :, 1]
 all_values: array_view[i32] = pixels[:, :, :]
 ```
 
-### Pairwise Integer Gather
+### Integer Gather
 
-Integer index arrays with matching shape can select pairwise coordinates. This
-is the important "get the selected class/logit for each row" form:
+Integer index arrays can select coordinates. The library decides whether the
+plain form is pairwise, NumPy-style mixed advanced indexing, or rejected in
+favor of an explicit helper.
 
 ```python
 label: tensor[i32][32]
 logits: tensor[f32][32, 10]
 
-correct_class_logit = logits.vindex[arange[32](), label]  # tensor[f32][32]
+correct_class_logit = logits[arange[32](), label]  # tensor[f32][32]
 ```
 
 Transformer-style token embedding lookup is the same idea at higher rank:
@@ -348,32 +421,30 @@ Transformer-style token embedding lookup is the same idea at higher rank:
 token_ids: tensor[i32][4, 16]
 token_embedding: tensor[f32][32000, 512]
 
-x = token_embedding.vindex[token_ids, :]  # tensor[f32][4, 16, 512]
+x = token_embedding[token_ids, :]  # tensor[f32][4, 16, 512]
 ```
 
-Rule: pairwise gather is not a view. It creates a gather expression or owning
-result unless the backend can represent a lazy gather view.
-
-Plain `tensor[ids, labels]` may eventually be accepted for the common pairwise
-case, but mixed advanced indexing should initially diagnose and suggest
-`.vindex[...]` or `.oindex[...]` when there is ambiguity.
+Rule: gather is not assumed to be a view. It creates a gather expression or
+owning result unless the backend can represent a lazy gather view.
 
 ### Orthogonal / Cartesian Gather
 
 Sometimes each index array should create its own output axis instead of zipping
-with the others. Use an explicit orthogonal indexer on the receiver:
+with the others. A library that needs this distinction can expose an explicit
+helper member:
 
 ```python
 batch_ids: array[i32] = [3, 0, 3, 1]
 head_ids: array[i32] = [0, 2, 4]
 hot_vocab: array[i32] = [2, 3, 5, 8, 13, 21]
 
-cartesian = logits.oindex[batch_ids, :, head_ids, hot_vocab]
+cartesian = logits.cartesian[batch_ids, :, head_ids, hot_vocab]
 # tensor[f32][4, 8, 3, 6]
 ```
 
-The semantic requirement is not tentative: Dudu needs a clear way to
-distinguish pairwise gather from orthogonal/cartesian gather.
+The language requirement is that helper members work through normal member
+lookup plus normal indexing hooks. The compiler does not own the cartesian
+policy.
 
 ### Boolean Masks
 
@@ -430,14 +501,15 @@ and gather are solid:
 last_vocab_per_head: tensor[f32][4, 8, 6] = logits[..., -1]
 
 per_head_bias: tensor[f32][6]
-logits[:, :, :, :] += per_head_bias[newaxis, newaxis, :, newaxis]
+logits[:, :, :, :] += per_head_bias[None, None, :, None]
 ```
 
 Rules:
 
 - `...` preserves all unspecified middle axes.
 - negative indices count from the end.
-- `newaxis` inserts a size-1 broadcast axis and should not allocate.
+- `None` in indexing position inserts a size-1 broadcast axis and should not
+  allocate.
 
 ### Broadcasting
 
@@ -449,11 +521,11 @@ mean: tensor[f32][784]
 inv_std: tensor[f32][784]
 x: tensor[f32][32, 784]
 
-x_norm = (x - mean[newaxis, :]) * inv_std[newaxis, :]
+x_norm = (x - mean[None, :]) * inv_std[None, :]
 # tensor[f32][32, 784]
 
 b1: tensor[f32][256]
-h1 = matmul(x_norm, w1) + b1[newaxis, :]
+h1 = matmul(x_norm, w1) + b1[None, :]
 # tensor[f32][32, 256]
 ```
 
@@ -486,8 +558,8 @@ non-default examples shaped like these:
 token_ids: tensor[i32][4, 16]
 valid_token: mask[bool][4, 16]
 
-x = token_embedding.vindex[token_ids, :]  # tensor[f32][4, 16, 512]
-x += position_embedding[newaxis, :, :]
+x = token_embedding[token_ids, :]         # tensor[f32][4, 16, 512]
+x += position_embedding[None, :, :]
 
 qkv = einsum("btc,chd->bthd", x, wqkv)  # tensor[f32][4, 16, 3, 8, 64]
 q = qkv[:, :, 0, :, :]                  # tensor[f32][4, 16, 8, 64]
@@ -501,11 +573,11 @@ And a more grounded MLP/MNIST-style case:
 
 ```python
 important_features: array[i32] = [0, 1, 2, 27, 28, 29, 391, 392, 393]
-diagnostic_inputs = x_norm.oindex[:, important_features]  # tensor[f32][32, 9]
+diagnostic_inputs = x_norm.cartesian[:, important_features] # tensor[f32][32, 9]
 
 train_x = x_norm[train_row, :]                          # tensor[f32][dyn, 784]
-correct_class_logit = logits.vindex[arange[32](), label] # tensor[f32][32]
-nll = -log_probs.vindex[train_row, train_label]          # tensor[f32][dyn]
+correct_class_logit = logits[arange[32](), label]        # tensor[f32][32]
+nll = -log_probs[train_row, train_label]                 # tensor[f32][dyn]
 ```
 
 These examples should become tracked fixtures/examples as the syntax becomes
@@ -520,12 +592,12 @@ opinionated:
 
 1. Remove compiler-owned `vindex[]`, `vindex[]=`, `oindex[]`, and `oindex[]=`
    operator names.
-2. Implement `.vindex[...]` and `.oindex[...]` through ordinary member lookup
-   plus ordinary `[]` / `[]=` hook dispatch on the returned indexer object.
+2. Make direct `tensor[...]` advanced indexing and helper-member indexing
+   resolve through ordinary member lookup plus ordinary `[]` / `[]=` hooks.
 3. Add fixtures showing that custom indexers are not hard-coded:
-   `tensor.vindex[...]`, `tensor.oindex[...]`, `image.window[...]`,
-   `sparse.coo[...]`, and a deliberately unsupported indexer that diagnoses a
-   missing `[]` hook.
+   `tensor[...]`, `tensor.cartesian[...]`, `image.window[...]`,
+   `sparse.coo[...]`, and a deliberately unsupported indexer that diagnoses
+   a missing `[]` hook.
 4. Audit semantic analysis and codegen for tensor-specific names. Any
    remaining special behavior should be moved to general member/index/call
    logic or deleted.
@@ -539,10 +611,13 @@ Acceptance test: a new indexer spelling can be added entirely in Dudu library
 code and used with `object.indexer[...]` without editing compiler sema or
 codegen.
 
-Status: complete for the compiler boundary. The fixtures cover
-`tensor.vindex[...]`, `tensor.oindex[...]`, chained temporary indexing such as
-`image.window[8, 9][y, x]`, and an unrelated custom `sparse.coo[...]` spelling
-using only normal library-owned `[]` / `[]=` hooks.
+Status: partially complete for the compiler boundary. Existing fixtures prove
+member indexer objects such as `tensor.vindex[...]`, `tensor.oindex[...]`,
+chained temporary indexing such as `image.window[8, 9][y, x]`, and unrelated
+custom `sparse.coo[...]` spellings can use normal library-owned `[]` / `[]=`
+hooks. The remaining correction is to make Python-style direct tensor indexing
+the target path and remove stale dogfood that treats `vindex/oindex` as the
+main API.
 
 ### 1. Audit Current Indexing Hooks
 
@@ -553,8 +628,10 @@ Verify the current compiler can express the library surface we need:
 - method calls on indexed member receivers
 - return types that are scalar, reference-like, view-like, or wrapper values
 - slice arguments passed to library hooks, not only Dudu fixed arrays
-- pairwise gather forms rejected or lowered deliberately
-- orthogonal gather marker syntax decided or rejected with a clear diagnostic
+- direct tensor gather forms such as `tensor[rows, cols]` routed to the
+  library hook deliberately
+- helper indexer forms such as `tensor.cartesian[...]` routed through normal
+  member lookup and normal `[]` hooks
 - mask indexing and masked assignment rejected or lowered deliberately
 - good diagnostics when a tensor type does not implement a required hook
 
@@ -587,6 +664,12 @@ Status:
   whose types implement normal `@operator("[]")` and `@operator("[]=")`.
   The compiler no longer recognizes special `vindex[]` / `oindex[]` operator
   names.
+- Remaining: direct Python-style advanced tensor indexing such as
+  `tensor[rows, cols]`, `tensor[..., -1]`, and `tensor[None, :]` needs the
+  variadic typed operator hook model from
+  [Indexing Dispatch Model](indexing-dispatch-model.md). Current fixed-arity
+  hook support proves the mechanism but is not sufficient for the full tensor
+  target.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".
@@ -628,8 +711,10 @@ Status:
 - Done: compound assignment also works for member-owned advanced indexer
   objects when the library provides matching selected-value write hooks.
   `tensor.vindex[...] += x` lowers to a normal `[]` read plus `[]=` write on
-  the `vindex` object, and `tensor.oindex[...] += x` does the same for
-  orthogonal selection.
+  the `vindex` object, and `tensor.oindex[...] += x` does the same for that
+  library-owned helper object. New tensor work should prefer direct
+  Python-style `tensor[...]` examples unless the point of the fixture is
+  proving helper indexer objects.
   Repeated-index scatter order and accumulation behavior is therefore a
   library policy, not a compiler policy.
 - Done: `assume_shape[T](value)` lets library/user code narrow a runtime-known

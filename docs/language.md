@@ -23,7 +23,8 @@ Core forms:
 - references: `&T`
 - const-qualified types: `const[T]`
 - contiguous arrays: `array[T] = literal`, `array[T][N]`, `array[T][M, N]`
-- array views: `items[a:b]`, `items[:]`, `matrix[row, :]`
+- Python-shaped indexing and views: `items[a:b]`, `items[:]`,
+  `matrix[row, :]`, `tensor[..., -1]`, `bias[None, :]`
 - dynamic containers: `list[T]`, `dict[K, V]`, `set[T]`
 - function pointer types: `fn(A, B) -> R`
 - result types: `Result[T, E]`

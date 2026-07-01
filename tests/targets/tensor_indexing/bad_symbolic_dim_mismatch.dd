@@ -1,0 +1,19 @@
+# Target diagnostic: symbolic dimensions must match through generic APIs.
+
+from ndad import Tensor
+from ndad import matmul
+from ndad import zeros
+
+
+def project[M, K, N](
+    x: Tensor[f32][M, K],
+    w: Tensor[f32][K, N],
+) -> Tensor[f32][M, N]:
+    return matmul(x, w)
+
+
+def main() -> i32:
+    x: Tensor[f32][32, 784] = zeros[f32](32, 784)
+    w: Tensor[f32][512, 10] = zeros[f32](512, 10)
+    y = project[32, 784, 10](x, w)
+    return i32(y.shape[1])

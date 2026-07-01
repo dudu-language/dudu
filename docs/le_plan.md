@@ -95,6 +95,8 @@ turning into a compiler made of successful experiments glued together forever.
 The current tensor/indexing dogfood exposed a serious shortcut that must be
 fixed before more numeric stack work builds on it.
 
+Primary spec: [Indexing Dispatch Model](indexing-dispatch-model.md).
+
 Wrong architecture to remove:
 
 - built-in fixed-array slicing lowered through pattern-specific compiler paths
@@ -108,18 +110,26 @@ Wrong architecture to remove:
 
 Required architecture:
 
-- parser keeps generic `IndexExpr(base, args...)` and
-  `SliceExpr(start, stop, step)` forms
+- parser keeps generic `IndexExpr(base, items...)` and structured slice,
+  ellipsis, and new-axis index item forms
 - sema resolves indexing through either generic fixed-array shape/stride rules
   or user-defined `@operator("[]")` / `@operator("[]=")` hooks
 - built-in fixed arrays lower slice-containing indexes through one generic
   `array_view[T]` / slice-spec / shape / stride mechanism
+- library tensor types use normal direct Python-style indexing such as
+  `tensor[rows, cols]`, `tensor[:, :, 0]`, `tensor[..., -1]`, and
+  `tensor[None, :]` routed to `[]` hooks
+- arbitrary-rank tensor libraries use variadic typed index hooks such as
+  `def at[Idx...](self, *idx: Idx)` rather than one overload per rank
 - `dudu_tensor` uses `shape`, `strides`, and `offset` metadata as its core
   representation; `rows` and `cols` are only optional rank-2 conveniences
 - rank 1, 2, 3, and 4 tensor/view demos must use the same library/compiler
   path, not separate shortcuts
 - tests must prove arbitrary-rank indexing and slicing without adding
   tensor-name or library-name special cases
+- target API fixtures live in `tests/targets/tensor_indexing` and are tracked
+  by `scripts/check_targets.sh`; expected-failure targets are not completion
+  claims and must be promoted into normal fixtures when they pass
 
 Do this before autograd, OpenCL, or more PyTorch-like API work. A passing demo
 that depends on rank-specific compiler code or rank-2 tensor storage is not a
@@ -1174,14 +1184,14 @@ push. They are not release packaging work.
    rules, shape metadata for library tensors, and GPU-backed tensor-library
    hooks remain.
    The next serious item-6 slice is not compiler built-in tensors. It is a
-   library-backed numeric stack that proves `@operator("[]")`, slices, BLAS,
+   library-backed numeric stack that proves direct Python-style indexing,
+   `@operator("[]")`, variadic typed index hooks, slices, BLAS,
    OpenCL/AMD-friendly GPU execution, and autograd-style graph code can be
    written as normal Dudu and C/C++ interop. That work should follow
-   `docs/tensor-backend-plan.md`, whose fancy-indexing target forms are the
-   concrete source of truth for shape inference, `dyn` runtime dimensions,
-   explicit `.vindex[...]` pairwise gather, explicit `.oindex[...]`
-   orthogonal/cartesian gather, boolean masks, masked/scatter assignment,
-   ellipsis, `newaxis`, broadcasting, named-axis sketches, and
+   `docs/indexing-dispatch-model.md` and `docs/tensor-backend-plan.md`, whose
+   target forms are the concrete source of truth for shape inference, `dyn`
+   runtime dimensions, boolean masks, masked/scatter assignment, ellipsis,
+   new-axis indexing, broadcasting, named-axis sketches, and
    transformer/MLP-shaped examples. Dudu should infer tensor shapes from the
    right side when possible and use explicit shape annotations mainly for API
    boundaries or shape assertions. Do not require left-side dimensions just to
@@ -1225,11 +1235,11 @@ push. They are not release packaging work.
    where needed, repeated-index scatter policy, and explicit proof/conversion
    diagnostics for `dyn` values flowing into concrete shape assertions.
    Before expanding further, de-opinionate advanced tensor indexing: remove
-   compiler-owned `vindex[]` / `oindex[]` operator names and make
-   `.vindex[...]`, `.oindex[...]`, and future spellings such as
-   `.window[...]` work through ordinary member lookup plus normal `[]` /
-   `[]=` hooks on library-defined indexer objects. The compiler should keep
-   only general syntax/type facilities such as slices, index argument lists,
+   compiler-owned `vindex[]` / `oindex[]` operator names, keep helper indexer
+   objects such as `.cartesian[...]` or `.window[...]` as ordinary library
+   members, and make direct `tensor[...]` the Python-shaped target. The
+   compiler should keep only general syntax/type facilities such as structured
+   index items, slices, ellipsis, new-axis items, variadic typed index hooks,
    shaped generic metadata, overload resolution, assignment hooks, and
    diagnostics. Tensor storage, CPU/GPU movement, BLAS/OpenCL/ROCm/CUDA
    dispatch, view-versus-copy policy, broadcasting, repeated-index scatter,

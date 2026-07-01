@@ -62,6 +62,25 @@ scratch: array[f32][4, 4]
 
 Ragged literals are errors, and empty literals need an explicit shape.
 
+Library tensor types may also carry shape metadata:
+
+```python
+batch: tensor[f32][dyn, 784]
+weights: tensor[f32][784, Classes]
+```
+
+`dyn` means an unrelated runtime-known dimension. Symbolic dimensions such as
+`M`, `K`, `N`, `B`, `T`, or `Classes` are user-chosen names that track equality
+relationships across a type or generic function:
+
+```python
+def matmul[M, K, N](
+    a: tensor[f32][M, K],
+    b: tensor[f32][K, N],
+) -> tensor[f32][M, N]:
+    ...
+```
+
 Likely lowerings:
 
 ```text
@@ -215,24 +234,35 @@ whole = image[:, :, :]
 interop/helper types, but fixed-array slicing should not infer them directly.
 They are not the core indexing architecture.
 
-## Advanced Indexing
+## Advanced Indexing Syntax
 
-Useful target forms:
+Advanced indexing syntax is language surface. Advanced tensor semantics are
+library behavior. The full dispatch model is defined in
+[Indexing Dispatch Model](indexing-dispatch-model.md).
+
+Useful syntax targets:
 
 ```python
 rgb = image[y, x, 0:3]
 channel = image[:, :, channel_index]
 tile = image[y:y + 8, x:x + 8]
+train_x = x_norm[train_row, :]
+correct = logits[arange(batch), label]
+last_vocab = logits[..., -1]
+broadcast_bias = bias[None, :]
 ```
 
-Do not add NumPy-style arbitrary gather/scatter indexing until normal slices,
-views, and tensor shapes are solid.
+For fixed Dudu arrays, slice-containing indexes produce `array_view[T]`
+through the generic shape/stride path. This includes trailing-dimension range
+slices after scalar prefixes, such as `image[y, x, 0:3]`, generic non-type
+extents, and member-backed fixed arrays. There must be no separate compiler
+branch for `image[y, x, 0:3]`, channel slicing, matrix patches, or tensor
+slabs.
 
-Status target: fixed arrays should support trailing-dimension range slices
-after scalar prefixes, such as `image[y, x, 0:3]`, through the same
-`array_view[T]` path as every other slice. This includes generic non-type
-extents and member-backed fixed arrays. There should be no separate
-`image[y, x, 0:3]` compiler lowering branch.
+For library tensor types, the same syntax routes through `@operator("[]")`
+and `@operator("[]=")` hooks. A tensor library can choose PyTorch-like
+pairwise gather, NumPy-like behavior, cartesian helper members, lazy views, or
+backend-specific results. The compiler only passes the structured index items.
 
 ## Tensor Policy Boundary
 
@@ -242,18 +272,19 @@ index assignment, shape metadata, and hook dispatch. It should not hard-code
 NumPy, PyTorch, BLAS, GPU, autograd, or tensor-library semantics.
 
 Advanced tensor behavior should be expressible by libraries through ordinary
-members and `[]` hooks:
+`[]` hooks on tensor or indexer types:
 
 ```python
-pairwise = logits.vindex[rows, cols]
-cartesian = logits.oindex[rows, cols]
+pairwise = logits[rows, cols]       # library-defined meaning
+cartesian = logits.cartesian[rows, cols]
 tiles = image.window[8, 8][y, x]
 ```
 
-`vindex`, `oindex`, `window`, or similar names are library API, not compiler
-operators. They should return indexer objects whose types implement normal
-`@operator("[]")` and `@operator("[]=")`. The compiler should not contain
-special `vindex[]` / `oindex[]` operator names.
+`cartesian`, `window`, `vindex`, `oindex`, or similar names are library API,
+not compiler operators. They are ordinary members whose returned types can
+implement normal `@operator("[]")` and `@operator("[]=")`. The compiler must
+not contain special `vindex[]`, `oindex[]`, tensor, BLAS, or backend operator
+names.
 
 Conversion between library tensors and `array[T][shape]` should be explicit
 unless the library can prove the value is already CPU-contiguous and safely
@@ -339,25 +370,38 @@ c = gpu.matmul(a, b)
 
 The compiler should not need to know that `gpu.Tensor` is a GPU object. It
 should lower indexing, slicing, and assignment through ordinary overloadable
-hooks such as:
+hooks. Simple containers can use fixed-arity hooks:
 
 ```python
-class Tensor[T, Rank]:
+class Grid:
     @operator("[]")
-    def index(self, indices: IndexList) -> T:
+    def at(self, row: i32, col: i32) -> Cell:
         ...
 
     @operator("[]=")
-    def set_index(self, indices: IndexList, value: T):
-        ...
-
-    def slice(self, ranges: SliceList) -> TensorView[T, Rank]:
+    def set_at(self, row: i32, col: i32, value: Cell):
         ...
 ```
 
-The exact hook names can change. The key rule is that tensor libraries can map
-Dudu syntax to CPU views, GPU buffer views, lazy expressions, kernel launches,
-or backend calls without the core language embedding CUDA/Vulkan/OpenCL logic.
+Tensor libraries need variadic typed hooks so one implementation can receive
+arbitrary-rank index lists without rank-specific overloads:
+
+```python
+class Tensor[T]:
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        ...
+
+    @operator("[]=")
+    def set_at[Idx...](self, *idx: Idx, value: TensorAssignable[T, Idx...]):
+        ...
+```
+
+Each item keeps its real type: integer, `slice`, `ellipsis`, `new_axis`,
+tensor/list/mask, or another library-defined index value. Tensor libraries can
+map Dudu syntax to CPU views, GPU buffer views, lazy expressions, kernel
+launches, or backend calls without the core language embedding
+CUDA/Vulkan/OpenCL logic.
 
 Status: Dudu-native `@operator("[]")` methods are recognized by indexing
 semantics for read expressions, including index argument type checking. Indexed
@@ -478,7 +522,8 @@ c = gpu.matmul(a, b)
 
 The tensor hook example does not require a real GPU backend in the core test
 suite. A CPU fake or small library fixture is enough to prove the language
-syntax, overload hooks, and view/copy behavior.
+syntax, variadic overload hooks, and view/copy behavior. The fixture must not
+depend on compiler knowledge of tensor/library names or rank-specific lowering.
 
 ## Acceptance
 
@@ -486,6 +531,8 @@ syntax, overload hooks, and view/copy behavior.
 - `array[T][M, N]` fixed matrices compile and run.
 - `a[i]` and `a[i, j]` work with type checking.
 - Slices have explicit view/copy semantics.
+- library indexing supports structured slice, ellipsis, new-axis, and
+  expression index items through normal operator hooks.
 - target examples exist as fixtures or runnable examples.
 - `list[T]` remains the normal dynamic owning container.
 - Raw heap arrays are not the default user-facing story.

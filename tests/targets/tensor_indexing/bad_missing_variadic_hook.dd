@@ -1,0 +1,12 @@
+# Target diagnostic: complex index item list on a type without matching []
+# hook points at the unsupported item set.
+
+class ScalarOnly:
+    @operator("[]")
+    def at(self, index: i32) -> i32:
+        return index
+
+
+def main() -> i32:
+    value = ScalarOnly()
+    return value[:, None, ...]

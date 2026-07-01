@@ -1,0 +1,22 @@
+# Target: fixed arrays use one rank-independent array_view path for scalar,
+# slice, ellipsis, and new-axis shaped indexing syntax.
+
+def sum_view(values: array_view[i32]) -> i32:
+    total = 0
+    for index in range(len(values)):
+        total += values[index]
+    return total
+
+
+def main() -> i32:
+    image: array[i32] = [
+        [[1, 2, 3, 4], [5, 6, 7, 8]],
+        [[9, 10, 11, 12], [13, 14, 15, 16]],
+    ]
+
+    pixel = image[1, 0, 2]
+    rgb = image[0, 1, 0:3]
+    green = image[:, :, 1]
+    all_values = image[..., :]
+
+    return pixel + sum_view(rgb) + sum_view(green) + sum_view(all_values) - 88

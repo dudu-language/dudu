@@ -1,0 +1,28 @@
+# Target: arbitrary-rank libraries can implement one variadic typed hook
+# instead of one overload per rank.
+
+class TensorSelection[T, Idx...]:
+    value: T
+
+
+class TensorAssignable[T, Idx...]:
+    value: T
+
+
+class Tensor[T]:
+    data: list[T]
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        return TensorSelection[T, Idx...](self.data[0])
+
+    @operator("[]=")
+    def set_at[Idx...](self, *idx: Idx, value: TensorAssignable[T, Idx...]):
+        self.data[0] = value.value
+
+
+def main() -> i32:
+    tensor = Tensor[i32]([41])
+    picked = tensor[0, :, None, ...]
+    tensor[:, 0] = TensorAssignable[i32, slice, i32](42)
+    return tensor.data[0]

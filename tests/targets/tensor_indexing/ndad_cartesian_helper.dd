@@ -1,0 +1,15 @@
+# Target: cartesian indexing is an ordinary helper member, not language syntax.
+
+from ndad import Tensor
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    logits: Tensor[f32][4, 8, 16, 32000] = zeros[f32](4, 8, 16, 32000)
+    batch_ids = array[i32]([3, 0, 3, 1])
+    head_ids = array[i32]([0, 2, 4])
+    vocab_ids = array[i32]([2, 3, 5, 8, 13, 21])
+
+    grid = logits.cartesian[batch_ids, :, head_ids, vocab_ids]
+    return i32(grid.shape[0] + grid.shape[2] + grid.shape[3] - 13)

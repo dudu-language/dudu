@@ -1,0 +1,26 @@
+# Target: symbolic dims track equality; dyn is unrelated runtime-known shape.
+
+from ndad import Tensor
+from ndad import matmul
+from ndad import zeros
+
+
+def project[M, K, N](
+    x: Tensor[f32][M, K],
+    w: Tensor[f32][K, N],
+) -> Tensor[f32][M, N]:
+    return matmul(x, w)
+
+
+def classify[B, C](
+    x: Tensor[f32][B, 784],
+    w: Tensor[f32][784, C],
+) -> Tensor[f32][B, C]:
+    return project[B, 784, C](x, w)
+
+
+def main() -> i32:
+    x = zeros[f32](32, 784)
+    w = zeros[f32](784, 10)
+    logits: Tensor[f32][32, 10] = classify[32, 10](x, w)
+    return i32(logits.shape[0] + logits.shape[1])

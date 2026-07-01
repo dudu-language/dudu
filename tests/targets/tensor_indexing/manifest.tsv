@@ -1,0 +1,13 @@
+# file	status	expected diagnostic substring
+parser_index_items.dd	xfail	
+fixed_array_python_slices.dd	xfail	
+library_fixed_arity_hooks.dd	pass	
+library_variadic_hooks.dd	xfail	
+ndad_core.dd	xfail	
+ndad_direct_pytorch_indexing.dd	xfail	
+ndad_mask_and_scatter.dd	xfail	
+ndad_cartesian_helper.dd	xfail	
+symbolic_dims.dd	xfail	
+bad_missing_variadic_hook.dd	xfail	
+bad_symbolic_dim_mismatch.dd	xfail	
+bad_scatter_value_type.dd	xfail	

@@ -1,0 +1,16 @@
+# Target: masks and scatter assignment are library policy through [] and []=.
+
+from ndad import Tensor
+from ndad import Mask
+from ndad import zeros
+
+
+def main() -> i32:
+    x: Tensor[f32][32, 784] = zeros[f32](32, 784)
+    mask: Mask[32] = x[:, 0] > 0.0
+
+    train_x: Tensor[f32][dyn, 784] = x[mask, :]
+    x[mask, :] = train_x
+    x[x < 0.0] = 0.0
+
+    return i32(train_x.shape[1])

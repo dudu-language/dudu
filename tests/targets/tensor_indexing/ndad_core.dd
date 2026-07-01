@@ -1,0 +1,30 @@
+# Target: ndad core storage is rank-independent: shape, strides, offset.
+
+class TensorView[T]:
+    data: &list[T]
+    shape: list[i64]
+    strides: list[i64]
+    offset: i64
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        ...
+
+
+class Tensor[T]:
+    data: list[T]
+    shape: list[i64]
+    strides: list[i64]
+    offset: i64
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+        ...
+
+    @operator("[]=")
+    def set_at[Idx...](self, *idx: Idx, value: TensorAssignable[T, Idx...]):
+        ...
+
+
+def zeros[T](shape: list[i64]) -> Tensor[T]:
+    ...

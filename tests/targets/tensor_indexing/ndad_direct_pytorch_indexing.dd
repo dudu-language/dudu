@@ -1,0 +1,18 @@
+# Target: reference ndad indexing uses direct PyTorch-like bracket behavior.
+
+from ndad import Tensor
+from ndad import arange
+from ndad import zeros
+
+
+def main() -> i32:
+    logits: Tensor[f32][32, 10] = zeros[f32](32, 10)
+    labels: Tensor[i32][32] = zeros[i32](32)
+
+    correct = logits[arange(32), labels]
+    first_row = logits[0, :]
+    first_col = logits[:, 0]
+    last_class = logits[..., -1]
+    expanded = labels[None, :]
+
+    return i32(correct.shape[0] + first_row.shape[0] + first_col.shape[0] + last_class.shape[0] + expanded.shape[0])
