@@ -23,10 +23,13 @@ std::optional<FunctionSignature> explicit_generic_function_signature_ast(
     }
     if (location != nullptr) {
         for (const TypeRef& type_arg : type_args) {
-            if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+            if (!explicit_generic_arg_known(scope.symbols, type_arg)) {
+                const auto unknown = unknown_type_ref(scope.symbols, type_arg);
                 const SourceLocation type_location =
-                    unknown->second.line > 0 ? unknown->second : type_arg.location;
-                sema_expr_fail(type_location, "unknown generic argument type: " + unknown->first);
+                    unknown && unknown->second.line > 0 ? unknown->second : type_arg.location;
+                sema_expr_fail(type_location,
+                               "unknown generic argument type: " +
+                                   (unknown ? unknown->first : type_ref_text(type_arg)));
             }
         }
     }

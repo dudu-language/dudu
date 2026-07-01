@@ -228,12 +228,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                        type_ref_text(signature_param_type_ref(*signature, 0)) +
                                        ", got " + right_display);
                 }
-                if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
-                    sema_expr_fail(*location, "comparison operator " + std::string(expr.op) +
-                                                  " must return bool");
-                }
             }
-            return named_type_ref("bool", expr.location);
+            return signature_return_type_ref(*signature);
         }
         if (location != nullptr && has_type_ref(left_ref) && has_type_ref(right_ref) &&
             !comparison_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1],

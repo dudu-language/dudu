@@ -3,11 +3,11 @@ parser_index_items.dd	xfail
 fixed_array_python_slices.dd	pass
 library_fixed_arity_hooks.dd	pass	
 library_variadic_hooks.dd	pass
-ndad_core.dd	xfail	
-ndad_direct_pytorch_indexing.dd	xfail	
-ndad_mask_and_scatter.dd	xfail	
-ndad_cartesian_helper.dd	xfail	
-symbolic_dims.dd	xfail	
-bad_missing_variadic_hook.dd	xfail	
-bad_symbolic_dim_mismatch.dd	xfail	
-bad_scatter_value_type.dd	xfail	
+ndad_core.dd	pass
+ndad_direct_pytorch_indexing.dd	pass
+ndad_mask_and_scatter.dd	pass
+ndad_cartesian_helper.dd	pass
+symbolic_dims.dd	pass
+bad_missing_variadic_hook.dd	xfail	function value[] expects 1 arguments, got 3
+bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
+bad_scatter_value_type.dd	xfail	expects Tensor[f32], got Tensor[i32][dyn, 784]

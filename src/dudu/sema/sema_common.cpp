@@ -36,6 +36,14 @@ void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& ty
     }
 }
 
+bool explicit_generic_arg_known(const Symbols& symbols, const TypeRef& type_arg) {
+    const std::string name = type_ref_head_name(type_arg);
+    if (!name.empty() && type_arg.children.empty() && symbols.generic_params.contains(name)) {
+        return true;
+    }
+    return !unknown_type_ref(symbols, type_arg).has_value();
+}
+
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
     return with_generic_params(std::move(symbols), params, {});
 }

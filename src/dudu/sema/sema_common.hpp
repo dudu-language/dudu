@@ -17,6 +17,7 @@ bool missing_expr(const Expr& expr);
 const SourceLocation& diagnostic_location(const SourceLocation& context, const Expr& expr);
 const SourceLocation& diagnostic_location(const SourceLocation& context, const TypeRef& type);
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref);
+bool explicit_generic_arg_known(const Symbols& symbols, const TypeRef& type_arg);
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params);
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params,
                             const std::set<std::string>& value_params);

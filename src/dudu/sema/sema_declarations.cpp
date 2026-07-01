@@ -123,11 +123,6 @@ bool receiver_type_is_reference_to_class(const Symbols& symbols, const TypeRef& 
     return type_ref_head_name(target) == class_name;
 }
 
-bool is_comparison_operator_method(const FunctionDecl& method) {
-    static const std::set<std::string> ops = {"==", "!=", "<", "<=", ">", ">="};
-    return ops.contains(operator_decorator_arg(method));
-}
-
 void check_generic_params(const SourceLocation& location, const std::vector<std::string>& params) {
     std::set<std::string> seen;
     for (size_t i = 0; i < params.size(); ++i) {
@@ -414,9 +409,6 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
-                } else if (is_comparison_operator_method(method) &&
-                           !function_returns(method, "bool")) {
-                    fail(method.location, "comparison operator methods must return bool");
                 }
             }
             if (is_constructor_method(method) && function_has_return_type(method) &&

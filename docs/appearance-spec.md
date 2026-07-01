@@ -1371,7 +1371,9 @@ class Vec2:
 Supported binary operators are `+`, `-`, `*`, `/`, and `%`. Supported compound
 assignment operators are `+=`, `-=`, `*=`, `/=`, and `%=`. Supported comparison
 operators are `==`, `!=`, `<`, `<=`, `>`, and `>=`. Operator methods take
-`self` plus one argument. Comparison operators must return `bool`.
+`self` plus one argument. Comparison operators may return `bool` or a
+library-defined mask/expression type; conditions still require a `bool` value
+or an explicit `@operator("bool")`.
 
 ## C Interop
 

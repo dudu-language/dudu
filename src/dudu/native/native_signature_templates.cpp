@@ -130,7 +130,8 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         same_native_template_name(expected.name, got.name)) {
         return bind_same_shape_children(expected, got, bindings);
     }
-    if (expected.kind == TypeKind::FixedArray && got.kind == TypeKind::FixedArray) {
+    if ((expected.kind == TypeKind::FixedArray || expected.kind == TypeKind::Shaped) &&
+        expected.kind == got.kind) {
         return bind_same_shape_children(expected, got, bindings);
     }
     return false;
@@ -189,8 +190,9 @@ bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
                                    const TypeRef& got, NativeTemplateBindings& bindings) {
+    TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
     TypeRef resolved_got = resolve_alias_ref(symbols, got);
-    return bind_template_type_ref(expected, resolved_got, bindings);
+    return bind_template_type_ref(resolved_expected, resolved_got, bindings);
 }
 
 } // namespace dudu

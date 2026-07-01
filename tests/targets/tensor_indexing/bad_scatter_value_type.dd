@@ -7,7 +7,7 @@ from ndad import zeros
 
 def main() -> i32:
     x: Tensor[f32][32, 784] = zeros[f32](32, 784)
-    mask: Mask[32] = x[:, 0] > 0.0
-    wrong: Tensor[f32][4, 4] = zeros[f32](4, 4)
+    mask: Mask = x[:, 0] > 0.0
+    wrong: Tensor[i32][dyn, 784] = zeros[i32](4, 784)
     x[mask, :] = wrong
     return 1

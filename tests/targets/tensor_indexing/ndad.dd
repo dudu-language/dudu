@@ -1,0 +1,143 @@
+class Mask:
+    data: list[bool]
+
+    @operator("[]")
+    def at(self, index: i32) -> bool:
+        return self.data[index]
+
+    def count_true(self) -> i32:
+        count = 0
+        index = 0
+        total = i32(len(self.data))
+        while index < total:
+            if self.data[index]:
+                count += 1
+            index += 1
+        return count
+
+
+class TensorSelection[T, Idx...]:
+    value: T
+    shape: list[i64]
+
+
+class TensorAssignable[T, Idx...]:
+    value: T
+    shape: list[i64]
+
+
+class CartesianIndexer[T]:
+    marker: i32
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> Tensor[T]:
+        return zeros[T](1)
+
+
+class TensorView[T]:
+    data: &list[T]
+    shape: list[i64]
+    strides: list[i64]
+    offset: i64
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> Tensor[T]:
+        return Tensor[T](self.data, self.shape, self.strides, self.offset)
+
+
+class Tensor[T]:
+    data: list[T]
+    shape: list[i64]
+    strides: list[i64]
+    offset: i64
+    cartesian: CartesianIndexer[T]
+
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> Tensor[T]:
+        return self
+
+    @operator("[]=")
+    def set_tensor[Idx...](self, *idx: Idx, value: Tensor[T]):
+        self.offset = self.offset
+
+    @operator("[]=")
+    def set_scalar[Idx...](self, *idx: Idx, value: T):
+        self.offset = self.offset
+
+    @operator(">")
+    def greater_than(self, value: T) -> Mask:
+        values: list[bool] = []
+        return Mask(values)
+
+    @operator("<")
+    def less_than(self, value: T) -> Mask:
+        values: list[bool] = []
+        return Mask(values)
+
+
+def contiguous_strides(shape: list[i64]) -> list[i64]:
+    strides: list[i64] = []
+    index = 0
+    total = i32(len(shape))
+    while index < total:
+        strides.append(1)
+        index += 1
+    return strides
+
+
+def zeros[T](dim0: i64) -> Tensor[T]:
+    shape: list[i64] = []
+    shape.append(dim0)
+    data: list[T] = []
+    cartesian = CartesianIndexer[T](0)
+    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
+    return tensor
+
+
+def zeros[T](dim0: i64, dim1: i64) -> Tensor[T]:
+    shape: list[i64] = []
+    shape.append(dim0)
+    shape.append(dim1)
+    data: list[T] = []
+    cartesian = CartesianIndexer[T](0)
+    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
+    return tensor
+
+
+def zeros[T](dim0: i64, dim1: i64, dim2: i64, dim3: i64) -> Tensor[T]:
+    shape: list[i64] = []
+    shape.append(dim0)
+    shape.append(dim1)
+    shape.append(dim2)
+    shape.append(dim3)
+    data: list[T] = []
+    cartesian = CartesianIndexer[T](0)
+    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
+    return tensor
+
+
+def arange(count: i64) -> Tensor[i64]:
+    return zeros[i64](count)
+
+
+def array[T](values: list[T]) -> Tensor[T]:
+    shape: list[i64] = []
+    shape.append(i64(len(values)))
+    cartesian = CartesianIndexer[T](0)
+    tensor = Tensor[T](values, shape, contiguous_strides(shape), 0, cartesian)
+    return tensor
+
+
+def matmul[T, M, K, N](
+    left: Tensor[T][M, K],
+    right: Tensor[T][K, N],
+) -> Tensor[T][M, N]:
+    shape: list[i64] = []
+    if len(left.shape) > 0:
+        shape.append(left.shape[0])
+    if len(right.shape) > 1:
+        shape.append(right.shape[1])
+    data: list[T] = []
+    cartesian = CartesianIndexer[T](0)
+    tensor = Tensor[T](data, shape, contiguous_strides(shape), 0, cartesian)
+    return tensor
