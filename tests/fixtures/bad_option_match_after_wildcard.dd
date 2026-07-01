@@ -10,4 +10,3 @@ def main() -> i32:
             return 0
         case Some(value):
             return value
-

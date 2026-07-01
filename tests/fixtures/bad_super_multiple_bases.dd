@@ -3,11 +3,9 @@ class Drawable:
     def draw(self) -> i32:
 
 
-
 class Tickable:
     @abstract
     def tick(self) -> i32:
-
 
 
 class Sprite(Drawable, Tickable):

@@ -14,7 +14,6 @@ struct IndexOperatorTarget {
     const Expr* receiver = nullptr;
     std::string read_operator;
     std::string write_operator;
-    bool explicit_mode = false;
 };
 
 IndexOperatorTarget index_operator_target(const Expr& receiver);

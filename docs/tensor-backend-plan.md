@@ -527,6 +527,11 @@ Acceptance test: a new indexer spelling can be added entirely in Dudu library
 code and used with `object.indexer[...]` without editing compiler sema or
 codegen.
 
+Status: complete for the compiler boundary. The fixtures cover
+`tensor.vindex[...]`, `tensor.oindex[...]`, chained temporary indexing such as
+`image.window[8, 9][y, x]`, and an unrelated custom `sparse.coo[...]` spelling
+using only normal library-owned `[]` / `[]=` hooks.
+
 ### 1. Audit Current Indexing Hooks
 
 Verify the current compiler can express the library surface we need:
@@ -565,16 +570,11 @@ Status:
 - Done: reference-backed view structs can be aggregate-initialized without
   invalid default reference fields.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
-- Done: `.vindex[...]` and `.oindex[...]` dispatch to library-owned
-  `@operator("vindex[]")` / `@operator("vindex[]=")` and
-  `@operator("oindex[]")` / `@operator("oindex[]=")` hooks. This gives
-  libraries explicit pairwise and orthogonal gather/scatter entry points
-  without compiler tensor-backend knowledge.
-- Rework required: the final design should remove compiler-recognized
-  `vindex[]` / `oindex[]` operator names. `.vindex[...]` and `.oindex[...]`
-  should work because `vindex`/`oindex` are ordinary library-defined indexer
-  members whose types implement normal `@operator("[]")` /
-  `@operator("[]=")`.
+- Done: `.vindex[...]`, `.oindex[...]`, and other custom indexing spellings
+  dispatch through ordinary member lookup to library-owned indexer objects
+  whose types implement normal `@operator("[]")` and `@operator("[]=")`.
+  The compiler no longer recognizes special `vindex[]` / `oindex[]` operator
+  names.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".
@@ -584,6 +584,7 @@ Status:
   and `tests/fixtures/tensor_vindex_hook.dd` and
   `tests/fixtures/tensor_oindex_hook.dd` and `tests/fixtures/bad_tensor_vindex.dd` and
   `tests/fixtures/bad_tensor_oindex.dd` and
+  `tests/fixtures/custom_indexer_objects.dd` and
   `tests/fixtures/bad_tensor_missing_index_hook.dd` and
   `tests/fixtures/bad_tensor_missing_index_set_hook.dd` and
   `tests/fixtures/tensor_dogfood/shape_metadata.dd` and
@@ -612,10 +613,11 @@ Status:
   selected value type. For example, `tensor[mask, :] += 1` does not silently
   lower through a scalar-fill scatter hook; users must spell the read/modify
   value and `[]=` assignment explicitly so the library policy is visible.
-- Done: compound assignment also works for explicit advanced-index hooks when
-  the library provides matching selected-value write hooks. `tensor.vindex[...] += x`
-  lowers to one `vindex[]` read and one `vindex[]=` write, and
-  `tensor.oindex[...] += x` does the same for orthogonal selection.
+- Done: compound assignment also works for member-owned advanced indexer
+  objects when the library provides matching selected-value write hooks.
+  `tensor.vindex[...] += x` lowers to a normal `[]` read plus `[]=` write on
+  the `vindex` object, and `tensor.oindex[...] += x` does the same for
+  orthogonal selection.
   Repeated-index scatter order and accumulation behavior is therefore a
   library policy, not a compiler policy.
 - Done: `assume_shape[T](value)` lets library/user code narrow a runtime-known

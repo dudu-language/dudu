@@ -63,7 +63,7 @@ bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
         "+",    "-",  "*",   "/",        "%",         "+=",       "-=",        "*=",
         "/=",   "%=", "==",  "!=",       "<",         "<=",       ">",         ">=",
-        "bool", "[]", "[]=", "vindex[]", "vindex[]=", "oindex[]", "oindex[]=",
+        "bool", "[]", "[]=",
     };
     return operators.contains(op);
 }

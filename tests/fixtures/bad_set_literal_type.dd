@@ -1,3 +1,2 @@
 def bad():
     seen: set[str] = {1}
-

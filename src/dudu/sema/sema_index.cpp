@@ -193,18 +193,9 @@ std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& loca
 } // namespace
 
 IndexOperatorTarget index_operator_target(const Expr& receiver) {
-    if (receiver.kind == ExprKind::Member && receiver.children.size() == 1 &&
-        (receiver.name == "vindex" || receiver.name == "oindex")) {
-        const std::string marker = receiver.name.str();
-        return IndexOperatorTarget{.receiver = &receiver.children.front(),
-                                   .read_operator = marker + "[]",
-                                   .write_operator = marker + "[]=",
-                                   .explicit_mode = true};
-    }
     return IndexOperatorTarget{.receiver = &receiver,
                                .read_operator = "[]",
-                               .write_operator = "[]=",
-                               .explicit_mode = false};
+                               .write_operator = "[]="};
 }
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,

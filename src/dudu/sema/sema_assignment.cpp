@@ -151,8 +151,10 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         const IndexOperatorTarget target = index_operator_target(receiver);
         const Expr& hook_receiver = *target.receiver;
         const TypeRef receiver_type =
-            member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
-                                 hook_receiver, {}, scope.current_class);
+            hook_receiver.kind == ExprKind::Member
+                ? member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
+                                       hook_receiver, {}, scope.current_class)
+                : TypeRef{};
         if (has_type_ref(receiver_type)) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
             args.push_back(stmt.value_expr);
@@ -172,12 +174,32 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                                                "\") for indexed assignment to " +
                                                indexed_assignment_label(receiver));
             }
-            if (target.explicit_mode) {
+            return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
+                                              stmt_target_expr(stmt).children[1],
+                                              indexed_assignment_label(receiver));
+        }
+        const TypeRef inferred_receiver_type =
+            infer_expr_type_ast(scope, hook_receiver, &target_location);
+        if (has_type_ref(inferred_receiver_type)) {
+            std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            args.push_back(stmt.value_expr);
+            if (const auto signature = dudu_operator_signature_for_args(
+                    scope.symbols, target.write_operator, inferred_receiver_type, args,
+                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
+                check_call_args_ast(scope,
+                                    indexed_assignment_label(receiver) + target.write_operator,
+                                    *signature, args, &target_location);
+                return {};
+            }
+            check_declared_index_assignment_operator_if_any(
+                scope, inferred_receiver_type, target.write_operator,
+                indexed_assignment_label(receiver), args, target_location);
+            if (class_for_receiver_type(scope.symbols, inferred_receiver_type) != nullptr) {
                 sema_fail(target_location, "no matching @operator(\"" + target.write_operator +
                                                "\") for indexed assignment to " +
                                                indexed_assignment_label(receiver));
             }
-            return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
+            return indexed_type_ref_from_type(scope.symbols, target_location, inferred_receiver_type,
                                               stmt_target_expr(stmt).children[1],
                                               indexed_assignment_label(receiver));
         }
@@ -244,8 +266,14 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
         scope.local_type_refs.contains(hook_receiver.name)) {
         receiver_type = local_type_ref(scope, hook_receiver.name, target_location);
     } else {
-        receiver_type = member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
-                                             hook_receiver, {}, scope.current_class);
+        receiver_type = hook_receiver.kind == ExprKind::Member
+                            ? member_expr_type_ref(scope.symbols, scope.local_type_refs,
+                                                   &target_location, hook_receiver, {},
+                                                   scope.current_class)
+                            : TypeRef{};
+        if (!has_type_ref(receiver_type)) {
+            receiver_type = infer_expr_type_ast(scope, hook_receiver, &target_location);
+        }
     }
     if (!has_type_ref(receiver_type) ||
         class_for_receiver_type(scope.symbols, receiver_type) == nullptr) {

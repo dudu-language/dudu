@@ -19,4 +19,3 @@ def main() -> i32:
     if first == 1 and second == "two" and third == 3:
         return 42
     return 4
-

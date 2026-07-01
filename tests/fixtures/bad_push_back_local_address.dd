@@ -7,4 +7,3 @@ def bad() -> list[*Node]:
     out: list[*Node] = []
     out.push_back(&node)
     return out
-

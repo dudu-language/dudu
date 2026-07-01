@@ -1,5 +1,5 @@
-import cpp "imgui.h"
-import c "string.h" as c
+from c.path import string.h as c
+from cpp.path import imgui.h
 
 
 def main() -> i32:

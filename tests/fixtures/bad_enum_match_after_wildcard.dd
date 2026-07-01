@@ -9,4 +9,3 @@ def value(direction: Direction) -> i32:
             return 0
         case Direction.North:
             return 1
-

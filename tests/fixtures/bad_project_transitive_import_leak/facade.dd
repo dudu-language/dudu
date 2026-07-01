@@ -3,4 +3,3 @@ import leaf
 
 def public_answer() -> i32:
     return leaf.hidden_answer()
-

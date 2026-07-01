@@ -266,12 +266,10 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                         function_returns, symbols)) {
                     return *hook_type;
                 }
-                if (!target.explicit_mode) {
-                    if (const TypeRef indexed_type =
-                            indexed_local_type_ref(local_type, expr.children[1], symbols);
-                        has_type_ref(indexed_type)) {
-                        return indexed_type;
-                    }
+                if (const TypeRef indexed_type =
+                        indexed_local_type_ref(local_type, expr.children[1], symbols);
+                    has_type_ref(indexed_type)) {
+                    return indexed_type;
                 }
             }
             const TypeRef receiver_type = infer_emitted_local_type_ref(
@@ -282,12 +280,10 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                         function_returns, symbols)) {
                     return *hook_type;
                 }
-                if (!target.explicit_mode) {
-                    if (const TypeRef indexed_type =
-                            indexed_local_type_ref(receiver_type, expr.children[1], symbols);
-                        has_type_ref(indexed_type)) {
-                        return indexed_type;
-                    }
+                if (const TypeRef indexed_type =
+                        indexed_local_type_ref(receiver_type, expr.children[1], symbols);
+                    has_type_ref(indexed_type)) {
+                    return indexed_type;
                 }
             }
         }

@@ -1,6 +1,6 @@
-import c "lua.h" as lua
-import c "lauxlib.h" as laux
-import c "lualib.h" as lualib
+from c.path import lauxlib.h as laux
+from c.path import lua.h as lua
+from c.path import lualib.h as lualib
 
 
 def main() -> i32:

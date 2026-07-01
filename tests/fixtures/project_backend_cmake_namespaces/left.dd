@@ -8,4 +8,3 @@ def make(value: i32) -> Box:
 
 def score(box: Box) -> i32:
     return box.value + 10
-

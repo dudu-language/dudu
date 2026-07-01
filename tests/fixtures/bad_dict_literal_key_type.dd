@@ -1,3 +1,2 @@
 def bad():
     scores: dict[str, i32] = {1: 42}
-

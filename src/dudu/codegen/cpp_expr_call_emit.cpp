@@ -280,8 +280,14 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (hook_receiver.kind == ExprKind::Name) {
         receiver_type = local_type_ref(local_type_refs, hook_receiver.name, hook_receiver.location);
     } else {
-        receiver_type = member_expr_type_ref(*symbols, local_type_refs, nullptr, hook_receiver, {},
-                                             locals.current_class);
+        receiver_type = hook_receiver.kind == ExprKind::Member
+                            ? member_expr_type_ref(*symbols, local_type_refs, nullptr,
+                                                   hook_receiver, {}, locals.current_class)
+                            : TypeRef{};
+        if (!has_type_ref(receiver_type)) {
+            receiver_type = infer_emitted_local_type_ref(hook_receiver, local_type_refs, {},
+                                                         symbols);
+        }
     }
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;
@@ -319,8 +325,14 @@ lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::st
     if (hook_receiver.kind == ExprKind::Name) {
         receiver_type = local_type_ref(local_type_refs, hook_receiver.name, hook_receiver.location);
     } else {
-        receiver_type = member_expr_type_ref(*symbols, local_type_refs, nullptr, hook_receiver, {},
-                                             locals.current_class);
+        receiver_type = hook_receiver.kind == ExprKind::Member
+                            ? member_expr_type_ref(*symbols, local_type_refs, nullptr,
+                                                   hook_receiver, {}, locals.current_class)
+                            : TypeRef{};
+        if (!has_type_ref(receiver_type)) {
+            receiver_type = infer_emitted_local_type_ref(hook_receiver, local_type_refs,
+                                                         function_returns, symbols);
+        }
     }
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;
@@ -375,8 +387,14 @@ lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
     if (hook_receiver.kind == ExprKind::Name) {
         receiver_type = local_type_ref(local_type_refs, hook_receiver.name, hook_receiver.location);
     } else {
-        receiver_type = member_expr_type_ref(*symbols, local_type_refs, nullptr, hook_receiver, {},
-                                             locals.current_class);
+        receiver_type = hook_receiver.kind == ExprKind::Member
+                            ? member_expr_type_ref(*symbols, local_type_refs, nullptr,
+                                                   hook_receiver, {}, locals.current_class)
+                            : TypeRef{};
+        if (!has_type_ref(receiver_type)) {
+            receiver_type = infer_emitted_local_type_ref(hook_receiver, local_type_refs, {},
+                                                         symbols);
+        }
     }
     if (!has_type_ref(receiver_type)) {
         return std::nullopt;

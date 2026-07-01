@@ -1,0 +1,49 @@
+class Window:
+    data: list[i32]
+    width: i32
+    tile_w: i32
+    tile_h: i32
+
+    @operator("[]")
+    def sample(self, y: i32, x: i32) -> i32:
+        return self.data[(y * self.width) + x] + self.tile_w + self.tile_h
+
+
+class WindowFactory:
+    data: list[i32]
+    width: i32
+
+    @operator("[]")
+    def make(self, tile_w: i32, tile_h: i32) -> Window:
+        return Window(self.data, self.width, tile_w, tile_h)
+
+
+class Image:
+    data: list[i32]
+    width: i32
+    window: WindowFactory
+
+
+class CooIndex:
+    values: list[i32]
+
+    @operator("[]")
+    def sample(self, rows: array[i32][2], cols: array[i32][2]) -> i32:
+        return self.values[rows[0] + cols[0]] + self.values[rows[1] + cols[1]]
+
+
+class Sparse:
+    coo: CooIndex
+
+
+def main() -> i32:
+    pixels: list[i32] = [1, 2, 3, 4, 5, 6]
+    image = Image(pixels, 3, WindowFactory(pixels, 3))
+    window_value = image.window[8, 9][1, 2]
+
+    sparse_values: list[i32] = [10, 20, 30, 40]
+    sparse = Sparse(CooIndex(sparse_values))
+    rows: array[i32] = [0, 1]
+    cols: array[i32] = [1, 2]
+    sparse_value = sparse.coo[rows, cols]
+    return window_value + sparse_value - 41

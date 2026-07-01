@@ -239,25 +239,16 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                     check_declared_index_operator_if_any(scope, receiver_type, target.read_operator,
                                                          index_receiver_label(receiver), args,
                                                          location);
-                    if (target.explicit_mode &&
-                        class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-                        sema_expr_fail(index_location, "no matching @operator(\"" +
-                                                           target.read_operator +
-                                                           "\") for indexed access to " +
-                                                           index_receiver_label(receiver));
-                    }
-                }
-                if (target.explicit_mode) {
-                    sema_expr_fail(index_location, "indexed access to unknown local: " +
-                                                       index_receiver_label(receiver));
                 }
                 return indexed_value_type_ref(scope.symbols, scope.local_type_refs, index_location,
                                               hook_receiver.name, expr.children[1],
                                               "indexed access to unknown local: ");
             }
             const TypeRef receiver_member_type =
-                member_expr_type_ref(scope.symbols, scope.local_type_refs, location, hook_receiver,
-                                     {}, scope.current_class);
+                hook_receiver.kind == ExprKind::Member
+                    ? member_expr_type_ref(scope.symbols, scope.local_type_refs, location,
+                                           hook_receiver, {}, scope.current_class)
+                    : TypeRef{};
             if (has_type_ref(receiver_member_type)) {
                 const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
                 if (const auto signature = dudu_operator_signature_for_args(
@@ -271,25 +262,24 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 check_declared_index_operator_if_any(
                     scope, receiver_member_type, target.read_operator,
                     index_receiver_label(receiver), args, location);
-                if (target.explicit_mode &&
-                    class_for_receiver_type(scope.symbols, receiver_member_type) != nullptr) {
-                    sema_expr_fail(index_location, "no matching @operator(\"" +
-                                                       target.read_operator +
-                                                       "\") for indexed access to " +
-                                                       index_receiver_label(receiver));
-                }
                 return indexed_type_ref_from_type(scope.symbols, index_location,
                                                   receiver_member_type, expr.children[1],
                                                   index_receiver_label(receiver));
             }
             const TypeRef receiver_type = infer_expr_type_ast(scope, hook_receiver, location);
             if (has_type_ref(receiver_type)) {
-                if (target.explicit_mode) {
-                    sema_expr_fail(index_location, "no matching @operator(\"" +
-                                                       target.read_operator +
-                                                       "\") for indexed access to " +
-                                                       index_receiver_label(receiver));
+                const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+                if (const auto signature = dudu_operator_signature_for_args(
+                        scope.symbols, target.read_operator, receiver_type, args,
+                        infer_arg_type_refs(scope, args, location))) {
+                    check_call_args_ast(scope,
+                                        index_receiver_label(receiver) + target.read_operator,
+                                        *signature, args, location);
+                    return signature_return_type_ref(*signature);
                 }
+                check_declared_index_operator_if_any(
+                    scope, receiver_type, target.read_operator, index_receiver_label(receiver),
+                    args, location);
                 return indexed_type_ref_from_type(scope.symbols, index_location, receiver_type,
                                                   expr.children[1], index_receiver_label(receiver));
             }
