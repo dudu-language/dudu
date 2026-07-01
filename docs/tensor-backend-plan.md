@@ -138,6 +138,13 @@ Imported/native generic matching now peels shaped metadata when the expected
 parameter is an unshaped generic library type, so helper APIs such as
 `Tensor[T]` can accept `Tensor[i32][2, 3]` without explicit type arguments.
 
+Status: `ndad_assignment_broadcast_runtime.dd` proves tensor-valued `[]=`
+assignment uses the same broadcast-compatible shape model as normal tensor
+operators. The reference library no longer cycles source elements with modulo;
+it maps source offsets through right-aligned broadcast coordinates and rejects
+incompatible assignment shapes in the library layer. The fixture covers row,
+column, face, and singleton-axis assignment into rank-2 and rank-3 selections.
+
 ## Backend Choice
 
 Use the most portable useful stack first:

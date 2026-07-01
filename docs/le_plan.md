@@ -1280,7 +1280,11 @@ push. They are not release packaging work.
    infer `T` from `Tensor[i32][2, 3]` without explicit type arguments.
    `ndad_broadcast_compatibility_runtime.dd` proves compatible row/column and
    higher-rank broadcasting while rejecting incompatible dimensions in the
-   library layer.
+   library layer. Tensor-valued indexed assignment now uses the same honest
+   broadcast-coordinate mapping instead of cycling source values with modulo;
+   `ndad_assignment_broadcast_runtime.dd` runs row, column, face, and
+   singleton-axis assignment into rank-2 and rank-3 selections through normal
+   `[]=` hooks.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

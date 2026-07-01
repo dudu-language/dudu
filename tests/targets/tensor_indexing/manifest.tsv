@@ -11,6 +11,7 @@ ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass
 ndad_broadcasting_runtime.dd	run	0
 ndad_broadcast_compatibility_runtime.dd	run	0
+ndad_assignment_broadcast_runtime.dd	run	0
 ndad_shape_preserving_helpers.dd	run	5
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value

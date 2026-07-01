@@ -1,0 +1,83 @@
+# Target: tensor-valued []= assignment uses honest broadcast-compatible shape mapping.
+
+from ndad import Tensor
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    matrix: Tensor[i32][2, 3] = zeros[i32](2, 3)
+    row: Tensor[i32][3] = array[i32]([10, 20, 30])
+    matrix[:, :] = row
+    if matrix.data[0] != 10:
+        return 1
+    if matrix.data[1] != 20:
+        return 2
+    if matrix.data[2] != 30:
+        return 3
+    if matrix.data[3] != 10:
+        return 4
+    if matrix.data[4] != 20:
+        return 5
+    if matrix.data[5] != 30:
+        return 6
+
+    column: Tensor[i32][2, 1] = zeros[i32](2, 1)
+    column.data[0] = 7
+    column.data[1] = 8
+    matrix[:, :] = column
+    if matrix.data[0] != 7:
+        return 7
+    if matrix.data[1] != 7:
+        return 8
+    if matrix.data[2] != 7:
+        return 9
+    if matrix.data[3] != 8:
+        return 10
+    if matrix.data[4] != 8:
+        return 11
+    if matrix.data[5] != 8:
+        return 12
+
+    cube: Tensor[i32][2, 3, 4] = zeros[i32](2, 3, 4)
+    face: Tensor[i32][3, 4] = zeros[i32](3, 4)
+    face_index = 0
+    face_total = i32(len(face.data))
+    while face_index < face_total:
+        face.data[face_index] = face_index + 1
+        face_index += 1
+
+    cube[:, :, :] = face
+    if cube.data[0] != 1:
+        return 13
+    if cube.data[11] != 12:
+        return 14
+    if cube.data[12] != 1:
+        return 15
+    if cube.data[23] != 12:
+        return 16
+
+    plane: Tensor[i32][2, 1, 4] = zeros[i32](2, 1, 4)
+    plane.data[0] = 101
+    plane.data[1] = 102
+    plane.data[2] = 103
+    plane.data[3] = 104
+    plane.data[4] = 201
+    plane.data[5] = 202
+    plane.data[6] = 203
+    plane.data[7] = 204
+    cube[:, :, :] = plane
+    if cube.data[0] != 101:
+        return 17
+    if cube.data[4] != 101:
+        return 18
+    if cube.data[8] != 101:
+        return 19
+    if cube.data[12] != 201:
+        return 20
+    if cube.data[16] != 201:
+        return 21
+    if cube.data[20] != 201:
+        return 22
+
+    return 0

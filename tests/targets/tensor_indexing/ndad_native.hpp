@@ -594,16 +594,17 @@ void assign_tensor(DestData& dest_data, const DestShape& dest_shape,
     const IndexPlan dest = index_plan(dest_shape, dest_strides, dest_offset, idx...);
     const std::vector<i64> source_shape = as_i64_shape(src_shape);
     const std::vector<i64> source_strides = as_i64_shape(src_strides);
+    if (!broadcast_compatible(source_shape, dest.shape)) {
+        throw std::runtime_error("incompatible tensor assignment shape");
+    }
     const i64 dest_count = element_count(dest.shape);
-    const i64 source_count = element_count(source_shape);
     for (i64 flat = 0; flat < dest_count; ++flat) {
-        const i64 source_flat = source_count <= 1 ? 0 : flat % source_count;
         const i64 dest_offset_value = dest.explicit_offsets.empty()
                                           ? flat_offset(dest.shape, dest.strides, dest.offset, flat)
                                           : dest.explicit_offsets[static_cast<std::size_t>(flat)];
         dest_data[static_cast<std::size_t>(dest_offset_value)] =
             src_data[static_cast<std::size_t>(
-                flat_offset(source_shape, source_strides, src_offset, source_flat))];
+                broadcast_flat_offset(source_shape, source_strides, src_offset, dest.shape, flat))];
     }
 }
 
