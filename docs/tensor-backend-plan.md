@@ -27,6 +27,12 @@ allowed to be aspirational and not build yet. They are the API contract we are
 working toward. A small passing BLAS demo is only a proof of native interop; it
 is not completion of first-class tensor indexing.
 
+Autograd target ergonomics should feel closer to PyTorch than TensorFlow:
+ordinary imperative model code, parameters used directly in tensor operations,
+`loss.backward()`, `opt.step()`, and `opt.zero_grad()`. Tape/graph machinery may
+exist inside the library, but the target API should not require user code to
+instantiate a public `Tape`.
+
 ## Non-Goals
 
 - Do not special-case OpenBLAS, OpenCL, ROCm, CUDA, Eigen, PyTorch, or any
@@ -822,6 +828,10 @@ Implement a small autograd graph in Dudu using ordinary classes:
 - gradient
 - backward pass
 - operations: add, mul, matmul, relu, mean squared error
+
+User-facing training code should use `loss.backward()` rather than a public
+`Tape` object. A tape or graph can be an internal implementation detail of the
+tensor/autograd library.
 
 This primarily stresses:
 
