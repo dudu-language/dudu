@@ -148,6 +148,11 @@ operators. The reference library no longer cycles source elements with modulo;
 it maps source offsets through right-aligned broadcast coordinates and rejects
 incompatible assignment shapes in the library layer. The fixture covers row,
 column, face, and singleton-axis assignment into rank-2 and rank-3 selections.
+`ndad_repeated_scatter_runtime.dd` documents the current repeated advanced
+scatter policy with executable evidence: destination offsets are visited in
+index-result order, so repeated destinations are overwritten by the later
+source element. This remains ordinary `ndad` library behavior, not a compiler
+rule.
 
 Status: `library_index_category_hooks.dd` proves `basic_index` is general
 index-dispatch machinery, not a tensor special case. A simple library type can

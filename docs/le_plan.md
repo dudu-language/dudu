@@ -1296,7 +1296,9 @@ push. They are not release packaging work.
    broadcast-coordinate mapping instead of cycling source values with modulo;
    `ndad_assignment_broadcast_runtime.dd` runs row, column, face, and
    singleton-axis assignment into rank-2 and rank-3 selections through normal
-   `[]=` hooks.
+   `[]=` hooks. `ndad_repeated_scatter_runtime.dd` now fixes the current
+   repeated advanced scatter policy as library-owned, index-order writes where
+   later repeated destinations win.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

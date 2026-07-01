@@ -1,0 +1,35 @@
+# Target: repeated advanced-index scatter has explicit library-owned behavior.
+
+from ndad import Tensor
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    values: Tensor[i32][4] = zeros[i32](4)
+    values.data[0] = 10
+    values.data[1] = 20
+    values.data[2] = 30
+    values.data[3] = 40
+
+    repeated = array[i64]([1, 1, 2])
+    updates = array[i32]([70, 80, 90])
+    values[repeated] = updates
+
+    if values.data[0] != 10:
+        return 1
+    if values.data[1] != 80:
+        return 2
+    if values.data[2] != 90:
+        return 3
+    if values.data[3] != 40:
+        return 4
+
+    mask = array[i32]([0, -1, 0, -1]) < 0
+    values[mask] = array[i32]([100, 200])
+    if values.data[1] != 100:
+        return 5
+    if values.data[3] != 200:
+        return 6
+
+    return 0
