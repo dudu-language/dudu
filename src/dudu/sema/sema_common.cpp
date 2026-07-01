@@ -4,6 +4,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/sema/sema_generics.hpp"
 
 namespace dudu {
 
@@ -42,10 +43,11 @@ Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& par
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params,
                             const std::set<std::string>& value_params) {
     for (const std::string& param : params) {
-        if (!value_params.contains(param)) {
-            symbols.types.insert(param);
+        const std::string name = generic_param_base_name(param);
+        if (!value_params.contains(name)) {
+            symbols.types.insert(name);
         }
-        symbols.generic_params.insert(param);
+        symbols.generic_params.insert(name);
     }
     return symbols;
 }

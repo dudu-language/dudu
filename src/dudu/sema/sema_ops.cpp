@@ -4,6 +4,7 @@
 #include "dudu/core/decorators.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/type_compat.hpp"
 #include "dudu/sema/type_compat_native.hpp"
@@ -61,9 +62,8 @@ bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeR
 
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
-        "+",    "-",  "*",   "/",        "%",         "+=",       "-=",        "*=",
-        "/=",   "%=", "==",  "!=",       "<",         "<=",       ">",         ">=",
-        "bool", "[]", "[]=",
+        "+",  "-",  "*", "/",  "%", "+=", "-=",   "*=", "/=",  "%=",
+        "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
     };
     return operators.contains(op);
 }
@@ -108,31 +108,45 @@ std::vector<TypeRef> receiver_template_args(const Symbols& symbols, TypeRef rece
 }
 
 TypeRef operator_method_type_ref(const Symbols& symbols, const TypeRef& receiver,
-                                 const ClassDecl& klass, const TypeRef& type) {
+                                 const ClassDecl& klass, const FunctionDecl& method,
+                                 const std::vector<TypeRef>& method_args, const TypeRef& type) {
     std::map<std::string, TypeRef> substitutions;
     substitutions.emplace("Self", operator_self_type_ref(symbols, receiver, klass));
     const std::vector<TypeRef> receiver_args = receiver_template_args(symbols, receiver);
-    for (size_t i = 0; i < klass.generic_params.size() && i < receiver_args.size(); ++i) {
-        substitutions.emplace(klass.generic_params[i], receiver_args[i]);
-    }
-    return substitute_type_ref(type, substitutions);
+    TypeRef out = substitute_generic_type_ref(method.generic_params, method_args, type);
+    out = substitute_generic_type_ref(klass.generic_params, receiver_args, out);
+    return substitute_type_ref(out, substitutions);
 }
 
 FunctionSignature operator_method_signature(const Symbols& symbols, const TypeRef& receiver,
-                                            const ClassDecl& klass, const FunctionDecl& method) {
+                                            const ClassDecl& klass, const FunctionDecl& method,
+                                            const std::vector<TypeRef>& method_args = {}) {
     FunctionSignature signature;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     std::vector<TypeRef> param_types;
     param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        param_types.push_back(
-            operator_method_type_ref(symbols, receiver, klass, method.params[i].type_ref));
+        TypeRef param_type = operator_method_type_ref(symbols, receiver, klass, method, method_args,
+                                                      method.params[i].type_ref);
+        if (method.params[i].variadic &&
+            generic_pack_param_named(method.generic_params,
+                                     type_ref_head_name(method.params[i].type_ref))) {
+            param_type = named_type_ref("auto", method.params[i].location);
+        }
+        param_types.push_back(std::move(param_type));
     }
     set_signature_param_types(signature, std::move(param_types));
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        if (method.params[i].variadic) {
+            signature.variadic = true;
+            signature.variadic_param_index = static_cast<int>(i - first_param);
+            break;
+        }
+    }
     set_signature_return_type(
-        signature,
-        operator_method_type_ref(symbols, receiver, klass, function_return_type_ref(method)));
+        signature, operator_method_type_ref(symbols, receiver, klass, method, method_args,
+                                            function_return_type_ref(method)));
     return signature;
 }
 
@@ -140,36 +154,44 @@ std::string operator_function_name(const std::string& op) {
     return "operator" + op;
 }
 
-std::vector<DuduOperatorCandidate>
-dudu_operator_candidates(const Symbols& symbols, const std::string& op, const TypeRef& left) {
-    std::vector<DuduOperatorCandidate> out;
-    if (!is_supported_dudu_operator(op)) {
-        return out;
+size_t method_first_argument_param(const FunctionDecl& method) {
+    return !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+}
+
+std::optional<DuduOperatorCandidate> dudu_operator_candidate_for_arg_types(
+    const Symbols& symbols, const std::string& op, const TypeRef& left, const ClassDecl& klass,
+    const FunctionDecl& method, const std::vector<TypeRef>& arg_types) {
+    if (!method_has_operator(method, op)) {
+        return std::nullopt;
     }
-    const ClassDecl* klass = class_for_receiver_type(symbols, left);
-    if (klass == nullptr) {
-        return out;
-    }
-    for (const FunctionDecl& method : klass->methods) {
-        if (!method_has_operator(method, op)) {
-            continue;
+    std::vector<TypeRef> method_args;
+    if (!method.generic_params.empty()) {
+        const std::string display = klass.name + "." + method.name;
+        const auto inferred = infer_generic_method_type_args_from_type_refs(
+            method, display, arg_types, method_first_argument_param(method), std::nullopt, nullptr);
+        if (!inferred) {
+            return std::nullopt;
         }
-        out.push_back(DuduOperatorCandidate{
-            method.name, operator_method_signature(symbols, left, *klass, method)});
+        method_args = *inferred;
     }
-    return out;
+    return DuduOperatorCandidate{
+        method.name, operator_method_signature(symbols, left, klass, method, method_args)};
 }
 
 bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature& signature,
                                  const std::vector<TypeRef>& arg_types) {
-    if (signature_param_count(signature) != arg_types.size()) {
+    const size_t param_count = signature_param_count(signature);
+    if ((!signature.variadic && param_count != arg_types.size()) ||
+        (signature.variadic && arg_types.size() < param_count)) {
         return false;
     }
     for (size_t i = 0; i < arg_types.size(); ++i) {
         if (!has_type_ref(arg_types[i])) {
             return false;
         }
-        if (!type_assignment_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, i)),
+        const TypeRef expected = signature_param_type_ref(
+            signature, signature_param_index_for_arg(signature, i, arg_types.size()));
+        if (!type_assignment_allowed(resolve_alias_ref(symbols, expected),
                                      resolve_alias_ref(symbols, arg_types[i]))) {
             return false;
         }
@@ -179,15 +201,20 @@ bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature
 
 bool signature_matches_args(const Symbols& symbols, const FunctionSignature& signature,
                             const std::vector<Expr>& args, const std::vector<TypeRef>& arg_types) {
-    if (signature_param_count(signature) != args.size() || args.size() != arg_types.size()) {
+    const size_t param_count = signature_param_count(signature);
+    if (((!signature.variadic && param_count != args.size()) ||
+         (signature.variadic && args.size() < param_count)) ||
+        args.size() != arg_types.size()) {
         return false;
     }
     for (size_t i = 0; i < args.size(); ++i) {
         if (!has_type_ref(arg_types[i])) {
             return false;
         }
-        if (!assignment_type_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, i)),
-                                     args[i], resolve_alias_ref(symbols, arg_types[i]))) {
+        const TypeRef expected = signature_param_type_ref(
+            signature, signature_param_index_for_arg(signature, i, args.size()));
+        if (!assignment_type_allowed(resolve_alias_ref(symbols, expected), args[i],
+                                     resolve_alias_ref(symbols, arg_types[i]))) {
             return false;
         }
     }
@@ -271,10 +298,18 @@ dudu_operator_signature_for_args(const Symbols& symbols, std::string_view op, co
                                  const std::vector<Expr>& args,
                                  const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate :
-         dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_args(symbols, candidate.signature, args, arg_types)) {
-            return candidate.signature;
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        const auto candidate = dudu_operator_candidate_for_arg_types(symbols, op_text, left, *klass,
+                                                                     method, arg_types);
+        if (!candidate) {
+            continue;
+        }
+        if (signature_matches_args(symbols, candidate->signature, args, arg_types)) {
+            return candidate->signature;
         }
     }
     return std::nullopt;
@@ -284,10 +319,18 @@ std::optional<FunctionSignature>
 dudu_operator_signature_for_arg_types(const Symbols& symbols, std::string_view op,
                                       const TypeRef& left, const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate :
-         dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_arg_types(symbols, candidate.signature, arg_types)) {
-            return candidate.signature;
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        const auto candidate = dudu_operator_candidate_for_arg_types(symbols, op_text, left, *klass,
+                                                                     method, arg_types);
+        if (!candidate) {
+            continue;
+        }
+        if (signature_matches_arg_types(symbols, candidate->signature, arg_types)) {
+            return candidate->signature;
         }
     }
     return std::nullopt;
@@ -298,10 +341,18 @@ dudu_operator_method_name_for_arg_types(const Symbols& symbols, std::string_view
                                         const TypeRef& left,
                                         const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate :
-         dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_arg_types(symbols, candidate.signature, arg_types)) {
-            return candidate.method_name;
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        const auto candidate = dudu_operator_candidate_for_arg_types(symbols, op_text, left, *klass,
+                                                                     method, arg_types);
+        if (!candidate) {
+            continue;
+        }
+        if (signature_matches_arg_types(symbols, candidate->signature, arg_types)) {
+            return candidate->method_name;
         }
     }
     return std::nullopt;
@@ -312,10 +363,18 @@ dudu_operator_method_name_for_args(const Symbols& symbols, std::string_view op, 
                                    const std::vector<Expr>& args,
                                    const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
-    for (const DuduOperatorCandidate& candidate :
-         dudu_operator_candidates(symbols, op_text, left)) {
-        if (signature_matches_args(symbols, candidate.signature, args, arg_types)) {
-            return candidate.method_name;
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        const auto candidate = dudu_operator_candidate_for_arg_types(symbols, op_text, left, *klass,
+                                                                     method, arg_types);
+        if (!candidate) {
+            continue;
+        }
+        if (signature_matches_args(symbols, candidate->signature, args, arg_types)) {
+            return candidate->method_name;
         }
     }
     return std::nullopt;
@@ -337,8 +396,9 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
         }
         FunctionSignature signature = operator_method_signature(symbols, left, *klass, method);
         if (signature_param_count(signature) == 0 ||
-            assignment_type_allowed(resolve_alias_ref(symbols, signature_param_type_ref(signature, 0)),
-                                    right_expr, resolve_alias_ref(symbols, right))) {
+            assignment_type_allowed(
+                resolve_alias_ref(symbols, signature_param_type_ref(signature, 0)), right_expr,
+                resolve_alias_ref(symbols, right))) {
             return signature;
         }
     }

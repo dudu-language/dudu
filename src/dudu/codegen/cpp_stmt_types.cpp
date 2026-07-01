@@ -212,6 +212,22 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
                 has_type_ref(native)) {
                 return native;
             }
+            if (const auto klass = symbols->classes.find(callee.name);
+                klass != symbols->classes.end() && klass->second != nullptr &&
+                generic_arity_matches(klass->second->generic_params, type_args.size())) {
+                TypeRef type = named_type_ref(callee.name, callee.location);
+                type.kind = TypeKind::Template;
+                type.children = type_args;
+                return type;
+            }
+            if ((symbols->native_classes.contains(callee.name) ||
+                 symbols->types.contains(callee.name)) &&
+                !type_args.empty()) {
+                TypeRef type = named_type_ref(callee.name, callee.location);
+                type.kind = TypeKind::Template;
+                type.children = type_args;
+                return type;
+            }
         }
         if (symbols != nullptr) {
             if (const auto overloaded_return = infer_overloaded_function_return_type_ref(

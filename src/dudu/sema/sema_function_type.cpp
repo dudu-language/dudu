@@ -1,7 +1,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <sstream>
 #include <utility>
@@ -57,6 +57,50 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
         return signature.return_type_ref;
     }
     return void_type_ref();
+}
+
+size_t signature_variadic_param_index(const FunctionSignature& signature) {
+    const size_t param_count = signature_param_count(signature);
+    if (!signature.variadic || param_count == 0) {
+        return param_count;
+    }
+    if (signature.variadic_param_index >= 0 &&
+        static_cast<size_t>(signature.variadic_param_index) < param_count) {
+        return static_cast<size_t>(signature.variadic_param_index);
+    }
+    return param_count - 1;
+}
+
+size_t signature_fixed_param_count(const FunctionSignature& signature, size_t arg_count) {
+    const size_t param_count = signature_param_count(signature);
+    if (!signature.variadic) {
+        return param_count;
+    }
+    const size_t variadic_index = signature_variadic_param_index(signature);
+    const size_t fixed_after = param_count - variadic_index - 1;
+    if (arg_count < fixed_after) {
+        return param_count;
+    }
+    const size_t variadic_arg_count = arg_count + 1 - param_count;
+    return param_count + variadic_arg_count - 1;
+}
+
+size_t signature_param_index_for_arg(const FunctionSignature& signature, size_t arg_index,
+                                     size_t arg_count) {
+    if (!signature.variadic) {
+        return arg_index;
+    }
+    const size_t param_count = signature_param_count(signature);
+    const size_t variadic_index = signature_variadic_param_index(signature);
+    const size_t fixed_after = param_count - variadic_index - 1;
+    const size_t variadic_arg_count = arg_count + 1 - param_count;
+    if (arg_index < variadic_index) {
+        return arg_index;
+    }
+    if (arg_index < variadic_index + variadic_arg_count) {
+        return variadic_index;
+    }
+    return param_count - fixed_after + (arg_index - variadic_index - variadic_arg_count);
 }
 
 std::string function_type(const FunctionSignature& signature) {

@@ -1,7 +1,7 @@
-#include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_type_internal.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 
 #include <sstream>
 
@@ -13,7 +13,6 @@ namespace {
                        "malformed structured type node: " + std::string(type_kind_name(type.kind)) +
                            " is missing its child type");
 }
-
 
 } // namespace
 
@@ -161,7 +160,10 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Function:
         return lower_cpp_function_type(type, true);
     case TypeKind::PackExpansion:
-        malformed_type_ref(type);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front()) + "...";
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }
@@ -230,7 +232,10 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Function:
         return lower_cpp_function_type(type, true, namespace_aliases);
     case TypeKind::PackExpansion:
-        malformed_type_ref(type);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front(), namespace_aliases) + "...";
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }
@@ -304,7 +309,10 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Function:
         return lower_cpp_function_type(type, true, namespace_aliases, options);
     case TypeKind::PackExpansion:
-        malformed_type_ref(type);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children.front(), namespace_aliases, options) + "...";
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }

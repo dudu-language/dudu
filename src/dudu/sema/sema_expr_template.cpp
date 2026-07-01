@@ -1,8 +1,9 @@
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
+#include "dudu/sema/sema_generics.hpp"
 
 namespace dudu {
 std::optional<FunctionSignature> explicit_generic_function_signature_ast(
@@ -13,10 +14,12 @@ std::optional<FunctionSignature> explicit_generic_function_signature_ast(
         return std::nullopt;
     }
     const std::vector<TypeRef> type_args = template_type_refs(expr);
-    if (location != nullptr && type_args.size() != fn->second->generic_params.size()) {
-        sema_expr_fail(*location, "function " + callee_base + " expects " +
-                                      std::to_string(fn->second->generic_params.size()) +
-                                      " type arguments, got " + std::to_string(type_args.size()));
+    if (location != nullptr &&
+        !generic_arity_matches(fn->second->generic_params, type_args.size())) {
+        sema_expr_fail(*location,
+                       "function " + callee_base + " expects " +
+                           std::to_string(generic_min_arity(fn->second->generic_params)) +
+                           " type arguments, got " + std::to_string(type_args.size()));
     }
     if (location != nullptr) {
         for (const TypeRef& type_arg : type_args) {

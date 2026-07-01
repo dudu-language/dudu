@@ -11,6 +11,13 @@
 
 namespace dudu {
 
+bool generic_param_is_pack(std::string_view param);
+std::string generic_param_base_name(std::string_view param);
+bool generic_pack_param_named(const std::vector<std::string>& params, std::string_view name);
+bool generic_arity_matches(const std::vector<std::string>& params, size_t arg_count);
+size_t generic_min_arity(const std::vector<std::string>& params);
+TypeRef substitute_generic_type_ref(const std::vector<std::string>& params,
+                                    const std::vector<TypeRef>& args, const TypeRef& type);
 std::vector<TypeRef> template_type_refs(const Expr& expr);
 std::set<std::string> generic_value_params(const std::vector<std::string>& params,
                                            const std::vector<TypeRef>& type_refs);

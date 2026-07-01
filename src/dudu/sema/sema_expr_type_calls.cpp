@@ -4,6 +4,7 @@
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
 #include <utility>
@@ -370,9 +371,10 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             class_for_receiver_type(scope.symbols, named_type_ref(callee_base, expr.location));
         klass != nullptr && !klass->generic_params.empty()) {
         const std::vector<TypeRef> type_args = template_type_refs(expr);
-        if (location != nullptr && type_args.size() != klass->generic_params.size()) {
+        if (location != nullptr &&
+            !generic_arity_matches(klass->generic_params, type_args.size())) {
             sema_expr_fail(*location, "type " + callee_base + " expects " +
-                                          std::to_string(klass->generic_params.size()) +
+                                          std::to_string(generic_min_arity(klass->generic_params)) +
                                           " type arguments, got " +
                                           std::to_string(type_args.size()));
         }

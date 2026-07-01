@@ -108,7 +108,12 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
         if (i > 0) {
             out << ", ";
         }
-        out << (value_params.contains(params[i]) ? "size_t " : "typename ") << params[i];
+        const std::string name = generic_param_base_name(params[i]);
+        if (generic_param_is_pack(params[i])) {
+            out << "typename... " << name;
+        } else {
+            out << (value_params.contains(name) ? "size_t " : "typename ") << name;
+        }
     }
     out << ">\n";
 }
@@ -213,7 +218,8 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(fn.params[i].type_ref, aliases, options) << ' ' << fn.params[i].name;
+        out << lower_cpp_type(fn.params[i].type_ref, aliases, options)
+            << (fn.params[i].variadic ? "... " : " ") << fn.params[i].name;
     }
     out << ')';
 }
@@ -356,7 +362,8 @@ std::string emit_c_header(const ModuleAst& module) {
             if (i > 0) {
                 out << ", ";
             }
-            out << lower_cpp_type(fn.params[i].type_ref) << ' ' << fn.params[i].name;
+            out << lower_cpp_type(fn.params[i].type_ref) << (fn.params[i].variadic ? "... " : " ")
+                << fn.params[i].name;
         }
         out << ");\n";
     }

@@ -1,8 +1,8 @@
 # file	status	expected diagnostic substring
 parser_index_items.dd	xfail	
-fixed_array_python_slices.dd	xfail	
+fixed_array_python_slices.dd	pass
 library_fixed_arity_hooks.dd	pass	
-library_variadic_hooks.dd	xfail	
+library_variadic_hooks.dd	pass
 ndad_core.dd	xfail	
 ndad_direct_pytorch_indexing.dd	xfail	
 ndad_mask_and_scatter.dd	xfail	

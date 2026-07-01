@@ -88,6 +88,28 @@ bool is_operator_method(const FunctionDecl& method) {
     return !operator_decorator_arg(method).empty();
 }
 
+void check_variadic_params(const FunctionDecl& fn) {
+    std::optional<size_t> variadic_index;
+    for (size_t i = 0; i < fn.params.size(); ++i) {
+        if (!fn.params[i].variadic) {
+            continue;
+        }
+        if (variadic_index.has_value()) {
+            fail(fn.params[i].location, "function can only have one variadic parameter");
+        }
+        variadic_index = i;
+    }
+    if (!variadic_index.has_value() || *variadic_index + 1 == fn.params.size()) {
+        return;
+    }
+    const bool allowed_index_set = operator_decorator_arg(fn) == "[]=" &&
+                                   *variadic_index + 2 == fn.params.size() &&
+                                   fn.params.back().name == "value";
+    if (!allowed_index_set) {
+        fail(fn.params[*variadic_index].location, "variadic parameter must be last");
+    }
+}
+
 bool receiver_type_is_reference_to_class(const Symbols& symbols, const TypeRef& type,
                                          std::string_view class_name) {
     TypeRef resolved = resolve_alias_ref(symbols, type);
@@ -108,7 +130,11 @@ bool is_comparison_operator_method(const FunctionDecl& method) {
 
 void check_generic_params(const SourceLocation& location, const std::vector<std::string>& params) {
     std::set<std::string> seen;
-    for (const std::string& param : params) {
+    for (size_t i = 0; i < params.size(); ++i) {
+        const std::string param = generic_param_base_name(params[i]);
+        if (generic_param_is_pack(params[i]) && i + 1 != params.size()) {
+            fail(location, "variadic generic parameter must be last: " + param);
+        }
         if (!seen.insert(param).second) {
             fail(location, "duplicate generic parameter: " + param);
         }
@@ -436,6 +462,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (is_test_decorator(method)) {
                 fail(method.location, "@test is only valid on free functions");
             }
+            check_variadic_params(method);
             std::set<std::string> params;
             for (const ParamDecl& param : method.params) {
                 if (!params.insert(param.name).second) {
@@ -481,6 +508,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(fn.location, "@test return type must be void, bool, or i32");
             }
         }
+        check_variadic_params(fn);
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {
             if (!params.insert(param.name).second) {

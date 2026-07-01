@@ -6,6 +6,7 @@
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
@@ -19,15 +20,6 @@ namespace {
 
 bool method_is_static(const FunctionDecl& method) {
     return method.params.empty() || method.params.front().name != "self";
-}
-
-std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::string>& params,
-                                                      const std::vector<TypeRef>& args) {
-    std::map<std::string, TypeRef> out;
-    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], args[i]);
-    }
-    return out;
 }
 
 TypeRef self_type_ref_for_method(const ClassDecl& klass, const std::vector<TypeRef>& receiver_args,
@@ -44,9 +36,8 @@ TypeRef self_type_ref_for_method(const ClassDecl& klass, const std::vector<TypeR
 TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
                                     const TypeRef& type, const std::vector<TypeRef>& receiver_args,
                                     const std::vector<TypeRef>& method_args) {
-    TypeRef out =
-        substitute_type_ref(type, type_ref_substitutions(method.generic_params, method_args));
-    out = substitute_type_ref(out, type_ref_substitutions(klass.generic_params, receiver_args));
+    TypeRef out = substitute_generic_type_ref(method.generic_params, method_args, type);
+    out = substitute_generic_type_ref(klass.generic_params, receiver_args, out);
     out = substitute_type_ref(
         out, {{"Self", self_type_ref_for_method(klass, receiver_args, type.location)}});
     return substitute_receiver_template_type(out, receiver_args);
@@ -75,8 +66,8 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
             continue;
         }
         saw_name = true;
-        expected_type_args = method.generic_params.size();
-        if (method.generic_params.size() != method_args.size()) {
+        expected_type_args = generic_min_arity(method.generic_params);
+        if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
         signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
@@ -114,7 +105,7 @@ method_signatures_for_type_impl(const Symbols& symbols, const TypeRef& receiver_
         if (method.name != lookup_name) {
             continue;
         }
-        if (method.generic_params.size() != method_args.size()) {
+        if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
         out.push_back(instantiate_method_signature(*klass, method, receiver_args, method_args));
@@ -147,8 +138,8 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
             continue;
         }
         saw_name = true;
-        expected_type_args = method.generic_params.size();
-        if (method.generic_params.size() != method_args.size()) {
+        expected_type_args = generic_min_arity(method.generic_params);
+        if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
         signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
@@ -180,10 +171,23 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     std::vector<TypeRef> param_types;
     param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        param_types.push_back(instantiate_method_type_ref(klass, method, method.params[i].type_ref,
-                                                          receiver_args, method_args));
+        TypeRef param_type = instantiate_method_type_ref(klass, method, method.params[i].type_ref,
+                                                         receiver_args, method_args);
+        if (method.params[i].variadic &&
+            generic_pack_param_named(method.generic_params,
+                                     type_ref_head_name(method.params[i].type_ref))) {
+            param_type = named_type_ref("auto", method.params[i].location);
+        }
+        param_types.push_back(std::move(param_type));
     }
     set_signature_param_types(signature, std::move(param_types));
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        if (method.params[i].variadic) {
+            signature.variadic = true;
+            signature.variadic_param_index = static_cast<int>(i - first_param);
+            break;
+        }
+    }
     set_signature_return_type(
         signature, function_has_return_type(method)
                        ? instantiate_method_type_ref(klass, method, method.return_type_ref,

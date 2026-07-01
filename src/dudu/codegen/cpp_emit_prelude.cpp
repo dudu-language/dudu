@@ -245,6 +245,8 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "    int64_t end{};\n"
            "    int64_t step{1};\n"
            "};\n"
+           "struct Ellipsis {};\n"
+           "struct NewAxis {};\n"
            "struct SliceSpec {\n"
            "    bool is_index{};\n"
            "    int64_t index{};\n"

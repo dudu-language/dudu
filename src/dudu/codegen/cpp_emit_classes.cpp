@@ -288,7 +288,12 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
         if (i > 0) {
             out << ", ";
         }
-        out << (value_params.contains(params[i]) ? "size_t " : "typename ") << params[i];
+        const std::string name = generic_param_base_name(params[i]);
+        if (generic_param_is_pack(params[i])) {
+            out << "typename... " << name;
+        } else {
+            out << (value_params.contains(name) ? "size_t " : "typename ") << name;
+        }
     }
     out << ">\n";
 }
@@ -340,7 +345,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         out << lower_cpp_type(method_type_for_emit(method.params[i].type_ref, class_name,
                                                    method.params[i].location),
                               aliases, options)
-            << ' ' << method.params[i].name;
+            << (method.params[i].variadic ? "... " : " ") << method.params[i].name;
     }
     CppLocalContext locals;
     std::map<std::string, TypeRef> local_type_refs;

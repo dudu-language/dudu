@@ -88,6 +88,7 @@ struct ParamDecl {
     std::string name;
     TypeRef type_ref;
     SourceLocation location;
+    bool variadic = false;
 };
 
 enum class StmtKind {

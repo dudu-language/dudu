@@ -23,6 +23,16 @@ bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
     return path && scope.symbols.native_enum_values.contains(*path);
 }
 
+std::optional<TypeRef> index_marker_type_ref(const Expr& expr) {
+    if (expr.kind == ExprKind::Ellipsis) {
+        return named_type_ref("ellipsis", expr.location);
+    }
+    if (expr.kind == ExprKind::NewAxis) {
+        return named_type_ref("new_axis", expr.location);
+    }
+    return std::nullopt;
+}
+
 std::string template_args_label(const Expr& expr) {
     std::ostringstream out;
     const std::vector<TypeRef> args = template_type_refs(expr);
@@ -117,9 +127,12 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
         sema_expr_fail(*location, "function " + callee + " expects " + std::to_string(param_count) +
                                       " arguments, got " + std::to_string(args.size()));
     }
-    for (size_t i = 0; i < param_count; ++i) {
-        const TypeRef expected = signature_param_type_ref(signature, i);
-        const TypeRef got_ref = infer_expr_type_ast(scope, args[i], location);
+    for (size_t i = 0; i < args.size(); ++i) {
+        const TypeRef expected = signature_param_type_ref(
+            signature, signature_param_index_for_arg(signature, i, args.size()));
+        const std::optional<TypeRef> marker_type = index_marker_type_ref(args[i]);
+        const TypeRef got_ref =
+            marker_type ? *marker_type : infer_expr_type_ast(scope, args[i], location);
         if (!can_assign_ast(scope, expected, args[i], got_ref)) {
             const std::string expected_display = substitute_type_ref_text(expected, {});
             const std::string got_display = substitute_type_ref_text(got_ref, {});
@@ -178,9 +191,13 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         (signature.variadic && args.size() < param_count)) {
         return false;
     }
-    for (size_t i = 0; i < param_count; ++i) {
-        const TypeRef got = infer_expr_type_ast(scope, args[i], nullptr);
-        if (!can_assign_ast(scope, signature_param_type_ref(signature, i), args[i], got)) {
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::optional<TypeRef> marker_type = index_marker_type_ref(args[i]);
+        const TypeRef got =
+            marker_type ? *marker_type : infer_expr_type_ast(scope, args[i], nullptr);
+        const TypeRef expected = signature_param_type_ref(
+            signature, signature_param_index_for_arg(signature, i, args.size()));
+        if (!can_assign_ast(scope, expected, args[i], got)) {
             return false;
         }
     }

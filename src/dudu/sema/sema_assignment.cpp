@@ -50,6 +50,14 @@ std::vector<TypeRef> infer_assignment_arg_type_refs(const FunctionScope& scope,
     std::vector<TypeRef> out;
     out.reserve(args.size());
     for (const Expr& arg : args) {
+        if (arg.kind == ExprKind::Ellipsis) {
+            out.push_back(named_type_ref("ellipsis", arg.location));
+            continue;
+        }
+        if (arg.kind == ExprKind::NewAxis) {
+            out.push_back(named_type_ref("new_axis", arg.location));
+            continue;
+        }
         out.push_back(infer_expr_type_ast(scope, arg, location));
     }
     return out;
@@ -199,9 +207,9 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                                                "\") for indexed assignment to " +
                                                indexed_assignment_label(receiver));
             }
-            return indexed_type_ref_from_type(scope.symbols, target_location, inferred_receiver_type,
-                                              stmt_target_expr(stmt).children[1],
-                                              indexed_assignment_label(receiver));
+            return indexed_type_ref_from_type(
+                scope.symbols, target_location, inferred_receiver_type,
+                stmt_target_expr(stmt).children[1], indexed_assignment_label(receiver));
         }
     }
     if (stmt_target_expr(stmt).kind == ExprKind::Name) {
@@ -266,11 +274,11 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
         scope.local_type_refs.contains(hook_receiver.name)) {
         receiver_type = local_type_ref(scope, hook_receiver.name, target_location);
     } else {
-        receiver_type = hook_receiver.kind == ExprKind::Member
-                            ? member_expr_type_ref(scope.symbols, scope.local_type_refs,
-                                                   &target_location, hook_receiver, {},
-                                                   scope.current_class)
-                            : TypeRef{};
+        receiver_type =
+            hook_receiver.kind == ExprKind::Member
+                ? member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location,
+                                       hook_receiver, {}, scope.current_class)
+                : TypeRef{};
         if (!has_type_ref(receiver_type)) {
             receiver_type = infer_expr_type_ast(scope, hook_receiver, &target_location);
         }

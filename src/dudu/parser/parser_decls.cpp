@@ -301,7 +301,11 @@ std::vector<std::string> Parser::parse_generic_params() {
         fail_current("generic parameter list cannot be empty");
     }
     while (true) {
-        params.push_back(std::string(consume_identifier("expected generic parameter name").text));
+        std::string param = std::string(consume_identifier("expected generic parameter name").text);
+        if (match(TokenKind::Ellipsis)) {
+            param += "...";
+        }
+        params.push_back(std::move(param));
         if (match(TokenKind::Comma)) {
             continue;
         }
@@ -318,6 +322,10 @@ void Parser::parse_params(std::vector<ParamDecl>& params, const TypeRef& receive
             break;
         }
         ParamDecl param;
+        if (at(TokenKind::Operator) && current().text == "*") {
+            param.variadic = true;
+            ++cursor_;
+        }
         const Token& name = consume_identifier("expected parameter name");
         param.name = name.text;
         param.location = name.location;

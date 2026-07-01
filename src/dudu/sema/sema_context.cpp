@@ -18,9 +18,9 @@ namespace dudu {
 namespace {
 
 bool is_builtin_type(const std::string& type) {
-    static const std::set<std::string> builtins = {"bool", "char", "i8",   "i16", "i32",   "i64",
-                                                   "u8",   "u16",  "u32",  "u64", "isize", "usize",
-                                                   "f32",  "f64",  "void", "str", "cstr",  "slice"};
+    static const std::set<std::string> builtins = {
+        "bool",  "char",  "i8",  "i16", "i32",  "i64", "u8",   "u16",   "u32",      "u64",
+        "isize", "usize", "f32", "f64", "void", "str", "cstr", "slice", "ellipsis", "new_axis"};
     return builtins.contains(type);
 }
 
@@ -409,6 +409,13 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         set_signature_param_types(signature, std::move(param_types));
         set_signature_return_type(signature, function_return_type_ref(fn));
+        for (size_t i = 0; i < fn.params.size(); ++i) {
+            if (fn.params[i].variadic) {
+                signature.variadic = true;
+                signature.variadic_param_index = static_cast<int>(i);
+                break;
+            }
+        }
         if (!symbols.function_signatures.contains(fn.name)) {
             symbols.function_signatures[fn.name] = signature;
             symbols.function_decls[fn.name] = &fn;
@@ -423,6 +430,9 @@ Symbols collect_symbols(const ModuleAst& module) {
         set_signature_return_type(signature, native_function_return_type_ref(fn));
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
+        if (signature.variadic && signature_param_count(signature) > 0) {
+            signature.variadic_param_index = static_cast<int>(signature_param_count(signature) - 1);
+        }
         signature.native_template_return_fallback = !fn.return_native_spelling.empty();
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
         symbols.native_function_decls[fn.name].push_back(&fn);
