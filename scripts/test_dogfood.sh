@@ -94,6 +94,7 @@ smoke_webserver() {
 
 raymarch_repo="$coding_root/Graphics/raymarch-dd"
 webserver_repo="$coding_root/Web/dudu-webserver"
+datascience_repo="$coding_root/ML/dudu-datascience"
 
 build_project "raymarch-dd" "$raymarch_repo"
 
@@ -106,6 +107,21 @@ if [[ -d "$webserver_repo" ]]; then
     fi
 else
     echo "skip dudu-webserver: missing $webserver_repo"
+fi
+
+if [[ -d "$datascience_repo" ]]; then
+    build_project "dudu-datascience" "$datascience_repo"
+    if [[ -x "$datascience_repo/scripts/check_target_api.sh" ]]; then
+        echo "dogfood dudu-datascience: target API"
+        (
+            cd "$datascience_repo"
+            PATH="$repo_root/build:$PATH" run_with_timeout ./scripts/check_target_api.sh
+        )
+    else
+        echo "skip dudu-datascience target API: checker not found"
+    fi
+else
+    echo "skip dudu-datascience: missing $datascience_repo"
 fi
 
 echo "dogfood ok"

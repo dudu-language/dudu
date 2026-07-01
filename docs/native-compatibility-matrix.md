@@ -14,14 +14,16 @@ run passed all available non-heavy probes on this machine; `spdlog` remained
 the intentional default skip, and the manual
 `DUDU_PROBE_HEAVY=1` spdlog smoke passed separately.
 
-Last targeted tensor backend probe run: 2026-06-30 with
-`scripts/probe_optional.sh openblas_tensor_matmul opencl`. OpenBLAS tensor
-comparison and OpenCL tensor add/matmul probes passed locally.
+Last targeted tensor backend probe run: 2026-07-01 with
+`scripts/probe_optional.sh openblas opencl`. OpenBLAS tensor comparison and
+OpenCL tensor add/matmul probes passed locally.
 
-Last local dogfood run: 2026-06-27 with `scripts/test_dogfood.sh`.
+Last local dogfood run: 2026-07-01 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
-`/echo`, and `/routes`.
+`/echo`, and `/routes`. `dudu-datascience` built and its target API
+graduation checker passed with 3 graduated specs and 2 explicitly pending
+specs.
 
 ## Status Key
 
@@ -85,6 +87,7 @@ periodically because they catch whole-project friction that small fixtures miss.
 | --- | --- | --- | --- |
 | `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
 | `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
+| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, and BLAS backend examples. | local dogfood via `scripts/test_dogfood.sh`; target API checker passed on 2026-07-01 |
 
 ## Planned Matrix Targets
 
