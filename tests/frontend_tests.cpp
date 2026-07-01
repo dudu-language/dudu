@@ -179,8 +179,8 @@ void test_rejected_fancy_indexing_fixtures(const std::filesystem::path& root) {
         std::string expected;
     };
     const std::vector<Case> cases = {
-        {"bad_tensor_vindex.dd", "no matching @operator(\"[]\")"},
-        {"bad_tensor_oindex.dd", "no matching @operator(\"[]\")"},
+        {"bad_pairwise_indexer_missing_hook.dd", "no matching @operator(\"[]\")"},
+        {"bad_cartesian_indexer_missing_hook.dd", "no matching @operator(\"[]\")"},
         {"bad_tensor_missing_index_hook.dd",
          "no matching @operator(\"[]\") for indexed access to tensor"},
         {"bad_tensor_missing_index_set_hook.dd",

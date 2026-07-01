@@ -630,13 +630,13 @@ Acceptance test: a new indexer spelling can be added entirely in Dudu library
 code and used with `object.indexer[...]` without editing compiler sema or
 codegen.
 
-Status: partially complete for the compiler boundary. Existing fixtures prove
-member indexer objects such as `tensor.vindex[...]`, `tensor.oindex[...]`,
+Status: complete for the compiler boundary. Existing fixtures prove
+member indexer objects such as `tensor.pairwise[...]`, `tensor.cartesian[...]`,
 chained temporary indexing such as `image.window[8, 9][y, x]`, and unrelated
 custom `sparse.coo[...]` spellings can use normal library-owned `[]` / `[]=`
-hooks. The remaining correction is to make Python-style direct tensor indexing
-the target path and remove stale dogfood that treats `vindex/oindex` as the
-main API.
+hooks. Python-style direct tensor indexing is the target path. `vindex` and
+`oindex` remain only examples of names a user library could choose; they are
+not compiler concepts or default dogfood API.
 
 ### 1. Audit Current Indexing Hooks
 
@@ -678,7 +678,7 @@ Status:
 - Done: reference-backed view structs can be aggregate-initialized without
   invalid default reference fields.
 - Done: operator declarations now validate `[]` / `[]=` arity directly.
-- Done: `.vindex[...]`, `.oindex[...]`, and other custom indexing spellings
+- Done: `.pairwise[...]`, `.cartesian[...]`, and other custom indexing spellings
   dispatch through ordinary member lookup to library-owned indexer objects
   whose types implement normal `@operator("[]")` and `@operator("[]=")`.
   The compiler no longer recognizes special `vindex[]` / `oindex[]` operator
@@ -694,9 +694,9 @@ Status:
 - Covered by fixtures: `tests/fixtures/tensor_multi_index_hook.dd` and
   `tests/fixtures/tensor_slice_hook.dd` and
   `tests/fixtures/tensor_slice_views.dd` and `tests/fixtures/cpu_tensor_matmul.dd`
-  and `tests/fixtures/tensor_vindex_hook.dd` and
-  `tests/fixtures/tensor_oindex_hook.dd` and `tests/fixtures/bad_tensor_vindex.dd` and
-  `tests/fixtures/bad_tensor_oindex.dd` and
+  and `tests/fixtures/tensor_pairwise_indexer_hook.dd` and
+  `tests/fixtures/tensor_cartesian_indexer_hook.dd` and `tests/fixtures/bad_pairwise_indexer_missing_hook.dd` and
+  `tests/fixtures/bad_cartesian_indexer_missing_hook.dd` and
   `tests/fixtures/custom_indexer_objects.dd` and
   `tests/fixtures/bad_tensor_missing_index_hook.dd` and
   `tests/fixtures/bad_tensor_missing_index_set_hook.dd` and
@@ -728,8 +728,8 @@ Status:
   value and `[]=` assignment explicitly so the library policy is visible.
 - Done: compound assignment also works for member-owned advanced indexer
   objects when the library provides matching selected-value write hooks.
-  `tensor.vindex[...] += x` lowers to a normal `[]` read plus `[]=` write on
-  the `vindex` object, and `tensor.oindex[...] += x` does the same for that
+  `tensor.pairwise[...] += x` lowers to a normal `[]` read plus `[]=` write on
+  the `pairwise` object, and `tensor.cartesian[...] += x` does the same for that
   library-owned helper object. New tensor work should prefer direct
   Python-style `tensor[...]` examples unless the point of the fixture is
   proving helper indexer objects.

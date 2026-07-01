@@ -1,13 +1,13 @@
-class VIndex:
+class PairwiseIndexer:
     data: list[i32]
     cols: i32
 
     @operator("[]")
-    def pairwise(self, rows: array[i32][2], cols: array[i32][2]) -> i32:
+    def at(self, rows: array[i32][2], cols: array[i32][2]) -> i32:
         return self.data[(rows[0] * self.cols) + cols[0]] + self.data[(rows[1] * self.cols) + cols[1]]
 
     @operator("[]=")
-    def set_pairwise(self, rows: array[i32][2], cols: array[i32][2], value: i32):
+    def set_at(self, rows: array[i32][2], cols: array[i32][2], value: i32):
         self.data[(rows[0] * self.cols) + cols[0]] = value
         self.data[(rows[1] * self.cols) + cols[1]] = value
 
@@ -16,7 +16,7 @@ class Tensor:
     rows: i32
     cols: i32
     data: list[i32]
-    vindex: VIndex
+    pairwise: PairwiseIndexer
 
     @operator("[]")
     def at(self, row: i32, col: i32) -> i32:
@@ -29,10 +29,10 @@ class Tensor:
 
 def main() -> i32:
     data: list[i32] = [1, 2, 3, 4]
-    tensor = Tensor(2, 2, data, VIndex(data, 2))
+    tensor = Tensor(2, 2, data, PairwiseIndexer(data, 2))
     rows: array[i32] = [0, 1]
     cols: array[i32] = [1, 0]
-    before = tensor.vindex[rows, cols]
-    tensor.vindex[rows, cols] = 10
-    after = tensor.vindex[rows, cols]
+    before = tensor.pairwise[rows, cols]
+    tensor.pairwise[rows, cols] = 10
+    after = tensor.pairwise[rows, cols]
     return before + after + 17

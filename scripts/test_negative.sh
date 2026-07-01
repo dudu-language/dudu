@@ -141,6 +141,8 @@ expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[
 expect_fail bad_tensor_index_set_member_type --emit-cpp "argument 1 for box.tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_return --check "indexed assignment operator methods must return void"
+expect_fail bad_pairwise_indexer_missing_hook --emit-cpp "no matching @operator(\"\\[\\]\") for indexed access to tensor.pairwise"
+expect_fail bad_cartesian_indexer_missing_hook --emit-cpp "no matching @operator(\"\\[\\]\") for indexed access to tensor.cartesian"
 expect_fail bad_tensor_shape_dyn_to_concrete --emit-cpp "argument 1 for expect_static_shape expects Tensor\\[f32\\]\\[2, 2\\], got Tensor\\[f32\\]\\[dyn, 2\\]"
 expect_fail bad_tensor_shape_generic_mismatch --emit-cpp "conflicting inferred type argument Inner: 3 vs 4 for matmul_shape"
 expect_fail bad_tensor_shape_composition_mismatch --emit-cpp "conflicting inferred type argument Cols: 4 vs 5 for add_same_shape"
