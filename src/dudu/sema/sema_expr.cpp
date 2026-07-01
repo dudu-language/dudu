@@ -31,6 +31,7 @@ std::optional<std::string> unknown_module_function_message(const Symbols& symbol
 
 std::vector<TypeRef> infer_arg_type_refs(const FunctionScope& scope, const std::vector<Expr>& args,
                                          const SourceLocation* location) {
+    check_index_arg_exprs(args, location);
     std::vector<TypeRef> out;
     out.reserve(args.size());
     for (const Expr& arg : args) {

@@ -79,8 +79,8 @@ Required fixture groups:
   `tensor[rows, cols]`, `tensor[mask, :]`, `tensor[..., -1]`,
   `tensor[None, :]`, and `tensor[:, :, 0]`
 - negative fixtures for unsupported item types, too many fixed-array indices,
-  missing hooks, unsupported `ellipsis`, unsupported `new_axis`, bad scatter
-  value types, and bad shape narrowing
+  missing hooks, multiple ellipses, unsupported `ellipsis`, unsupported
+  `new_axis`, bad scatter value types, and bad shape narrowing
 - optional native probes for BLAS, OpenCL, ROCm/CUDA/LibTorch, and dataset
   examples when the local machine/tooling supports them
 

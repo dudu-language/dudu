@@ -23,6 +23,7 @@ Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& par
                             const std::set<std::string>& value_params);
 Symbols with_self_type(Symbols symbols, const std::string& class_name);
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
+void check_index_arg_exprs(const std::vector<Expr>& args, const SourceLocation* location);
 struct ScopedCallee {
     std::optional<ExprPath> path;
     std::string key;

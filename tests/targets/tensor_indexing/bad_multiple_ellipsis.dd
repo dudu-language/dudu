@@ -1,0 +1,12 @@
+# Target diagnostic: Python-shaped indexing permits only one ellipsis item.
+
+class Tensor:
+    @operator("[]")
+    def at[Idx...](self, *idx: Idx) -> Tensor:
+        return self
+
+
+def main() -> i32:
+    x = Tensor()
+    y = x[..., ...]
+    return 0

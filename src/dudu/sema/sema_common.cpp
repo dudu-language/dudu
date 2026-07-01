@@ -79,6 +79,22 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
+void check_index_arg_exprs(const std::vector<Expr>& args, const SourceLocation* location) {
+    if (location == nullptr) {
+        return;
+    }
+    bool saw_ellipsis = false;
+    for (const Expr& arg : args) {
+        if (arg.kind != ExprKind::Ellipsis) {
+            continue;
+        }
+        if (saw_ellipsis) {
+            sema_fail(arg.location, "index expression may contain at most one ellipsis");
+        }
+        saw_ellipsis = true;
+    }
+}
+
 std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {

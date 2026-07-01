@@ -95,7 +95,8 @@ gathered = logits[batch_ids, :, head_ids, vocab_ids]
 `:` is not a standalone expression outside indexing. Inside indexing it creates
 a `slice` value. `...` creates an `ellipsis` value. `None` creates a `new_axis`
 value only in indexing position; normal `None` expression rules still apply
-elsewhere.
+elsewhere. An index expression may contain at most one `...`, matching Python
+numeric indexing.
 
 The parser must not collapse comma indexing into an ordinary tuple literal.
 `x[a, b]` is an index expression with two index items, not `x[(a, b)]`.
@@ -247,6 +248,7 @@ Diagnostics should describe the missing operation, not a tensor guess:
 - missing `@operator("[]")` for receiver type
 - no overload accepting the item types `(slice, Tensor[i32], new_axis)`
 - fixed array indexed with too many scalar dimensions
+- index expression contains more than one ellipsis
 - fixed array slice cannot produce a safe view
 - unsupported `ellipsis` or `new_axis` for a library type
 

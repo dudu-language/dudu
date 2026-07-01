@@ -135,6 +135,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         if (scope.local_type_refs.contains(name)) {
             const TypeRef receiver_type = local_type_ref(scope, name, target_location);
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
             if (const auto signature = dudu_operator_signature_for_args(
                     scope.symbols, "[]=", receiver_type, args,
@@ -165,6 +166,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 : TypeRef{};
         if (has_type_ref(receiver_type)) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
             if (const auto signature = dudu_operator_signature_for_args(
                     scope.symbols, target.write_operator, receiver_type, args,
@@ -190,6 +192,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             infer_expr_type_ast(scope, hook_receiver, &target_location);
         if (has_type_ref(inferred_receiver_type)) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
+            check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
             if (const auto signature = dudu_operator_signature_for_args(
                     scope.symbols, target.write_operator, inferred_receiver_type, args,
@@ -294,6 +297,7 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
     }
 
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
+    check_index_arg_exprs(args, &target_location);
     std::vector<TypeRef> arg_types = infer_assignment_arg_type_refs(scope, args, &target_location);
     arg_types.push_back(indexed_type);
     if (!dudu_operator_signature_for_arg_types(scope.symbols, index_target.write_operator,
