@@ -1199,6 +1199,19 @@ push. They are not release packaging work.
    probes when local tooling is available, then out-of-line method emission
    where needed, repeated-index scatter policy, and explicit proof/conversion
    diagnostics for `dyn` values flowing into concrete shape assertions.
+   Before expanding further, de-opinionate advanced tensor indexing: remove
+   compiler-owned `vindex[]` / `oindex[]` operator names and make
+   `.vindex[...]`, `.oindex[...]`, and future spellings such as
+   `.window[...]` work through ordinary member lookup plus normal `[]` /
+   `[]=` hooks on library-defined indexer objects. The compiler should keep
+   only general syntax/type facilities such as slices, index argument lists,
+   shaped generic metadata, overload resolution, assignment hooks, and
+   diagnostics. Tensor storage, CPU/GPU movement, BLAS/OpenCL/ROCm/CUDA
+   dispatch, view-versus-copy policy, broadcasting, repeated-index scatter,
+   and autograd ownership belong in libraries and optional dogfood probes.
+   CPU-contiguous array compatibility should be zero-copy only when a library
+   can prove it; GPU tensors, strided views, lazy expressions, and
+   autograd-tracked values need explicit view/copy/move APIs.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

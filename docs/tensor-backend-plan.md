@@ -164,6 +164,113 @@ types. Repeated-index scatter, mask scatter, and accumulation order are library
 policy. The compiler should route the syntax to hooks and reject unsupported
 forms precisely; it should not silently invent NumPy/PyTorch copy behavior.
 
+## Language Boundary
+
+Dudu's job is to provide enough syntax and static typing to express serious
+numeric APIs. Dudu's compiler should not become the numeric stack.
+
+The compiler owns these general facilities:
+
+- comma-separated indexing syntax
+- `slice` values for `start:end:step` forms
+- assignment through `@operator("[]=")`
+- overload resolution for normal index hooks
+- shape metadata on generic types, including `dyn`
+- diagnostics when a type does not implement a requested index operation
+- zero-copy-safe conversions only when the type contract proves compatible
+
+Libraries own these policies:
+
+- tensor storage layout
+- CPU versus GPU residency
+- BLAS, OpenCL, ROCm, CUDA, Vulkan, or other backend dispatch
+- whether an index result is a view, lazy expression, or owning result
+- broadcasting rules
+- repeated-index scatter and accumulation policy
+- autograd graph construction and tape ownership
+- conversion/copy APIs between device tensors, CPU tensors, arrays, and views
+
+This means `array[T][shape]` is a systems-language contiguous storage/view
+facility, not Dudu's built-in NumPy. A tensor library may expose an explicit
+CPU-contiguous view or copy when the storage makes that honest:
+
+```python
+cpu_view = tensor.as_array_view()   # zero-copy only if already CPU contiguous
+cpu_copy = tensor.to_array()        # explicit materialization/copy
+gpu_tensor = tensor.to_gpu()        # explicit device move/copy
+```
+
+Implicit passing to `array[T][...]`-like APIs is only acceptable when the
+library type proves CPU-contiguous compatibility. GPU tensors, non-contiguous
+views, remote buffers, lazy expressions, and autograd-tracked tensors must not
+silently masquerade as arrays. They should require explicit copy/view/move APIs
+so lifetime and allocation are visible.
+
+Ownership belongs in library types using normal Dudu/C++ RAII rules. Stack
+fixed arrays are inline values. Dynamic CPU tensors own heap buffers. Views
+borrow storage and must have lifetimes expressible through normal Dudu
+reference rules. GPU tensors own device resources and release them through
+their destructor. The compiler should improve diagnostics around illegal view
+escape, incompatible storage conversion, and `dyn` to concrete shape
+assertions; it should not hard-code tensor allocation or freeing policy.
+
+## De-Opinionated Indexer Model
+
+The preferred design for pairwise and orthogonal advanced indexing is ordinary
+member access plus ordinary `[]` hooks:
+
+```python
+pairwise = logits.vindex[rows, cols]
+grid = logits.oindex[rows, cols]
+```
+
+Here `vindex` and `oindex` are not special indexing operators. They are
+library-defined fields/properties/method values that return indexer objects.
+Those indexer objects implement normal `@operator("[]")` and
+`@operator("[]=")`:
+
+```python
+class Tensor[T]:
+    vindex: VIndex[T]
+    oindex: OIndex[T]
+
+class VIndex[T]:
+    @operator("[]")
+    def get(self, rows: IndexArray, cols: IndexArray) -> Tensor[T][dyn]:
+        ...
+
+class OIndex[T]:
+    @operator("[]")
+    def get(self, rows: IndexArray, cols: IndexArray) -> Tensor[T][dyn, dyn]:
+        ...
+```
+
+This keeps Dudu flexible. A library can also expose `masked`, `window`,
+`blocks`, `csr`, `coo`, or backend-specific indexer objects without compiler
+patches:
+
+```python
+tiles = image.window[8, 8][y, x]
+values = sparse.coo[rows, cols]
+```
+
+Compiler-owned `@operator("vindex[]")`, `@operator("oindex[]")`, or other
+named advanced-index operators should be removed. They solve one tensor-family
+case but make the language too opinionated. The migration target is:
+
+- `tensor.vindex[...]` parses as member access followed by normal index.
+- sema resolves `tensor.vindex` like any other member.
+- sema resolves `[...]` on the returned indexer type through `[]` hooks.
+- `[]=` and compound assignment use the same normal read/write hook rules.
+- diagnostics mention missing `vindex`/`oindex` members or missing `[]` hooks,
+  not missing special compiler operators.
+- existing dogfood examples are rewritten to indexer objects.
+
+Plain `tensor[rows, cols]` can still be supported by a library's normal
+`@operator("[]")` overload if that library chooses a policy. The compiler must
+not globally decide whether that means PyTorch-style pairwise gather,
+NumPy-style mixed advanced indexing, or cartesian selection.
+
 ## Fancy Indexing Target Forms
 
 The scratch dogfood file
@@ -394,6 +501,32 @@ real. They do not belong in the fast default test suite.
 
 ## Implementation Phases
 
+### 0. Pull Tensor Policy Out Of The Compiler
+
+Before expanding the numeric stack, make the current indexing support less
+opinionated:
+
+1. Remove compiler-owned `vindex[]`, `vindex[]=`, `oindex[]`, and `oindex[]=`
+   operator names.
+2. Implement `.vindex[...]` and `.oindex[...]` through ordinary member lookup
+   plus ordinary `[]` / `[]=` hook dispatch on the returned indexer object.
+3. Add fixtures showing that custom indexers are not hard-coded:
+   `tensor.vindex[...]`, `tensor.oindex[...]`, `image.window[...]`,
+   `sparse.coo[...]`, and a deliberately unsupported indexer that diagnoses a
+   missing `[]` hook.
+4. Audit semantic analysis and codegen for tensor-specific names. Any
+   remaining special behavior should be moved to general member/index/call
+   logic or deleted.
+5. Keep only general compiler concepts: `slice`, index argument lists,
+   shaped generic metadata, overload resolution, assignment hooks, and precise
+   diagnostics.
+6. Update the Dudu data-science dogfood repo and compiler fixtures to use
+   indexer-object APIs.
+
+Acceptance test: a new indexer spelling can be added entirely in Dudu library
+code and used with `object.indexer[...]` without editing compiler sema or
+codegen.
+
 ### 1. Audit Current Indexing Hooks
 
 Verify the current compiler can express the library surface we need:
@@ -437,6 +570,11 @@ Status:
   `@operator("oindex[]")` / `@operator("oindex[]=")` hooks. This gives
   libraries explicit pairwise and orthogonal gather/scatter entry points
   without compiler tensor-backend knowledge.
+- Rework required: the final design should remove compiler-recognized
+  `vindex[]` / `oindex[]` operator names. `.vindex[...]` and `.oindex[...]`
+  should work because `vindex`/`oindex` are ordinary library-defined indexer
+  members whose types implement normal `@operator("[]")` /
+  `@operator("[]=")`.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".
@@ -527,6 +665,17 @@ The BLAS call should be a normal imported C function. If a small adapter is
 needed for enum constants or CBLAS layout values, keep it as a user-library
 adapter, not a compiler patch.
 
+The library should also prove the storage/conversion boundary:
+
+- stack/local fixed arrays remain `array[T][shape]`
+- dynamic CPU tensors own heap storage through RAII
+- row/column/patch selections return borrow/view types, not hidden copies
+- explicit `.copy()`, `.to_array()`, or `.to_tensor()` materializes owning
+  storage
+- explicit `.as_array_view()` works only for CPU-contiguous storage and
+  rejects/diagnoses GPU, non-contiguous, or lazy-expression values
+- shape assertions such as `assume_shape` remain explicit and diagnostic-rich
+
 Status:
 
 - First compiler-resident dogfood fixture exists in
@@ -615,6 +764,20 @@ Add an optional OpenCL-backed tensor example:
 Keep the first GPU test small and deterministic. It should prove the language
 can drive GPU buffers and kernels through imports and normal wrapper code. It
 does not need to beat optimized BLAS immediately.
+
+The GPU API should mirror CPU tensor shape and indexing where practical, but
+storage movement must remain explicit:
+
+```python
+cpu = tensor.zeros[f32](32, 784)
+gpu = cpu.to_gpu()
+result = gpu.matmul(weights_gpu)
+back = result.to_cpu()
+```
+
+Indexing a GPU tensor may return a GPU view, a lazy gather expression, or a
+backend-specific value. It must not silently copy to CPU just because the user
+used `[]`. CPU array compatibility should require an explicit download/copy.
 
 Status:
 

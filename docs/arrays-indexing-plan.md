@@ -230,6 +230,33 @@ Status: fixed arrays support contiguous trailing-dimension range slices after
 scalar prefixes, such as `image[y, x, 0:3]`, as `span[T]` views. This includes
 generic non-type extents and member-backed fixed arrays.
 
+## Tensor Policy Boundary
+
+The array/indexing feature is general language surface, not a built-in tensor
+framework. Core Dudu should understand fixed arrays, slices, comma indexing,
+index assignment, shape metadata, and hook dispatch. It should not hard-code
+NumPy, PyTorch, BLAS, GPU, autograd, or tensor-library semantics.
+
+Advanced tensor behavior should be expressible by libraries through ordinary
+members and `[]` hooks:
+
+```python
+pairwise = logits.vindex[rows, cols]
+cartesian = logits.oindex[rows, cols]
+tiles = image.window[8, 8][y, x]
+```
+
+`vindex`, `oindex`, `window`, or similar names are library API, not compiler
+operators. They should return indexer objects whose types implement normal
+`@operator("[]")` and `@operator("[]=")`. The compiler should not contain
+special `vindex[]` / `oindex[]` operator names.
+
+Conversion between library tensors and `array[T][shape]` should be explicit
+unless the library can prove the value is already CPU-contiguous and safely
+borrowable. GPU tensors, strided views, lazy expressions, and autograd-tracked
+values need explicit copy/view/move APIs so allocation, device transfer, and
+lifetime are visible.
+
 ## Swizzling
 
 GLSL-style swizzling is valuable for vector math and shader-like code:
