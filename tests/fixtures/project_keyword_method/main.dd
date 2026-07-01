@@ -1,0 +1,6 @@
+from backend import Backend
+
+
+def main() -> i32:
+    device = Backend.default()
+    return device.id + 1

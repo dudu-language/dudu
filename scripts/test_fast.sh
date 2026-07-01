@@ -39,6 +39,7 @@ compile_and_expect member_index_ast_path 42
 compile_and_expect literal_symbol_context 20
 compile_and_expect member_expr_receiver 42
 compile_and_expect method_expr_receiver 42
+compile_path_and_expect project_keyword_method tests/fixtures/project_keyword_method/main.dd 42
 compile_and_expect named_callback 42
 compile_and_expect function_values 42
 compile_and_expect fixed_arrays 42

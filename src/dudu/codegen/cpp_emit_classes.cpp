@@ -101,7 +101,8 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
     return {};
 }
 
-std::string operator_name(const FunctionDecl& method) {
+std::string method_emit_name(const std::string& source_class_name, const FunctionDecl& method,
+                             const CppEmitOptions& options) {
     const std::string op = function_decorator_arg(method, "operator");
     if (!op.empty()) {
         if (op == "[]" || op == "[]=") {
@@ -109,7 +110,10 @@ std::string operator_name(const FunctionDecl& method) {
         }
         return op == "bool" ? "operator bool" : "operator" + op;
     }
-    return method.name;
+    if (!cpp_reserved_identifier(method.name)) {
+        return method.name;
+    }
+    return emitted_reserved_member_name(source_class_name, method.name, options);
 }
 
 std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases,
@@ -305,7 +309,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
             (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
             out << "virtual ";
         }
-        const std::string lowered_name = operator_name(method);
+        const std::string lowered_name = method_emit_name(source_class_name, method, options);
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
         } else {

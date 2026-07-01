@@ -132,11 +132,9 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
-std::vector<TypeRef>
-infer_index_arg_type_refs(const std::vector<Expr>& args,
-                          const std::map<std::string, TypeRef>& local_type_refs,
-                          const std::map<std::string, TypeRef>& function_returns,
-                          const Symbols* symbols) {
+std::vector<TypeRef> infer_index_arg_type_refs(
+    const std::vector<Expr>& args, const std::map<std::string, TypeRef>& local_type_refs,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
     std::vector<TypeRef> out;
     out.reserve(args.size());
     for (const Expr& arg : args) {
@@ -199,7 +197,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
             expression_has_pointer_type(callee.children.front(), local_type_refs, symbols)) {
             return lower_expr(callee.children.front(), aliases, locals, local_type_refs, symbols,
                               options) +
-                   "->" + callee.name;
+                   "->" + emitted_member_name_for_expr(callee, local_type_refs, symbols, options);
         }
     }
     if (has_expr_callee(expr)) {
@@ -285,8 +283,8 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                                                    hook_receiver, {}, locals.current_class)
                             : TypeRef{};
         if (!has_type_ref(receiver_type)) {
-            receiver_type = infer_emitted_local_type_ref(hook_receiver, local_type_refs, {},
-                                                         symbols);
+            receiver_type =
+                infer_emitted_local_type_ref(hook_receiver, local_type_refs, {}, symbols);
         }
     }
     if (!has_type_ref(receiver_type)) {
@@ -392,8 +390,8 @@ lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
                                                    hook_receiver, {}, locals.current_class)
                             : TypeRef{};
         if (!has_type_ref(receiver_type)) {
-            receiver_type = infer_emitted_local_type_ref(hook_receiver, local_type_refs, {},
-                                                         symbols);
+            receiver_type =
+                infer_emitted_local_type_ref(hook_receiver, local_type_refs, {}, symbols);
         }
     }
     if (!has_type_ref(receiver_type)) {

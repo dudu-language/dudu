@@ -1,9 +1,9 @@
 #include "dudu/codegen/cpp_emit_modules.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/core/file_io.hpp"
 
 #include <fstream>
@@ -79,6 +79,16 @@ void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, b
                 options.generated_value_names[klass.name + "." + constant.name] = constant.cpp_name;
             }
         }
+        for (const FunctionDecl& method : klass.methods) {
+            if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
+                !cpp_emit_function_has_decorator(method, "operator")) {
+                options.generated_value_names[klass.name + "." + method.name] = method.cpp_name;
+                if (!klass.cpp_name.empty()) {
+                    options.generated_value_names[klass.cpp_name + "." + method.name] =
+                        method.cpp_name;
+                }
+            }
+        }
     }
     for (const ConstDecl& constant : unit.constants) {
         if (!constant.cpp_name.empty()) {
@@ -119,6 +129,15 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
         if ((!selective || klass.name == import.imported_name) && !klass.cpp_name.empty()) {
             options.generated_type_names[expose(klass.name)] = klass.cpp_name;
             options.generated_value_names[expose(klass.name)] = klass.cpp_name;
+            for (const FunctionDecl& method : klass.methods) {
+                if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
+                    !cpp_emit_function_has_decorator(method, "operator")) {
+                    options.generated_value_names[expose(klass.name) + "." + method.name] =
+                        method.cpp_name;
+                    options.generated_value_names[klass.cpp_name + "." + method.name] =
+                        method.cpp_name;
+                }
+            }
         }
     }
     for (const ConstDecl& constant : dependency.constants) {

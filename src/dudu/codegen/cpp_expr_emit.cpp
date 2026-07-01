@@ -75,6 +75,42 @@ filter_member_template_type_args(const Expr& expr, std::vector<TypeRef> type_arg
 
 } // namespace
 
+std::string emitted_member_name_for_expr(const Expr& member,
+                                         const std::map<std::string, TypeRef>& local_type_refs,
+                                         const Symbols* symbols, const CppEmitOptions& options) {
+    if (symbols == nullptr || member.kind != ExprKind::Member || member.children.size() != 1) {
+        return member.name;
+    }
+    if (!cpp_reserved_identifier(member.name)) {
+        return member.name;
+    }
+
+    const Expr& receiver = member.children.front();
+    const ClassDecl* klass = nullptr;
+    if (receiver.kind == ExprKind::Name) {
+        if (const auto found = symbols->classes.find(receiver.name);
+            found != symbols->classes.end()) {
+            klass = found->second;
+        }
+        if (klass == nullptr) {
+            if (const auto alias = symbols->alias_type_refs.find(receiver.name);
+                alias != symbols->alias_type_refs.end()) {
+                klass = class_for_receiver_type(*symbols, alias->second);
+            }
+        }
+    }
+    if (klass == nullptr) {
+        const TypeRef receiver_type =
+            member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver);
+        klass = has_type_ref(receiver_type) ? class_for_receiver_type(*symbols, receiver_type)
+                                            : nullptr;
+    }
+    if (klass == nullptr) {
+        return member.name;
+    }
+    return emitted_reserved_member_name(klass->name, member.name, options);
+}
+
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options);
@@ -134,25 +170,40 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
     if (starts_with(receiver, "shader::")) {
         return receiver + "." + member;
     }
-    const std::string dotted = receiver + "." + member;
-    const std::string generated = emitted_value_name(dotted, options);
-    if (generated != dotted) {
-        return generated;
-    }
-    const std::string qualified = qualify_namespace_aliases(dotted, aliases);
-    if (qualified != dotted) {
-        return qualified;
-    }
-    if (receiver.find("::") != std::string::npos) {
+    if (scoped_receiver) {
+        const std::string dotted = receiver + "." + member;
+        const std::string generated = emitted_value_name(dotted, options);
+        if (generated != dotted) {
+            return generated;
+        }
+        const std::string qualified = qualify_namespace_aliases(dotted, aliases);
+        if (qualified != dotted) {
+            return qualified;
+        }
         return receiver + "::" + member;
     }
-    return receiver + (scoped_receiver ? "::" : ".") + member;
+    return receiver + "." + member;
 }
 
 bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
                                const CppLocalContext& locals) {
     if (receiver.kind != ExprKind::Name) {
-        return false;
+        const std::optional<ExprPath> path = expr_path_from_expr(receiver);
+        if (!path || symbols == nullptr) {
+            return false;
+        }
+        const std::string name = render_expr_path(*path);
+        if (symbols->classes.contains(name) || symbols->enums.contains(name) ||
+            symbols->native_classes.contains(name)) {
+            return true;
+        }
+        const size_t dot = name.find('.');
+        if (dot == std::string::npos) {
+            return false;
+        }
+        const std::string prefix = name.substr(0, dot);
+        return symbols->native_path_prefixes.contains(prefix) &&
+               !symbols->module_import_prefixes.contains(prefix);
     }
     if (receiver.name == "class") {
         return !locals.current_class.empty();
@@ -427,8 +478,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return lower_member_expr(
                 lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
                            options),
-                expr.name, aliases, options,
-                member_receiver_is_scoped(expr.children.front(), symbols, locals));
+                emitted_member_name_for_expr(expr, local_type_refs, symbols, options), aliases,
+                options, member_receiver_is_scoped(expr.children.front(), symbols, locals));
         }
         break;
     case ExprKind::DictEntry:

@@ -1,0 +1,7 @@
+class Device:
+    id: i32
+
+
+class Backend:
+    def default() -> Device:
+        return Device(41)
