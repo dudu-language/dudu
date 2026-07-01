@@ -10,6 +10,7 @@ ndad_runtime_checks.dd	run	0
 ndad_arbitrary_rank_runtime.dd	run	0
 ndad_direct_pairwise_runtime.dd	run	0
 ndad_compound_advanced_runtime.dd	run	0
+ndad_ml_indexing_runtime.dd	run	0
 ndad_direct_pytorch_indexing.dd	pass
 ndad_mask_and_scatter.dd	pass
 ndad_cartesian_helper.dd	pass

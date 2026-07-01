@@ -117,6 +117,12 @@ rank-5 direct indexing through the normal `ndad` operator hooks. It checks
 mixed scalar/slice views, all-scalar `.item()` extraction, view
 materialization, and mixed advanced indexing without adding tensor-name or
 rank-specific compiler policy.
+`ndad_ml_indexing_runtime.dd` promotes several ML-shaped target examples into
+runtime evidence: embedding lookup through `embedding[token_ids, :]`, direct
+class-logit gather through `logits[arange(...), labels]`, ellipsis plus
+negative index selection through `scores[..., -1]`, new-axis broadcasting with
+`bias[None, None, :, None]`, and an explicit cartesian diagnostic gather
+through `scores.cartesian[...]`.
 
 Status: `ndad_broadcasting_runtime.dd` proves broadcasting is library-owned
 behavior behind ordinary Dudu operators. The fixture runs

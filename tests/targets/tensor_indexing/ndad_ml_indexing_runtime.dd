@@ -1,0 +1,95 @@
+# Target: ML-shaped direct indexing examples run through the ordinary ndad
+# tensor hooks. These mirror embedding lookup, class-logit gather, ellipsis,
+# negative indices, new-axis broadcast, and cartesian diagnostic gathers.
+
+from ndad import Tensor
+from ndad import arange
+from ndad import array
+from ndad import zeros
+
+
+def main() -> i32:
+    embeddings: Tensor[i32][4, 5] = zeros[i32](4, 5)
+    index = 0
+    while index < i32(len(embeddings.data)):
+        embeddings.data[index] = index
+        index += 1
+
+    token_ids: Tensor[i64][2, 3] = zeros[i64](2, 3)
+    token_ids[0, 0] = 3
+    token_ids[0, 1] = 0
+    token_ids[0, 2] = 1
+    token_ids[1, 0] = 2
+    token_ids[1, 1] = 3
+    token_ids[1, 2] = 1
+
+    tokens = embeddings[token_ids, :]
+    if tokens.shape[0] != 2:
+        return 1
+    if tokens.shape[1] != 3:
+        return 2
+    if tokens.shape[2] != 5:
+        return 3
+    if tokens[0, 0, 0].item() != 15:
+        return 4
+    if tokens[0, 1, 4].item() != 4:
+        return 5
+    if tokens[1, 2, 3].item() != 8:
+        return 6
+
+    logits: Tensor[i32][2, 4] = zeros[i32](2, 4)
+    index = 0
+    while index < i32(len(logits.data)):
+        logits.data[index] = index
+        index += 1
+    labels = array[i64]([3, 1])
+    correct = logits[arange(2), labels]
+    if correct.shape[0] != 2:
+        return 7
+    if correct[0].item() != 3:
+        return 8
+    if correct[1].item() != 5:
+        return 9
+
+    scores: Tensor[i32][2, 3, 4, 6] = zeros[i32](2, 3, 4, 6)
+    index = 0
+    while index < i32(len(scores.data)):
+        scores.data[index] = index
+        index += 1
+    last_vocab_per_head = scores[..., -1]
+    if last_vocab_per_head.shape[0] != 2:
+        return 10
+    if last_vocab_per_head.shape[1] != 3:
+        return 11
+    if last_vocab_per_head.shape[2] != 4:
+        return 12
+    if last_vocab_per_head[0, 0, 0].item() != 5:
+        return 13
+    if last_vocab_per_head[1, 2, 3].item() != 143:
+        return 14
+
+    per_head_bias = array[i32]([1, 2, 3, 4])
+    biased = scores + per_head_bias[None, None, :, None]
+    if biased[0, 0, 0, 0].item() != 1:
+        return 15
+    if biased[1, 2, 3, 5].item() != 147:
+        return 16
+
+    batch_ids = array[i64]([1, 0])
+    head_ids = array[i64]([0, 2])
+    vocab_ids = array[i64]([1, 3, 5])
+    diagnostic = scores.cartesian[batch_ids, :, head_ids, vocab_ids]
+    if diagnostic.shape[0] != 2:
+        return 17
+    if diagnostic.shape[1] != 3:
+        return 18
+    if diagnostic.shape[2] != 2:
+        return 19
+    if diagnostic.shape[3] != 3:
+        return 20
+    if diagnostic[0, 0, 0, 0].item() != 73:
+        return 21
+    if diagnostic[1, 2, 1, 2].item() != 65:
+        return 22
+
+    return 0

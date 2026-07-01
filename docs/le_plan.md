@@ -1282,6 +1282,10 @@ push. They are not release packaging work.
    pairwise gather/scatter and explicit `tensor.cartesian[rows, cols]`
    cartesian gather at runtime. The reference helper now points at the owning
    tensor storage so helper objects do not hide stale copied data.
+   `ndad_ml_indexing_runtime.dd` now runs ML-shaped target examples through
+   the same ordinary hooks: embedding lookup with `embedding[token_ids, :]`,
+   class-logit gather with `logits[arange(...), labels]`, ellipsis/negative
+   indexing, new-axis broadcasting, and explicit cartesian diagnostic gathers.
    `ndad_broadcasting_runtime.dd` also proves library-owned broadcasting
    through normal tensor operators by running
    `(x - mean[None, :]) * inv_std[None, :]` and row-bias addition without any
