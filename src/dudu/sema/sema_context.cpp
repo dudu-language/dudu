@@ -20,7 +20,9 @@ namespace {
 bool is_builtin_type(const std::string& type) {
     static const std::set<std::string> builtins = {
         "bool",  "char",  "i8",  "i16", "i32",  "i64", "u8",   "u16",   "u32",      "u64",
-        "isize", "usize", "f32", "f64", "void", "str", "cstr", "slice", "ellipsis", "new_axis"};
+        "isize",       "usize",      "f32",        "f64",       "void",
+        "str",         "cstr",       "slice",      "ellipsis",  "new_axis",
+        "scalar_index", "basic_index"};
     return builtins.contains(type);
 }
 

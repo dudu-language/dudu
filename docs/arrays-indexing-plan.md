@@ -410,6 +410,12 @@ map Dudu syntax to CPU views, GPU buffer views, lazy expressions, kernel
 launches, or backend calls without the core language embedding
 CUDA/Vulkan/OpenCL logic.
 
+Libraries can also use general index category types. `scalar_index` accepts
+integer-like scalar indexes. `basic_index` accepts scalar indexes, slices,
+ellipsis, and new-axis items, which is enough for view-safe Python-style
+indexing overloads. Advanced index objects keep their library-defined type and
+therefore route to ordinary generic `Idx...` overloads.
+
 Status: Dudu-native `@operator("[]")` methods are recognized by indexing
 semantics for read expressions, including index argument type checking. Indexed
 member paths such as `self.values[i]` type-check through the same indexing

@@ -37,7 +37,9 @@ const std::map<std::string, std::string>& builtin_cpp_type_names() {
                                                                 {"cstr", "const char*"},
                                                                 {"slice", "dudu::Slice"},
                                                                 {"ellipsis", "dudu::Ellipsis"},
-                                                                {"new_axis", "dudu::NewAxis"}};
+                                                                {"new_axis", "dudu::NewAxis"},
+                                                                {"scalar_index", "dudu::ScalarIndex"},
+                                                                {"basic_index", "dudu::BasicIndex"}};
     return builtins;
 }
 

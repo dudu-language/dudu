@@ -4,6 +4,7 @@ generic_pack_forwarding.dd	pass
 fixed_array_python_slices.dd	run	0
 library_fixed_arity_hooks.dd	pass	
 library_variadic_hooks.dd	pass
+library_index_category_hooks.dd	run	30
 ndad_core.dd	pass
 ndad_runtime_checks.dd	run	0
 ndad_direct_pytorch_indexing.dd	pass
@@ -12,6 +13,7 @@ ndad_cartesian_helper.dd	pass
 ndad_broadcasting_runtime.dd	run	0
 ndad_broadcast_compatibility_runtime.dd	run	0
 ndad_assignment_broadcast_runtime.dd	run	0
+ndad_view_copy_runtime.dd	run	0
 ndad_shape_preserving_helpers.dd	run	7
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value

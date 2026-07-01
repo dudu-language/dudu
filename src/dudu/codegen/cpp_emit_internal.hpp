@@ -6,6 +6,7 @@
 #include <iosfwd>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 
@@ -13,6 +14,9 @@ bool cpp_emit_function_has_decorator(const FunctionDecl& fn, std::string_view na
 bool cpp_emit_function_is_test(const FunctionDecl& fn);
 std::string cpp_emit_string_literal(std::string text);
 std::string cpp_emit_function_decorator_arg(const FunctionDecl& fn, std::string_view name);
+bool cpp_emit_concrete_variadic_param(const FunctionDecl& fn, const ParamDecl& param);
+std::string cpp_emit_concrete_variadic_pack_name(const ParamDecl& param);
+std::vector<std::string> cpp_emit_template_params_for_function(const FunctionDecl& fn);
 
 void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const std::string& filter,
                        bool capture_output, const CppEmitOptions& options = {});

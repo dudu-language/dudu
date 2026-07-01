@@ -119,6 +119,9 @@ Required architecture:
 - library tensor types use normal direct Python-style indexing such as
   `tensor[rows, cols]`, `tensor[:, :, 0]`, `tensor[..., -1]`, and
   `tensor[None, :]` routed to `[]` hooks
+- view-safe direct indexing uses general `basic_index` overloads, while
+  advanced indexing falls through to generic variadic index packs; this must
+  stay library-dispatched, not tensor-name-dispatched
 - arbitrary-rank tensor libraries use variadic typed index hooks such as
   `def at[Idx...](self, *idx: Idx)` rather than one overload per rank
 - `dudu_tensor` uses `shape`, `strides`, and `offset` metadata as its core

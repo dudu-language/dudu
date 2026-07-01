@@ -11,6 +11,8 @@ namespace dudu {
 struct Slice;
 struct Ellipsis;
 struct NewAxis;
+struct ScalarIndex;
+struct BasicIndex;
 } // namespace dudu
 
 namespace ndad {
@@ -76,6 +78,12 @@ concept EllipsisLike = std::is_same_v<std::decay_t<T>, dudu::Ellipsis>;
 
 template <class T>
 concept NewAxisLike = std::is_same_v<std::decay_t<T>, dudu::NewAxis>;
+
+template <class T>
+concept ScalarIndexLike = std::is_same_v<std::decay_t<T>, dudu::ScalarIndex>;
+
+template <class T>
+concept BasicIndexLike = std::is_same_v<std::decay_t<T>, dudu::BasicIndex>;
 
 template <class T>
 concept ShapedIndexLike = requires(const T& value) { value.shape; };
@@ -264,7 +272,28 @@ template <class T> std::vector<i64> mask_index_values(const T& value) {
 
 template <class T> IndexItem make_index_item(const T& value) {
     using Value = std::decay_t<T>;
-    if constexpr (EllipsisLike<Value>) {
+    if constexpr (ScalarIndexLike<Value>) {
+        return {.kind = IndexKind::Scalar, .scalar = static_cast<i64>(value.value)};
+    } else if constexpr (BasicIndexLike<Value>) {
+        switch (static_cast<int>(value.kind)) {
+        case 0:
+            return {.kind = IndexKind::Scalar, .scalar = static_cast<i64>(value.scalar)};
+        case 1:
+            return {.kind = IndexKind::Slice,
+                    .has_start = value.slice.has_start,
+                    .has_end = value.slice.has_end,
+                    .has_step = value.slice.has_step,
+                    .start = value.slice.start,
+                    .end = value.slice.end,
+                    .step = value.slice.step};
+        case 2:
+            return {.kind = IndexKind::Ellipsis};
+        case 3:
+            return {.kind = IndexKind::NewAxis};
+        default:
+            return {.kind = IndexKind::Scalar, .scalar = 0};
+        }
+    } else if constexpr (EllipsisLike<Value>) {
         return {.kind = IndexKind::Ellipsis};
     } else if constexpr (NewAxisLike<Value>) {
         return {.kind = IndexKind::NewAxis};
@@ -562,6 +591,18 @@ template <class Data> Data result_data(const Data& data, const IndexPlan& plan) 
     Data out;
     out.reserve(plan.explicit_offsets.size());
     for (const i64 source : plan.explicit_offsets) {
+        out.push_back(data[static_cast<std::size_t>(source)]);
+    }
+    return out;
+}
+
+template <class Data> Data materialize_view(const Data& data, const std::vector<i64>& shape,
+                                            const std::vector<i64>& strides, i64 offset) {
+    Data out;
+    const i64 count = element_count(shape);
+    out.reserve(static_cast<std::size_t>(count));
+    for (i64 flat = 0; flat < count; ++flat) {
+        const i64 source = flat_offset(shape, strides, offset, flat);
         out.push_back(data[static_cast<std::size_t>(source)]);
     }
     return out;

@@ -144,6 +144,20 @@ it maps source offsets through right-aligned broadcast coordinates and rejects
 incompatible assignment shapes in the library layer. The fixture covers row,
 column, face, and singleton-axis assignment into rank-2 and rank-3 selections.
 
+Status: `library_index_category_hooks.dd` proves `basic_index` is general
+index-dispatch machinery, not a tensor special case. A simple library type can
+route scalar/slice/ellipsis/new-axis packs to one overload and advanced
+library-defined index objects to a generic variadic overload.
+
+Status: `ndad_view_copy_runtime.dd` proves the in-repo ndad surface now makes a
+real view/copy boundary observable at runtime. Basic direct indexing such as
+`x[1, :]` returns a reference-backed `TensorView[T]` that can mutate the base
+through `.fill(...)`; explicit `.to_tensor()` materializes an owning copy; and
+advanced indexing such as `x[ids, :]` materializes a `Tensor[T]` that does not
+alias the base. This remains ordinary library overload behavior: the compiler
+only knows `basic_index` as a general scalar/slice/ellipsis/new-axis category
+and does not know tensor names.
+
 ## Backend Choice
 
 Use the most portable useful stack first:
@@ -172,7 +186,11 @@ class Tensor[T]:
     data: list[T]
 
     @operator("[]")
-    def at[Idx...](self, *idx: Idx) -> TensorSelection[T, Idx...]:
+    def view_at(self, *idx: basic_index) -> TensorView[T]:
+        ...
+
+    @operator("[]")
+    def materialize_at[Idx...](self, *idx: Idx) -> Tensor[T]:
         ...
 
     @operator("[]=")
@@ -196,6 +214,14 @@ the tensor names and only dispatches the normal `@operator("[]")` /
 `zeros[T, Dims...]` forwards arbitrary-rank dimensions through a variadic pack,
 and elementwise tensor operators use the same runtime shape/stride metadata for
 right-aligned broadcasting.
+
+Basic direct indexing now routes through `*idx: basic_index` overloads and
+returns `TensorView[T]`; advanced direct indexing routes through generic
+`Idx...` overloads and returns materialized `Tensor[T]`. Returning a scalar only
+when scalar indexes consume every tensor axis still needs a rank/pack-count
+constraint feature; until that exists, scalar extraction should be explicit or
+provided as honest rank-specific library convenience rather than compiler
+policy.
 
 ## External Baseline
 
@@ -728,6 +754,11 @@ Status:
   scatter/assignment, and symbolic dimensions is covered by the current
   `tests/targets/tensor_indexing` manifest through ordinary fixed-arity and
   variadic `@operator("[]")` / `@operator("[]=")` hooks.
+- Done: `basic_index` and `scalar_index` category types allow libraries to
+  separate basic view-safe indexing from advanced materializing indexing without
+  compiler tensor-name policy. `ndad_view_copy_runtime.dd` proves basic direct
+  indexing can return a mutating `TensorView[T]`, while advanced indexing
+  materializes a non-aliasing `Tensor[T]`.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".

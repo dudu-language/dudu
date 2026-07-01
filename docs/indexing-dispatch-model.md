@@ -177,6 +177,28 @@ dispatch. Each index item keeps its real type:
 - index `None` becomes `new_axis`
 - tensor/list/mask index expressions keep their library-defined type
 
+Libraries that need to distinguish view-safe indexing from advanced indexing
+can overload on general index category types:
+
+```python
+class Tensor[T]:
+    @operator("[]")
+    def view_at(self, *idx: basic_index) -> TensorView[T]:
+        ...
+
+    @operator("[]")
+    def materialize_at[Idx...](self, *idx: Idx) -> Tensor[T]:
+        ...
+```
+
+`basic_index` accepts scalar integer indexes, `slice`, `ellipsis`, and
+`new_axis`. It does not accept tensor/list/mask index objects, so advanced
+indexing falls through to the generic variadic overload without the compiler
+knowing tensor library names. `scalar_index` is the narrower integer-only
+category. Concrete variadic parameters such as `*idx: basic_index` lower to a
+generated C++ template pack; generic packs such as `*idx: Idx` keep their
+ordinary Dudu generic-pack behavior.
+
 The compiler does not decide whether `tensor[rows, cols]` is pairwise gather,
 cartesian gather, a view, a lazy expression, or an owning result. The selected
 library operator decides that through its return type and implementation.
@@ -187,6 +209,11 @@ The code generator emits variadic `[]=` methods with the assigned value before
 the C++ parameter pack while preserving Dudu source syntax as
 `def set_at[Idx...](self, *idx: Idx, value: T)`. This keeps C++ template
 deduction valid without changing the Dudu surface.
+
+Current limitation: returning a plain scalar only when a scalar-only index pack
+fully consumes a tensor's rank needs rank/pack-count constraints. Until that
+type-system feature exists, tensor libraries should expose scalar materializing
+helpers or honest rank-specific conveniences, not compiler rank shortcuts.
 
 Implementation status: imported Dudu functions and methods preserve variadic
 metadata through the module-alias/native-signature boundary. A library module
@@ -290,10 +317,12 @@ The tensor library work needed after that is:
    `shape`, `strides`, and `offset`.
 2. Implement `@operator("[]")` / `@operator("[]=")` with variadic typed index
    hooks.
-3. Define view/copy/lazy/scatter behavior in the library API and make it
+3. Use `basic_index` overloads for view-safe direct indexing and generic index
+   packs for advanced/materialized indexing.
+4. Define view/copy/lazy/scatter behavior in the library API and make it
    visible through return types and hover.
-4. Add BLAS/OpenCL/other backend dispatch behind normal library calls.
-5. Prove the target API with real examples, not rank-2 demos.
+5. Add BLAS/OpenCL/other backend dispatch behind normal library calls.
+6. Prove the target API with real examples, not rank-2 demos.
 
 ## Non-Negotiable Boundaries
 

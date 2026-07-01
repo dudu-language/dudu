@@ -1,5 +1,6 @@
 #include "dudu/codegen/cpp_emit_classes.hpp"
 
+#include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
@@ -336,7 +337,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                  const CppEmitOptions& options) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    emit_template_params(out, generic_cpp_params_for_function(method), "    ",
+    emit_template_params(out, cpp_emit_template_params_for_function(method), "    ",
                          generic_cpp_value_params_for_function(method));
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
@@ -371,9 +372,13 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
             out << ", ";
         }
         const ParamDecl& param = method.params[param_order[i]];
-        out << lower_cpp_type(method_type_for_emit(param.type_ref, class_name, param.location),
-                              aliases, options)
-            << (param.variadic ? "... " : " ") << param.name;
+        if (cpp_emit_concrete_variadic_param(method, param)) {
+            out << cpp_emit_concrete_variadic_pack_name(param) << "... " << param.name;
+        } else {
+            out << lower_cpp_type(method_type_for_emit(param.type_ref, class_name, param.location),
+                                  aliases, options)
+                << (param.variadic ? "... " : " ") << param.name;
+        }
     }
     CppLocalContext locals;
     std::map<std::string, TypeRef> local_type_refs;

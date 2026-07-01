@@ -42,6 +42,29 @@ bool is_numeric_type(const TypeRef& type) {
     return is_numeric_type_name(type_ref_head_name(wrapped_type_arg_ref(type)));
 }
 
+bool is_scalar_index_type(const TypeRef& type) {
+    return type_ref_is_integer(wrapped_type_arg_ref(type));
+}
+
+bool is_basic_index_type(const TypeRef& type) {
+    const TypeRef wrapped = wrapped_type_arg_ref(type);
+    return is_scalar_index_type(wrapped) || type_ref_is_name(wrapped, "slice") ||
+           type_ref_is_name(wrapped, "ellipsis") || type_ref_is_name(wrapped, "new_axis") ||
+           type_ref_is_name(wrapped, "scalar_index");
+}
+
+bool is_index_category_assignment(const TypeRef& expected, const TypeRef& got) {
+    const TypeRef normalized_expected = normalize_cpp_type_artifacts_ref(expected);
+    const TypeRef normalized_got = normalize_cpp_type_artifacts_ref(got);
+    if (type_ref_is_name(normalized_expected, "scalar_index")) {
+        return is_scalar_index_type(normalized_got);
+    }
+    if (type_ref_is_name(normalized_expected, "basic_index")) {
+        return is_basic_index_type(normalized_got);
+    }
+    return false;
+}
+
 std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {
     if (type.kind != kind || type.children.size() != 1) {
         return std::nullopt;
@@ -291,6 +314,7 @@ bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeR
            is_const_pointer_binding(expected_ref, got_ref) ||
            is_pointer_to_reference_value(expected_ref, got_ref) ||
            is_reference_binding(expected_ref, got_ref) ||
+           is_index_category_assignment(expected_ref, got_ref) ||
            is_value_from_reference(expected_ref, got_ref) ||
            is_value_from_const(expected_ref, got_ref) ||
            is_native_function_pointer(expected_ref, got_ref) ||
@@ -315,6 +339,7 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     return structural_type_assignment_allowed(expected, got) ||
            is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
+           is_index_category_assignment(expected, got) ||
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
            native_associated_type_assignment_allowed(expected, got) ||
@@ -344,6 +369,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
             is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
             is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
+            is_index_category_assignment(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
             is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
@@ -364,6 +390,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
            is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
            is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
+           is_index_category_assignment(normalized_expected_ref, normalized_got_ref) ||
            is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
            is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
            is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||

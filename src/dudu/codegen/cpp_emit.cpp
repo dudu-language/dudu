@@ -70,6 +70,25 @@ std::string cpp_emit_function_decorator_arg(const FunctionDecl& fn, std::string_
     return {};
 }
 
+bool cpp_emit_concrete_variadic_param(const FunctionDecl& fn, const ParamDecl& param) {
+    return param.variadic &&
+           !generic_pack_param_named(fn.generic_params, type_ref_head_name(param.type_ref));
+}
+
+std::string cpp_emit_concrete_variadic_pack_name(const ParamDecl& param) {
+    return "__DuduVariadic_" + param.name;
+}
+
+std::vector<std::string> cpp_emit_template_params_for_function(const FunctionDecl& fn) {
+    std::vector<std::string> params = generic_cpp_params_for_function(fn);
+    for (const ParamDecl& param : fn.params) {
+        if (cpp_emit_concrete_variadic_param(fn, param)) {
+            params.push_back(cpp_emit_concrete_variadic_pack_name(param) + "...");
+        }
+    }
+    return params;
+}
+
 namespace {
 
 std::string cpp_emit_function_decorator_args(const FunctionDecl& fn, std::string_view name) {
@@ -218,8 +237,13 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(fn.params[i].type_ref, aliases, options)
-            << (fn.params[i].variadic ? "... " : " ") << fn.params[i].name;
+        if (cpp_emit_concrete_variadic_param(fn, fn.params[i])) {
+            out << cpp_emit_concrete_variadic_pack_name(fn.params[i]) << "... "
+                << fn.params[i].name;
+        } else {
+            out << lower_cpp_type(fn.params[i].type_ref, aliases, options)
+                << (fn.params[i].variadic ? "... " : " ") << fn.params[i].name;
+        }
     }
     out << ')';
 }
@@ -228,7 +252,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, TypeRef>& function_returns,
                         const Symbols& symbols, const CppEmitOptions& options = {}) {
-    emit_template_params(out, generic_cpp_params_for_function(fn),
+    emit_template_params(out, cpp_emit_template_params_for_function(fn),
                          generic_cpp_value_params_for_function(fn));
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
@@ -258,7 +282,7 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
         if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, generic_cpp_params_for_function(fn),
+        emit_template_params(out, cpp_emit_template_params_for_function(fn),
                              generic_cpp_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";

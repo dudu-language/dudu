@@ -1,0 +1,22 @@
+# Target: index category overloads are general library machinery, not tensor
+# special cases. Basic index packs can be routed separately from advanced packs.
+
+class Mask:
+    ok: bool
+
+
+class Picker:
+    @operator("[]")
+    def basic(self, *idx: basic_index) -> i32:
+        return 10
+
+    @operator("[]")
+    def advanced[Idx...](self, *idx: Idx) -> i32:
+        return 20
+
+
+def main() -> i32:
+    picker = Picker()
+    basic_value = picker[0, :, None, ...]
+    advanced_value = picker[Mask(True), :]
+    return basic_value + advanced_value
