@@ -37,11 +37,12 @@ class CartesianIndexer[T]:
     @operator("[]")
     def at[Idx...](self, *idx: Idx) -> Tensor[T]:
         plan = cpp("ndad::cartesian_index_plan(self.shape, self.strides, self.offset, idx...)")
+        data: list[T] = cpp("ndad::result_data(self.data, plan)")
         shape: list[i64] = cpp("plan.shape")
-        strides: list[i64] = cpp("plan.strides")
-        offset: i64 = cpp("plan.offset")
-        cartesian = CartesianIndexer[T](self.data, shape, strides, offset)
-        return Tensor[T](self.data, shape, strides, offset, cartesian)
+        strides: list[i64] = cpp("ndad::result_strides(plan)")
+        offset: i64 = cpp("ndad::result_offset(plan)")
+        cartesian = CartesianIndexer[T](data, shape, strides, offset)
+        return Tensor[T](data, shape, strides, offset, cartesian)
 
 
 class TensorView[T]:
@@ -53,11 +54,12 @@ class TensorView[T]:
     @operator("[]")
     def at[Idx...](self, *idx: Idx) -> Tensor[T]:
         plan = cpp("ndad::index_plan(self.shape, self.strides, self.offset, idx...)")
+        data: list[T] = cpp("ndad::result_data(self.data, plan)")
         shape: list[i64] = cpp("plan.shape")
-        strides: list[i64] = cpp("plan.strides")
-        offset: i64 = cpp("plan.offset")
-        cartesian = CartesianIndexer[T](self.data, shape, strides, offset)
-        return Tensor[T](self.data, shape, strides, offset, cartesian)
+        strides: list[i64] = cpp("ndad::result_strides(plan)")
+        offset: i64 = cpp("ndad::result_offset(plan)")
+        cartesian = CartesianIndexer[T](data, shape, strides, offset)
+        return Tensor[T](data, shape, strides, offset, cartesian)
 
 
 class Tensor[T]:
@@ -70,11 +72,12 @@ class Tensor[T]:
     @operator("[]")
     def at[Idx...](self, *idx: Idx) -> Tensor[T]:
         plan = cpp("ndad::index_plan(self.shape, self.strides, self.offset, idx...)")
+        data: list[T] = cpp("ndad::result_data(self.data, plan)")
         shape: list[i64] = cpp("plan.shape")
-        strides: list[i64] = cpp("plan.strides")
-        offset: i64 = cpp("plan.offset")
-        cartesian = CartesianIndexer[T](self.data, shape, strides, offset)
-        return Tensor[T](self.data, shape, strides, offset, cartesian)
+        strides: list[i64] = cpp("ndad::result_strides(plan)")
+        offset: i64 = cpp("ndad::result_offset(plan)")
+        cartesian = CartesianIndexer[T](data, shape, strides, offset)
+        return Tensor[T](data, shape, strides, offset, cartesian)
 
     @operator("[]=")
     def set_tensor[Idx...](self, *idx: Idx, value: Tensor[T]):

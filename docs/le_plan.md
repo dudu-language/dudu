@@ -1258,9 +1258,9 @@ push. They are not release packaging work.
    running generated C++. Expression-level pack forwarding such as `idx...` is
    parsed as AST and works through ordinary generic calls; variadic `[]=`
    hooks preserve Dudu source order while emitting a C++-deducible
-   value-before-pack ABI. True mask-position gather/scatter is not complete
-   until the runtime fixture proves selected element positions, not only mask
-   counts and hook dispatch.
+   value-before-pack ABI. Mask-position gather and masked scalar scatter are
+   now runtime-checked, including row-mask plus slice behavior, so the target
+   no longer passes by tracking only selected counts.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

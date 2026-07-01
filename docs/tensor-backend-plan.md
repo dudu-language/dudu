@@ -102,9 +102,10 @@ tensor surface. It checks row-major strides, slice offsets, ellipsis, new-axis
 insertion, direct advanced indexing, cartesian helper indexing, scalar point
 writes, scalar slice fill, tensor-valued slice assignment, and boolean-mask
 construction. This is intentionally inside the Dudu repo so a fake rank-2 or
-ignored-index implementation cannot claim completion. True mask-position
-gather/scatter is still a required follow-up; the current boolean-mask runtime
-check proves mask construction, not correct masked element placement.
+ignored-index implementation cannot claim completion. The runtime target now
+also checks mask-position gather and masked scalar scatter, including a
+row-mask plus slice case, so masks must carry selected element positions rather
+than only a selected count.
 
 ## Backend Choice
 

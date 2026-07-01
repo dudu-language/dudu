@@ -20,6 +20,7 @@ struct IndexPlan {
     std::vector<i64> shape{};
     std::vector<i64> strides{};
     i64 offset{};
+    std::vector<i64> explicit_offsets{};
 };
 
 enum class IndexKind {
@@ -41,6 +42,22 @@ struct IndexItem {
     i64 end{};
     i64 step{1};
     std::vector<i64> shape{};
+    std::vector<i64> values{};
+};
+
+enum class ContributionKind {
+    Scalar,
+    Slice,
+    Advanced,
+};
+
+struct OffsetContribution {
+    std::size_t axis{};
+    ContributionKind kind{};
+    i64 scalar{};
+    std::vector<i64> values{};
+    std::size_t result_dim{};
+    std::size_t result_rank{};
 };
 
 template <class T>
@@ -65,7 +82,8 @@ concept ShapedIndexLike = requires(const T& value) {
 };
 
 template <class T>
-concept BoolMaskIndexLike = requires(const T& value) {
+concept MaskIndexLike = requires(T& value) {
+    value.data;
     value.count_true();
 };
 
@@ -77,6 +95,63 @@ std::vector<i64> as_i64_shape(const T& shape) {
         out.push_back(static_cast<i64>(dim));
     }
     return out;
+}
+
+inline i64 element_count(const std::vector<i64>& shape) {
+    i64 total = 1;
+    for (const i64 dim : shape) {
+        total *= dim;
+    }
+    return shape.empty() ? 1 : total;
+}
+
+inline std::vector<i64> contiguous_strides(const std::vector<i64>& shape) {
+    std::vector<i64> strides(shape.size(), 1);
+    if (shape.empty()) {
+        return strides;
+    }
+    for (std::size_t index = shape.size() - 1; index > 0; --index) {
+        strides[index - 1] = strides[index] * shape[index];
+    }
+    return strides;
+}
+
+inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& strides, i64 offset,
+                       i64 flat) {
+    i64 source = offset;
+    for (std::size_t dim = shape.size(); dim > 0; --dim) {
+        const std::size_t axis = dim - 1;
+        const i64 extent = shape[axis];
+        const i64 coord = extent == 0 ? 0 : flat % extent;
+        flat = extent == 0 ? 0 : flat / extent;
+        source += coord * strides[axis];
+    }
+    return source;
+}
+
+template <class T>
+std::vector<i64> tensor_index_values(const T& value) {
+    std::vector<i64> values;
+    const std::vector<i64> shape = as_i64_shape(value.shape);
+    const std::vector<i64> strides = as_i64_shape(value.strides);
+    const i64 count = element_count(shape);
+    values.reserve(static_cast<std::size_t>(count));
+    for (i64 flat = 0; flat < count; ++flat) {
+        const i64 source = flat_offset(shape, strides, static_cast<i64>(value.offset), flat);
+        values.push_back(static_cast<i64>(value.data[static_cast<std::size_t>(source)]));
+    }
+    return values;
+}
+
+template <class T>
+std::vector<i64> mask_index_values(const T& value) {
+    std::vector<i64> values;
+    for (std::size_t index = 0; index < value.data.size(); ++index) {
+        if (value.data[index]) {
+            values.push_back(static_cast<i64>(index));
+        }
+    }
+    return values;
 }
 
 template <class T>
@@ -94,10 +169,15 @@ IndexItem make_index_item(const T& value) {
                 .start = value.start,
                 .end = value.end,
                 .step = value.step};
-    } else if constexpr (BoolMaskIndexLike<Value>) {
-        return {.kind = IndexKind::Mask, .shape = {static_cast<i64>(value.count_true())}};
+    } else if constexpr (MaskIndexLike<Value>) {
+        auto values = mask_index_values(value);
+        return {.kind = IndexKind::Mask,
+                .shape = {static_cast<i64>(values.size())},
+                .values = std::move(values)};
     } else if constexpr (ShapedIndexLike<Value>) {
-        return {.kind = IndexKind::Tensor, .shape = as_i64_shape(value.shape)};
+        return {.kind = IndexKind::Tensor,
+                .shape = as_i64_shape(value.shape),
+                .values = tensor_index_values(value)};
     } else {
         return {.kind = IndexKind::Scalar, .scalar = static_cast<i64>(value)};
     }
@@ -110,20 +190,34 @@ inline i64 normalize_scalar(i64 index, i64 extent) {
     return std::clamp(index, i64{0}, extent <= 0 ? i64{0} : extent - 1);
 }
 
-inline i64 slice_length(i64 start, i64 end, i64 step) {
-    if (step == 0) {
-        return 0;
+inline std::vector<i64> slice_values(const IndexItem& item, i64 extent) {
+    const i64 step = item.has_step ? item.step : 1;
+    std::vector<i64> values;
+    if (step == 0 || extent <= 0) {
+        return values;
+    }
+    i64 start = item.has_start ? item.start : (step < 0 ? extent - 1 : 0);
+    i64 end = item.has_end ? item.end : (step < 0 ? -1 : extent);
+    if (start < 0) {
+        start += extent;
+    }
+    if (end < 0 && item.has_end) {
+        end += extent;
     }
     if (step > 0) {
-        if (end <= start) {
-            return 0;
+        start = std::clamp(start, i64{0}, extent);
+        end = std::clamp(end, i64{0}, extent);
+        for (i64 index = start; index < end; index += step) {
+            values.push_back(index);
         }
-        return ((end - start - 1) / step) + 1;
+        return values;
     }
-    if (start <= end) {
-        return 0;
+    start = std::clamp(start, i64{-1}, extent - 1);
+    end = std::clamp(end, i64{-1}, extent - 1);
+    for (i64 index = start; index > end; index += step) {
+        values.push_back(index);
     }
-    return ((start - end - 1) / (-step)) + 1;
+    return values;
 }
 
 inline std::vector<IndexItem> expand_ellipsis(std::vector<IndexItem> items,
@@ -157,13 +251,74 @@ inline std::vector<IndexItem> expand_ellipsis(std::vector<IndexItem> items,
 }
 
 inline void append_full_axis(IndexPlan& out, const std::vector<i64>& shape,
-                             const std::vector<i64>& strides, std::size_t& axis) {
+                             const std::vector<i64>& strides, std::size_t& axis,
+                             std::vector<OffsetContribution>& contributions) {
     if (axis >= shape.size()) {
         return;
     }
+    OffsetContribution contribution;
+    contribution.axis = axis;
+    contribution.kind = ContributionKind::Slice;
+    contribution.result_dim = out.shape.size();
+    contribution.result_rank = 1;
+    for (i64 index = 0; index < shape[axis]; ++index) {
+        contribution.values.push_back(index);
+    }
     out.shape.push_back(shape[axis]);
     out.strides.push_back(strides[axis]);
+    contributions.push_back(std::move(contribution));
     ++axis;
+}
+
+inline std::vector<i64> unravel_index(const std::vector<i64>& shape, i64 flat) {
+    std::vector<i64> coords(shape.size(), 0);
+    for (std::size_t dim = shape.size(); dim > 0; --dim) {
+        const std::size_t axis = dim - 1;
+        const i64 extent = shape[axis];
+        coords[axis] = extent == 0 ? 0 : flat % extent;
+        flat = extent == 0 ? 0 : flat / extent;
+    }
+    return coords;
+}
+
+inline i64 contribution_index(const OffsetContribution& contribution,
+                              const std::vector<i64>& result_shape,
+                              const std::vector<i64>& result_coords) {
+    if (contribution.result_rank == 0) {
+        return 0;
+    }
+    i64 flat = 0;
+    for (std::size_t index = 0; index < contribution.result_rank; ++index) {
+        const std::size_t dim = contribution.result_dim + index;
+        flat *= result_shape[dim];
+        flat += result_coords[dim];
+    }
+    return flat;
+}
+
+inline void build_explicit_offsets(IndexPlan& out, const std::vector<i64>& shape,
+                                   const std::vector<i64>& strides,
+                                   const std::vector<OffsetContribution>& contributions) {
+    const i64 total = element_count(out.shape);
+    out.explicit_offsets.reserve(static_cast<std::size_t>(total));
+    for (i64 flat = 0; flat < total; ++flat) {
+        const std::vector<i64> coords = unravel_index(out.shape, flat);
+        i64 source = out.offset;
+        for (const OffsetContribution& contribution : contributions) {
+            i64 coord = contribution.scalar;
+            if (contribution.kind != ContributionKind::Scalar) {
+                const i64 local = contribution_index(contribution, out.shape, coords);
+                if (!contribution.values.empty()) {
+                    coord = contribution.values[static_cast<std::size_t>(
+                        local % static_cast<i64>(contribution.values.size()))];
+                }
+            }
+            source += normalize_scalar(coord, shape[contribution.axis]) * strides[contribution.axis];
+        }
+        out.explicit_offsets.push_back(source);
+    }
+    out.offset = out.explicit_offsets.empty() ? out.offset : out.explicit_offsets.front();
+    out.strides = contiguous_strides(out.shape);
 }
 
 inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vector<i64>& strides,
@@ -171,14 +326,21 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
     items = expand_ellipsis(std::move(items), shape);
     IndexPlan out;
     out.offset = offset;
+    std::vector<OffsetContribution> contributions;
     std::size_t axis = 0;
     bool advanced_shape_added = false;
+    std::size_t direct_advanced_dim = 0;
+    std::size_t direct_advanced_rank = 0;
+    bool needs_explicit_offsets = false;
     for (const IndexItem& item : items) {
         switch (item.kind) {
         case IndexKind::Scalar: {
             if (axis >= shape.size()) {
                 break;
             }
+            contributions.push_back({.axis = axis,
+                                     .kind = ContributionKind::Scalar,
+                                     .scalar = normalize_scalar(item.scalar, shape[axis])});
             out.offset += normalize_scalar(item.scalar, shape[axis]) * strides[axis];
             ++axis;
             break;
@@ -187,19 +349,19 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
             if (axis >= shape.size()) {
                 break;
             }
-            const i64 extent = shape[axis];
-            const i64 step = item.has_step ? item.step : 1;
-            i64 start = item.has_start ? item.start : (step < 0 ? extent - 1 : 0);
-            i64 end = item.has_end ? item.end : (step < 0 ? -1 : extent);
-            if (start < 0) {
-                start += extent;
+            const std::vector<i64> values = slice_values(item, shape[axis]);
+            if (!values.empty()) {
+                out.offset += values.front() * strides[axis];
             }
-            if (end < 0 && item.has_end) {
-                end += extent;
-            }
-            out.offset += std::clamp(start, i64{0}, extent) * strides[axis];
-            out.shape.push_back(slice_length(start, end, step));
-            out.strides.push_back(strides[axis] * step);
+            OffsetContribution contribution;
+            contribution.axis = axis;
+            contribution.kind = ContributionKind::Slice;
+            contribution.values = values;
+            contribution.result_dim = out.shape.size();
+            contribution.result_rank = 1;
+            out.shape.push_back(static_cast<i64>(contribution.values.size()));
+            out.strides.push_back(strides[axis] * (item.has_step ? item.step : 1));
+            contributions.push_back(std::move(contribution));
             ++axis;
             break;
         }
@@ -209,18 +371,51 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
             break;
         case IndexKind::Mask:
             if (axis < shape.size()) {
-                out.shape.insert(out.shape.end(), item.shape.begin(), item.shape.end());
-                out.strides.push_back(1);
+                OffsetContribution contribution;
+                contribution.axis = axis;
+                contribution.kind = ContributionKind::Advanced;
+                contribution.values = item.values;
+                if (cartesian || !advanced_shape_added) {
+                    contribution.result_dim = out.shape.size();
+                    contribution.result_rank = item.shape.size();
+                    out.shape.insert(out.shape.end(), item.shape.begin(), item.shape.end());
+                    out.strides.insert(out.strides.end(), item.shape.size(), 1);
+                    if (!cartesian) {
+                        direct_advanced_dim = contribution.result_dim;
+                        direct_advanced_rank = contribution.result_rank;
+                    }
+                    advanced_shape_added = true;
+                } else {
+                    contribution.result_dim = direct_advanced_dim;
+                    contribution.result_rank = direct_advanced_rank;
+                }
+                contributions.push_back(std::move(contribution));
+                needs_explicit_offsets = true;
                 ++axis;
             }
             break;
         case IndexKind::Tensor:
             if (axis < shape.size()) {
+                OffsetContribution contribution;
+                contribution.axis = axis;
+                contribution.kind = ContributionKind::Advanced;
+                contribution.values = item.values;
                 if (cartesian || !advanced_shape_added) {
+                    contribution.result_dim = out.shape.size();
+                    contribution.result_rank = item.shape.size();
                     out.shape.insert(out.shape.end(), item.shape.begin(), item.shape.end());
                     out.strides.insert(out.strides.end(), item.shape.size(), 1);
+                    if (!cartesian) {
+                        direct_advanced_dim = contribution.result_dim;
+                        direct_advanced_rank = contribution.result_rank;
+                    }
                     advanced_shape_added = true;
+                } else {
+                    contribution.result_dim = direct_advanced_dim;
+                    contribution.result_rank = direct_advanced_rank;
                 }
+                contributions.push_back(std::move(contribution));
+                needs_explicit_offsets = true;
                 ++axis;
             }
             break;
@@ -229,30 +424,12 @@ inline IndexPlan normalize_index(const std::vector<i64>& shape, const std::vecto
         }
     }
     while (axis < shape.size()) {
-        append_full_axis(out, shape, strides, axis);
+        append_full_axis(out, shape, strides, axis, contributions);
+    }
+    if (needs_explicit_offsets) {
+        build_explicit_offsets(out, shape, strides, contributions);
     }
     return out;
-}
-
-inline i64 element_count(const std::vector<i64>& shape) {
-    i64 total = 1;
-    for (const i64 dim : shape) {
-        total *= dim;
-    }
-    return shape.empty() ? 1 : total;
-}
-
-inline i64 flat_offset(const std::vector<i64>& shape, const std::vector<i64>& strides, i64 offset,
-                       i64 flat) {
-    i64 source = offset;
-    for (std::size_t dim = shape.size(); dim > 0; --dim) {
-        const std::size_t axis = dim - 1;
-        const i64 extent = shape[axis];
-        const i64 coord = extent == 0 ? 0 : flat % extent;
-        flat = extent == 0 ? 0 : flat / extent;
-        source += coord * strides[axis];
-    }
-    return source;
 }
 
 template <class Shape, class Strides, class... Idx>
@@ -270,14 +447,37 @@ IndexPlan cartesian_index_plan(const Shape& shape, const Strides& strides, i64 o
                            true);
 }
 
+template <class Data>
+Data result_data(const Data& data, const IndexPlan& plan) {
+    if (plan.explicit_offsets.empty()) {
+        return data;
+    }
+    Data out;
+    out.reserve(plan.explicit_offsets.size());
+    for (const i64 source : plan.explicit_offsets) {
+        out.push_back(data[static_cast<std::size_t>(source)]);
+    }
+    return out;
+}
+
+inline std::vector<i64> result_strides(const IndexPlan& plan) {
+    return plan.explicit_offsets.empty() ? plan.strides : contiguous_strides(plan.shape);
+}
+
+inline i64 result_offset(const IndexPlan& plan) {
+    return plan.explicit_offsets.empty() ? plan.offset : 0;
+}
+
 template <class Data, class Shape, class Strides, class T, class... Idx>
 void assign_scalar(Data& data, const Shape& shape, const Strides& strides, i64 offset,
                    const T& value, const Idx&... idx) {
     const IndexPlan plan = index_plan(shape, strides, offset, idx...);
     const i64 total = element_count(plan.shape);
     for (i64 flat = 0; flat < total; ++flat) {
-        data[static_cast<std::size_t>(flat_offset(plan.shape, plan.strides, plan.offset, flat))] =
-            value;
+        const i64 dest = plan.explicit_offsets.empty()
+                             ? flat_offset(plan.shape, plan.strides, plan.offset, flat)
+                             : plan.explicit_offsets[static_cast<std::size_t>(flat)];
+        data[static_cast<std::size_t>(dest)] = value;
     }
 }
 
@@ -294,8 +494,10 @@ void assign_tensor(DestData& dest_data, const DestShape& dest_shape,
     const i64 source_count = element_count(source_shape);
     for (i64 flat = 0; flat < dest_count; ++flat) {
         const i64 source_flat = source_count <= 1 ? 0 : flat % source_count;
-        dest_data[static_cast<std::size_t>(
-            flat_offset(dest.shape, dest.strides, dest.offset, flat))] =
+        const i64 dest_offset_value = dest.explicit_offsets.empty()
+                                          ? flat_offset(dest.shape, dest.strides, dest.offset, flat)
+                                          : dest.explicit_offsets[static_cast<std::size_t>(flat)];
+        dest_data[static_cast<std::size_t>(dest_offset_value)] =
             src_data[static_cast<std::size_t>(
                 flat_offset(source_shape, source_strides, src_offset, source_flat))];
     }
