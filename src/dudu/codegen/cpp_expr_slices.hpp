@@ -22,40 +22,6 @@ std::optional<std::string> lower_generic_array_view_index_expr(
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
     const Symbols* symbols, const CppEmitOptions& options);
 
-std::optional<std::string> lower_trailing_full_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string> lower_trailing_range_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string>
-lower_column_slice_expr(const Expr& base, const Expr& index,
-                        const std::vector<std::string>& aliases, const CppLocalContext& locals,
-                        const std::map<std::string, TypeRef>& local_type_refs,
-                        const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string>
-lower_channel_slice_expr(const Expr& base, const Expr& index,
-                         const std::vector<std::string>& aliases, const CppLocalContext& locals,
-                         const std::map<std::string, TypeRef>& local_type_refs,
-                         const Symbols* symbols, const CppEmitOptions& options);
-
-std::optional<std::string> lower_leading_range_full_tail_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols, const CppEmitOptions& options);
-
-std::optional<std::string> lower_matrix_patch_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols, const CppEmitOptions& options);
-
-std::optional<std::string> lower_full_multidim_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
-    const Symbols* symbols, const CppEmitOptions& options);
-
 std::optional<std::string> lower_strided_span2_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,

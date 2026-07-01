@@ -81,41 +81,6 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                                                local_type_refs, symbols, options)) {
             return *span2_slice;
         }
-        if (const auto full_slice =
-                lower_full_multidim_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                               local_type_refs, symbols, options)) {
-            return *full_slice;
-        }
-        if (const auto channel_slice =
-                lower_channel_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                         local_type_refs, symbols, options)) {
-            return *channel_slice;
-        }
-        if (const auto row_range_slice = lower_leading_range_full_tail_slice_expr(
-                expr.children[0], expr.children[1], aliases, locals, local_type_refs, symbols,
-                options)) {
-            return *row_range_slice;
-        }
-        if (const auto matrix_patch =
-                lower_matrix_patch_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                              local_type_refs, symbols, options)) {
-            return *matrix_patch;
-        }
-        if (const auto column_slice =
-                lower_column_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                        local_type_refs, symbols, options)) {
-            return *column_slice;
-        }
-        if (const auto slice =
-                lower_trailing_full_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                               local_type_refs, symbols, options)) {
-            return *slice;
-        }
-        if (const auto slice =
-                lower_trailing_range_slice_expr(expr.children[0], expr.children[1], aliases, locals,
-                                                local_type_refs, symbols, options)) {
-            return *slice;
-        }
         for (const Expr& index : expr.children[1].children) {
             out +=
                 "[" + lower_expr(index, aliases, locals, local_type_refs, symbols, options) + "]";

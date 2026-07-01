@@ -62,89 +62,14 @@ bool has_step_slice(const Expr& expr) {
     return false;
 }
 
-std::optional<size_t> trailing_full_slice_prefix_count(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral || expr.children.empty()) {
-        return std::nullopt;
-    }
-    const Expr& tail = expr.children.back();
-    if (tail.kind != ExprKind::Slice || tail.children.size() != 2 ||
-        !missing_expr(tail.children[0]) || !missing_expr(tail.children[1])) {
-        return std::nullopt;
-    }
-    for (size_t i = 0; i + 1 < expr.children.size(); ++i) {
-        if (is_slice_expr(expr.children[i])) {
-            return std::nullopt;
-        }
-    }
-    return expr.children.size() - 1;
-}
-
 bool is_full_slice_expr(const Expr& expr) {
     return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
            missing_expr(expr.children[0]) && missing_expr(expr.children[1]);
 }
 
-bool is_column_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 2 &&
-           is_full_slice_expr(expr.children[0]) && !is_slice_expr(expr.children[1]);
-}
-
-bool is_channel_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 3 &&
-           is_full_slice_expr(expr.children[0]) && is_full_slice_expr(expr.children[1]) &&
-           !is_slice_expr(expr.children[2]);
-}
-
-bool is_full_multidim_slice_expr(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral || expr.children.size() < 2) {
-        return false;
-    }
-    for (const Expr& child : expr.children) {
-        if (!is_full_slice_expr(child)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool is_simple_range_slice_expr(const Expr& expr) {
     return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
            expr.children[1].kind != ExprKind::Slice;
-}
-
-std::optional<size_t> trailing_range_slice_prefix_count(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral || expr.children.empty()) {
-        return std::nullopt;
-    }
-    const Expr& tail = expr.children.back();
-    if (!is_simple_range_slice_expr(tail)) {
-        return std::nullopt;
-    }
-    for (size_t i = 0; i + 1 < expr.children.size(); ++i) {
-        if (is_slice_expr(expr.children[i])) {
-            return std::nullopt;
-        }
-    }
-    return expr.children.size() - 1;
-}
-
-bool is_leading_range_full_tail_slice_expr(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral || expr.children.size() < 2 ||
-        !is_simple_range_slice_expr(expr.children[0])) {
-        return false;
-    }
-    for (size_t i = 1; i < expr.children.size(); ++i) {
-        if (!is_full_slice_expr(expr.children[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool is_matrix_patch_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 2 &&
-           is_simple_range_slice_expr(expr.children[0]) &&
-           is_simple_range_slice_expr(expr.children[1]);
 }
 
 std::optional<TypeRef> single_template_child(const TypeRef& type, std::string_view name) {
@@ -207,18 +132,17 @@ std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& loca
     if (!element || index_expr.kind != ExprKind::TupleLiteral || index_expr.children.size() != 2) {
         return std::nullopt;
     }
-    if (is_full_multidim_slice_expr(index_expr) ||
-        is_leading_range_full_tail_slice_expr(index_expr) ||
-        is_matrix_patch_slice_expr(index_expr)) {
+    const Expr& row = index_expr.children[0];
+    const Expr& col = index_expr.children[1];
+    if ((is_full_slice_expr(row) && is_full_slice_expr(col)) ||
+        (is_simple_range_slice_expr(row) && is_full_slice_expr(col)) ||
+        (is_simple_range_slice_expr(row) && is_simple_range_slice_expr(col))) {
         return view_type_ref(location, "strided_span2", *element);
     }
-    if (is_column_slice_expr(index_expr) ||
-        trailing_full_slice_prefix_count(index_expr).has_value() ||
-        trailing_range_slice_prefix_count(index_expr).has_value()) {
-        return view_type_ref(location, "strided_span", *element);
-    }
-    if (is_simple_range_slice_expr(index_expr.children[0]) &&
-        !is_slice_expr(index_expr.children[1])) {
+    if ((is_full_slice_expr(row) && !is_slice_expr(col)) ||
+        (!is_slice_expr(row) && is_full_slice_expr(col)) ||
+        (!is_slice_expr(row) && is_simple_range_slice_expr(col)) ||
+        (is_simple_range_slice_expr(row) && !is_slice_expr(col))) {
         return view_type_ref(location, "strided_span", *element);
     }
     return std::nullopt;
@@ -245,7 +169,6 @@ TypeRef indexed_value_type_ref(const Symbols& symbols,
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const TypeRef& receiver_type, const Expr& index_expr,
                                    const std::string& label) {
-    const TypeRef unwrapped_type_ref = unwrap_reference_and_const(receiver_type);
     if (const std::optional<TypeRef> array_view_index_type =
             indexed_array_view_type_ref(location, receiver_type, index_expr)) {
         return *array_view_index_type;
@@ -257,68 +180,6 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     if (const std::optional<TypeRef> span2_type =
             indexed_strided_span2_type_ref(location, receiver_type, index_expr)) {
         return *span2_type;
-    }
-    if (is_full_multidim_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        if (shape.size() == index_expr.children.size() ||
-            shape_values.size() == index_expr.children.size()) {
-            return array_element_template_type_ref(location, unwrapped_type_ref, "span");
-        }
-    }
-    if (is_leading_range_full_tail_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        if (shape.size() == index_expr.children.size() ||
-            shape_values.size() == index_expr.children.size()) {
-            return array_element_template_type_ref(location, unwrapped_type_ref, "span");
-        }
-    }
-    if (is_matrix_patch_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        if (shape.size() == 2 || shape_values.size() == 2) {
-            return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span2");
-        }
-    }
-    if (is_channel_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        if (shape.size() == 3 || shape_values.size() == 3) {
-            return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
-        }
-    }
-    if (is_column_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        if (shape.size() == 2 || shape_values.size() == 2) {
-            return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
-        }
-    }
-    if (!has_step_slice(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_values =
-            explicit_array_shape_values(unwrapped_type_ref);
-        const auto known_rank = [&](const size_t expected) {
-            return shape.size() == expected || shape_values.size() == expected;
-        };
-        if (!shape.empty() || !shape_values.empty()) {
-            if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
-                if (known_rank(*prefix_count + 1)) {
-                    return array_element_template_type_ref(location, unwrapped_type_ref, "span");
-                }
-            }
-            if (const auto prefix_count = trailing_range_slice_prefix_count(index_expr)) {
-                if (known_rank(*prefix_count + 1)) {
-                    return array_element_template_type_ref(location, unwrapped_type_ref, "span");
-                }
-            }
-        }
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
             symbols, location, receiver_type, index_count_from_expr(index_expr),

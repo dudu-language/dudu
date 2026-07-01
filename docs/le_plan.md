@@ -1156,14 +1156,14 @@ push. They are not release packaging work.
    diagnosed.
    Fixed arrays work with `len(values)` and `&values[0]` for native
    pointer/count handoff.
-   Fixed-array slicing is being corrected away from the prototype
+   Fixed-array slicing has been corrected away from the prototype
    `span[T]`/`strided_span[T]`/`strided_span2[T]` branches. Any fixed-array
-   index expression containing a slice should produce `array_view[T]`, backed
-   by generic runtime shape, stride, and offset metadata. That single path must
-   cover one-dimensional `start:end`, row views such as `mat[row, :]`, column
+   index expression containing a slice now produces `array_view[T]`, backed
+   by generic runtime shape, stride, and offset metadata. That single path
+   covers one-dimensional `start:end`, row views such as `mat[row, :]`, column
    views such as `mat[:, col]`, full-rank slices such as `mat[:, :]`, rank-3
    image channel slices such as `image[:, :, c]`, trailing channel ranges such
-   as `image[y, x, 0:3]`, and rank-4 or higher library tests. Low-level
+   as `image[y, x, 0:3]`, and rank-4 or higher fixed-array fixtures. Low-level
    `span[T]`, `strided_span[T]`, and `strided_span2[T]` may remain as explicit
    helper/native interop types, but the language slice inference path must not
    be rank-specific.
@@ -1175,7 +1175,7 @@ push. They are not release packaging work.
    indexing hooks are now selected by argument types, so a single Dudu class can
    expose scalar element access plus row, column, and patch slice views.
    One-dimensional fixed-array step slices such as `values[start:end:step]`
-   should also produce `array_view[T]`, with the step represented in the view
+   also produce `array_view[T]`, with the step represented in the view
    stride.
    This is enough to play with fixed arrays, row/column/full-storage views,
    channel views, basic step slices, and library indexing hooks, but it is not
@@ -1234,6 +1234,9 @@ push. They are not release packaging work.
    probes when local tooling is available, then out-of-line method emission
    where needed, repeated-index scatter policy, and explicit proof/conversion
    diagnostics for `dyn` values flowing into concrete shape assertions.
+   Prototype row/column/channel/full-matrix fixed-array lowering helpers have
+   been deleted from sema and C++ emission. Fixed arrays no longer infer
+   `span[T]`, `strided_span[T]`, or `strided_span2[T]` from slice shape.
    Before expanding further, de-opinionate advanced tensor indexing: remove
    compiler-owned `vindex[]` / `oindex[]` operator names, keep helper indexer
    objects such as `.cartesian[...]` or `.window[...]` as ordinary library

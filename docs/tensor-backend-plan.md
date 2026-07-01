@@ -665,12 +665,11 @@ Status:
   whose types implement normal `@operator("[]")` and `@operator("[]=")`.
   The compiler no longer recognizes special `vindex[]` / `oindex[]` operator
   names.
-- Remaining: direct Python-style advanced tensor indexing such as
-  `tensor[rows, cols]`, `tensor[..., -1]`, and `tensor[None, :]` needs the
-  variadic typed operator hook model from
-  [Indexing Dispatch Model](indexing-dispatch-model.md). Current fixed-arity
-  hook support proves the mechanism but is not sufficient for the full tensor
-  target.
+- Done: direct Python-style advanced tensor indexing such as
+  `tensor[rows, cols]`, `tensor[..., -1]`, `tensor[None, :]`, masks,
+  scatter/assignment, and symbolic dimensions is covered by the current
+  `tests/targets/tensor_indexing` manifest through ordinary fixed-arity and
+  variadic `@operator("[]")` / `@operator("[]=")` hooks.
 - Done: Dudu class receivers without matching index hooks now diagnose missing
   `@operator("[]")` or `@operator("[]=")` directly instead of reporting
   "cannot index non-container".
