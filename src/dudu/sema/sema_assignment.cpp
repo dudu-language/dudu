@@ -105,7 +105,12 @@ void check_declared_index_assignment_operator_if_any(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& op,
     const std::string& label, const std::vector<Expr>& args, const SourceLocation& location) {
     if (const auto signature = dudu_operator_signature(scope.symbols, op, receiver_type)) {
-        check_call_args_ast(scope, label + op, *signature, args, &location);
+        (void)signature;
+        sema_fail(location,
+                  dudu_operator_no_match_message_for_args(
+                      scope.symbols, op, receiver_type, args,
+                      infer_assignment_arg_type_refs(scope, args, &location),
+                      "indexed assignment", label));
     }
 }
 
@@ -146,8 +151,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             check_declared_index_assignment_operator_if_any(scope, receiver_type, "[]=", name, args,
                                                             target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-                sema_fail(target_location,
-                          "no matching @operator(\"[]=\") for indexed assignment to " + name);
+                sema_fail(target_location, dudu_operator_no_match_message_for_args(
+                                               scope.symbols, "[]=", receiver_type, args,
+                                               infer_assignment_arg_type_refs(scope, args,
+                                                                             &target_location),
+                                               "indexed assignment", name));
             }
         }
         return indexed_value_type_ref(scope.symbols, scope.local_type_refs, target_location, name,
@@ -180,9 +188,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 scope, receiver_type, target.write_operator, indexed_assignment_label(receiver),
                 args, target_location);
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-                sema_fail(target_location, "no matching @operator(\"" + target.write_operator +
-                                               "\") for indexed assignment to " +
-                                               indexed_assignment_label(receiver));
+                sema_fail(target_location,
+                          dudu_operator_no_match_message_for_args(
+                              scope.symbols, target.write_operator, receiver_type, args,
+                              infer_assignment_arg_type_refs(scope, args, &target_location),
+                              "indexed assignment", indexed_assignment_label(receiver)));
             }
             return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
                                               stmt_target_expr(stmt).children[1],
@@ -206,9 +216,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 scope, inferred_receiver_type, target.write_operator,
                 indexed_assignment_label(receiver), args, target_location);
             if (class_for_receiver_type(scope.symbols, inferred_receiver_type) != nullptr) {
-                sema_fail(target_location, "no matching @operator(\"" + target.write_operator +
-                                               "\") for indexed assignment to " +
-                                               indexed_assignment_label(receiver));
+                sema_fail(target_location,
+                          dudu_operator_no_match_message_for_args(
+                              scope.symbols, target.write_operator, inferred_receiver_type, args,
+                              infer_assignment_arg_type_refs(scope, args, &target_location),
+                              "indexed assignment", indexed_assignment_label(receiver)));
             }
             return indexed_type_ref_from_type(
                 scope.symbols, target_location, inferred_receiver_type,

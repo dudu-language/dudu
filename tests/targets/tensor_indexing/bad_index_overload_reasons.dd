@@ -1,0 +1,15 @@
+# Target diagnostic: failed [] overloads report each candidate with a rejection reason.
+
+class Choice:
+    @operator("[]")
+    def by_value(self, index: i32) -> i32:
+        return index
+
+    @operator("[]")
+    def by_pair(self, row: i32, col: i32) -> i32:
+        return row + col
+
+
+def main() -> i32:
+    value = Choice()
+    return value[1, "bad"]

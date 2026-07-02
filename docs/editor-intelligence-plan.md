@@ -405,6 +405,11 @@ Required implementation behavior:
 - LSP hover on a diagnostic range should be able to show the same candidate
   information without rerunning a separate parser or string matcher
 
+Status: sema now emits failed Dudu indexing operator candidates with selected
+signature display and rejection reasons. Current diagnostics cover `[]` and
+`[]=` compiler errors; surfacing the same payload through dedicated LSP
+diagnostic hover remains an editor presentation task.
+
 ### Native C/C++ Interop
 
 For imported native code:

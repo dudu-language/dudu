@@ -26,13 +26,14 @@ ndad_shape_preserving_helpers.dd	run	7
 ndad_shape_arithmetic_runtime.dd	run	24
 ndad_shape_arithmetic_api.dd	pass
 symbolic_dims.dd	pass
-bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
-bad_fixed_arity_ellipsis.dd	xfail	no matching @operator("[]") for indexed access to value
-bad_fixed_arity_new_axis.dd	xfail	no matching @operator("[]") for indexed access to value
+bad_missing_variadic_hook.dd	xfail	candidate ScalarOnly.at(i32) -> i32 rejected: expects 1 arguments, got 3
+bad_fixed_arity_ellipsis.dd	xfail	candidate ScalarOnly.at(i32) -> i32 rejected: argument 1 expects i32, got ellipsis
+bad_fixed_arity_new_axis.dd	xfail	candidate ScalarOnly.at(i32) -> i32 rejected: argument 1 expects i32, got new_axis
+bad_index_overload_reasons.dd	xfail	candidate Choice.by_pair(i32, i32) -> i32 rejected: argument 2 expects i32, got str
 bad_fixed_array_too_many_indices.dd	xfail	too many indices for array: matrix
 bad_multiple_ellipsis.dd	xfail	index expression may contain at most one ellipsis
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
-bad_scatter_value_type.dd	xfail	expects Tensor[f32], got Tensor[i32][dyn, 784]
+bad_scatter_value_type.dd	xfail	candidate ndad.Tensor.set_tensor(*auto, Tensor[f32]) -> void rejected: argument 3 expects Tensor[f32], got Tensor[i32][dyn, 784]
 bad_shape_preserving_helper_mismatch.dd	xfail	argument 2 for add_same[i32, 2, 3] expects Tensor[i32][2, 3], got Tensor[i32][3, 2]
 bad_shape_arithmetic_mismatch.dd	xfail	cannot assign Tensor[i32][2, 12] to Tensor[i32][2, 11] without an explicit cast
 bad_shape_arithmetic_conv_mismatch.dd	xfail	cannot assign Tensor[f32][3, 3] to Tensor[f32][4, 3] without an explicit cast

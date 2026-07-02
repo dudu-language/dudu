@@ -220,6 +220,15 @@ Acceptance:
 - candidate reasons are stable enough to test without being brittle wall text
 - errors do not fall through to C++ template spew for normal Dudu mistakes
 
+Status: failed Dudu `@operator("[]")` and `@operator("[]=")` dispatch now
+reports candidate signatures and per-candidate rejection reasons. The tensor
+target manifest checks missing variadic hooks, fixed-arity `ellipsis` and
+`new_axis` rejection, fixed-array arity, multiple ellipsis, scatter assignment
+value type, symbolic/concrete shape mismatches, `dyn` arithmetic rejection, and
+an explicit overload set where one candidate fails by arity and another fails by
+argument type. The formatter is implemented in `sema_operator_diagnostics.cpp`
+so the normal operator resolver remains separate from diagnostic presentation.
+
 ## 5. Implement Dudu Dependency Bootstrapping
 
 Goal: let early Dudu libraries be consumed before a central package registry

@@ -30,6 +30,10 @@ std::optional<std::string>
 dudu_operator_method_name_for_args(const Symbols& symbols, std::string_view op, const TypeRef& left,
                                    const std::vector<Expr>& args,
                                    const std::vector<TypeRef>& arg_types);
+std::string dudu_operator_no_match_message_for_args(
+    const Symbols& symbols, std::string_view op, const TypeRef& left,
+    const std::vector<Expr>& args, const std::vector<TypeRef>& arg_types,
+    std::string_view action, std::string_view label);
 std::optional<FunctionSignature> binary_operator_signature(const Symbols& symbols,
                                                            std::string_view op, const TypeRef& left,
                                                            const Expr& right_expr,
