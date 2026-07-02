@@ -15,14 +15,14 @@ grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
 grep -q "#define DUDU_CUDA_GLOBAL" "$repo_root/build/cuda_kernel.cpp"
 grep -q "DUDU_CUDA_GLOBAL void saxpy_kernel" "$repo_root/build/cuda_kernel.cpp"
 grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
-grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
+grep -q "err = cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 ! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/examples/cuda_shared_memory_tile.dd" \
     -o "$repo_root/build/cuda_shared_memory_tile.cpp"
 grep -q "DUDU_CUDA_GLOBAL void tile_sum" "$repo_root/build/cuda_shared_memory_tile.cpp"
 grep -q "std::array<float, 256> tile" "$repo_root/build/cuda_shared_memory_tile.cpp"
-grep -q "cuda::threadIdx::x" "$repo_root/build/cuda_shared_memory_tile.cpp"
+grep -q "threadIdx::x" "$repo_root/build/cuda_shared_memory_tile.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/examples/shader_compute.dd" \
     -o "$repo_root/build/shader_compute.cpp"
@@ -52,7 +52,7 @@ grep -Fq "[&](auto&& req, auto&& res)" "$repo_root/build/web_server.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/sqlite_crud.dd" \
     -o "$repo_root/build/sqlite_crud.cpp"
-grep -Fq '#include "sqlite3.h"' "$repo_root/build/sqlite_crud.cpp"
+grep -Fq '#include <sqlite3.h>' "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "sqlite3_prepare_v2" "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)))" \

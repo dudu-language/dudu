@@ -1,16 +1,16 @@
-import c "time.h" as c
+from c import time.h
 
 
-def add_seconds(ts: *struct timespec) -> i32:
+def add_seconds(ts: *timespec) -> i32:
     return i32(ts.tv_sec + ts.tv_nsec)
 
 
-def by_value(ts: struct timespec) -> i32:
+def by_value(ts: timespec) -> i32:
     return i32(ts.tv_sec - ts.tv_nsec)
 
 
 def main() -> i32:
-    ts: struct timespec
+    ts: timespec
     ts.tv_sec = 40
     ts.tv_nsec = 2
     return add_seconds(&ts) + by_value(ts) - 38

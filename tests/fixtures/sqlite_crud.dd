@@ -1,4 +1,4 @@
-import c "sqlite3.h" as sqlite
+from c import sqlite3.h as sqlite
 from cpp import string
 
 
@@ -14,9 +14,9 @@ enum DbError:
     NotFound
 
 
-def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
+def fetch_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     query: str = "select id, title, done from todos where id = ?"
-    stmt: *struct sqlite3_stmt = None
+    stmt: *sqlite.sqlite3_stmt = None
 
     if sqlite.sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.SQLITE_OK:
         return Err(DbError.QueryFailed)
@@ -36,7 +36,7 @@ def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
 
 
 def main() -> i32:
-    db: *struct sqlite3 = None
+    db: *sqlite.sqlite3 = None
     if sqlite.sqlite3_open(":memory:", &db) != sqlite.SQLITE_OK:
         return 1
 

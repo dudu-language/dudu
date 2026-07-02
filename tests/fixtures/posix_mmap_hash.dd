@@ -21,7 +21,7 @@ def map_file(path: cstr) -> Result[MappedFile, FileError]:
     if fd < 0:
         return Err(FileError.OpenFailed)
 
-    info: struct stat
+    info: stat.stat
     if stat.fstat(fd, &info) != 0:
         unistd.close(fd)
         return Err(FileError.StatFailed)

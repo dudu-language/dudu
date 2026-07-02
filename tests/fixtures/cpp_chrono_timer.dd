@@ -4,7 +4,7 @@ from cpp import chrono
 def main() -> i32:
     start = std.chrono.steady_clock.now()
     duration: std.chrono.milliseconds = std.chrono.milliseconds(42)
-    elapsed = std.chrono.duration_cast[std.chrono.milliseconds](duration)
+    elapsed: std.chrono.milliseconds = std.chrono.duration_cast[std.chrono.milliseconds](duration)
     if elapsed.count() == 42:
         return 42
     return 1

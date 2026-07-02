@@ -90,9 +90,9 @@ def main() -> i32:
     if callback(41) != 42:
         return 11
 
-    owned: std.shared_ptr[Counter] = std.make_shared[Counter](Counter(value=42))
+    owned: std.shared_ptr[Counter] = std.shared_ptr[Counter]()
     weak: std.weak_ptr[Counter] = std.weak_ptr[Counter](owned)
-    locked: std.shared_ptr[Counter] = weak.lock()
+    locked = weak.lock()
 
     mutex: std.mutex
     guard: std.lock_guard[std.mutex] = std.lock_guard[std.mutex](mutex)

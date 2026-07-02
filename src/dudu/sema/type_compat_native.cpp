@@ -97,7 +97,9 @@ bool nonarray_template_name(const std::string& name) {
 
 bool type_traits_template_name(const std::string& name) {
     return name == "__decay_and_strip" || name == "std.remove_reference" ||
-           name == "std::remove_reference";
+           name == "std::remove_reference" || name == "__enable_if_is_duration" ||
+           name.ends_with(".__enable_if_is_duration") ||
+           name.ends_with("::__enable_if_is_duration");
 }
 
 std::optional<TypeKind> builtin_wrapper_template_kind(const std::string& name) {

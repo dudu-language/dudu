@@ -1,8 +1,8 @@
-import c "c_audio_callback.h" as audio
+from c.path import c_audio_callback.h as audio
 
 
 def fill_samples(output: *f32, frames: i32, user_data: *void):
-    state: *struct dudu_audio_state = *struct dudu_audio_state(user_data)
+    state: *audio.dudu_audio_state = *audio.dudu_audio_state(user_data)
     for i: i32 in range(frames):
         output[i] = state.phase
         state.phase += state.step
@@ -10,7 +10,7 @@ def fill_samples(output: *f32, frames: i32, user_data: *void):
 
 
 def main() -> i32:
-    state: struct dudu_audio_state
+    state: audio.dudu_audio_state
     state.phase = 1.0
     state.step = 2.0
     state.calls = 0

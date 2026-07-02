@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/type_compat_native.hpp"
 
 #include <optional>
 #include <string_view>
@@ -75,18 +76,21 @@ void set_param_types(FunctionSignature& signature, std::initializer_list<TypeRef
 
 TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
+    type = normalize_cpp_type_artifacts_ref(type);
     while (true) {
         if (type.kind == TypeKind::Shaped && !type.children.empty()) {
             type = type.children.front();
             type = resolve_alias_ref(symbols, std::move(type));
+            type = normalize_cpp_type_artifacts_ref(type);
             continue;
         }
         if (const auto inner = unary_type_child_ref(
                 type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const,
-                       TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage, TypeKind::Shared,
+                       TypeKind::Volatile, TypeKind::Storage, TypeKind::Shared,
                        TypeKind::Device})) {
             type = *inner;
             type = resolve_alias_ref(symbols, std::move(type));
+            type = normalize_cpp_type_artifacts_ref(type);
             continue;
         }
         break;
