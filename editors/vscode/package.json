@@ -15,7 +15,8 @@
     "onCommand:dudu.buildProject",
     "onCommand:dudu.runFile",
     "onCommand:dudu.testProject",
-    "onCommand:dudu.restartLsp"
+    "onCommand:dudu.restartLsp",
+    "onCommand:dudu.toggleInlayHints"
   ],
   "categories": [
     "Programming Languages"
@@ -70,6 +71,18 @@
       {
         "command": "dudu.restartLsp",
         "title": "Dudu: Restart Language Server"
+      },
+      {
+        "command": "dudu.toggleInlayHints",
+        "title": "Dudu: Toggle Inlay Hints"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "dudu.toggleInlayHints",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && editorLangId == dudu"
       }
     ],
     "configuration": {

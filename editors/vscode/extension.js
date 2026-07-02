@@ -202,6 +202,19 @@ async function restartClient(context) {
   await startClient(context);
 }
 
+async function toggleDuduInlayHints() {
+  const scopedConfig = vscode.workspace.getConfiguration(undefined, { languageId: "dudu" });
+  const current = scopedConfig.get("editor.inlayHints.enabled", "offUnlessPressed");
+  const next = current === "on" ? "offUnlessPressed" : "on";
+  await scopedConfig.update(
+    "editor.inlayHints.enabled",
+    next,
+    vscode.ConfigurationTarget.Global,
+    true,
+  );
+  vscode.window.setStatusBarMessage(`Dudu inlay hints: ${next}`, 2000);
+}
+
 function activate(context) {
   statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
   context.subscriptions.push(statusItem);
@@ -234,6 +247,7 @@ function activate(context) {
       runCommand(`${shellQuote(duduPath())} test`);
     }),
     vscode.commands.registerCommand("dudu.restartLsp", () => restartClient(context)),
+    vscode.commands.registerCommand("dudu.toggleInlayHints", toggleDuduInlayHints),
   );
 
   startClient(context);
