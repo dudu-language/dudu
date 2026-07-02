@@ -334,12 +334,13 @@ expressions, but stable Rust intentionally limits where arbitrary generic const
 expressions may appear. Zig's `comptime`, Julia's type parameters, and
 dependent-type languages go further in different directions.
 
-Dudu's current non-type generic support is intentionally smaller: it carries
-symbolic extents such as `N`, `Rows`, and `Cols`, uses them in fixed-array and
-tensor shape metadata, and can prove equality or mismatch for direct shape
-relationships. It is not yet a compile-time arithmetic solver.
+Dudu's non-type generic support carries symbolic extents such as `N`, `Rows`,
+and `Cols`, uses them in fixed-array and tensor shape metadata, and can prove
+equality or mismatch for direct shape relationships. Shape/value expressions
+now parse, normalize, substitute explicit generic value arguments, and fold
+constant results for common arithmetic.
 
-The target feature is shape/value generic arithmetic:
+The supported shape/value generic arithmetic surface is:
 
 ```python
 def matmul[M, K, N](
@@ -360,10 +361,10 @@ def conv2d[H, W, K](
 ```
 
 This is not required for a tensor library to exist. A library can operate with
-runtime `dyn` shapes and explicit runtime checks. It is highly desirable,
-though, because it reduces unnecessary `dyn`, gives better API diagnostics,
-improves hover/inlay output, and catches reshape, matmul, convolution, and
-broadcast mistakes before generated C++ is compiled.
+runtime `dyn` shapes and explicit runtime checks. It is useful because it
+reduces unnecessary `dyn`, gives better API diagnostics, improves hover/inlay
+output, and catches reshape, matmul, convolution, and broadcast mistakes before
+generated C++ is compiled.
 
 Rules for this feature:
 

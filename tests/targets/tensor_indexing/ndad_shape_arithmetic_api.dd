@@ -1,0 +1,58 @@
+# Target: shape/value generic arithmetic covers common numeric API surfaces.
+
+from ndad import Tensor
+from ndad import matmul
+from ndad import zeros
+
+
+def flatten_static[T, B, C, H, W](
+    value: Tensor[T][B, C, H, W],
+) -> Tensor[T][B, C * H * W]:
+    flat = value.flatten()
+    return assume_shape[Tensor[T][B, C * H * W]](flat)
+
+
+def reshape_static[T, A, B, C](
+    value: Tensor[T][A * B, C],
+) -> Tensor[T][A, B, C]:
+    return assume_shape[Tensor[T][A, B, C]](value)
+
+
+def conv2d_valid[T, H, W, K](
+    value: Tensor[T][H, W],
+) -> Tensor[T][H - K + 1, W - K + 1]:
+    return assume_shape[Tensor[T][H - K + 1, W - K + 1]](value)
+
+
+def matvec_shape[T, Rows, Cols](
+    matrix: Tensor[T][Rows, Cols],
+    vector: Tensor[T][Cols],
+) -> Tensor[T][Rows]:
+    flat = vector.flatten()
+    return assume_shape[Tensor[T][Rows]](flat)
+
+
+def main() -> i32:
+    batch: Tensor[f32][2, 3, 2, 2] = zeros[f32](2, 3, 2, 2)
+    flat: Tensor[f32][2, 12] = flatten_static[f32, 2, 3, 2, 2](batch)
+
+    packed: Tensor[f32][6, 4] = zeros[f32](6, 4)
+    reshaped: Tensor[f32][2, 3, 4] = reshape_static[f32, 2, 3, 4](packed)
+
+    image: Tensor[f32][5, 5] = zeros[f32](5, 5)
+    convolved: Tensor[f32][3, 3] = conv2d_valid[f32, 5, 5, 3](image)
+
+    left: Tensor[f32][2, 3] = zeros[f32](2, 3)
+    right: Tensor[f32][3, 4] = zeros[f32](3, 4)
+    product: Tensor[f32][2, 4] = matmul[f32, 2, 3, 4](left, right)
+
+    vector: Tensor[f32][3] = zeros[f32](3)
+    reduced: Tensor[f32][2] = matvec_shape[f32, 2, 3](left, vector)
+
+    return i32(
+        flat.shape[0]
+        + reshaped.shape[0]
+        + convolved.shape[0]
+        + product.shape[0]
+        + reduced.shape[0]
+    )

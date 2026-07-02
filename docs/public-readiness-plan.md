@@ -54,12 +54,12 @@ Already implemented and should stay protected by tests:
 - shaped metadata such as `Tensor[f32][dyn, 784]`
 - shape/value generic arithmetic in shaped metadata, including expressions such
   as `B, C * H * W`
+- shape-arithmetic API fixtures for flatten, reshape, conv-like output shape,
+  matmul, and matrix-vector shape signatures
 - arbitrary-rank reference fixtures through `tests/targets/tensor_indexing`
 
 Remaining language work:
 
-- broaden shape-arithmetic fixtures from flatten-style products into matmul,
-  reshape, conv-like output shape, and fixed-size vector/matrix math
 - improve rejected shape-expression diagnostics so unsupported operators,
   malformed expressions, and compile-time requirements point at Dudu source
 - make scalar extraction policy explicit: one-element tensor/view results use

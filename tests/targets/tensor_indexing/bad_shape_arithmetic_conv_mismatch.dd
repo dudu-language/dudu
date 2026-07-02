@@ -1,0 +1,16 @@
+# Target diagnostic: folded conv-like shape arithmetic rejects wrong metadata.
+
+from ndad import Tensor
+from ndad import zeros
+
+
+def conv2d_valid[T, H, W, K](
+    value: Tensor[T][H, W],
+) -> Tensor[T][H - K + 1, W - K + 1]:
+    return assume_shape[Tensor[T][H - K + 1, W - K + 1]](value)
+
+
+def main() -> i32:
+    image: Tensor[f32][5, 5] = zeros[f32](5, 5)
+    convolved: Tensor[f32][4, 3] = conv2d_valid[f32, 5, 5, 3](image)
+    return i32(convolved.shape[0])
