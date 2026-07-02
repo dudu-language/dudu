@@ -13,5 +13,6 @@ std::string semantic_tokens_json(const ModuleAst& module);
 std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& native_symbols);
 std::string semantic_tokens_json(const ProjectIndex& index, const std::filesystem::path& path,
                                  const ProjectIndex& native_index);
+std::string lexical_semantic_tokens_json(std::string_view source);
 
 } // namespace dudu

@@ -356,7 +356,7 @@ class LanguageServer {
             const ProjectIndex& native_index = project_index_for_document(found->second, true);
             return semantic_tokens_json(index, found->second.path, native_index);
         } catch (const std::exception&) {
-            return "{\"data\":[]}";
+            return lexical_semantic_tokens_json(found->second.text);
         }
     }
 

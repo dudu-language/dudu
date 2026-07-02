@@ -220,6 +220,38 @@ void test_native_import_semantic_token_ranges() {
     require_decoded_semantic_token(tokens, "foo", token_namespace, mod_declaration | mod_native);
 }
 
+void test_lexical_semantic_tokens_survive_invalid_source() {
+    const std::string source = "from renderer import launch_render_workers\n"
+                               "\n"
+                               "@operator(\"+\")\n"
+                               "class Vec3:\n"
+                               "    x: f32\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    if fps_elapsed_ms: i32 >= 250:\n"
+                               "        return launch_render_workers(1)\n";
+    const std::vector<DecodedSemanticToken> tokens =
+        decoded_semantic_tokens(source, dudu::lexical_semantic_tokens_json(source));
+
+    constexpr int token_class = 2;
+    constexpr int token_function = 4;
+    constexpr int token_variable = 6;
+    constexpr int token_macro = 10;
+    constexpr int token_keyword = 11;
+    constexpr int token_type = 1;
+    constexpr int token_number = 12;
+    constexpr int token_string = 13;
+    require_decoded_semantic_token(tokens, "from", token_keyword, 0);
+    require_decoded_semantic_token(tokens, "launch_render_workers", token_variable, 0);
+    require_decoded_semantic_token(tokens, "@operator", token_macro, 0);
+    require_decoded_semantic_token(tokens, "\"+\"", token_string, 0);
+    require_decoded_semantic_token(tokens, "Vec3", token_class, 0);
+    require_decoded_semantic_token(tokens, "f32", token_type, 0);
+    require_decoded_semantic_token(tokens, "main", token_function, 0);
+    require_decoded_semantic_token(tokens, "if", token_keyword, 0);
+    require_decoded_semantic_token(tokens, "250", token_number, 0);
+}
+
 void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     const std::string source = "GLOBAL: i32 = 1\n"
                                "\n"
@@ -835,6 +867,7 @@ int main() {
     try {
         test_native_semantic_tokens();
         test_native_import_semantic_token_ranges();
+        test_lexical_semantic_tokens_survive_invalid_source();
         test_decoded_semantic_tokens_cover_core_dudu_kinds();
         test_unresolved_semantic_tokens_are_marked();
         test_project_semantic_tokens_are_import_aware();

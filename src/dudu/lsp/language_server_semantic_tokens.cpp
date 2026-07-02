@@ -281,8 +281,9 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         } else if (native_index != nullptr && path && native_index->methods.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_method);
         } else if (!expr.children.empty()) {
-            const std::optional<SemanticTokenShape> receiver_shape = member_token_shape_for_receiver(
-                expr.children.front(), expr.name, dudu_index, native_index, local_types, true);
+            const std::optional<SemanticTokenShape> receiver_shape =
+                member_token_shape_for_receiver(expr.children.front(), expr.name, dudu_index,
+                                                native_index, local_types, true);
             add_semantic_token(tokens, member_location, expr.name,
                                receiver_shape ? receiver_shape->type : token_method,
                                receiver_shape ? receiver_shape->modifiers : mod_unresolved);
@@ -379,8 +380,9 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
         } else if (!expr.children.empty()) {
-            const std::optional<SemanticTokenShape> receiver_shape = member_token_shape_for_receiver(
-                expr.children.front(), expr.name, dudu_index, native_index, local_types, false);
+            const std::optional<SemanticTokenShape> receiver_shape =
+                member_token_shape_for_receiver(expr.children.front(), expr.name, dudu_index,
+                                                native_index, local_types, false);
             add_semantic_token(tokens, member_location, expr.name,
                                receiver_shape ? receiver_shape->type : token_property,
                                receiver_shape ? receiver_shape->modifiers : mod_unresolved);
