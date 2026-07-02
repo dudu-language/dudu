@@ -1,4 +1,4 @@
-import cpp "Eigen/Dense" as Eigen
+from cpp import Eigen/Dense
 
 
 def main() -> i32:

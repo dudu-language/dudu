@@ -1,4 +1,4 @@
-import cpp "glm/glm.hpp" as glm
+from cpp import glm/glm.hpp
 
 
 def main() -> i32:

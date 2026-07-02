@@ -1,4 +1,4 @@
-import cpp "answer.hpp" as answer
+from cpp.path import answer.hpp
 
 
 def main() -> i32:

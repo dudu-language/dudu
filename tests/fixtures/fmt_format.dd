@@ -1,4 +1,4 @@
-import cpp "fmt/core.h" as fmt
+from cpp import fmt/core.h
 
 
 def main() -> i32:

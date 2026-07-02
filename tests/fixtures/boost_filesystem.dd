@@ -1,4 +1,4 @@
-import cpp "boost/filesystem.hpp" as boost
+from cpp import boost/filesystem.hpp
 
 
 def main() -> i32:

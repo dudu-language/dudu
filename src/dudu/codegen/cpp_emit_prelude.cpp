@@ -146,8 +146,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
                "#include <initializer_list>\n"
                "#include <span>\n"
                "#include <type_traits>\n"
-               "#include <utility>\n"
-               "#include <vector>\n";
+               "#include <utility>\n";
     } else {
         out << "#include <algorithm>\n"
                "#include <array>\n"
@@ -276,8 +275,9 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "    static SliceSpec range(Slice value) { return {SliceSpecKind::Range, 0, value}; }\n"
            "    static SliceSpec ellipsis() { return {SliceSpecKind::Ellipsis, 0, {}}; }\n"
            "    static SliceSpec new_axis() { return {SliceSpecKind::NewAxis, 0, {}}; }\n"
-           "};\n"
-           "template <typename T> struct ArrayView {\n"
+           "};\n";
+    if (!freestanding) {
+        out << "template <typename T> struct ArrayView {\n"
            "    T* data{};\n"
            "    std::vector<std::size_t> shape{};\n"
            "    std::vector<std::size_t> strides{};\n"
@@ -400,8 +400,9 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "template <typename Array> auto array_view_slice(Array& value, "
            "std::initializer_list<SliceSpec> specs) {\n"
            "    return array_view_slice(make_array_view(value), specs);\n"
-           "}\n"
-           "template <typename T> struct StridedSpan {\n"
+           "}\n";
+    }
+    out << "template <typename T> struct StridedSpan {\n"
            "    T* data{};\n"
            "    std::size_t count{};\n"
            "    std::size_t stride{};\n"

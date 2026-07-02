@@ -18,6 +18,7 @@
 #include "dudu/testing/test_driver.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -244,14 +245,69 @@ bool check_source_path(const CliOptions& options) {
     return true;
 }
 
+std::string stable_content_hash(const std::string& text) {
+    std::uint64_t hash = 14695981039346656037ull;
+    for (const unsigned char byte : text) {
+        hash ^= byte;
+        hash *= 1099511628211ull;
+    }
+    return std::to_string(hash);
+}
+
+std::string file_content_hash(const std::filesystem::path& path) {
+    const std::optional<std::string> text = try_read_text_file(path);
+    if (!text.has_value()) {
+        return {};
+    }
+    return stable_content_hash(*text);
+}
+
+std::string file_state_stamp(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    const std::filesystem::path resolved = error ? path : canonical;
+    const std::uintmax_t size = std::filesystem::file_size(resolved, error);
+    if (error) {
+        return {};
+    }
+    const auto write_time = std::filesystem::last_write_time(resolved, error);
+    if (error) {
+        return {};
+    }
+    std::ostringstream out;
+    out << resolved.string() << '\t' << size << '\t'
+        << write_time.time_since_epoch().count();
+    return out.str();
+}
+
 bool artifact_manifest_current(const std::filesystem::path& dir,
-                               const std::filesystem::path& manifest) {
+                               const std::filesystem::path& manifest,
+                               const std::filesystem::path& source_stamp,
+                               const std::filesystem::path& compiler_path) {
     const std::optional<std::string> text = try_read_text_file(manifest);
     if (!text.has_value()) {
         return false;
     }
+    const std::string expected_stamp_hash = file_content_hash(source_stamp);
+    if (expected_stamp_hash.empty()) {
+        return false;
+    }
+    const std::string expected_compiler_stamp = file_state_stamp(compiler_path);
+    if (expected_compiler_stamp.empty()) {
+        return false;
+    }
     std::istringstream lines(*text);
     std::string line;
+    const std::string source_stamp_prefix = "source-stamp\t";
+    if (!std::getline(lines, line) || !line.starts_with(source_stamp_prefix) ||
+        line.substr(source_stamp_prefix.size()) != expected_stamp_hash) {
+        return false;
+    }
+    const std::string compiler_stamp_prefix = "compiler-stamp\t";
+    if (!std::getline(lines, line) || !line.starts_with(compiler_stamp_prefix) ||
+        line.substr(compiler_stamp_prefix.size()) != expected_compiler_stamp) {
+        return false;
+    }
     bool any = false;
     while (std::getline(lines, line)) {
         if (line.empty()) {
@@ -267,6 +323,8 @@ bool artifact_manifest_current(const std::filesystem::path& dir,
 }
 
 void write_artifact_manifest(const std::filesystem::path& manifest,
+                             const std::filesystem::path& source_stamp,
+                             const std::filesystem::path& compiler_path,
                              const std::vector<std::filesystem::path>& paths) {
     std::filesystem::create_directories(manifest.parent_path().empty() ? "."
                                                                        : manifest.parent_path());
@@ -274,6 +332,16 @@ void write_artifact_manifest(const std::filesystem::path& manifest,
     if (!out) {
         fail("could not open artifact manifest " + manifest.string());
     }
+    const std::string source_stamp_hash = file_content_hash(source_stamp);
+    if (source_stamp_hash.empty()) {
+        fail("could not read source stamp " + source_stamp.string());
+    }
+    const std::string compiler_stamp = file_state_stamp(compiler_path);
+    if (compiler_stamp.empty()) {
+        fail("could not read compiler stamp " + compiler_path.string());
+    }
+    out << "source-stamp\t" << source_stamp_hash << '\n';
+    out << "compiler-stamp\t" << compiler_stamp << '\n';
     for (const std::filesystem::path& path : paths) {
         out << path.string() << '\n';
     }
@@ -448,10 +516,12 @@ int run_cli(int argc, char** argv) {
             fail("emit-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
+        const std::filesystem::path compiler_path = executable_path(argv[0]);
         const std::filesystem::path stamp_file = *options.output / ".dudu_sources.stamp";
         const std::filesystem::path artifact_manifest = *options.output / ".dudu_artifacts.stamp";
         if (source_stamp_file_current_for_entry(stamp_file, options.input) &&
-            artifact_manifest_current(*options.output, artifact_manifest)) {
+            artifact_manifest_current(*options.output, artifact_manifest, stamp_file,
+                                      compiler_path)) {
             print_project_step(project_output, "dirty", "0 modules");
             print_project_step(project_output, "analyze", "0 modules");
             print_project_step(project_output, "emit", *options.output);
@@ -465,7 +535,8 @@ int run_cli(int argc, char** argv) {
         std::vector<std::string> affected_modules =
             index.affected_modules_for_sources(changed_sources);
         if (changed_sources.empty() &&
-            !artifact_manifest_current(*options.output, artifact_manifest)) {
+            !artifact_manifest_current(*options.output, artifact_manifest, stamp_file,
+                                       compiler_path)) {
             affected_modules = all_project_module_paths(index);
         }
         print_project_step(project_output, "dirty",
@@ -476,9 +547,9 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output,
                             emit_cpp_module_artifacts(index.merged_module(), affected_modules));
-        write_artifact_manifest(artifact_manifest,
-                                cpp_module_artifact_paths(index.merged_module()));
         index.write_source_stamp_file(stamp_file);
+        write_artifact_manifest(artifact_manifest, stamp_file, compiler_path,
+                                cpp_module_artifact_paths(index.merged_module()));
         return 0;
     }
     if (options.emit_test_modules) {
@@ -486,11 +557,13 @@ int run_cli(int argc, char** argv) {
             fail("emit-test-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
+        const std::filesystem::path compiler_path = executable_path(argv[0]);
         const std::filesystem::path stamp_file = *options.output / ".dudu_test_sources.stamp";
         const std::filesystem::path artifact_manifest =
             *options.output / ".dudu_test_artifacts.stamp";
         if (source_stamp_file_current_for_entry(stamp_file, options.input) &&
-            artifact_manifest_current(*options.output, artifact_manifest)) {
+            artifact_manifest_current(*options.output, artifact_manifest, stamp_file,
+                                      compiler_path)) {
             print_project_step(project_output, "dirty", "0 modules");
             print_project_step(project_output, "analyze", "0 modules");
             print_project_step(project_output, "emit", *options.output);
@@ -504,7 +577,8 @@ int run_cli(int argc, char** argv) {
         std::vector<std::string> affected_modules =
             index.affected_modules_for_sources(changed_sources);
         if (changed_sources.empty() &&
-            !artifact_manifest_current(*options.output, artifact_manifest)) {
+            !artifact_manifest_current(*options.output, artifact_manifest, stamp_file,
+                                       compiler_path)) {
             affected_modules = all_project_module_paths(index);
         }
         print_project_step(project_output, "dirty",
@@ -516,9 +590,9 @@ int run_cli(int argc, char** argv) {
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
                                                  index.merged_module(), affected_modules,
                                                  options.test_filter, !options.no_capture));
-        write_artifact_manifest(artifact_manifest,
-                                cpp_test_module_artifact_paths(index.merged_module()));
         index.write_source_stamp_file(stamp_file);
+        write_artifact_manifest(artifact_manifest, stamp_file, compiler_path,
+                                cpp_test_module_artifact_paths(index.merged_module()));
         return 0;
     }
     if (options.emit_cpp) {

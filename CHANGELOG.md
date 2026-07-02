@@ -279,6 +279,9 @@
   timing prefixes for `generate`, `configure`, and `compile`.
 - Reused the loaded module graph while emitting generated CMake projects so
   source dependency discovery no longer walks imports a second time.
+- Made generated CMake builds run the Dudu module emission target every build,
+  relying on Dudu's own artifact manifest for the cheap no-op path so missing
+  or stale generated files can self-heal.
 - Split AST-backed unused-local and shadowing lint logic into a focused
   language-server scope-lint module.
 - Split AST-backed suspicious narrowing-cast lint logic into a focused
@@ -334,3 +337,7 @@
   that unsafe shape.
 - Improved language-server references for aliased native functions such as
   `dudu_native.dudu_native_add`.
+- Fixed module artifact manifests so changes to the `duc` executable/runtime
+  prelude invalidate generated artifacts, not just Dudu source edits.
+- Fixed freestanding generated runtime headers so hosted vector-backed
+  `ArrayView` helpers are not emitted into freestanding/embedded targets.

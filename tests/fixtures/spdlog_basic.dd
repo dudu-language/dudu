@@ -1,4 +1,4 @@
-import cpp "spdlog/spdlog.h" as spdlog
+from cpp import spdlog/spdlog.h
 
 
 def main() -> i32:

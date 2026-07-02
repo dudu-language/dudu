@@ -1,4 +1,4 @@
-import cpp "pkg_answer.hpp" as pkg_answer
+from cpp import pkg_answer.hpp
 
 
 def main() -> i32:

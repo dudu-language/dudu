@@ -200,9 +200,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "    set(DUDU_TIMING_ARGS --timings)\n"
         << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
-    out << "add_custom_command(\n"
-        << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
-        << "    BYPRODUCTS ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
+    out << "add_custom_target(" << target << "_dudu_generate\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
@@ -213,8 +212,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
         << ")\n"
-        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
-        << "add_custom_target(" << target << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
+        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n\n";
     emit_pkg_config(out, config);
     emit_cmake_target(out, config, project_dir, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
@@ -263,9 +261,8 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "    set(DUDU_TIMING_ARGS --timings)\n"
         << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
-    out << "add_custom_command(\n"
-        << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
-        << "    BYPRODUCTS ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
+    out << "add_custom_target(" << target << "_dudu_generate\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
@@ -283,8 +280,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
         << ")\n"
-        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
-        << "add_custom_target(" << target << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
+        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n\n";
     emit_pkg_config(out, config);
     out << "add_executable(" << target << "\n"
         << "    ${DUDU_GENERATED}\n";

@@ -1,26 +1,26 @@
-from c.path import lauxlib.h as laux
-from c.path import lua.h as lua
-from c.path import lualib.h as lualib
+from c import lauxlib.h
+from c import lua.h
+from c import lualib.h
 
 
 def main() -> i32:
-    state = laux.luaL_newstate()
+    state = luaL_newstate()
     if state == None:
         return 1
 
-    lualib.luaL_openlibs(state)
+    luaL_openlibs(state)
 
     code: str = "return 40 + 2"
-    if laux.luaL_loadstring(state, code.c_str()) != lua.LUA_OK:
-        lua.lua_close(state)
+    if luaL_loadstring(state, code.c_str()) != LUA_OK:
+        lua_close(state)
         return 2
-    if lua.lua_pcallk(state, 0, 1, 0, 0, None) != lua.LUA_OK:
-        lua.lua_close(state)
+    if lua_pcallk(state, 0, 1, 0, 0, None) != LUA_OK:
+        lua_close(state)
         return 3
 
-    value = lua.lua_tointegerx(state, -1, None)
-    top = lua.lua_gettop(state)
-    lua.lua_close(state)
+    value = lua_tointegerx(state, -1, None)
+    top = lua_gettop(state)
+    lua_close(state)
 
     if top != 1:
         return 4

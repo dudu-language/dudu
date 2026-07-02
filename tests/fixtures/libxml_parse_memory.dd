@@ -6,7 +6,7 @@ def main() -> i32:
     if doc == None:
         return 1
 
-    root: *struct _xmlNode = xml.xmlDocGetRootElement(doc)
+    root: xml.xmlNodePtr = xml.xmlDocGetRootElement(doc)
     if root == None:
         xml.xmlFreeDoc(doc)
         return 2
