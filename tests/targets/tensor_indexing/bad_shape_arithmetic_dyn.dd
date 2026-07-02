@@ -1,0 +1,16 @@
+# Target diagnostic: dyn dimensions do not become concrete through arithmetic.
+
+from ndad import Tensor
+from ndad import zeros
+
+
+def flatten_static[T, B, C](
+    value: Tensor[T][B, C],
+) -> Tensor[T][B * C]:
+    return assume_shape[Tensor[T][B * C]](value)
+
+
+def main() -> i32:
+    x: Tensor[i32][dyn, 3] = zeros[i32](2, 3)
+    y: Tensor[i32][6] = flatten_static(x)
+    return i32(y.shape[0])

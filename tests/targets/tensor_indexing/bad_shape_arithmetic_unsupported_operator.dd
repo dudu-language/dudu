@@ -1,0 +1,16 @@
+# Target diagnostic: unsupported shape operators are rejected in Dudu source.
+
+from ndad import Tensor
+from ndad import zeros
+
+
+def weird[T, B, C](
+    value: Tensor[T][B, C],
+) -> Tensor[T][B ** C]:
+    return assume_shape[Tensor[T][B ** C]](value)
+
+
+def main() -> i32:
+    x: Tensor[i32][2, 3] = zeros[i32](2, 3)
+    y: Tensor[i32][8] = weird[i32, 2, 3](x)
+    return i32(y.shape[0])

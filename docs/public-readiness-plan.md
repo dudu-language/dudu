@@ -57,16 +57,16 @@ Already implemented and should stay protected by tests:
 - shape-arithmetic API fixtures for flatten, reshape, conv-like output shape,
   matmul, and matrix-vector shape signatures
 - arbitrary-rank reference fixtures through `tests/targets/tensor_indexing`
+- scalar extraction policy is explicit: one-element tensor/view results use
+  `.item()` unless rank/pack-count constraints can prove scalar return safely
+- fixed-array and tensor indexing shortcuts were audited against
+  [Indexing Dispatch Model](indexing-dispatch-model.md); fixed arrays use the
+  generic `array_view[T]` path and tensor indexing uses operator hooks
 
 Remaining language work:
 
 - improve rejected shape-expression diagnostics so unsupported operators,
   malformed expressions, and compile-time requirements point at Dudu source
-- make scalar extraction policy explicit: one-element tensor/view results use
-  `.item()` unless and until rank/pack-count constraints can prove scalar
-  return safely
-- audit compiler source for old rank-specific array/tensor shortcuts and remove
-  any remaining shortcut
 
 Required fixtures:
 
