@@ -11,7 +11,9 @@
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_expr.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
@@ -427,33 +429,17 @@ void collect_hints_for_statement_exprs(const Document& doc, FunctionScope& scope
     }
 }
 
-std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    if (stmt.iterable_expr == nullptr) {
-        return std::nullopt;
-    }
-    const Expr& iterable = *stmt.iterable_expr;
-    if (iterable.kind == ExprKind::Call && iterable.callee != nullptr &&
-        !iterable.callee->empty() && iterable.callee->front().kind == ExprKind::Name &&
-        iterable.callee->front().name == "range") {
-        return named_type_ref("i32", iterable.location);
-    }
-    const TypeRef iterable_type = infer_type(scope, iterable);
-    const std::vector<TypeRef> list_args =
-        template_type_arg_refs_with_aliases(iterable_type, "list", scope.symbols.alias_type_refs);
-    if (!list_args.empty()) {
-        return list_args.front();
-    }
-    const std::vector<TypeRef> vector_args = template_type_arg_refs_with_aliases(
-        iterable_type, "std.vector", scope.symbols.alias_type_refs);
-    if (!vector_args.empty()) {
-        return vector_args.front();
-    }
-    return std::nullopt;
-}
-
 void collect_hints_for_block(const Document& doc, FunctionScope& scope,
                              const std::vector<Stmt>& statements, const InlayHintOptions& options,
                              std::vector<InlayHint>& hints);
+
+std::optional<TypeRef> infer_loop_binding_type(FunctionScope& scope, const Stmt& stmt) {
+    try {
+        return infer_for_binding_type(scope, stmt);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
 
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
     if (stmt.target_expr == nullptr) {
@@ -508,7 +494,7 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
         FunctionScope body_scope = scope;
         TypeRef binding_type = has_stmt_type_ref(stmt) ? stmt_type_ref(stmt) : TypeRef{};
         if (!hintable_type(binding_type)) {
-            if (const std::optional<TypeRef> inferred = infer_for_binding_type(scope, stmt)) {
+            if (const std::optional<TypeRef> inferred = infer_loop_binding_type(scope, stmt)) {
                 binding_type = *inferred;
             }
         }
@@ -542,7 +528,12 @@ void collect_hints_for_block(const Document& doc, FunctionScope& scope,
 void collect_hints_for_function(const Document& doc, const Symbols& symbols, const FunctionDecl& fn,
                                 std::string current_class, const InlayHintOptions& options,
                                 std::vector<InlayHint>& hints) {
-    FunctionScope scope(symbols);
+    Symbols function_symbols = symbols;
+    if (!fn.generic_params.empty()) {
+        function_symbols = with_generic_params(std::move(function_symbols), fn.generic_params,
+                                               generic_value_params_for_function(fn));
+    }
+    FunctionScope scope(function_symbols);
     scope.current_class = std::move(current_class);
     for (const ParamDecl& param : fn.params) {
         if (options.implicit_self && param.name == "self" &&
@@ -585,7 +576,12 @@ std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions 
             collect_hints_for_function(doc, symbols, fn, {}, options, hints);
         }
         for (const ClassDecl& klass : module.classes) {
-            const Symbols method_symbols = with_self_type(symbols, klass.name);
+            Symbols method_symbols = with_self_type(symbols, klass.name);
+            if (!klass.generic_params.empty()) {
+                method_symbols =
+                    with_generic_params(std::move(method_symbols), klass.generic_params,
+                                        generic_value_params_for_class(klass));
+            }
             for (const FunctionDecl& method : klass.methods) {
                 collect_hints_for_function(doc, method_symbols, method, klass.name, options, hints);
             }

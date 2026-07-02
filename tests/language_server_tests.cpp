@@ -418,6 +418,28 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
     assert(hints.find("\": i32\"") == std::string::npos);
 }
 
+void test_lsp_inlay_hints_type_value_generic_extents_as_usize() {
+    const dudu::Document doc{
+        .uri = "",
+        .path = "value_generic_extent_inlay.dd",
+        .text = "def apply_conv2d[H, W, K](\n"
+                "    image: &array[f32][H, W],\n"
+                "    kernel: &array[f32][K, K],\n"
+                ") -> i32:\n"
+                "    out_h = H - K + 1\n"
+                "    out_w = W - K + 1\n"
+                "    total = 0\n"
+                "    for y in range(out_h):\n"
+                "        total += i32(y)\n"
+                "    return total + i32(out_w)\n"};
+
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"line\":4") != std::string::npos);
+    assert(hints.find("\"line\":5") != std::string::npos);
+    assert(hints.find("\"line\":7") != std::string::npos);
+    assert(hints.find("\"value\":\"usize\"") != std::string::npos);
+}
+
 void test_lsp_hover_describes_tensor_indexing_builtin_types() {
     const dudu::Document doc{.uri = "",
                              .path = "tensor_index_builtin_hover.dd",
@@ -813,6 +835,7 @@ int main() {
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
         test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
         test_lsp_inlay_hints_use_inferred_array_literal_shapes();
+        test_lsp_inlay_hints_type_value_generic_extents_as_usize();
         test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();

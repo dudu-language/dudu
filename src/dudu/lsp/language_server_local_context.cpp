@@ -10,7 +10,9 @@
 #include "dudu/parser/lexer.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_expr.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
@@ -214,24 +216,11 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
 }
 
 std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    if (!has_stmt_iterable_expr(stmt)) {
+    try {
+        return infer_for_binding_type(scope, stmt);
+    } catch (const std::exception&) {
         return std::nullopt;
     }
-    if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
-        return named_type_ref("i32", stmt_iterable_expr(stmt).location);
-    }
-    if (stmt_iterable_expr(stmt).kind == ExprKind::Name) {
-        const TypeRef local_ref =
-            local_type_ref(scope, stmt_iterable_expr(stmt).name, stmt_iterable_expr(stmt).location);
-        if (const auto element = iterable_type_ref_from_type(local_ref)) {
-            return *element;
-        }
-    }
-    const TypeRef iterable_type = infer_lsp_expr_type(scope, stmt_iterable_expr(stmt));
-    if (const auto element = iterable_type_ref_from_type(iterable_type)) {
-        return *element;
-    }
-    return std::nullopt;
 }
 
 void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& statements,
@@ -295,6 +284,14 @@ void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int c
     collect_block_locals(scope, fn.statements, cursor_line);
 }
 
+Symbols symbols_for_lsp_function(Symbols symbols, const FunctionDecl& fn) {
+    if (!fn.generic_params.empty()) {
+        symbols = with_generic_params(std::move(symbols), fn.generic_params,
+                                      generic_value_params_for_function(fn));
+    }
+    return symbols;
+}
+
 } // namespace
 
 std::optional<std::string> member_completion_target(const Document& doc, const Json* params) {
@@ -352,7 +349,9 @@ std::map<std::string, TypeRef> local_type_refs_before_location(const ModuleAst& 
             if (!function_contains_location(fn, location)) {
                 continue;
             }
-            collect_function_locals(scope, fn, location.line);
+            FunctionScope fn_scope(symbols_for_lsp_function(symbols, fn));
+            collect_function_locals(fn_scope, fn, location.line);
+            scope.local_type_refs = std::move(fn_scope.local_type_refs);
             return scope.local_type_refs;
         }
         for (const ClassDecl& klass : module.classes) {
@@ -361,6 +360,12 @@ std::map<std::string, TypeRef> local_type_refs_before_location(const ModuleAst& 
                     continue;
                 }
                 Symbols method_symbols = with_self_type(symbols, klass.name);
+                if (!klass.generic_params.empty()) {
+                    method_symbols =
+                        with_generic_params(std::move(method_symbols), klass.generic_params,
+                                            generic_value_params_for_class(klass));
+                }
+                method_symbols = symbols_for_lsp_function(std::move(method_symbols), method);
                 FunctionScope method_scope(method_symbols);
                 method_scope.current_class = klass.name;
                 collect_function_locals(method_scope, method, location.line);
