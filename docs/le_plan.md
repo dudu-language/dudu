@@ -33,6 +33,10 @@ The standard is:
 
 Current direction notes:
 
+- First public language polish is tracked in
+  [Public Readiness Plan](public-readiness-plan.md). That plan selects the
+  near-term work for finalizing indexing/shaped generics, bottled numeric
+  library proof, editor intelligence, diagnostics, and dependency bootstrapping.
 - Concurrency stays ordinary until proven otherwise: prefer blocking functions,
   threads, queues, `select`/`poll`/platform event APIs, and explicit state
   machines over core-language `async`/`await`. See
