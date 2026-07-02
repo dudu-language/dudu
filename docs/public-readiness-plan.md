@@ -183,6 +183,9 @@ and result type for indexed/operator expressions, while preserving any attached
 method docs. Inlay type labels for imported shaped classes now expose hoverable
 definition previews and clickable label parts that jump back to the imported
 module source, including module-qualified labels such as `tensor.Tensor`.
+Parameter-name inlay hints for Dudu functions, methods, constructors, and
+scanned native C/C++ functions now include hoverable type tooltips when the
+callee metadata exposes parameter types.
 
 ## 4. Improve Generic And Index Diagnostics
 

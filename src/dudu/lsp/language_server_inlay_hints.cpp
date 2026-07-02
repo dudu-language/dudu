@@ -36,6 +36,7 @@ struct InlayHint {
 
 struct ParamHints {
     std::vector<std::string> names;
+    std::vector<TypeRef> types;
 };
 
 bool placeholder_param_name(std::string_view name) {
@@ -122,7 +123,18 @@ void add_argument_type_hint(std::vector<InlayHint>& hints, const Document& doc,
                      .kind = 1});
 }
 
-void add_parameter_hint(std::vector<InlayHint>& hints, const Expr& expr, const std::string& name) {
+std::string parameter_hint_tooltip_json(const Document& doc, const Symbols& symbols,
+                                        const TypeRef& type) {
+    if (!hintable_type(type)) {
+        return {};
+    }
+    const InlayTypeDetail detail = inlay_type_detail(doc, symbols, type, "");
+    return inlay_tooltip_json(detail);
+}
+
+void add_parameter_hint(std::vector<InlayHint>& hints, const Document& doc,
+                        const Symbols& symbols, const Expr& expr, const std::string& name,
+                        const TypeRef& type) {
     if (name.empty() || expr.kind == ExprKind::NamedArg) {
         return;
     }
@@ -130,7 +142,7 @@ void add_parameter_hint(std::vector<InlayHint>& hints, const Expr& expr, const s
                      .character = std::max(0, expr.location.column - 1),
                      .label = name + ":",
                      .label_json = {},
-                     .tooltip_json = {},
+                     .tooltip_json = parameter_hint_tooltip_json(doc, symbols, type),
                      .kind = 2});
 }
 
@@ -180,6 +192,7 @@ ParamHints constructor_param_hints(const ClassDecl& klass) {
     ParamHints hints;
     for (const ConstructorParam& param : constructor_params(klass)) {
         hints.names.push_back(hintable_param_name(param.name) ? param.name : "");
+        hints.types.push_back(param.type_ref);
     }
     return hints;
 }
@@ -189,15 +202,20 @@ ParamHints function_param_hints(const FunctionDecl& fn, bool skip_self) {
     size_t start = skip_self && !fn.params.empty() && fn.params.front().name == "self" ? 1 : 0;
     for (size_t i = start; i < fn.params.size(); ++i) {
         hints.names.push_back(hintable_param_name(fn.params[i].name) ? fn.params[i].name : "");
+        hints.types.push_back(fn.params[i].type_ref);
     }
     return hints;
 }
 
 ParamHints native_function_param_hints(const NativeFunctionDecl& fn) {
     ParamHints hints;
+    const std::vector<TypeRef> param_types = native_function_param_type_refs(fn);
     hints.names.reserve(fn.param_names.size());
-    for (const std::string& name : fn.param_names) {
+    hints.types.reserve(fn.param_names.size());
+    for (size_t i = 0; i < fn.param_names.size(); ++i) {
+        const std::string& name = fn.param_names[i];
         hints.names.push_back(hintable_param_name(name) ? name : "");
+        hints.types.push_back(i < param_types.size() ? param_types[i] : TypeRef{});
     }
     return hints;
 }
@@ -223,10 +241,10 @@ ParamHints first_native_function_param_hints(const Symbols& symbols, const std::
 
 ParamHints builtin_member_param_hints(const std::string& method_name) {
     if (method_name == "append" || method_name == "push") {
-        return {.names = {"value"}};
+        return {.names = {"value"}, .types = {TypeRef{}}};
     }
     if (method_name == "insert") {
-        return {.names = {"index", "value"}};
+        return {.names = {"index", "value"}, .types = {TypeRef{}, TypeRef{}}};
     }
     return {};
 }
@@ -343,7 +361,8 @@ void collect_hints_for_expr(const Document& doc, FunctionScope& scope, const Exp
         for (size_t i = 0; i < expr.children.size(); ++i) {
             const Expr& arg = expr.children[i];
             if (options.parameter_names && i < params.names.size()) {
-                add_parameter_hint(hints, arg, params.names[i]);
+                const TypeRef type = i < params.types.size() ? params.types[i] : TypeRef{};
+                add_parameter_hint(hints, doc, scope.symbols, arg, params.names[i], type);
             }
             if (options.argument_types) {
                 add_argument_type_hint(hints, doc, scope.symbols, arg, infer_type(scope, arg));

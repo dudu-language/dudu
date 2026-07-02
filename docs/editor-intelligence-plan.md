@@ -101,7 +101,9 @@ indexed/operator expressions, so `tensor[...]` can explain which
 library. Inlay type labels for imported shaped classes now include hoverable
 Dudu definition previews and clickable label-part locations that point at the
 imported module source, including module-qualified labels such as
-`tensor.Tensor`.
+`tensor.Tensor`. Parameter-name inlay hints now include hoverable type tooltips
+for Dudu functions, methods, constructors, and scanned native C/C++ functions
+when parameter type metadata is available.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

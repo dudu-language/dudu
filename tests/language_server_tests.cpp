@@ -281,6 +281,10 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
     assert(hints.find("\"label\":\"value:\"") != std::string::npos);
     assert(hints.find("\"label\":\"left:\"") != std::string::npos);
     assert(hints.find("\"label\":\"right:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"left:\",\"kind\":2,\"paddingLeft\":true,\"tooltip\"") !=
+           std::string::npos);
+    assert(hints.find("\"label\":\"right:\",\"kind\":2,\"paddingLeft\":true,\"tooltip\"") !=
+           std::string::npos);
 
     dudu::InlayHintOptions quiet;
     quiet.parameter_names = false;
@@ -450,6 +454,10 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
     assert(hints.find("\"label\":\"y:\"") != std::string::npos);
     assert(hints.find("\"label\":\"left:\"") != std::string::npos);
     assert(hints.find("\"label\":\"right:\"") != std::string::npos);
+    assert(hints.find("\"label\":\"x:\",\"kind\":2,\"paddingLeft\":true,\"tooltip\"") !=
+           std::string::npos);
+    assert(hints.find("\"label\":\"left:\",\"kind\":2,\"paddingLeft\":true,\"tooltip\"") !=
+           std::string::npos);
     assert(hints.find("\"value\":\"NativeOpaque\"") != std::string::npos);
     assert(hints.find("native type NativeOpaque") != std::string::npos);
     assert(hints.find("\"label\":\"arg0:\"") == std::string::npos);
