@@ -435,7 +435,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         if (signature.variadic && signature_param_count(signature) > 0) {
             signature.variadic_param_index = static_cast<int>(signature_param_count(signature) - 1);
         }
-        signature.native_template_return_fallback = !fn.return_native_spelling.empty();
+        signature.has_native_template_return_spelling = !fn.return_native_spelling.empty();
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
         symbols.native_function_decls[fn.name].push_back(&fn);
         add_native_path_prefix(symbols, fn.name);

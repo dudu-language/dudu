@@ -18,7 +18,7 @@ struct FunctionSignature {
     int min_params = -1;
     bool variadic = false;
     int variadic_param_index = -1;
-    bool native_template_return_fallback = false;
+    bool has_native_template_return_spelling = false;
 };
 
 struct Symbols {
