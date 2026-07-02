@@ -24,6 +24,7 @@ ndad_reduction_shape_runtime.dd	run	0
 ndad_assume_shape_runtime.dd	run	11
 ndad_shape_preserving_helpers.dd	run	7
 ndad_shape_arithmetic_runtime.dd	run	24
+array_conv_shape_runtime.dd	run	0
 ndad_shape_arithmetic_api.dd	pass
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	candidate ScalarOnly.at(i32) -> i32 rejected: expects 1 arguments, got 3

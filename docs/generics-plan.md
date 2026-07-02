@@ -340,6 +340,10 @@ equality or mismatch for direct shape relationships. Shape/value expressions
 now parse, normalize, substitute explicit generic value arguments, and fold
 constant results for common arithmetic.
 
+Value generic extents are also ordinary compile-time integer values inside the
+generic body. That lets APIs use the same `H`, `W`, and `K` in loop bounds,
+temporary fixed-array declarations, and output shape expressions.
+
 The supported shape/value generic arithmetic surface is:
 
 ```python
