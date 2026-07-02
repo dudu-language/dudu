@@ -1331,6 +1331,17 @@ push. They are not release packaging work.
    matmul kernel, device row slicing, and explicit `.cpu()` download.
    `autograd_training.dd` remains explicitly pending for PyTorch-like autograd
    modules, parameters, backward, and optimizers.
+   Remaining Dudu-language polish for this numeric stack is not library
+   implementation but better compile-time shape arithmetic: symbolic
+   dimensions such as `M`, `K`, and `N` already flow through shaped metadata,
+   but expressions such as `C * H * W` or `H - K + 1` should become checked
+   compile-time shape/value expressions instead of forcing APIs to widen to
+   `dyn`.
+   The source of truth is [Generics Plan](generics-plan.md#shape-and-const-arithmetic).
+   The separate ecosystem proof is to bottle the reference surface into
+   ordinary Dudu packages such as `ndad` and `mald` so user code imports clean
+   library APIs instead of seeing backend/native glue. That is documented in
+   [Tensor Backend And Numeric Stack Plan](tensor-backend-plan.md#bottled-library-prototypes).
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
@@ -2444,6 +2455,16 @@ push. They are not release packaging work.
    without guessing.
    Hints must be served through standard LSP `textDocument/inlayHint` from
    AST/sema/native metadata facts, not through VS Code-only decoration logic.
+   Tensor-shaped editor support is part of this same quality bar: hover and
+   inlay should expose known shape metadata such as
+   `Tensor[f32][Batch, Classes]`, selected indexing overloads, and view/copy
+   boundaries without hard-coding tensor package names. Generic/index overload
+   failures should preserve candidate rejection reasons so diagnostics explain
+   why `basic_index`, `scalar_index`, or advanced-index overloads did not
+   match. See
+   [Editor Intelligence Plan](editor-intelligence-plan.md#tensor-and-shape-intelligence)
+   and
+   [Editor Intelligence Plan](editor-intelligence-plan.md#generic-and-index-diagnostic-ux).
 
    Status: unaliased nested Dudu module imports such as
    `import vendor.helper` now resolve through their full dotted path for hover,
@@ -2711,6 +2732,14 @@ push. They are not release packaging work.
    separate native build path.
    CMake-backed builds should still be launched through `dudu build`,
    `dudu run`, and `dudu test`.
+
+   Dudu also needs a dependency story for Dudu libraries that does not put Git
+   URLs into source imports. Source should say `from ndad import Tensor`; project
+   metadata can later pin `ndad` to a Git tag, commit, path, or registry
+   package, with a lockfile recording exact resolved revisions. Native C/C++
+   dependencies remain CMake/pkg-config/system/vendor concerns. This is
+   documented in
+   [Project Driver Plan](project-driver-plan.md#dudu-dependencies-and-lockfiles).
 
    Dudu is not copying Zig here. CMake is not a shameful fallback after
    `dudu build` gives up. It is one of the serious native backends because

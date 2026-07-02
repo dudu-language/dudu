@@ -250,6 +250,67 @@ gathers. Returning a scalar directly when scalar indexes consume every tensor
 axis still needs a rank/pack-count constraint feature; until that exists,
 scalar extraction stays explicit rather than compiler policy.
 
+## Bottled Library Prototypes
+
+The compiler tests prove language support, but the next usability proof should
+package the numeric surface as ordinary Dudu libraries. This is not standard
+library work and it is not compiler policy. The point is to prove that a real
+library can hide native/backend details behind normal imports.
+
+Target packages:
+
+- `ndad`: ndarray/tensor storage, indexing, shape metadata, CPU backend,
+  optional BLAS/OpenCL/ROCm/CUDA backend modules, reductions, broadcasting, and
+  view/copy/device movement APIs
+- `mald`: ML/autograd/module/optimizer layer built on top of `ndad`
+- `ddtorch`: optional PyTorch-shaped facade if a torch-like naming layer is
+  useful separately from the lower-level `ndad` API
+
+Desired user code:
+
+```python
+from ndad import Tensor
+from ndad import randn
+from ndad.backends import openblas
+
+x = randn[f32](32, 784).to(openblas.default())
+w = randn[f32](784, 10).to(openblas.default())
+logits = x.matmul(w)
+row = logits[0, :]
+```
+
+and eventually:
+
+```python
+from mald import Module
+from mald import Parameter
+from mald.optim import SGD
+
+class Mlp(Module):
+    w1: Parameter[f32][784, 128]
+    w2: Parameter[f32][128, 10]
+
+    @operator("()")
+    def forward(self, x: Tensor[f32][dyn, 784]) -> Tensor[f32][dyn, 10]:
+        return relu(x.matmul(self.w1)).matmul(self.w2)
+```
+
+Rules:
+
+- the libraries should use only ordinary Dudu imports, classes, generics,
+  operators, and native interop
+- native details such as CBLAS/OpenCL headers may live behind backend modules
+- user code should not import helper headers such as
+  `dudu_tensor/index_native.hpp` directly
+- BLAS/GPU support should be optional backend modules, not required for CPU-only
+  tensor use
+- compiler tests remain in this repository; bottled libraries are dogfood and
+  ecosystem proof
+
+This bottling step is worthwhile even if the first package is small. It proves
+that Dudu can support serious library abstraction instead of making every user
+see the native/backend glue.
+
 ## External Baseline
 
 Dudu should feel familiar to people coming from Python numeric code, but it

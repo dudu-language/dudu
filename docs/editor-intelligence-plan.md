@@ -309,6 +309,95 @@ inspection, layout facts, CodeLens, or native documentation scraping. Those
 remain part of the broader editor-intelligence work. Hints must come from AST
 and semantic facts, not regex guesses.
 
+### Tensor And Shape Intelligence
+
+Numeric code should not feel like opaque templates in the editor. When sema has
+shape metadata, backend metadata, or index-selection facts, LSP should surface
+them directly.
+
+Target hover examples:
+
+```text
+logits: Tensor[f32][Batch, Classes]
+view: TensorView[f32][dyn, 64]
+backend: opencl
+layout: row-major contiguous
+```
+
+For direct indexing, hover should show the selected overload and the resulting
+view/copy shape when it is known:
+
+```python
+row = logits[batch, :]
+```
+
+```text
+row: TensorView[f32][Classes]
+selected @operator("[]"): Tensor.view_at(*idx: basic_index)
+view: borrows logits storage
+```
+
+For advanced indexing, hover should make the materialization boundary visible:
+
+```python
+picked = logits[rows, cols]
+```
+
+```text
+picked: Tensor[f32][dyn]
+selected @operator("[]"): Tensor.materialize_at[Idx...](...)
+advanced indexing returns owning storage
+```
+
+Inlay hints should expose inferred tensor shapes at high-value boundaries such
+as locals, function returns when requested, and selected call arguments. These
+hints should use the same standard LSP inlay-hint mechanism as other Dudu
+hints, including hoverable/clickable label parts where the tensor type or
+symbolic dimension is resolvable.
+
+Shape-aware LSP is mostly plumbing from semantic facts into hover/inlay display,
+but it must not be hand-authored for tensor names. A user library such as
+`ndad`, `mald`, `ddtorch`, or an unrelated graphics math package should get the
+same behavior when it uses normal Dudu shaped metadata and operator overloads.
+
+### Generic And Index Diagnostic UX
+
+Fancy indexing and generics are only pleasant if failures explain the overload
+search. A vague error such as:
+
+```text
+no matching @operator("[]") for indexed access to value
+```
+
+is acceptable as a fallback, but the target diagnostic should preserve an
+overload-attempt trace:
+
+```text
+tensor[mask, :, ids] cannot use Tensor.view_at(*idx: basic_index)
+because argument 1 is Mask, not basic_index.
+
+Tried:
+  Tensor.view_at(*idx: basic_index) -> TensorView[f32]
+  Tensor.materialize_at[Idx...](...) -> Tensor[f32]
+
+Hint:
+  define an advanced-index overload that accepts Mask, or convert the mask to
+  an index array.
+```
+
+Required implementation behavior:
+
+- sema should keep enough failed-candidate information to report why each
+  plausible overload was rejected
+- diagnostics should distinguish fixed-array indexing from library `[]` hook
+  indexing
+- `basic_index`, `scalar_index`, `slice`, `ellipsis`, `new_axis`, and
+  library-defined advanced index types should be named in Dudu terms
+- shape mismatch diagnostics should show both symbolic and concrete dimensions
+  where known
+- LSP hover on a diagnostic range should be able to show the same candidate
+  information without rerunning a separate parser or string matcher
+
 ### Native C/C++ Interop
 
 For imported native code:

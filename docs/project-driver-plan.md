@@ -315,6 +315,80 @@ libs = ["raylib", "sdl3"]
 
 The driver can translate that to `pkg-config --cflags --libs ...`.
 
+## Dudu Dependencies And Lockfiles
+
+Dudu does not have a full package manager yet, but real libraries such as
+`ndad` will need a reproducible dependency story. The source language should
+keep imports clean:
+
+```python
+from ndad import Tensor
+from ndad.backends import openblas
+```
+
+Source imports should not contain remote Git URLs. Dependency resolution belongs
+in project metadata and lock state, not scattered through `.dd` files.
+
+Cargo and Go both support Git/VCS-backed dependency workflows, but they make
+different tradeoffs. Cargo allows Git dependencies in `Cargo.toml` and records
+resolved versions in `Cargo.lock`. Go module paths are import-like paths and
+versions are resolved through `go.mod`/`go.sum` using module metadata and VCS
+tags. Both systems separate source import spelling from reproducibility state.
+
+Dudu's eventual package/dependency model should follow that separation:
+
+```toml
+[deps]
+ndad = { git = "https://github.com/wefafwefgawefg/ndad.git", tag = "v0.1.0" }
+mald = { git = "https://github.com/wefafwefgawefg/mald.git", rev = "..." }
+local_math = { path = "../local_math" }
+```
+
+The lockfile is the generated reproducibility record. It pins the exact
+resolved dependency identities, usually commit hashes and package metadata, so
+`dudu build` on another machine uses the same source revision instead of "the
+latest thing on that branch." It is analogous to `Cargo.lock` or `go.sum` in
+purpose, even if the exact format differs.
+
+Important boundaries:
+
+- Dudu package deps are source-level Dudu dependencies.
+- Native C/C++ deps remain native deps: CMake packages, pkg-config packages,
+  system packages, vendored sources, or user-owned CMake logic.
+- A Dudu package may declare native requirements, but Dudu should not promise
+  portable binary dependency management for C/C++ libraries.
+- `dudu build` should be able to fetch or locate Dudu source deps before
+  running the generated/user-owned CMake backend.
+- `duc` should stay usable without a package manifest for explicit compiler
+  workflows.
+
+Reasons to do this:
+
+- users can depend on early Dudu libraries before a central registry exists
+- dogfood libraries such as `ndad` can be pinned by Git tag or commit
+- source imports stay stable if a dependency moves from Git to a future
+  registry
+- CI and collaborators get reproducible builds
+
+Reasons to be cautious:
+
+- package resolution can grow into a second build system if it tries to own
+  native dependencies
+- private repos, auth, mirrors, and offline builds complicate UX
+- Dudu's native interop promise means package metadata must cooperate with
+  CMake/pkg-config rather than replacing them
+- lockfile churn and multi-target native platform differences need clear rules
+
+Near-term alternative if this is not implemented yet:
+
+- document dependencies in `README.md`
+- vendor Dudu libraries as submodules or sibling checkout paths
+- use scripts to clone expected repos
+- configure include/source paths in `dudu.toml` or user-owned CMake
+
+That is acceptable for dogfood, but it is not a good long-term story for a
+language people should be able to try quickly.
+
 ## Build Backends
 
 `dudu build`, `dudu run`, and `dudu test` are the stable front door for Dudu

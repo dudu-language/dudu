@@ -324,6 +324,63 @@ fixed-array extent. Dudu emits `template <typename T, size_t N>` and
 `std::array<T, N>`, supports indexing fields with symbolic extents inside
 generic methods, and rejects using value parameters as types.
 
+### Shape And Const Arithmetic
+
+Rust const generics and C++ non-type template parameters can represent
+compile-time values. C++ can also use those values in template expressions such
+as `M * N`, `H - K + 1`, or static assertions, because the C++ template system
+is an expression language. Rust const generics support useful constant
+expressions, but stable Rust intentionally limits where arbitrary generic const
+expressions may appear. Zig's `comptime`, Julia's type parameters, and
+dependent-type languages go further in different directions.
+
+Dudu's current non-type generic support is intentionally smaller: it carries
+symbolic extents such as `N`, `Rows`, and `Cols`, uses them in fixed-array and
+tensor shape metadata, and can prove equality or mismatch for direct shape
+relationships. It is not yet a compile-time arithmetic solver.
+
+The target feature is shape/value generic arithmetic:
+
+```python
+def matmul[M, K, N](
+    left: Tensor[f32][M, K],
+    right: Tensor[f32][K, N],
+) -> Tensor[f32][M, N]:
+    ...
+
+def flatten[B, C, H, W](
+    input: Tensor[f32][B, C, H, W],
+) -> Tensor[f32][B, C * H * W]:
+    ...
+
+def conv2d[H, W, K](
+    input: Tensor[f32][H, W],
+) -> Tensor[f32][H - K + 1, W - K + 1]:
+    ...
+```
+
+This is not required for a tensor library to exist. A library can operate with
+runtime `dyn` shapes and explicit runtime checks. It is highly desirable,
+though, because it reduces unnecessary `dyn`, gives better API diagnostics,
+improves hover/inlay output, and catches reshape, matmul, convolution, and
+broadcast mistakes before generated C++ is compiled.
+
+Rules for this feature:
+
+- shape/value expressions are compile-time only and must lower to C++ constant
+  expressions or generated static checks
+- supported operators should start small: `+`, `-`, `*`, `/`, `%`, parentheses,
+  equality constraints, and integer literals
+- Dudu should reject expressions it cannot prove instead of silently widening
+  everything to `dyn`
+- `dyn` is a runtime-known dimension and does not participate in compile-time
+  arithmetic except through explicit shape assertions such as `assume_shape`
+- diagnostics must point at the shape expression and the call/assignment that
+  required it
+
+The goal is not full dependent typing. The goal is enough const arithmetic for
+serious systems, graphics, DSP, and numeric-library APIs.
+
 ## Diagnostics
 
 Required generic diagnostics:
