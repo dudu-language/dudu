@@ -314,6 +314,12 @@ Acceptance:
 - examples do not depend on private local paths except explicit dogfood paths
 - public README and docs describe what is complete, optional, and future work
 
+Status: [Validation Matrix](validation-matrix.md) now defines the fast default
+suite, editor/LSP checks, optional native probes, dogfood checks, numeric stack
+checks, and release-candidate checks. `scripts/test_dependencies.sh` covers the
+public Dudu source dependency path with a local path package, a local Git
+package, logical imports, and lockfile stability without requiring network.
+
 ## Execution Order
 
 1. Shape/value generic arithmetic and diagnostic fixtures.

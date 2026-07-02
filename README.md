@@ -10,7 +10,7 @@ produce native code that C++ projects can consume.
 Source files use `.dd`.
 
 ```python
-import cpp "raylib.h" as rl
+from c import raylib.h as rl
 
 
 class Player:
@@ -146,9 +146,29 @@ projects link correctly. After creation, that file belongs to the project.
 Import C and C++ headers directly:
 
 ```python
-import cpp "raylib.h" as rl
-import cpp "vector" as std
+from c import raylib.h as rl
+from cpp import vector
 ```
+
+C++ standard library headers expose their normal namespaces, so `from cpp
+import vector` makes `std.vector` available.
+
+Use Dudu source dependencies through `dudu.toml`:
+
+```toml
+[deps]
+local_math = { path = "../local_math" }
+ndad = { git = "https://github.com/wegfawefgawefg/ndad.git", tag = "v0.1.0" }
+```
+
+Fetch or refresh missing source dependencies with:
+
+```sh
+dudu deps fetch
+```
+
+Native C/C++ libraries still belong to CMake, pkg-config, system packages, or
+vendored native code. Dudu source dependencies are for `.dd` packages.
 
 Generated headers are available for C and C++ integration:
 
@@ -164,12 +184,15 @@ External dogfood projects can be checked locally with:
 
 ```sh
 ./scripts/test_examples.sh
+./scripts/test_dependencies.sh
 ./scripts/test_dogfood.sh
 ```
 
 The example script skips missing optional package SDKs. The dogfood script
-skips missing local repos and currently covers `raymarch-dd` and
-`dudu-webserver` when they exist next to the Dudu checkout.
+skips missing local repos and currently covers `raymarch-dd`,
+`dudu-webserver`, and `dudu-datascience` when they exist next to the Dudu
+checkout. The full validation matrix lives in
+[`docs/validation-matrix.md`](docs/validation-matrix.md).
 
 ## Editor Support
 
