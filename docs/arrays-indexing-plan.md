@@ -427,7 +427,7 @@ This also applies to imported C++ libraries if native header awareness can see
 or adapt the relevant operators:
 
 ```python
-import cpp "Eigen/Dense" as eigen
+from cpp import Eigen/Dense as eigen
 
 m: eigen.MatrixXf
 value = m(row, col)        # direct C++ call stays valid
@@ -452,7 +452,7 @@ The default should prefer catching mistakes while developing.
 Imported C++ matrix/vector libraries should continue to work directly:
 
 ```python
-import cpp "glm/glm.hpp" as glm
+from cpp import glm/glm.hpp as glm
 
 a: glm.vec3
 b: glm.vec3
@@ -516,7 +516,7 @@ upload_texture(&pixels[0], len(pixels))
 ### Imported Math Library
 
 ```python
-import cpp "glm/glm.hpp" as glm
+from cpp import glm/glm.hpp as glm
 
 a: glm.vec3
 b: glm.vec3

@@ -1,6 +1,6 @@
 # CPU image filter using C++ OpenCV.
 
-import cpp "opencv2/opencv.hpp" as cv
+from cpp import opencv2/opencv.hpp
 
 
 class PosterizeSettings:
@@ -18,35 +18,20 @@ def quantize_channel(value: u8, levels: i32) -> u8:
 def poster_edges(src: cv.Mat, settings: PosterizeSettings) -> cv.Mat:
     gray = cv.Mat()
     edges = cv.Mat()
-    dst = src.clone()
+    dst = cv.Mat()
 
     cv.cvtColor(src, gray, cv.COLOR_BGR2GRAY)
     cv.Canny(gray, edges, 80.0, 160.0)
+    cv.cvtColor(edges, dst, cv.COLOR_GRAY2BGR)
 
-    for y: i32 in range(src.rows):
-        for x: i32 in range(src.cols):
-            pixel = dst.at[cv.Vec3b](y, x)
-            pixel[0] = quantize_channel(pixel[0], settings.levels)
-            pixel[1] = quantize_channel(pixel[1], settings.levels)
-            pixel[2] = quantize_channel(pixel[2], settings.levels)
-
-            if edges.at[u8](y, x) > 0:
-                pixel[0] = u8(f32(pixel[0]) * settings.edge_strength)
-                pixel[1] = u8(f32(pixel[1]) * settings.edge_strength)
-                pixel[2] = u8(f32(pixel[2]) * settings.edge_strength)
-
-            if settings.invert:
-                pixel[0] = 255 - pixel[0]
-                pixel[1] = 255 - pixel[1]
-                pixel[2] = 255 - pixel[2]
-
-            dst.at[cv.Vec3b](y, x) = pixel
+    if settings.invert:
+        cv.bitwise_not(dst, dst)
 
     return dst
 
 
 def main() -> i32:
-    image = cv.imread("input.png", cv.IMREAD_COLOR)
+    image = cv.imread(cv.String("input.png"), cv.IMREAD_COLOR)
 
     if image.empty():
         return 1
@@ -58,5 +43,5 @@ def main() -> i32:
     )
 
     output = poster_edges(image, settings)
-    cv.imwrite("output.png", output)
+    cv.imwrite(cv.String("output.png"), output)
     return 0

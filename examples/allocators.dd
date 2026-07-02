@@ -1,6 +1,6 @@
 # Allocation helpers and custom arena APIs.
 
-import c "string.h" as cstr
+from c import string.h as cstr
 
 
 class Enemy:

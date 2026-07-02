@@ -1,6 +1,6 @@
 # Small typed numeric example with tuples, lists, and deterministic allocation.
 
-import cpp "cmath" as cmath
+from cpp import cmath
 
 
 class Vec2:

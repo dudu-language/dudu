@@ -1,6 +1,6 @@
 # CUDA shared-memory shaped kernel.
 
-import cpp "cuda_runtime.h" as cuda
+from cpp.path import cuda_runtime.h as cuda
 
 
 @cuda.global

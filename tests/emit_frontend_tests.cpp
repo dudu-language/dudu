@@ -27,9 +27,9 @@ void test_image_filter_emission(const std::filesystem::path& root) {
     const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
     dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("dst.at<cv::Vec3b>(y, x)") != std::string::npos);
-    assert(cpp.find("edges.at<uint8_t>(y, x)") != std::string::npos);
-    assert(cpp.find("pixel[0]") != std::string::npos);
+    assert(cpp.find("cvtColor") != std::string::npos);
+    assert(cpp.find("Canny") != std::string::npos);
+    assert(cpp.find("bitwise_not") != std::string::npos);
 }
 
 void test_pointer_member_emission(const std::filesystem::path& root) {

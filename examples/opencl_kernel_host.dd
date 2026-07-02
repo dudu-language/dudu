@@ -1,6 +1,6 @@
 # OpenCL host-side probe with output pointer parameters.
 
-import c "CL/cl.h" as cl
+from c import CL/cl.h as cl
 
 
 def main() -> i32:

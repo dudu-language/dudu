@@ -130,6 +130,27 @@ Color color;
 InitWindow(800, 600, "demo");
 ```
 
+C tag types keep their required native tag spelling when reached through an
+alias. For example:
+
+```python
+from c import sys/stat.h as stat
+
+info: stat.stat
+```
+
+emits the native C type as:
+
+```cpp
+struct stat info;
+```
+
+Typedef aliases preserve the typedef spelling instead. If a header exposes
+`typedef std::array<unsigned char, 16> DuduFixedBytes`, then an aliased Dudu
+type such as `native.DuduFixedBytes` emits `DuduFixedBytes`, not the expanded
+implementation type. The scanner/codegen boundary is responsible for knowing
+which imported names are C records and which are typedef aliases.
+
 C++ namespaces under an aliased header are also reached through the alias if the
 alias is used intentionally as a collision boundary:
 
@@ -188,4 +209,3 @@ The language server should use those ranges so Ctrl-click can distinguish:
 - `vendor/foo.hpp`: header definition/open path behavior, with path segments
   handled separately when possible
 - `foo`: alias binding definition/references
-

@@ -1,6 +1,6 @@
 # GLFW/OpenGL setup with raw handles and proc lookup.
 
-import c "GLFW/glfw3.h" as glfw
+from c import GLFW/glfw3.h as glfw
 
 
 def main() -> i32:
@@ -12,7 +12,7 @@ def main() -> i32:
     glfw.glfwWindowHint(glfw.GLFW_CONTEXT_VERSION_MINOR, 3)
     glfw.glfwWindowHint(glfw.GLFW_OPENGL_PROFILE, glfw.GLFW_OPENGL_CORE_PROFILE)
 
-    window: *struct GLFWwindow = glfw.glfwCreateWindow(320, 200, "dudu glfw", None, None)
+    window: *glfw.GLFWwindow = glfw.glfwCreateWindow(320, 200, "dudu glfw", None, None)
     if window == None:
         glfw.glfwTerminate()
         return 2

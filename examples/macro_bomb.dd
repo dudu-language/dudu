@@ -10,7 +10,7 @@
 # Token-pasting and declaration-generating macros belong behind a tiny C/C++
 # wrapper because they are not expression-shaped.
 
-import cpp "../tests/fixtures/cpp_macro_bomb.hpp" as macros
+from cpp.path import ../tests/fixtures/cpp_macro_bomb.hpp as macros
 
 
 def main() -> i32:

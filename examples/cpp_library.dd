@@ -1,6 +1,6 @@
 # Dudu code intended to be imported from C++ after generating a .hpp/.cpp pair.
 
-import cpp "cmath" as std
+from cpp import cmath
 
 
 class Camera:

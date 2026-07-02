@@ -1,10 +1,10 @@
 # Vulkan API struct setup without creating a device.
 
-import c "vulkan/vulkan.h" as vk
+from c import vulkan/vulkan.h as vk
 
 
 def main() -> i32:
-    app: struct VkApplicationInfo
+    app: vk.VkApplicationInfo
     app.sType = vk.VK_STRUCTURE_TYPE_APPLICATION_INFO
     app.pApplicationName = "dudu vulkan"
     app.applicationVersion = 1

@@ -122,10 +122,10 @@ C and C++ headers need explicit foreign imports. These are not Python syntax,
 but they should stay visually close:
 
 ```python
-import c "stdio.h" as c
-import cxx "libxml/parser.h" as xml
-import cpp "raylib.h" as rl
-import cpp "glm/glm.hpp" as glm
+from c import stdio.h as c
+from cxx import libxml/parser.h as xml
+from cpp import raylib.h as rl
+from cpp import glm/glm.hpp as glm
 ```
 
 The quoted path is a header spelling, not a Dudu module name.
@@ -481,10 +481,10 @@ Native typedefs from imported C/C++ headers are discovered automatically when
 Clang can scan the imported header:
 
 ```python
-import c "SDL3/SDL.h" as sdl
+from c import SDL3/SDL.h as sdl
 
 def pump_events() -> bool:
-    event: SDL_Event
+    event: sdl.SDL_Event
     while sdl.SDL_PollEvent(&event):
         if event.type == sdl.SDL_EVENT_QUIT:
             return False
@@ -567,7 +567,7 @@ Result[T, E]
 C++ exception interop is available when native libraries require it:
 
 ```python
-import cpp "stdexcept"
+from cpp import stdexcept
 
 def load() -> i32:
     try:
@@ -1391,8 +1391,8 @@ or an explicit `@operator("bool")`.
 ## C Interop
 
 ```python
-import c "stdio.h" as c
-import cxx "libxml/parser.h" as xml
+from c import stdio.h as c
+from cxx import libxml/parser.h as xml
 
 
 def main() -> i32:
@@ -1407,7 +1407,7 @@ plain C++ include while still exposing C-style globals through the alias.
 ## C++ Interop
 
 ```python
-import cpp "raylib.h" as rl
+from cpp import raylib.h as rl
 
 
 def main() -> i32:
@@ -1426,7 +1426,7 @@ def main() -> i32:
 GLM:
 
 ```python
-import cpp "glm/glm.hpp" as glm
+from cpp import glm/glm.hpp as glm
 
 
 def main() -> i32:
@@ -1708,8 +1708,8 @@ imports stay source-file relative:
 
 ```python
 import "./math.dd"
-import cpp "./local.hpp"
-import cpp "raylib.h"
+from cpp.path import local.hpp
+from cpp import raylib.h
 ```
 
 ## Systems Surface

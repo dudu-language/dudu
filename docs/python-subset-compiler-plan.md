@@ -41,7 +41,7 @@ Implement this first:
 
 - `.dd` files with Python-like indentation.
 - Python comments.
-- `import`, `import c "..." as name`, `import cpp "..." as name`.
+- `import`, `from c import ... as name`, `from cpp import ... as name`.
 - qualified module imports by default.
 - selective imports with compile errors on direct-name collisions.
 - facade modules through ordinary imports, with no special reexport system.
@@ -427,7 +427,7 @@ Keep it small and inspectable.
 Emit-only interop first:
 
 ```python
-import c "stdio.h" as c
+from c import stdio.h as c
 ```
 
 Generated C++ includes the header and lowers dot paths:
@@ -459,8 +459,8 @@ tests/fixtures/interop_c/
 Emit-only C++ interop first:
 
 ```python
-import cpp "glm/glm.hpp" as glm
-import cpp "memory" as std
+from cpp import glm/glm.hpp as glm
+from cpp import memory
 ```
 
 Generated C++ includes headers and lowers dot paths to C++ namespaces/members.

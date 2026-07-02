@@ -559,8 +559,8 @@ Required fixtures:
 
 - single-file diagnostics
 - multi-file imports
-- direct native import: `import c "raylib.h"` and `Vector2`
-- aliased native import: `import c "raylib.h" as rl` and `rl.Vector2`
+- direct native import: `from c import raylib.h` and `Vector2`
+- aliased native import: `from c import raylib.h as rl` and `rl.Vector2`
 - direct sqlite calls through `sqlite3.h`
 - C++ namespace import and C++ class/member lookup
 - macro hover/completion

@@ -1,6 +1,6 @@
 # Small raylib arcade loop.
 
-import c "raylib.h" as rl
+from c import raylib.h as rl
 
 
 class Player:

@@ -1,6 +1,6 @@
 # Function pointer types for comparators and callbacks.
 
-import cpp "algorithm" as std
+from cpp import algorithm
 
 
 def less_i32(a: i32, b: i32) -> bool:

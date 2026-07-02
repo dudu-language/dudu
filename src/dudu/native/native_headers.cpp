@@ -64,6 +64,14 @@ bool public_direct_macro_name(const std::string& name) {
     return !name.empty() &&
            (std::isupper(static_cast<unsigned char>(name.front())) != 0 || name.front() == '_');
 }
+bool builtin_native_type_name(const std::string& name) {
+    static const std::set<std::string> builtins = {
+        "bool",  "char",  "i8",    "i16",   "i32",   "i64",  "u8",
+        "u16",   "u32",   "u64",   "isize", "usize", "f32",  "f64",
+        "void",  "str",   "cstr",  "auto",  "None",
+    };
+    return builtins.contains(name);
+}
 std::optional<std::filesystem::path>
 normalized_existing_header_path(const ImportDecl& import, const NativeHeaderOptions& options) {
     const std::filesystem::path header = native_header_unquoted(import.module_path);
@@ -303,7 +311,8 @@ std::set<std::string> native_type_names(const NativeHeaderScan& scan) {
 }
 
 void prefix_type_ref(TypeRef& type, const std::set<std::string>& names, const std::string& prefix) {
-    if (names.contains(type.name.str()) && !type.name.starts_with(prefix + ".")) {
+    if (names.contains(type.name.str()) && !builtin_native_type_name(type.name.str()) &&
+        !type.name.starts_with(prefix + ".")) {
         type.name = prefix + "." + type.name.str();
     }
     for (TypeRef& child : type.children) {
@@ -497,7 +506,8 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
     return out;
 }
 std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl>& source,
-                                                const std::string& prefix) {
+                                                const std::string& prefix,
+                                                const std::set<std::string>& c_record_names = {}) {
     std::vector<NativeTypeDecl> out;
     out.reserve(source.size());
     for (NativeTypeDecl item : source) {
@@ -506,7 +516,8 @@ std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl
             item.name = prefix + "." + item.name;
         }
         if (item.native_spelling.empty()) {
-            item.native_spelling = original;
+            item.native_spelling =
+                c_record_names.contains(original) ? "struct " + original : original;
             item.type_ref = named_type_ref(original, item.location);
         }
         out.push_back(std::move(item));
@@ -539,10 +550,16 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique_native_namespaces(out.namespaces, scan.namespaces);
         } else {
             const std::set<std::string> type_names = native_type_names(scan);
+            std::set<std::string> c_record_names;
+            if (import.kind == ImportKind::ForeignC) {
+                for (const ClassDecl& klass : scan.classes) {
+                    c_record_names.insert(klass.name);
+                }
+            }
             append_unique_native_types(
                 out.types,
-                prefixed_type_refs(prefixed_type_names(scan.types, import.alias), type_names,
-                                   import.alias));
+                prefixed_type_refs(prefixed_type_names(scan.types, import.alias, c_record_names),
+                                   type_names, import.alias));
             append_unique_native_classes(
                 out.classes,
                 prefixed_type_refs(prefixed_names(scan.classes, import.alias), type_names,

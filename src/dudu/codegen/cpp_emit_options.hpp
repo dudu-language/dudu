@@ -27,12 +27,12 @@ const std::string& emitted_name(const Decl& decl, const CppEmitOptions& options)
 }
 
 inline std::string emitted_type_name(std::string name, const CppEmitOptions& options) {
-    if (!options.use_generated_names) {
-        return name;
-    }
     if (const auto found = options.generated_type_names.find(name);
         found != options.generated_type_names.end()) {
         return found->second;
+    }
+    if (!options.use_generated_names) {
+        return name;
     }
     return name;
 }

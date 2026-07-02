@@ -1,9 +1,9 @@
 # Tiny HTTP API using a hypothetical C++ HTTP library.
 
-import cpp "httplib.h"
-import c "sqlite3.h" as sqlite
-import cpp "string" as std
-import c "stdlib.h" as c
+from cpp.path import httplib.h
+from c import sqlite3.h as sqlite
+from cpp import string
+from c import stdlib.h as c
 
 
 class Todo:
@@ -29,9 +29,9 @@ def parse_i64(text: str) -> i64:
     return c.atoll(text.c_str())
 
 
-def find_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
+def find_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     query = "select id, title, done from todos where id = ?"
-    stmt: *struct sqlite3_stmt = None
+    stmt: *sqlite.sqlite3_stmt = None
 
     if sqlite.sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.SQLITE_OK:
         return Err(DbError.QueryFailed)
@@ -53,7 +53,7 @@ def find_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     return Ok(todo)
 
 
-def handle_get_todo(db: *struct sqlite3, req: httplib.Request, res: &httplib.Response):
+def handle_get_todo(db: *sqlite.sqlite3, req: httplib.Request, res: &httplib.Response):
     todo_id = parse_i64(req.matches[1])
     result = find_todo(db, todo_id)
 
@@ -69,7 +69,7 @@ def handle_health(req: httplib.Request, res: &httplib.Response):
 
 
 def main() -> i32:
-    db: *struct sqlite3 = None
+    db: *sqlite.sqlite3 = None
 
     if sqlite.sqlite3_open("todos.db", &db) != sqlite.SQLITE_OK:
         return 1

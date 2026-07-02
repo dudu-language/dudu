@@ -414,7 +414,7 @@ diagnostic hover remains an editor presentation task.
 
 For imported native code:
 
-- `import c "SDL3/SDL.h"` and `import cpp <vector>` should produce navigable
+- `from c import SDL3/SDL.h` and `from cpp import vector` should produce navigable
   native symbols when the scanner has source locations
 - clicking a C function, macro, enum constant, struct type, typedef, C++ class,
   namespace, method, field, constructor, or overload should jump to the header

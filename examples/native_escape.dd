@@ -1,6 +1,6 @@
 # Native C++ escape hatch for platform-specific code.
 
-import cpp "immintrin.h" as simd
+from cpp import immintrin.h as simd
 
 
 @inline

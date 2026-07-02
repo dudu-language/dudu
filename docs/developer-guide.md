@@ -99,9 +99,9 @@ libs = ["raylib"]
 ```
 
 Manifest paths are resolved from the directory containing `dudu.toml`, not from
-the shell's current working directory. Explicit local imports such as
-`import "./math.dd"` or `import cpp "./local.hpp"` remain relative to the source
-file that contains the import.
+the shell's current working directory. Explicit local native path imports such
+as `from cpp.path import local.hpp` remain relative to the source file that
+contains the import.
 
 Project manifests can also define named targets:
 

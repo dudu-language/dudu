@@ -545,7 +545,7 @@ class MulNode(GradNode):
 ### Imported C++ Base
 
 ```python
-import cpp "widgets.hpp" as widgets
+from cpp.path import widgets.hpp as widgets
 
 class Button(widgets.Widget):
     @override

@@ -6,7 +6,7 @@ binding files.
 This works at C++ emission time:
 
 ```python
-import c "SDL3/SDL.h" as sdl
+from c import SDL3/SDL.h as sdl
 ```
 
 The generated C++ includes `SDL3/SDL.h`, and expression lowering turns
@@ -28,10 +28,10 @@ predeclare every imported type by hand.
 This should typecheck without manual declarations:
 
 ```python
-import c "SDL3/SDL.h" as sdl
+from c import SDL3/SDL.h as sdl
 
 def pump_events() -> bool:
-    event: SDL_Event
+    event: sdl.SDL_Event
     while sdl.SDL_PollEvent(&event):
         if event.type == sdl.SDL_EVENT_QUIT:
             return False
@@ -61,7 +61,7 @@ include: discovered names enter the current Dudu module directly.
 Dear ImGui is the motivating case:
 
 ```python
-import cpp "imgui.h"
+from cpp.path import imgui.h
 
 def init_imgui():
     IMGUI_CHECKVERSION()
@@ -81,15 +81,15 @@ void init_imgui() {
 }
 ```
 
-Dudu should not require both `import c "imgui.h" as imgui` and
-`import cpp "imgui.h" as ImGui` for the same header. The scanner should attach
+Dudu should not require both `from c.path import imgui.h as imgui` and
+`from cpp.path import imgui.h as ImGui` for the same header. The scanner should attach
 object-like macros, global values/functions, and C++ namespaces to the same
 imported header model.
 
 `as` is still useful when the user wants hygiene:
 
 ```python
-import cpp "windows.h" as win
+from cpp.path import windows.h as win
 
 win.CreateWindowExA(...)
 ```
@@ -124,7 +124,7 @@ Suggested diagnostic:
 
 ```text
 dudu: src/main.dd:7:12: native header awareness requires clang tooling
-  import c "SDL3/SDL.h" as sdl
+  from c import SDL3/SDL.h as sdl
   install clang/libclang, or declare an explicit escape hatch:
       type SDL_Event
 ```
@@ -156,7 +156,8 @@ src/dudu/native/native_header_cache.cpp
 
 The scanner input should include:
 
-- header spelling from `import c "..." as name` and `import cpp "..." as name`
+- header spelling from `from c import ... as name` and
+  `from cpp import ... as name`
 - import kind, C or C++
 - include directories from `dudu.toml`
 - defines and compile flags from `dudu.toml`
@@ -360,7 +361,7 @@ Examples:
 
 ```text
 dudu: src/main.dd:1:10: could not scan native header SDL3/SDL.h
-  import c "SDL3/SDL.h" as sdl
+  from c import SDL3/SDL.h as sdl
 clang++: fatal error: 'SDL3/SDL.h' file not found
 hint: add include_dirs or pkg_config packages in dudu.toml
 ```

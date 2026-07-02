@@ -9,9 +9,10 @@ Core forms:
 - `import`
 - `import module.path as alias`
 - `from module.path import Name`
-- `import c "header.h" as alias`
-- `import cxx "header.h" as alias`
-- `import cpp "header.hpp" as alias`
+- `from c import header.h as alias`
+- `from cxx import header.h as alias`
+- `from cpp import header.hpp as alias`
+- `from cpp.path import vendor/header.hpp as alias`
 - `class`
 - `enum`
 - `type Name = Type`

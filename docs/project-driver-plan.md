@@ -170,9 +170,10 @@ Target decisions:
 Path resolution:
 
 - `dudu.toml` paths are relative to the directory containing that manifest.
-- Explicit local Dudu and native imports such as `import "./math.dd"` and
-  `import cpp "./local.hpp"` are relative to the source file that wrote them.
-- Native/system imports such as `import cpp "raylib.h"` search configured
+- Explicit local Dudu and native imports such as `import math` and
+  `from cpp.path import local.hpp` are relative to the source file that wrote
+  them.
+- Native/system imports such as `from cpp import raylib.h` search configured
   include paths, pkg-config include paths, and toolchain include paths.
 - Running `dudu` from another working directory must not change behavior when
   it finds the same manifest.

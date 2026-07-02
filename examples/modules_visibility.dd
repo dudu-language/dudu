@@ -1,6 +1,6 @@
 # Header visibility and generated C++ API shape.
 
-import cpp "cmath" as std
+from cpp import cmath
 
 
 class Camera:

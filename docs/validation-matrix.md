@@ -61,9 +61,17 @@ The public example set is:
 - `dudu init hello && cd hello && dudu run`
 - C/C++ native import smoke through fixtures and examples
 - SDL/raylib examples when those packages are installed
+- `examples/` through `./scripts/test_examples.sh`
 - `/home/vega/Coding/Graphics/raymarch-dd`
 - `/home/vega/Coding/Web/dudu-webserver`
 - `/home/vega/Coding/ML/dudu-datascience`
+
+`scripts/test_examples.sh` checks that public examples use current language
+syntax and validates optional native packages when present. Missing optional
+packages are reported as skips, not failures. The examples should prefer
+canonical native imports such as `from cpp import thread`,
+`from c import SDL3/SDL.h`, and `from cpp.path import vendor/foo.hpp as foo`;
+old `import cpp "..."` / fake `as std` forms should not reappear.
 
 Run local dogfood checks with:
 

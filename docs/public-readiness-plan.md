@@ -328,6 +328,17 @@ suite, editor/LSP checks, optional native probes, dogfood checks, numeric stack
 checks, and release-candidate checks. `scripts/test_dependencies.sh` covers the
 public Dudu source dependency path with a local path package, a local Git
 package, logical imports, and lockfile stability without requiring network.
+Public examples have been migrated to the canonical Python-shaped native import
+syntax from [Import Semantics](import_semantics.md), including `.path` imports
+for local/vendor headers and unaliased `from cpp import thread`-style C++
+standard-library imports. `scripts/test_examples.sh` validates the public
+example set and skips optional native packages clearly when they are not
+installed. Native alias codegen now distinguishes C tag types from typedef
+aliases, so examples such as `from c import sys/stat.h as stat` can write
+`stat.stat` and still emit `struct stat`, while typedef aliases keep their
+typedef spelling. The OpenCV image example intentionally uses API-level OpenCV
+interop (`cv.cvtColor`, `cv.Canny`, `cv.bitwise_not`) instead of wrapper
+headers or unsupported direct native template field writes.
 
 ## Execution Order
 

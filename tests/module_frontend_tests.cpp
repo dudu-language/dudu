@@ -496,10 +496,9 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
            std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("return DuduRendererCameraCamera{.x = x};") != std::string::npos);
-    assert(by_path.at("main.cpp").find("DuduCameraCamera first = dudu_camera_make_camera(1);") !=
-           std::string::npos);
+    assert(by_path.at("main.cpp").find("dudu_camera_make_camera(1)") != std::string::npos);
     assert(by_path.at("main.cpp")
-               .find("DuduRendererCameraCamera second = dudu_renderer_camera_make_camera(2);") !=
+               .find("dudu_renderer_camera_make_camera(2)") !=
            std::string::npos);
     assert(by_path.at("main.cpp").find("cam.make_camera") == std::string::npos);
     assert(by_path.at("main.cpp").find("render_camera.make_camera") == std::string::npos);

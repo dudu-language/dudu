@@ -1,6 +1,6 @@
 # FFmpeg allocation/cleanup probe.
 
-import c "libavcodec/packet.h"
+from c import libavcodec/packet.h
 
 
 def main() -> i32:

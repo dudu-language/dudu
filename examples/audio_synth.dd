@@ -1,7 +1,7 @@
 # Realtime audio callback style code.
 
-import c "raylib.h" as rl
-import cpp "cmath" as std
+from c import raylib.h as rl
+from cpp import cmath
 
 
 SAMPLE_RATE: f32 = 48000.0

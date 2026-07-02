@@ -137,6 +137,14 @@ std::optional<std::string> strip_native_alias_prefix(const std::string& name,
     return std::nullopt;
 }
 
+std::string native_alias_emit_name(const NativeTypeDecl& type, const std::string& stripped_name) {
+    if (type.native_spelling.starts_with("struct ") || type.native_spelling.starts_with("union ") ||
+        type.native_spelling.starts_with("enum ")) {
+        return type.native_spelling;
+    }
+    return stripped_name;
+}
+
 void add_native_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
     const std::vector<std::string> aliases = stripped_alias_prefixes(unit);
     if (aliases.empty()) {
@@ -144,7 +152,7 @@ void add_native_generated_names(CppEmitOptions& options, const ModuleAst& unit) 
     }
     for (const NativeTypeDecl& type : unit.native_types) {
         if (const auto name = strip_native_alias_prefix(type.name, aliases)) {
-            options.generated_type_names[type.name] = *name;
+            options.generated_type_names[type.name] = native_alias_emit_name(type, *name);
         }
     }
     for (const ClassDecl& klass : unit.native_classes) {
