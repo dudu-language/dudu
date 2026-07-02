@@ -131,9 +131,15 @@ Acceptance:
 
 - sample user project imports `ndad` normally and runs CPU-only tensor code
 - optional backend sample imports `ndad.backends.openblas` and runs matmul
-- optional backend sample imports `ndad.backends.opencl` only when OpenCL is
-  available
+- optional OpenCL sample stays isolated from CPU-only `ndad` imports until
+  Dudu has clean extension-module boundaries for backend-specific methods
 - no user-facing example needs native helper headers
+
+Status: `/home/vega/Coding/ML/dudu-datascience` now bottles the CPU/OpenBLAS
+surface as `ndad`, keeps OpenCL in the older optional `dudu_tensor` target, and
+documents the pending `mald` autograd layer. `dudu run --timings` and
+`./scripts/check_target_api.sh` passed on 2026-07-02 after installing the
+current Dudu checkout.
 
 ## 3. Improve Tensor/Generic Editor Intelligence
 

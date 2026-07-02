@@ -311,6 +311,13 @@ This bottling step is worthwhile even if the first package is small. It proves
 that Dudu can support serious library abstraction instead of making every user
 see the native/backend glue.
 
+Status: `/home/vega/Coding/ML/dudu-datascience` now has a package-shaped
+`src/ndad.dd` plus `src/ndad/backends.dd` for the CPU/OpenBLAS tensor surface.
+Default `dudu run` uses `ndad` and links OpenBLAS without OpenCL. The optional
+OpenCL target still uses the older `dudu_tensor` prototype so CPU-only `ndad`
+users do not pull GPU native headers or libraries. The pending autograd target
+now sketches `mald` imports on top of `ndad`.
+
 ## External Baseline
 
 Dudu should feel familiar to people coming from Python numeric code, but it

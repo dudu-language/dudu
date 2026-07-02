@@ -14,9 +14,10 @@ run passed all available non-heavy probes on this machine; `spdlog` remained
 the intentional default skip, and the manual
 `DUDU_PROBE_HEAVY=1` spdlog smoke passed separately.
 
-Last targeted tensor backend probe run: 2026-07-01 with
-`scripts/probe_optional.sh openblas opencl`. OpenBLAS tensor comparison and
-OpenCL tensor add/matmul probes passed locally.
+Last targeted tensor backend probe run: 2026-07-02 with
+`scripts/probe_optional.sh openblas opencl` plus the external
+`dudu-datascience` target API checker. OpenBLAS tensor comparison and OpenCL
+tensor add/matmul probes passed locally.
 
 Last local dogfood run: 2026-07-01 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
@@ -87,7 +88,7 @@ periodically because they catch whole-project friction that small fixtures miss.
 | --- | --- | --- | --- |
 | `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
 | `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
-| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / OpenCL / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, BLAS backend, and OpenCL GPU backend examples. | local dogfood via `scripts/test_dogfood.sh`; target API checker passed on 2026-07-01 |
+| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / OpenCL / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, BLAS backend, and OpenCL GPU backend examples. CPU/OpenBLAS demos import package-shaped `ndad`; optional OpenCL remains isolated in the older `dudu_tensor` target until backend extension modules are cleaner. | local dogfood via `dudu run --timings` and `./scripts/check_target_api.sh`; passed on 2026-07-02 |
 
 ## Planned Matrix Targets
 

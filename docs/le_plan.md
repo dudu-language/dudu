@@ -1335,6 +1335,11 @@ push. They are not release packaging work.
    matmul kernel, device row slicing, and explicit `.cpu()` download.
    `autograd_training.dd` remains explicitly pending for PyTorch-like autograd
    modules, parameters, backward, and optimizers.
+   The same dogfood repo now bottles the CPU/OpenBLAS tensor surface behind
+   `ndad`, keeps OpenCL isolated in the older optional `dudu_tensor` target
+   until extension-module boundaries are cleaner, and sketches the future
+   autograd layer as `mald` on top of `ndad`. Default `dudu run` and
+   `scripts/check_target_api.sh` passed in that repo on 2026-07-02.
    Remaining Dudu-language polish for this numeric stack is not library
    implementation but better compile-time shape arithmetic: symbolic
    dimensions such as `M`, `K`, and `N` already flow through shaped metadata,
