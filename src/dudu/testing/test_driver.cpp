@@ -1,11 +1,12 @@
 #include "dudu/testing/test_driver.hpp"
 
-#include "dudu/project/cmake_backend.hpp"
-#include "dudu/project/cmake_emit.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/file_io.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/project/cmake_backend.hpp"
+#include "dudu/project/cmake_emit.hpp"
 #include "dudu/project/project_config.hpp"
+#include "dudu/project/project_dependencies.hpp"
 #include "dudu/project/project_driver.hpp"
 #include "dudu/project/project_index_cache.hpp"
 
@@ -36,6 +37,9 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
     ProjectConfig config = config_for_input(options.input);
     if (!options.target_name.empty()) {
         config = apply_project_target(std::move(config), options.target_name);
+    }
+    if (options.project_driver) {
+        ensure_project_dependencies(config, false, options.quiet);
     }
     return config;
 }

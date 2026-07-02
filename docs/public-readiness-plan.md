@@ -272,6 +272,15 @@ Acceptance:
 - missing Git, auth failure, bad tag, missing package root, and native dependency
   failure all produce different useful diagnostics
 
+Status: `[deps]` now accepts path and Git source dependencies in
+`dudu.toml`. `dudu deps fetch` resolves dependencies and writes `dudu.lock`;
+`dudu build`, `dudu run`, `dudu check`, `dudu cmake`, and `dudu test` resolve
+missing deps through the project driver before indexing/building. Path deps are
+resolved relative to the manifest, package source roots prefer `src/` when it
+exists, and Dudu imports stay logical, for example
+`from local_math import value`. Git deps clone into `.dudu/deps/<name>`, support
+`rev`, `tag`, or `branch`, and record the resolved commit in the lockfile.
+
 ## 6. Public Example And Validation Matrix
 
 Goal: make the public demo story honest and reproducible.

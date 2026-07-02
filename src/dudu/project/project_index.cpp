@@ -6,6 +6,7 @@
 #include "dudu/parser/parser.hpp"
 #include "dudu/project/module_loader.hpp"
 #include "dudu/project/module_names.hpp"
+#include "dudu/project/project_dependencies.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -114,12 +115,16 @@ ModuleAst load_project_module(const ProjectIndexOptions& options) {
         source_overrides[options.entry_path] = std::string(options.entry_source);
     }
     if (options.allow_module_tree && options.force_module_tree) {
-        return load_source_tree(options.entry_path, source_overrides);
+        return load_source_tree({.entry = options.entry_path,
+                                 .source_overrides = source_overrides,
+                                 .module_roots = dependency_module_roots(options.config)});
     }
     ModuleAst parsed =
         stamp_single_module(parse_source(std::string(options.entry_source), options.entry_path));
     if (options.allow_module_tree && has_dudu_module_imports(parsed)) {
-        return load_source_tree(options.entry_path, source_overrides);
+        return load_source_tree({.entry = options.entry_path,
+                                 .source_overrides = source_overrides,
+                                 .module_roots = dependency_module_roots(options.config)});
     }
     return parsed;
 }

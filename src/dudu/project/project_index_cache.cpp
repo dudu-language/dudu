@@ -18,6 +18,17 @@ void append_values(std::ostringstream& out, const std::vector<std::string>& valu
     }
 }
 
+void append_dependencies(std::ostringstream& out,
+                         const std::map<std::string, ProjectDependency>& dependencies) {
+    out << dependencies.size();
+    for (const auto& [name, dependency] : dependencies) {
+        out << '\0' << name << '\0' << dependency.kind << '\0'
+            << normalized_path_text(dependency.path) << '\0' << dependency.git << '\0'
+            << dependency.rev << '\0' << dependency.tag << '\0' << dependency.branch << '\0'
+            << normalized_path_text(dependency.resolved_root) << '\0' << dependency.resolved_rev;
+    }
+}
+
 std::string fingerprint_config(const ProjectConfig& config) {
     std::ostringstream out;
     out << normalized_path_text(config.project_dir) << '\0'
@@ -35,6 +46,7 @@ std::string fingerprint_config(const ProjectConfig& config) {
     append_values(out, config.link_flags);
     append_values(out, config.pkg_config_packages);
     append_values(out, config.pkg_config_paths);
+    append_dependencies(out, config.dependencies);
     out << normalized_path_text(config.cmake_source) << '\0' << config.cmake_target << '\0'
         << config.cmake_config << '\0' << config.cmake_generator;
     return out.str();
@@ -48,8 +60,8 @@ std::string fingerprint_build_values(const std::map<std::string, std::string>& v
     return out.str();
 }
 
-std::string fingerprint_source_overrides(
-    const std::map<std::filesystem::path, std::string>& source_overrides) {
+std::string
+fingerprint_source_overrides(const std::map<std::filesystem::path, std::string>& source_overrides) {
     std::ostringstream out;
     for (const auto& [path, source] : source_overrides) {
         out << normalized_path_text(path) << '\0' << std::hash<std::string>{}(source) << '\0';

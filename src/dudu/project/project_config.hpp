@@ -24,6 +24,18 @@ struct ProjectTarget {
     std::vector<std::string> pkg_config_paths;
 };
 
+struct ProjectDependency {
+    std::string name;
+    std::string kind;
+    std::filesystem::path path;
+    std::string git;
+    std::string rev;
+    std::string tag;
+    std::string branch;
+    std::filesystem::path resolved_root;
+    std::string resolved_rev;
+};
+
 struct ProjectConfig {
     std::filesystem::path project_dir;
     std::filesystem::path manifest_path;
@@ -37,6 +49,7 @@ struct ProjectConfig {
     std::string bench_command;
     std::string test_command;
     std::map<std::string, ProjectTarget> targets;
+    std::map<std::string, ProjectDependency> dependencies;
     std::map<std::string, std::string> build_values;
     std::string compiler;
     std::vector<std::string> c_sources;

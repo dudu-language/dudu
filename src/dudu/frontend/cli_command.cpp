@@ -1,16 +1,17 @@
 #include "dudu/frontend/cli_command.hpp"
 
-#include "dudu/frontend/cli_options.hpp"
-#include "dudu/project/cmake_backend.hpp"
-#include "dudu/project/cmake_emit.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/core/file_io.hpp"
 #include "dudu/format/format_path.hpp"
+#include "dudu/frontend/cli_options.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/native/native_header_cache.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/project/cmake_backend.hpp"
+#include "dudu/project/cmake_emit.hpp"
 #include "dudu/project/project_config.hpp"
+#include "dudu/project/project_dependencies.hpp"
 #include "dudu/project/project_driver.hpp"
 #include "dudu/project/project_index_cache.hpp"
 #include "dudu/sema/sema.hpp"
@@ -138,6 +139,9 @@ ProjectConfig config_for_options(const CliOptions& options) {
     ProjectConfig config = config_for_input(options.input);
     if (!options.target_name.empty()) {
         config = apply_project_target(std::move(config), options.target_name);
+    }
+    if (options.project_driver) {
+        ensure_project_dependencies(config, false, options.quiet);
     }
     return config;
 }
@@ -327,6 +331,15 @@ int run_run_command(const CliOptions& options, char* executable) {
     return std::system(run_command.c_str()) == 0 ? 0 : 1;
 }
 
+int run_deps_fetch_command(const CliOptions& options) {
+    const std::filesystem::path root =
+        options.input.empty() ? std::filesystem::path(".") : options.input;
+    ProjectConfig config = parse_project_config(build_config_path(root));
+    ensure_project_dependencies(config, true, options.quiet);
+    print_project_step(options.project_driver && !options.quiet, "deps", "fetched");
+    return 0;
+}
+
 } // namespace
 
 int run_cli(int argc, char** argv) {
@@ -364,6 +377,9 @@ int run_cli(int argc, char** argv) {
             std::cerr << "clean-cache " << cleaned.string() << '\n';
         }
         return 0;
+    }
+    if (options.deps_fetch) {
+        return run_deps_fetch_command(options);
     }
     if (options.test) {
         return run_project_tests({.input = options.input,

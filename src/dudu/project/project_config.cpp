@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -139,6 +140,94 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
         start = cursor + 1;
     }
     return out;
+}
+
+std::map<std::string, std::string> parse_inline_table(const std::filesystem::path& path,
+                                                      const std::string& line, std::string value) {
+    value = trim_copy(std::move(value));
+    if (value.size() < 2 || value.front() != '{' || value.back() != '}') {
+        fail(path, "invalid inline table", line);
+    }
+    value = value.substr(1, value.size() - 2);
+    std::map<std::string, std::string> out;
+    size_t start = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t cursor = 0; cursor <= value.size(); ++cursor) {
+        const char c = cursor < value.size() ? value[cursor] : ',';
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c != ',') {
+            continue;
+        }
+        const std::string item = trim_copy(value.substr(start, cursor - start));
+        if (!item.empty()) {
+            const size_t equal = item.find('=');
+            if (equal == std::string::npos || equal == 0) {
+                fail(path, "invalid inline table entry", line);
+            }
+            const std::string key = trim_copy(std::string_view(item).substr(0, equal));
+            if (key.empty() || out.contains(key)) {
+                fail(path, "invalid inline table key", line);
+            }
+            out[key] = unquote(path, line, trim_copy(std::string_view(item).substr(equal + 1)));
+        }
+        start = cursor + 1;
+    }
+    return out;
+}
+
+ProjectDependency parse_dependency(const std::filesystem::path& path, const std::string& line,
+                                   const std::string& name, const std::string& value) {
+    if (name.empty()) {
+        fail(path, "invalid dependency name", line);
+    }
+    const std::map<std::string, std::string> fields = parse_inline_table(path, line, value);
+    ProjectDependency dependency;
+    dependency.name = name;
+    for (const auto& [key, field_value] : fields) {
+        if (key == "path") {
+            dependency.path = field_value;
+        } else if (key == "git") {
+            dependency.git = field_value;
+        } else if (key == "rev") {
+            dependency.rev = field_value;
+        } else if (key == "tag") {
+            dependency.tag = field_value;
+        } else if (key == "branch") {
+            dependency.branch = field_value;
+        } else {
+            fail(path, "unknown dependency field '" + key + "'", line);
+        }
+    }
+    const bool has_path = !dependency.path.empty();
+    const bool has_git = !dependency.git.empty();
+    if (has_path == has_git) {
+        fail(path, "dependency must specify exactly one of path or git", line);
+    }
+    if (has_path &&
+        (!dependency.rev.empty() || !dependency.tag.empty() || !dependency.branch.empty())) {
+        fail(path, "path dependency cannot specify rev, tag, or branch", line);
+    }
+    const int git_ref_count = (dependency.rev.empty() ? 0 : 1) + (dependency.tag.empty() ? 0 : 1) +
+                              (dependency.branch.empty() ? 0 : 1);
+    if (git_ref_count > 1) {
+        fail(path, "git dependency can specify only one of rev, tag, or branch", line);
+    }
+    dependency.kind = has_path ? "path" : "git";
+    return dependency;
 }
 
 void validate_one_of(const std::filesystem::path& path, const std::string& line,
@@ -364,6 +453,9 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.pkg_config_packages = parse_string_array(path, line, value);
         } else if ((section == "pkg_config" || section == "pkg") && name == "paths") {
             config.pkg_config_paths = parse_string_array(path, line, value);
+        } else if (section == "deps") {
+            ProjectDependency dependency = parse_dependency(path, line, name, value);
+            config.dependencies[dependency.name] = std::move(dependency);
         } else if (section == "build" && name == "dir") {
             config.build_dir = unquote(path, line, value);
         } else if (section == "build" && name == "backend") {

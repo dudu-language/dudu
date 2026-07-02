@@ -1,12 +1,14 @@
 #include "dudu/frontend/cli_options.hpp"
 #include "dudu/project/cmake_emit.hpp"
 #include "dudu/project/project_config.hpp"
+#include "dudu/project/project_dependencies.hpp"
 
 #include <cassert>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <vector>
 
 namespace {
@@ -18,6 +20,14 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
         throw std::runtime_error("could not write " + path.string());
     }
     out << text;
+}
+
+std::string read_text(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    if (!in) {
+        throw std::runtime_error("could not read " + path.string());
+    }
+    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
 }
 
 std::vector<char*> argv_for(std::vector<std::string>& args) {
@@ -50,6 +60,48 @@ void test_manifest_relative_paths(const std::filesystem::path& root) {
            std::filesystem::absolute(project / "dudu.toml").lexically_normal());
     assert(dudu::project_path(config, "third_party/include").lexically_normal() ==
            (project / "third_party/include").lexically_normal());
+}
+
+void test_project_dependency_manifest_and_lockfile(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-deps";
+    const std::filesystem::path dependency = root / "build" / "project-config-deps-local";
+    std::filesystem::remove_all(project);
+    std::filesystem::remove_all(dependency);
+    write_text(project / "dudu.toml", "name = \"deps_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[deps]\n"
+                                      "local_math = { path = \"../project-config-deps-local\" }\n");
+    write_text(project / "src" / "main.dd", "from local_math import value\n");
+    write_text(dependency / "src" / "local_math.dd", "def value() -> i32:\n"
+                                                     "    return 4\n");
+
+    dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
+    assert(config.dependencies.size() == 1);
+    assert(config.dependencies.at("local_math").kind == "path");
+    assert(config.dependencies.at("local_math").path == "../project-config-deps-local");
+    const std::map<std::string, std::filesystem::path> roots =
+        dudu::dependency_module_roots(config);
+    assert(roots.at("local_math").lexically_normal() == (dependency / "src").lexically_normal());
+
+    dudu::ensure_project_dependencies(config, false, true);
+    const std::string lock = read_text(project / "dudu.lock");
+    assert(lock.find("name = \"local_math\"") != std::string::npos);
+    assert(lock.find("kind = \"path\"") != std::string::npos);
+
+    write_text(project / "dudu.toml",
+               "name = \"deps_probe\"\n"
+               "\n"
+               "[deps]\n"
+               "bad = { path = \"x\", git = \"https://example.invalid/x\" }\n");
+    bool rejected = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        rejected =
+            std::string(error.what()).find("exactly one of path or git") != std::string::npos;
+    }
+    assert(rejected);
 }
 
 void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
@@ -300,6 +352,7 @@ void test_project_driver_command_defaults(const std::filesystem::path& root) {
 int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
+        test_project_dependency_manifest_and_lockfile(DUDU_REPO_ROOT);
         test_cmake_emit_depends_on_manifest(DUDU_REPO_ROOT);
         test_cmake_project_config(DUDU_REPO_ROOT);
         test_quoted_manifest_strings(DUDU_REPO_ROOT);

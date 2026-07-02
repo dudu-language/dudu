@@ -23,6 +23,7 @@ struct CliOptions {
     bool clean = false;
     bool clean_cache = false;
     bool cmake = false;
+    bool deps_fetch = false;
     bool emit_cpp = false;
     bool emit_modules = false;
     bool emit_test_modules = false;

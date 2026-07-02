@@ -114,6 +114,10 @@ std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& c
     std::vector<std::filesystem::path> files = index.source_files();
     if (!config.manifest_path.empty() && std::filesystem::exists(config.manifest_path)) {
         files.push_back(config.manifest_path);
+        const std::filesystem::path lock = config.manifest_path.parent_path() / "dudu.lock";
+        if (std::filesystem::exists(lock)) {
+            files.push_back(lock);
+        }
     }
     return files;
 }

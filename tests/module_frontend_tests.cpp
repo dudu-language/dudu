@@ -1,15 +1,15 @@
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/format/format_path.hpp"
-#include "dudu/parser/lexer.hpp"
-#include "dudu/project/module_loader.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema.hpp"
@@ -142,8 +142,8 @@ void test_module_loader_rejects_duplicate_from_aliases() {
 }
 
 void test_project_index_records_module_graph() {
-    const std::filesystem::path root = std::filesystem::path(DUDU_REPO_ROOT) / "tests" /
-                                       "fixtures" / "project_import_metadata";
+    const std::filesystem::path root =
+        std::filesystem::path(DUDU_REPO_ROOT) / "tests" / "fixtures" / "project_import_metadata";
     const std::filesystem::path entry = root / "main.dd";
     dudu::ProjectIndexOptions options;
     options.entry_path = entry;
@@ -188,6 +188,48 @@ void test_project_index_records_module_graph() {
     assert((main_affected == std::vector<std::string>{"main"}));
 }
 
+void test_project_index_resolves_path_dependency_modules() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_path_dependency_module_test";
+    std::filesystem::remove_all(dir);
+    const std::filesystem::path app = dir / "app";
+    const std::filesystem::path dependency = dir / "local_math";
+    std::filesystem::create_directories(app / "src");
+    std::filesystem::create_directories(dependency / "src");
+    write_file(app / "dudu.toml", "name = \"app\"\n"
+                                  "entry = \"src/main.dd\"\n"
+                                  "\n"
+                                  "[deps]\n"
+                                  "local_math = { path = \"../local_math\" }\n");
+    write_file(app / "src" / "main.dd", "from local_math import value\n"
+                                        "\n"
+                                        "def main() -> i32:\n"
+                                        "    return value()\n");
+    write_file(dependency / "src" / "local_math.dd", "def value() -> i32:\n"
+                                                     "    return 42\n");
+
+    dudu::ProjectIndexOptions options;
+    options.entry_path = app / "src" / "main.dd";
+    options.config = dudu::parse_project_config(app / "dudu.toml");
+    options.source_dir = app / "src";
+    options.force_module_tree = true;
+    options.include_native_headers = false;
+    options.check_semantics = true;
+    options.semantic_options = {.check_bodies = true};
+
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.modules().size() == 2);
+    const dudu::ProjectModuleSummary* local_math = index.summary_for_module("local_math");
+    const dudu::ProjectModuleSummary* main = index.summary_for_module("main");
+    assert(local_math != nullptr);
+    assert(main != nullptr);
+    assert(local_math->exports.contains("value"));
+    assert(main->dependencies.size() == 1);
+    assert(main->dependencies[0].resolved_module_path == "local_math");
+    assert(std::filesystem::weakly_canonical(main->dependencies[0].source_path) ==
+           std::filesystem::weakly_canonical(dependency / "src" / "local_math.dd"));
+}
+
 void test_project_index_source_stamps_detect_changed_modules() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_project_index_stamps_test";
@@ -220,10 +262,8 @@ void test_project_index_source_stamps_detect_changed_modules() {
     write_file(dependency, "def value() -> i32:\n"
                            "    return 2\n");
     std::error_code error;
-    std::filesystem::last_write_time(dependency,
-                                     std::filesystem::file_time_type::clock::now() +
-                                         std::chrono::seconds(5),
-                                     error);
+    std::filesystem::last_write_time(
+        dependency, std::filesystem::file_time_type::clock::now() + std::chrono::seconds(5), error);
     assert(!error);
     assert(!index.source_stamps_current());
 
@@ -533,6 +573,7 @@ int main() {
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
         test_project_index_records_module_graph();
+        test_project_index_resolves_path_dependency_modules();
         test_project_index_source_stamps_detect_changed_modules();
         test_selected_module_analysis_falls_back_when_paths_miss();
         test_merged_output_rejects_same_named_module_declarations();

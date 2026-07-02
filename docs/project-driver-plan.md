@@ -389,6 +389,29 @@ Near-term alternative if this is not implemented yet:
 That is acceptable for dogfood, but it is not a good long-term story for a
 language people should be able to try quickly.
 
+Status: the first dependency bootstrap is implemented. `dudu.toml` supports:
+
+```toml
+[deps]
+local_math = { path = "../local_math" }
+ndad = { git = "https://github.com/wegfawefgawefg/ndad.git", tag = "v0.1.0" }
+```
+
+`dudu deps fetch` resolves deps and writes `dudu.lock`. Normal project-driver
+commands resolve missing deps before indexing/building. Source imports remain
+logical:
+
+```python
+from local_math import value
+from ndad import Tensor
+```
+
+Path deps resolve relative to the manifest. Git deps are cloned under
+`.dudu/deps/<name>` and pin the resolved commit in `dudu.lock`; the cache
+directory is ignored, while the lockfile is intentionally not ignored. Native
+C/C++ dependencies still belong to CMake/pkg-config/system/vendor setup, not
+the Dudu source dependency lockfile.
+
 ## Build Backends
 
 `dudu build`, `dudu run`, and `dudu test` are the stable front door for Dudu

@@ -56,6 +56,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     } else if (argc > 1 && std::string(argv[1]) == "cmake") {
         options.cmake = true;
         first_arg = 2;
+    } else if (project_driver && argc > 2 && std::string(argv[1]) == "deps" &&
+               std::string(argv[2]) == "fetch") {
+        options.deps_fetch = true;
+        first_arg = 3;
     } else if (argc > 1 && std::string(argv[1]) == "emit") {
         options.emit_cpp = true;
         first_arg = 2;
@@ -220,8 +224,8 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     const bool project_format_default = options.project_driver && options.format;
     if (options.input.empty() && !project_format_default && !options.bench && !options.build &&
         !options.check && !options.clean && !options.clean_cache && !options.cmake &&
-        !options.emit_cpp && !options.emit_modules && !options.init_project &&
-        !options.new_project && !options.run && !options.test) {
+        !options.deps_fetch && !options.emit_cpp && !options.emit_modules &&
+        !options.init_project && !options.new_project && !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
@@ -229,7 +233,7 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
 
 CliOptions resolve_project_input(CliOptions options) {
     if (options.bench || options.clean || options.clean_cache || options.init_project ||
-        options.new_project || options.test) {
+        options.new_project || options.test || options.deps_fetch) {
         return options;
     }
     if (options.project_driver && options.format && options.input.empty()) {

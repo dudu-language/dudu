@@ -1,5 +1,5 @@
 def main() -> i32:
-    value: i32 = 1
+	value: i32 = 1
 
 
     return value
