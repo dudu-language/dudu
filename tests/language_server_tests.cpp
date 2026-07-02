@@ -366,6 +366,23 @@ void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
     assert(hints.find("\"value\":\"dyn\"") != std::string::npos);
 }
 
+void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
+    const dudu::Document doc{.uri = "",
+                             .path = "array_literal_shape_inlay.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    matrix: array[i32] = [\n"
+                                     "        [1, 2, 3],\n"
+                                     "        [10, 20, 30],\n"
+                                     "    ]\n"
+                                     "    col = matrix[:, 1]\n"
+                                     "    return col[1]\n"};
+
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"line\":5") != std::string::npos);
+    assert(hints.find("array_view[i32]") != std::string::npos);
+    assert(hints.find("\": i32\"") == std::string::npos);
+}
+
 void test_lsp_hover_describes_tensor_indexing_builtin_types() {
     const dudu::Document doc{.uri = "",
                              .path = "tensor_index_builtin_hover.dd",
@@ -759,6 +776,7 @@ int main() {
         test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
         test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
+        test_lsp_inlay_hints_use_inferred_array_literal_shapes();
         test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();

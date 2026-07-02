@@ -1,5 +1,6 @@
 #include "dudu/lsp/language_server_inlay_hints.hpp"
 
+#include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_inlay_type_details.hpp"
@@ -132,9 +133,8 @@ std::string parameter_hint_tooltip_json(const Document& doc, const Symbols& symb
     return inlay_tooltip_json(detail);
 }
 
-void add_parameter_hint(std::vector<InlayHint>& hints, const Document& doc,
-                        const Symbols& symbols, const Expr& expr, const std::string& name,
-                        const TypeRef& type) {
+void add_parameter_hint(std::vector<InlayHint>& hints, const Document& doc, const Symbols& symbols,
+                        const Expr& expr, const std::string& name, const TypeRef& type) {
     if (name.empty() || expr.kind == ExprKind::NamedArg) {
         return;
     }
@@ -162,6 +162,18 @@ TypeRef infer_type(FunctionScope& scope, const Expr& expr) {
     } catch (const std::exception&) {
         return {};
     }
+}
+
+TypeRef effective_inlay_var_type(const Stmt& stmt) {
+    if (!has_stmt_type_ref(stmt)) {
+        return {};
+    }
+    const ArrayShapeInference inferred =
+        infer_array_literal_shape_type(stmt_type_ref(stmt), stmt.value_expr);
+    if (inferred.status == ArrayShapeStatus::Inferred) {
+        return inferred.type_ref;
+    }
+    return stmt_type_ref(stmt);
 }
 
 TypeRef unwrap_ref_const(TypeRef type) {
@@ -466,8 +478,8 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
     collect_hints_for_statement_exprs(doc, scope, stmt, options, hints);
 
     if (stmt.kind == StmtKind::VarDecl) {
-        TypeRef type =
-            has_stmt_type_ref(stmt) ? stmt_type_ref(stmt) : infer_type(scope, stmt.value_expr);
+        TypeRef type = has_stmt_type_ref(stmt) ? effective_inlay_var_type(stmt)
+                                               : infer_type(scope, stmt.value_expr);
         if (options.inferred_types &&
             !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
             add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, type);
