@@ -182,7 +182,7 @@ def main() -> i32:
 DD
 (
     cd "$bad_ref_app"
-    expect_failure_contains "checkout --quiet 'tags/definitely_missing_tag'" \
+    expect_failure_contains "could not checkout Git dependency 'gitmath' ref 'tags/definitely_missing_tag'" \
         "$dudu_bin" deps fetch --quiet
 )
 
@@ -201,7 +201,7 @@ def main() -> i32:
 DD
 (
     cd "$bad_git_app"
-    expect_failure_contains "git clone --quiet 'file://$work_root/definitely_missing_git_repo'" \
+    expect_failure_contains "could not clone Git dependency 'ghost' from file://$work_root/definitely_missing_git_repo" \
         "$dudu_bin" deps fetch --quiet
 )
 

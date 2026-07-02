@@ -42,15 +42,20 @@ std::string capture_command(const std::string& command) {
     return trim_newline(std::move(out));
 }
 
-void run_command_or_fail(const std::string& command, bool quiet) {
+void run_command_or_fail(const std::string& command, bool quiet, const std::string& message) {
     const std::string effective = quiet ? command + " >/dev/null 2>&1" : command;
     if (std::system(effective.c_str()) != 0) {
-        fail_dependency("command failed: " + command);
+        fail_dependency(message + "\ncommand: " + command);
     }
 }
 
-std::string git_head_rev(const std::filesystem::path& root) {
-    return capture_command("git -C " + shell_quote_path(root) + " rev-parse HEAD");
+std::string git_head_rev(const ProjectDependency& dependency, const std::filesystem::path& root) {
+    try {
+        return capture_command("git -C " + shell_quote_path(root) + " rev-parse HEAD");
+    } catch (const std::runtime_error& error) {
+        fail_dependency("could not resolve Git dependency '" + dependency.name +
+                        "' commit\n" + error.what());
+    }
 }
 
 std::string requested_git_ref(const ProjectDependency& dependency) {
@@ -72,8 +77,11 @@ void checkout_git_ref(const ProjectDependency& dependency, const std::filesystem
     if (ref.empty()) {
         return;
     }
-    run_command_or_fail(
-        "git -C " + shell_quote_path(root) + " checkout --quiet " + shell_quote_arg(ref), quiet);
+    run_command_or_fail("git -C " + shell_quote_path(root) + " checkout --quiet " +
+                            shell_quote_arg(ref),
+                        quiet,
+                        "could not checkout Git dependency '" + dependency.name + "' ref '" + ref +
+                            "'");
 }
 
 void ensure_git_dependency(ProjectDependency& dependency, const std::filesystem::path& root,
@@ -82,17 +90,20 @@ void ensure_git_dependency(ProjectDependency& dependency, const std::filesystem:
         std::filesystem::create_directories(root.parent_path());
         run_command_or_fail("git clone --quiet " + shell_quote_arg(dependency.git) + " " +
                                 shell_quote_path(root),
-                            quiet);
+                            quiet,
+                            "could not clone Git dependency '" + dependency.name + "' from " +
+                                dependency.git);
         checkout_git_ref(dependency, root, quiet);
     } else {
         if (update) {
             run_command_or_fail("git -C " + shell_quote_path(root) + " fetch --quiet --tags",
-                                quiet);
+                                quiet,
+                                "could not fetch Git dependency '" + dependency.name + "'");
         }
         checkout_git_ref(dependency, root, quiet);
     }
     dependency.resolved_root = root;
-    dependency.resolved_rev = git_head_rev(root);
+    dependency.resolved_rev = git_head_rev(dependency, root);
 }
 
 std::string lock_text(const ProjectConfig& config) {
