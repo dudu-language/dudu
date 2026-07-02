@@ -19,6 +19,13 @@
 namespace dudu {
 namespace {
 
+bool numeric_literal_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Unary && expr.op == "-" && expr.children.size() == 1) {
+        return numeric_literal_expr(expr.children.front());
+    }
+    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
 void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const Expr& expr,
                       const SourceLocation& location, std::string_view mismatch_label) {
     if (expr.kind == ExprKind::Call && has_expr_callee(expr) &&
@@ -167,8 +174,16 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
     }
     const SourceLocation& location = diagnostic_location(stmt.location, stmt_iterable_expr(stmt));
     if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
-        for (const Expr& arg : stmt_iterable_expr(stmt).children) {
-            (void)infer_expr_type_ast(scope, arg, &location);
+        TypeRef inferred;
+        const std::vector<Expr>& args = stmt_iterable_expr(stmt).children;
+        for (const Expr& arg : args) {
+            const TypeRef arg_type = infer_expr_type_ast(scope, arg, &location);
+            if (!numeric_literal_expr(arg) && has_type_ref(arg_type)) {
+                inferred = arg_type;
+            }
+        }
+        if (has_type_ref(inferred)) {
+            return inferred;
         }
         return named_type_ref("i32", location);
     }

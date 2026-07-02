@@ -40,6 +40,31 @@ void emit_cpp_escape(std::ostringstream& out, const Stmt& stmt, int depth,
     }
 }
 
+bool numeric_literal_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Unary && expr.op == "-" && expr.children.size() == 1) {
+        return numeric_literal_expr(expr.children.front());
+    }
+    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
+TypeRef inferred_range_binding_type(const Expr& range_expr,
+                                    const std::map<std::string, TypeRef>& local_type_refs,
+                                    const std::map<std::string, TypeRef>& function_returns,
+                                    const Symbols* symbols) {
+    TypeRef inferred;
+    for (const Expr& arg : range_expr.children) {
+        const TypeRef arg_type =
+            infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols);
+        if (!numeric_literal_expr(arg) && has_type_ref(arg_type)) {
+            inferred = arg_type;
+        }
+    }
+    if (has_type_ref(inferred)) {
+        return inferred;
+    }
+    return named_type_ref("i32", range_expr.location);
+}
+
 void emit_source_comment(std::ostringstream& out, const Stmt& stmt, int depth) {
     out << indent(depth) << "// dudu: " << format_location(stmt.location) << '\n';
 }
@@ -364,6 +389,13 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             local_type_refs[stmt.name] = stmt_type_ref(stmt);
         }
         if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
+            if (!has_stmt_type_ref(stmt)) {
+                const TypeRef inferred =
+                    inferred_range_binding_type(stmt_iterable_expr(stmt), local_type_refs,
+                                                function_returns, symbols);
+                binding_type = lower_cpp_type(inferred, aliases, options);
+                local_type_refs[stmt.name] = inferred;
+            }
             const std::vector<Expr>& args = stmt_iterable_expr(stmt).children;
             const std::string start = args.size() == 1
                                           ? "0"

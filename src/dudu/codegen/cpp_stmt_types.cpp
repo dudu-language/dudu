@@ -22,6 +22,13 @@
 namespace dudu {
 namespace {
 
+bool numeric_literal_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Unary && expr.op == "-" && expr.children.size() == 1) {
+        return numeric_literal_expr(expr.children.front());
+    }
+    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
 std::string receiver_base_type(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Pointer:
@@ -277,8 +284,10 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
 }
 
 bool is_numeric_type(const TypeRef& type) {
-    return type_ref_is_name(type, "i32") || type_ref_is_name(type, "f32") ||
-           type_ref_is_name(type, "f64");
+    return type_ref_is_name(type, "i32") || type_ref_is_name(type, "i64") ||
+           type_ref_is_name(type, "u32") || type_ref_is_name(type, "u64") ||
+           type_ref_is_name(type, "usize") || type_ref_is_name(type, "isize") ||
+           type_ref_is_name(type, "f32") || type_ref_is_name(type, "f64");
 }
 
 TypeRef infer_binary_expr_type_ref(const Expr& expr,
@@ -306,6 +315,12 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
         return right_ref;
     }
     if (!has_type_ref(right_ref) || type_ref_equivalent(left_ref, right_ref)) {
+        return left_ref;
+    }
+    if (numeric_literal_expr(expr.children[0]) && is_numeric_type(right_ref)) {
+        return right_ref;
+    }
+    if (numeric_literal_expr(expr.children[1]) && is_numeric_type(left_ref)) {
         return left_ref;
     }
     if ((type_ref_is_name(left_ref, "f64") || type_ref_is_name(right_ref, "f64")) &&
@@ -338,6 +353,10 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::NoneLiteral:
         return named_type_ref("None", expr.location);
     case ExprKind::Name:
+        if (symbols != nullptr && symbols->generic_params.contains(expr.name) &&
+            !symbols->types.contains(expr.name)) {
+            return named_type_ref("usize", expr.location);
+        }
         return emitted_local_type_ref(local_type_refs, expr.name, expr.location);
     case ExprKind::Unary:
         if (expr.children.size() != 1) {

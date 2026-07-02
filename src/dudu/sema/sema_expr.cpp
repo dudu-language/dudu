@@ -143,7 +143,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (scope.symbols.generic_params.contains(expr.name)) {
             if (!scope.symbols.types.contains(expr.name)) {
-                return named_type_ref("i32", type_location);
+                return named_type_ref("usize", type_location);
             }
             if (location != nullptr) {
                 throw CompileError(*location, "type parameter used as a value: " + expr.name,

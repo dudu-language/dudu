@@ -8,21 +8,13 @@ def apply_conv2d[H, W, K](
     out_h = H - K + 1
     out_w = W - K + 1
 
-    y = 0
-    while y < out_h:
-        x = 0
-        while x < out_w:
+    for y in range(out_h):
+        for x in range(out_w):
             acc: f32 = 0.0
-            ky = 0
-            while ky < K:
-                kx = 0
-                while kx < K:
+            for ky in range(K):
+                for kx in range(K):
                     acc += image[y + ky, x + kx] * kernel[ky, kx]
-                    kx += 1
-                ky += 1
             out[y, x] = acc
-            x += 1
-        y += 1
 
     return out
 
