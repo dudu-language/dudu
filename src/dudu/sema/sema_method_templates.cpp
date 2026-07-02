@@ -1,13 +1,20 @@
 #include "dudu/sema/sema_method_templates.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_context.hpp"
 
 #include <map>
 
 namespace dudu {
 namespace {
+
+void insert_native_placeholder_alias(std::map<std::string, TypeRef>& substitutions,
+                                     const std::string& name, const TypeRef& type) {
+    substitutions.insert_or_assign(name, type);
+    substitutions.insert_or_assign("std." + name, type);
+    substitutions.insert_or_assign("std::" + name, type);
+}
 
 std::map<std::string, TypeRef>
 receiver_template_ref_substitutions(const std::vector<TypeRef>& receiver_args) {
@@ -18,21 +25,21 @@ receiver_template_ref_substitutions(const std::vector<TypeRef>& receiver_args) {
     const TypeRef& first = receiver_args.front();
     for (const char* name :
          {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type", "key_type"}) {
-        substitutions.emplace(name, first);
+        insert_native_placeholder_alias(substitutions, name, first);
     }
     if (receiver_args.size() >= 2) {
         const TypeRef& first_arg = receiver_args[0];
         const TypeRef& second_arg = receiver_args[1];
-        substitutions.insert_or_assign("_Key", first_arg);
-        substitutions.insert_or_assign("_Val", second_arg);
-        substitutions.insert_or_assign("_T1", first_arg);
-        substitutions.insert_or_assign("_T2", second_arg);
-        substitutions.insert_or_assign("_Tp1", first_arg);
-        substitutions.insert_or_assign("_Tp2", second_arg);
-        substitutions.insert_or_assign("_Ty1", first_arg);
-        substitutions.insert_or_assign("_Ty2", second_arg);
-        substitutions.insert_or_assign("mapped_type", second_arg);
-        substitutions.insert_or_assign("key_type", first_arg);
+        insert_native_placeholder_alias(substitutions, "_Key", first_arg);
+        insert_native_placeholder_alias(substitutions, "_Val", second_arg);
+        insert_native_placeholder_alias(substitutions, "_T1", first_arg);
+        insert_native_placeholder_alias(substitutions, "_T2", second_arg);
+        insert_native_placeholder_alias(substitutions, "_Tp1", first_arg);
+        insert_native_placeholder_alias(substitutions, "_Tp2", second_arg);
+        insert_native_placeholder_alias(substitutions, "_Ty1", first_arg);
+        insert_native_placeholder_alias(substitutions, "_Ty2", second_arg);
+        insert_native_placeholder_alias(substitutions, "mapped_type", second_arg);
+        insert_native_placeholder_alias(substitutions, "key_type", first_arg);
     }
     return substitutions;
 }

@@ -1,9 +1,10 @@
 #include "dudu/native/native_signature_substitution.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/type_compat_native.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -171,9 +172,9 @@ std::string collapse_decay_and_strip(std::string type) {
     return type;
 }
 
-std::string replace_native_template_spelling_bindings(
-    std::string type, const NativeTemplateBindings& bindings,
-    const NativePackBindingMap& pack_bindings) {
+std::string replace_native_template_spelling_bindings(std::string type,
+                                                      const NativeTemplateBindings& bindings,
+                                                      const NativePackBindingMap& pack_bindings) {
     for (const auto& [name, args] : pack_bindings) {
         type = replace_native_pack_spelling_binding(std::move(type), name, args);
     }
@@ -308,12 +309,14 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         const TypeRef param_type =
             require_signature_type_ref(signature_param_type_ref(signature, i), "parameter");
-        param_types.push_back(substitute_type_ref(param_type, ref_bindings));
+        param_types.push_back(
+            normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, ref_bindings)));
     }
     set_signature_param_types(signature, std::move(param_types));
     const TypeRef return_type =
         require_signature_type_ref(signature_return_type_ref(signature), "return");
-    set_signature_return_type(signature, substitute_type_ref(return_type, ref_bindings));
+    set_signature_return_type(signature, normalize_cpp_type_artifacts_ref(
+                                             substitute_type_ref(return_type, ref_bindings)));
     return signature;
 }
 
@@ -336,7 +339,8 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
             continue;
         }
         if (structured_substitution_allowed(param_type, bindings)) {
-            params.push_back(substitute_type_ref(param_type, refs));
+            params.push_back(
+                normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, refs)));
             continue;
         }
         params.push_back(substitute_native_spelling_type_ref(param_type, bindings, pack_bindings));
@@ -349,13 +353,15 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         expand_nested_pack_expansions(return_type, pack_bindings, expanded_return_pack);
     if (expanded_return_pack) {
         if (structured_substitution_allowed(expanded_return, bindings)) {
-            expanded_return = substitute_type_ref(expanded_return, refs);
+            expanded_return =
+                normalize_cpp_type_artifacts_ref(substitute_type_ref(expanded_return, refs));
         }
         set_signature_return_type(signature, std::move(expanded_return));
         return signature;
     }
     if (structured_substitution_allowed(return_type, bindings)) {
-        set_signature_return_type(signature, substitute_type_ref(return_type, refs));
+        set_signature_return_type(
+            signature, normalize_cpp_type_artifacts_ref(substitute_type_ref(return_type, refs)));
         return signature;
     }
     set_signature_return_type(
