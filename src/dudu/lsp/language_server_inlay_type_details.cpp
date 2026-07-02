@@ -38,6 +38,30 @@ std::optional<LayoutInfo> primitive_layout(const std::string& name) {
     return std::nullopt;
 }
 
+std::optional<std::string> builtin_type_tooltip(const std::string& name) {
+    if (name == "slice") {
+        return "`slice`\n\nIndex slice value produced by `start:stop[:step]` inside `[]`.";
+    }
+    if (name == "ellipsis") {
+        return "`ellipsis`\n\nIndex item produced by `...` inside `[]`.";
+    }
+    if (name == "new_axis") {
+        return "`new_axis`\n\nIndex item produced by `None` inside `[]`.";
+    }
+    if (name == "scalar_index") {
+        return "`scalar_index`\n\nIndex-category type for scalar integer indices.";
+    }
+    if (name == "basic_index") {
+        return "`basic_index`\n\nIndex-category type for scalar indices, slices, ellipsis, "
+               "and new-axis items.";
+    }
+    if (name == "array_view") {
+        return "`array_view[T]`\n\nRank-independent non-owning view produced by fixed-array "
+               "slicing.";
+    }
+    return std::nullopt;
+}
+
 std::optional<size_t> align_decorator_value(const ClassDecl& klass) {
     for (const Decorator& decorator : klass.decorators) {
         const std::optional<std::string> value = decorator_first_arg_display(decorator, "align");
@@ -166,6 +190,9 @@ std::string type_token_tooltip(const Symbols& symbols, const std::string& name) 
         if (const std::optional<LayoutInfo> layout = primitive_layout(name)) {
             return "`" + name + "`\n\nsize = " + std::to_string(layout->size) +
                    " bytes, align = " + std::to_string(layout->align) + " bytes";
+        }
+        if (const std::optional<std::string> builtin = builtin_type_tooltip(name)) {
+            return *builtin;
         }
         return {};
     }

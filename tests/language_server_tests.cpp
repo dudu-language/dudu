@@ -84,9 +84,8 @@ void test_lsp_index_diagnostic_preserves_candidate_reasons() {
     assert(diags.front().message.find(
                "candidate Choice.by_value(i32) -> i32 rejected: expects 1 arguments, got 2") !=
            std::string::npos);
-    assert(diags.front().message.find(
-               "candidate Choice.by_pair(i32, i32) -> i32 rejected: argument 2 expects i32, got str") !=
-           std::string::npos);
+    assert(diags.front().message.find("candidate Choice.by_pair(i32, i32) -> i32 rejected: "
+                                      "argument 2 expects i32, got str") != std::string::npos);
 }
 
 void test_lsp_block_header_diagnostics_use_extra_token_location() {
@@ -365,6 +364,32 @@ void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
     assert(hints.find("\"location\"") != std::string::npos);
     assert(hints.find("tensor.dd") != std::string::npos);
     assert(hints.find("\"value\":\"dyn\"") != std::string::npos);
+}
+
+void test_lsp_hover_describes_tensor_indexing_builtin_types() {
+    const dudu::Document doc{.uri = "",
+                             .path = "tensor_index_builtin_hover.dd",
+                             .text = "def consume(values: array_view[i32], item: basic_index, "
+                                     "axis: new_axis) -> i32:\n"
+                                     "    return 0\n"};
+
+    dudu::Json array_params =
+        dudu::JsonParser("{\"position\":{\"line\":0,\"character\":22}}").parse();
+    const std::string array_hover = dudu::hover_json(doc, "", &array_params);
+    assert(array_hover.find("type array_view") != std::string::npos);
+    assert(array_hover.find("Rank-independent non-owning view") != std::string::npos);
+
+    dudu::Json basic_params =
+        dudu::JsonParser("{\"position\":{\"line\":0,\"character\":45}}").parse();
+    const std::string basic_hover = dudu::hover_json(doc, "", &basic_params);
+    assert(basic_hover.find("type basic_index") != std::string::npos);
+    assert(basic_hover.find("scalar indices, slices, ellipsis, and new-axis") != std::string::npos);
+
+    dudu::Json new_axis_params =
+        dudu::JsonParser("{\"position\":{\"line\":0,\"character\":64}}").parse();
+    const std::string new_axis_hover = dudu::hover_json(doc, "", &new_axis_params);
+    assert(new_axis_hover.find("type new_axis") != std::string::npos);
+    assert(new_axis_hover.find("produced by `None` inside `[]`") != std::string::npos);
 }
 
 void test_lsp_signature_help_uses_visible_imported_functions() {
@@ -734,6 +759,7 @@ int main() {
         test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
         test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
+        test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_inlay_hints_include_native_parameter_names();

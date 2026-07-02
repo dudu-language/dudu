@@ -83,6 +83,16 @@ std::optional<std::string> primitive_hover_json(const std::string& word) {
         {"str", {"std::string", "Owned UTF-8 string value."}},
         {"None", {"std::nullptr_t", "Null pointer value."}},
         {"slice", {"dudu::Slice", "Index slice value used by library-defined indexing hooks."}},
+        {"ellipsis", {"dudu::Ellipsis", "Index item produced by `...` inside `[]`."}},
+        {"new_axis", {"dudu::NewAxis", "Index item produced by `None` inside `[]`."}},
+        {"scalar_index",
+         {"dudu::ScalarIndex",
+          "Index-category type accepted by variadic `@operator(\"[]\")` hooks for scalar "
+          "integer indices."}},
+        {"basic_index",
+         {"dudu::BasicIndex",
+          "Index-category type accepted by variadic `@operator(\"[]\")` hooks for scalar "
+          "indices, slices, ellipsis, and new-axis items."}},
         {"list", {"std::vector<T>", "Dynamic owning contiguous list. Use `list[T]`."}},
         {"dict", {"std::unordered_map<K, V>", "Dynamic hash map. Use `dict[K, V]`."}},
         {"set", {"std::unordered_set<T>", "Dynamic hash set. Use `set[T]`."}},
@@ -95,6 +105,10 @@ std::optional<std::string> primitive_hover_json(const std::string& word) {
           "Fixed-shape contiguous array. Use `array[T][shape]`, or `array[T] = literal` "
           "when the shape can be inferred."}},
         {"span", {"std::span<T>", "Non-owning contiguous view. Use `span[T]`."}},
+        {"array_view",
+         {"dudu::ArrayView<T>",
+          "Rank-independent non-owning view produced by fixed-array slicing. Use "
+          "`array_view[T]` for helpers that consume `array[T][...]` slices without copying."}},
     };
     const auto found = primitives.find(word);
     if (found == primitives.end()) {
