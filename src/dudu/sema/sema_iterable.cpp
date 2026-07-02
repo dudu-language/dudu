@@ -35,6 +35,9 @@ std::optional<TypeRef> fixed_array_element_type_ref(const TypeRef& type) {
 }
 
 std::optional<TypeRef> single_template_child_type_ref(const TypeRef& type, std::string_view name) {
+    if (type.kind == TypeKind::Shaped && !type.children.empty()) {
+        return single_template_child_type_ref(type.children.front(), name);
+    }
     if (type.kind == TypeKind::Template && type.name == name && type.children.size() == 1) {
         return type.children.front();
     }

@@ -114,7 +114,10 @@ language type.
 Rules:
 
 - all scalar indices produce an element or lower-rank fixed array reference
-- any slice item produces an `array_view[T]`
+- any slice, `...`, or index-position `None` item produces an
+  `array_view[T][result_shape]` when the source shape is known
+- unknown source dimensions or non-literal slice bounds become `dyn` for that
+  result dimension only; they do not erase the whole shape
 - shape, stride, and offset computation is rank-independent
 - no compiler path may be specific to rows/columns/channels/images
 
@@ -123,17 +126,23 @@ Valid examples:
 ```python
 matrix: array[f32][4, 4]
 value = matrix[y, x]
-row = matrix[y, :]
-patch = matrix[y0:y1, x0:x1]
+row = matrix[y, :]          # array_view[f32][4]
+col = matrix[:, x]          # array_view[f32][4]
+patch = matrix[1:3, 0:2]    # array_view[f32][2, 2]
+expanded = matrix[:, None, x] # array_view[f32][4, 1]
+same = matrix[...]          # array_view[f32][4, 4]
 
 image: array[u8][480, 640, 4]
-rgb = image[y, x, 0:3]
-red = image[:, :, 0]
+rgb = image[y, x, 0:3]      # array_view[u8][3]
+red = image[:, :, 0]        # array_view[u8][480, 640]
 ```
 
 The implementation must use one generic shape/stride/view builder for all
 ranks. Separate compiler branches such as "row slice", "column slice",
 "rank-3 channel slice", or "rank-4 tensor slab" are architecture bugs.
+The LSP inlay and hover layers should surface the same result shape that sema
+uses, so `col = matrix[:, 1]` should display `col: array_view[i32][rows]`, not
+plain `array_view[i32]` or the source matrix shape.
 
 ### Library Types
 

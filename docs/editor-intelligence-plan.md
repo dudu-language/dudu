@@ -364,6 +364,23 @@ hints should use the same standard LSP inlay-hint mechanism as other Dudu
 hints, including hoverable/clickable label parts where the tensor type or
 symbolic dimension is resolvable.
 
+Built-in fixed-array views are part of the same contract. When sema derives a
+view shape, inlays should show the result shape:
+
+```python
+matrix: array[i32] = [
+    [1, 2, 3, 4],
+    [10, 20, 30, 40],
+    [100, 200, 300, 400],
+]
+
+row = matrix[1, :]       # row: array_view[i32][4]
+col = matrix[:, 1]       # col: array_view[i32][3]
+patch = matrix[1:3, 2:4] # patch: array_view[i32][2, 2]
+expanded = matrix[:, None, 1] # expanded: array_view[i32][3, 1]
+same = matrix[...]       # same: array_view[i32][3, 4]
+```
+
 Shape-aware LSP is mostly plumbing from semantic facts into hover/inlay display,
 but it must not be hand-authored for tensor names. A user library such as
 `ndad`, `mald`, `ddtorch`, or an unrelated graphics math package should get the

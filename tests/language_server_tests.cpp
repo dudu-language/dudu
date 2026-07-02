@@ -371,15 +371,29 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
                              .path = "array_literal_shape_inlay.dd",
                              .text = "def main() -> i32:\n"
                                      "    matrix: array[i32] = [\n"
-                                     "        [1, 2, 3],\n"
-                                     "        [10, 20, 30],\n"
+                                     "        [1, 2, 3, 4],\n"
+                                     "        [10, 20, 30, 40],\n"
+                                     "        [100, 200, 300, 400],\n"
                                      "    ]\n"
                                      "    col = matrix[:, 1]\n"
-                                     "    return col[1]\n"};
+                                     "    row = matrix[1, :]\n"
+                                     "    patch = matrix[1:3, 2:4]\n"
+                                     "    expanded = matrix[:, None, 1]\n"
+                                     "    same = matrix[...]\n"
+                                     "    return col[1] + row[2] + patch[1, 0] + expanded[2, 0] + "
+                                     "same[2, 3]\n"};
 
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
-    assert(hints.find("\"line\":5") != std::string::npos);
-    assert(hints.find("array_view[i32]") != std::string::npos);
+    assert(hints.find("\"line\":6") != std::string::npos);
+    assert(hints.find("\"line\":7") != std::string::npos);
+    assert(hints.find("\"line\":8") != std::string::npos);
+    assert(hints.find("\"line\":9") != std::string::npos);
+    assert(hints.find("\"line\":10") != std::string::npos);
+    assert(hints.find("array_view[i32][3]") != std::string::npos);
+    assert(hints.find("array_view[i32][4]") != std::string::npos);
+    assert(hints.find("array_view[i32][2, 2]") != std::string::npos);
+    assert(hints.find("array_view[i32][3, 1]") != std::string::npos);
+    assert(hints.find("array_view[i32][3, 4]") != std::string::npos);
     assert(hints.find("\": i32\"") == std::string::npos);
 }
 

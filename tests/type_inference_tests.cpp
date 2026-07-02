@@ -165,15 +165,35 @@ void test_index_type_inference_uses_type_ast() {
     const dudu::TypeRef dense_matrix_type = dudu::parse_type_text("array[i32][3, 4]");
     const dudu::TypeRef column_type = dudu::indexed_type_ref_from_type(
         symbols, location, dense_matrix_type, dudu::parse_expr_text(":, 1", location), "matrix");
-    assert(column_type.kind == dudu::TypeKind::Template);
-    assert(column_type.name == "array_view");
-    assert(dudu::substitute_type_ref_text(column_type, {}) == "array_view[i32]");
+    assert(column_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(column_type, {}) == "array_view[i32][3]");
 
     const dudu::TypeRef row_span_type = dudu::indexed_type_ref_from_type(
         symbols, location, dense_matrix_type, dudu::parse_expr_text("1, :", location), "matrix");
-    assert(row_span_type.kind == dudu::TypeKind::Template);
-    assert(row_span_type.name == "array_view");
-    assert(dudu::substitute_type_ref_text(row_span_type, {}) == "array_view[i32]");
+    assert(row_span_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(row_span_type, {}) == "array_view[i32][4]");
+
+    const dudu::TypeRef patch_type =
+        dudu::indexed_type_ref_from_type(symbols, location, dense_matrix_type,
+                                         dudu::parse_expr_text("1:3, 2:4", location), "matrix");
+    assert(patch_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(patch_type, {}) == "array_view[i32][2, 2]");
+
+    const dudu::TypeRef vector_type = dudu::parse_type_text("array[i32][7]");
+    const dudu::TypeRef stepped_type = dudu::indexed_type_ref_from_type(
+        symbols, location, vector_type, dudu::parse_expr_text("0:6:2", location), "values");
+    assert(stepped_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(stepped_type, {}) == "array_view[i32][3]");
+
+    const dudu::TypeRef open_stepped_type = dudu::indexed_type_ref_from_type(
+        symbols, location, vector_type, dudu::parse_expr_text("1::2", location), "values");
+    assert(open_stepped_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(open_stepped_type, {}) == "array_view[i32][3]");
+
+    const dudu::TypeRef clipped_type = dudu::indexed_type_ref_from_type(
+        symbols, location, vector_type, dudu::parse_expr_text("1:99", location), "values");
+    assert(clipped_type.kind == dudu::TypeKind::Shaped);
+    assert(dudu::substitute_type_ref_text(clipped_type, {}) == "array_view[i32][6]");
 
     const std::map<std::string, dudu::TypeRef> local_type_refs = {
         {"bag", dudu::parse_type_text("Bag[Item]", location)},
