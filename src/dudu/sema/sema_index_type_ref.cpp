@@ -7,6 +7,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_ops.hpp"
 
+#include <initializer_list>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -129,6 +130,18 @@ bool native_fixed_extent_template(const Symbols& symbols, const TypeRef& type,
     return true;
 }
 
+bool template_head_is(const TypeRef& type, std::initializer_list<std::string_view> names) {
+    if (type.kind != TypeKind::Template) {
+        return false;
+    }
+    for (std::string_view name : names) {
+        if (type.name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 TypeRef array_element_template_type_ref(const SourceLocation& location, const TypeRef& array_type,
@@ -220,7 +233,12 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
         return shaped_array_type_ref(
             element, std::vector<std::string>(shape.begin() + index_count, shape.end()));
     }
-    if (type->kind == TypeKind::Template && type->name == "dict" && type->children.size() == 2) {
+    if (template_head_is(*type, {"dict", "std.map", "std::map", "std.unordered_map",
+                                 "std::unordered_map"}) &&
+        type->children.size() == 2) {
+        if (is_slice || index_count != 1) {
+            throw CompileError(location, "map indexing requires exactly one key: " + label);
+        }
         return type->children[1];
     }
     if (native_fixed_extent_template(symbols, *type, receiver_is_native_alias)) {

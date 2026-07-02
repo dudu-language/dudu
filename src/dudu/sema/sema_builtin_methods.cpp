@@ -158,6 +158,11 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             set_return_type(signature, "bool");
             return true;
         }
+        if (method_name == "count") {
+            set_param_types(signature, {value_type});
+            set_return_type(signature, "usize");
+            return true;
+        }
         if (method_name == "insert") {
             set_param_types(signature, {value_type});
             set_return_type(signature, "auto");
@@ -178,6 +183,11 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
         if (method_name == "contains") {
             set_param_types(signature, {key_type});
             set_return_type(signature, "bool");
+            return true;
+        }
+        if (method_name == "count") {
+            set_param_types(signature, {key_type});
+            set_return_type(signature, "usize");
             return true;
         }
         if (method_name == "size") {

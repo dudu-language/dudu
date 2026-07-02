@@ -20,6 +20,10 @@ The important proof is compile-and-run coverage. Shape-only tests are useful, bu
 - `std::string_view`
 - `std::map`
 - `std::unordered_set`
+- map-like indexed reads/writes for `dict`, `std::map`, and
+  `std::unordered_map`
+- set/map-like `count()` typing for `std::set`, `std::unordered_set`,
+  `std::map`, and `std::unordered_map`
 - `std::shared_ptr` and `std::weak_ptr`
 - Scanner-derived template method returns, including `weak_ptr.lock`
 - `std::mutex` and `std::lock_guard`

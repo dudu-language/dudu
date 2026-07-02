@@ -13,6 +13,7 @@
 #include "dudu/sema/sema_scope.hpp"
 
 #include <optional>
+#include <set>
 #include <string_view>
 #include <vector>
 
@@ -87,6 +88,51 @@ bool member_assignment_receiver_is_const(const Symbols& symbols, TypeRef type) {
     return false;
 }
 
+TypeRef assignment_template_receiver_type(const Symbols& symbols, TypeRef type) {
+    type = resolved_assignment_type(symbols, std::move(type));
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const ||
+            type.kind == TypeKind::Pointer || type.kind == TypeKind::Storage ||
+            type.kind == TypeKind::Shared || type.kind == TypeKind::Device ||
+            type.kind == TypeKind::Volatile || type.kind == TypeKind::Atomic) &&
+           type.children.size() == 1) {
+        type = resolved_assignment_type(symbols, type.children.front());
+    }
+    return type;
+}
+
+bool is_map_like_assignment_receiver(const TypeRef& type) {
+    static const std::set<std::string_view> names = {"dict", "std.map", "std::map",
+                                                     "std.unordered_map",
+                                                     "std::unordered_map"};
+    return type.kind == TypeKind::Template && type.children.size() == 2 && names.contains(type.name);
+}
+
+bool index_args_include_view_marker(const std::vector<Expr>& args) {
+    for (size_t i = 0; i + 1 < args.size(); ++i) {
+        const Expr& arg = args[i];
+        if (arg.kind == ExprKind::Slice || arg.kind == ExprKind::Ellipsis ||
+            arg.kind == ExprKind::NewAxis) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<TypeRef> map_like_index_assignment_type(const Symbols& symbols,
+                                                      const TypeRef& receiver_type,
+                                                      const std::vector<Expr>& args,
+                                                      const SourceLocation& location,
+                                                      const std::string& label) {
+    const TypeRef type = assignment_template_receiver_type(symbols, receiver_type);
+    if (!is_map_like_assignment_receiver(type)) {
+        return std::nullopt;
+    }
+    if (args.size() != 2 || index_args_include_view_marker(args)) {
+        sema_fail(location, "map indexing requires exactly one key: " + label);
+    }
+    return type.children[1];
+}
+
 void reject_const_member_assignment(const FunctionScope& scope, const Expr& target,
                                     const SourceLocation& location) {
     if (target.kind != ExprKind::Member || target.children.size() != 1) {
@@ -150,6 +196,10 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             }
             check_declared_index_assignment_operator_if_any(scope, receiver_type, "[]=", name, args,
                                                             target_location);
+            if (const auto map_target = map_like_index_assignment_type(
+                    scope.symbols, receiver_type, args, target_location, name)) {
+                return *map_target;
+            }
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
                 sema_fail(target_location, dudu_operator_no_match_message_for_args(
                                                scope.symbols, "[]=", receiver_type, args,
@@ -187,6 +237,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             check_declared_index_assignment_operator_if_any(
                 scope, receiver_type, target.write_operator, indexed_assignment_label(receiver),
                 args, target_location);
+            if (const auto map_target = map_like_index_assignment_type(
+                    scope.symbols, receiver_type, args, target_location,
+                    indexed_assignment_label(receiver))) {
+                return *map_target;
+            }
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
                 sema_fail(target_location,
                           dudu_operator_no_match_message_for_args(
@@ -215,6 +270,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             check_declared_index_assignment_operator_if_any(
                 scope, inferred_receiver_type, target.write_operator,
                 indexed_assignment_label(receiver), args, target_location);
+            if (const auto map_target = map_like_index_assignment_type(
+                    scope.symbols, inferred_receiver_type, args, target_location,
+                    indexed_assignment_label(receiver))) {
+                return *map_target;
+            }
             if (class_for_receiver_type(scope.symbols, inferred_receiver_type) != nullptr) {
                 sema_fail(target_location,
                           dudu_operator_no_match_message_for_args(

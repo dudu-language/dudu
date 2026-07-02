@@ -431,6 +431,42 @@ void test_reference_list_indexing() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_std_map_index_assignment() {
+    const dudu::ModuleAst ok =
+        dudu::parse_source("from cpp import map\n"
+                           "from cpp import string\n"
+                           "from cpp import unordered_map\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    scores: std.map[std.string, i32]\n"
+                           "    lookup: std.unordered_map[std.string, i32]\n"
+                           "    key: std.string\n"
+                           "    scores[key] = 20\n"
+                           "    lookup[key] = scores[key] + 2\n"
+                           "    return lookup[key]\n",
+                           "std_map_index_assignment.dd");
+    dudu::analyze_module(ok, {.check_bodies = true});
+
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst bad =
+            dudu::parse_source("from cpp import string\n"
+                               "from cpp import unordered_map\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    scores: std.unordered_map[std.string, i32]\n"
+                               "    key: std.string\n"
+                               "    scores[key] = True\n"
+                               "    return 0\n",
+                               "bad_std_map_index_assignment.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected = std::string(error.what()).find("cannot assign bool to i32") !=
+                   std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_negative_numeric_literals_contextualize_as_f32_args() {
     const dudu::ModuleAst module = dudu::parse_source("def take_f32(x: f32, y: f32):\n"
                                                       "    pass\n"
@@ -817,6 +853,7 @@ int main() {
         test_formatter();
         test_list_iterator_methods();
         test_reference_list_indexing();
+        test_std_map_index_assignment();
         test_negative_numeric_literals_contextualize_as_f32_args();
         test_receiver_reference_semantics();
         test_pointer_dereference_uses_type_ast();

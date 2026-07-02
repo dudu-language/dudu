@@ -278,11 +278,11 @@ def stdlib_func_$i(seed: i32) -> i32:
     scores: std.unordered_map[std.string, i32]
     scores[names[0]] = total
     scores[names[1]] = total + $i
-    pair: std.pair[std.string, i32] = std.make_pair(std.string("score"), scores[names[1]])
-    tup: std.tuple[std.string, i32] = std.make_tuple(pair.first, pair.second)
+    pair = std.make_pair(std.string("score"), scores[names[1]])
+    tup = std.make_tuple(pair.first, pair.second)
     if std.get[1](tup) != pair.second:
         return 0
-    return scores[std.string("alpha")] + std.get[1](tup)
+    return scores[std.string("alpha")] + i32(std.get[1](tup))
 
 EOF
     done
