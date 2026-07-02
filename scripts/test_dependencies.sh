@@ -186,6 +186,25 @@ DD
         "$dudu_bin" deps fetch --quiet
 )
 
+bad_git_app="$work_root/bad_git_app"
+mkdir -p "$bad_git_app/src"
+cat >"$bad_git_app/dudu.toml" <<TOML
+name = "bad_git_app"
+entry = "src/main.dd"
+
+[deps]
+ghost = { git = "file://$work_root/definitely_missing_git_repo", rev = "abc123" }
+TOML
+cat >"$bad_git_app/src/main.dd" <<'DD'
+def main() -> i32:
+    return 0
+DD
+(
+    cd "$bad_git_app"
+    expect_failure_contains "git clone --quiet 'file://$work_root/definitely_missing_git_repo'" \
+        "$dudu_bin" deps fetch --quiet
+)
+
 native_dep_app="$work_root/native_dep_app"
 mkdir -p "$native_dep_app/src"
 cat >"$native_dep_app/dudu.toml" <<'TOML'
