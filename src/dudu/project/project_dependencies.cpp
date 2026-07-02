@@ -161,6 +161,13 @@ std::filesystem::path dependency_source_root(const std::filesystem::path& packag
     return std::filesystem::exists(src) ? src : package_root;
 }
 
+void validate_dependency_package_root(const std::string& name, const std::filesystem::path& root) {
+    if (!std::filesystem::exists(root / "dudu.toml")) {
+        fail_dependency("Dudu dependency '" + name +
+                        "' package root is missing dudu.toml: " + root.string());
+    }
+}
+
 std::map<std::string, std::filesystem::path> dependency_module_roots(const ProjectConfig& config) {
     std::map<std::string, std::filesystem::path> out;
     for (const auto& [name, dependency] : config.dependencies) {
@@ -179,11 +186,13 @@ void ensure_project_dependencies(ProjectConfig& config, bool update, bool quiet)
             if (!std::filesystem::exists(root)) {
                 fail_dependency("Dudu dependency '" + name + "' path not found: " + root.string());
             }
+            validate_dependency_package_root(name, root);
             dependency.resolved_root = root;
             continue;
         }
         if (dependency.kind == "git") {
             ensure_git_dependency(dependency, root, update, quiet);
+            validate_dependency_package_root(name, root);
             continue;
         }
         fail_dependency("Dudu dependency '" + name + "' has unknown kind: " + dependency.kind);

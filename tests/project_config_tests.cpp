@@ -73,6 +73,8 @@ void test_project_dependency_manifest_and_lockfile(const std::filesystem::path& 
                                       "[deps]\n"
                                       "local_math = { path = \"../project-config-deps-local\" }\n");
     write_text(project / "src" / "main.dd", "from local_math import value\n");
+    write_text(dependency / "dudu.toml", "name = \"local_math\"\n"
+                                         "entry = \"src/local_math.dd\"\n");
     write_text(dependency / "src" / "local_math.dd", "def value() -> i32:\n"
                                                      "    return 4\n");
 

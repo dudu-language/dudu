@@ -292,6 +292,9 @@ resolved relative to the manifest, package source roots prefer `src/` when it
 exists, and Dudu imports stay logical, for example
 `from local_math import value`. Git deps clone into `.dudu/deps/<name>`, support
 `rev`, `tag`, or `branch`, and record the resolved commit in the lockfile.
+Dependency smoke tests cover successful path/Git dependencies, lockfile
+stability, missing paths, existing folders that are not Dudu package roots, bad
+Git refs, and native pkg-config failures as distinct diagnostics.
 
 ## 6. Public Example And Validation Matrix
 

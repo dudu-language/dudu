@@ -409,9 +409,11 @@ from ndad import Tensor
 
 Path deps resolve relative to the manifest. Git deps are cloned under
 `.dudu/deps/<name>` and pin the resolved commit in `dudu.lock`; the cache
-directory is ignored, while the lockfile is intentionally not ignored. Native
-C/C++ dependencies still belong to CMake/pkg-config/system/vendor setup, not
-the Dudu source dependency lockfile.
+directory is ignored, while the lockfile is intentionally not ignored. A Dudu
+source dependency must resolve to a package root containing `dudu.toml`; `src/`
+is used as the package module root when it exists. Native C/C++ dependencies
+still belong to CMake/pkg-config/system/vendor setup, not the Dudu source
+dependency lockfile.
 
 ## Build Backends
 
