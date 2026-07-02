@@ -173,7 +173,7 @@ cases = [
         "name": "cpp_stdlib_vector",
         "pkg": None,
         "source": [
-            'import cpp "vector" as std',
+            'from cpp import vector',
             "",
             "def main() -> i32:",
             "    values: std.vector[i32]",
@@ -192,7 +192,7 @@ cases = [
         "name": "sqlite3",
         "pkg": "sqlite3",
         "source": [
-            'import c "sqlite3.h"',
+            "from c import sqlite3.h",
             "",
             "def main() -> i32:",
             "    db: *sqlite3 = None",
@@ -210,7 +210,7 @@ cases = [
         "name": "raylib",
         "pkg": "raylib",
         "source": [
-            'import c "raylib.h"',
+            "from c import raylib.h",
             "",
             "def main() -> i32:",
             "    pos: Vector2 = Vector2(1.0, 2.0)",
@@ -229,7 +229,7 @@ cases = [
         "name": "sdl3",
         "pkg": "sdl3",
         "source": [
-            'import c "SDL3/SDL.h"',
+            "from c import SDL3/SDL.h",
             "",
             "def main() -> i32:",
             "    SDL_Init(0)",
@@ -247,7 +247,7 @@ cases = [
         "name": "glfw3",
         "pkg": "glfw3",
         "source": [
-            'import c "GLFW/glfw3.h"',
+            "from c import GLFW/glfw3.h",
             "",
             "def main() -> i32:",
             "    glfwInit()",

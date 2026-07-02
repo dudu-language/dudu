@@ -218,7 +218,7 @@ messages.extend([
                     "version": 1,
                     "text": "\n".join(
                         [
-                            'import c "lsp_project_header.h"',
+                            "from c import lsp_project_header.h",
                             "",
                             "def main() -> i32:",
                             "    return project_header_value()",

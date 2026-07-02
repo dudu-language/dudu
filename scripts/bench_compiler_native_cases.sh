@@ -201,8 +201,8 @@ prepare_scaled_native_case() {
     fi
 
     cat >"$entry" <<'EOF'
-import cpp "./native_headers/simple_cpp.hpp"
-import c "./native_headers/simple_c.h" as c_native
+from cpp.path import ./native_headers/simple_cpp.hpp
+from c.path import ./native_headers/simple_c.h as c_native
 
 EOF
     for ((i = 0; i < funcs; ++i)); do
@@ -253,13 +253,13 @@ prepare_scaled_stdlib_case() {
     fi
 
     cat >"$entry" <<'EOF'
-import cpp "algorithm" as std
-import cpp "numeric" as std
-import cpp "string" as std
-import cpp "tuple" as std
-import cpp "unordered_map" as std
-import cpp "utility" as std
-import cpp "vector" as std
+from cpp import algorithm
+from cpp import numeric
+from cpp import string
+from cpp import tuple
+from cpp import unordered_map
+from cpp import utility
+from cpp import vector
 
 EOF
     for ((i = 0; i < funcs; ++i)); do
@@ -370,4 +370,3 @@ EOF
     done
     printf '%s\n' "$entry"
 }
-

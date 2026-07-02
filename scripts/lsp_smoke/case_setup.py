@@ -45,8 +45,8 @@ source = "\n".join(
 native_source = "\n".join(
     [
         "import lsp_workspace_helper as helper",
-        'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
-        'import c "native_headers/simple_c.h" as dudu_native',
+        "from cpp.path import native_headers/simple_cpp.hpp as native_cpp",
+        "from c.path import ./native_headers/simple_c.h as dudu_native",
         "",
         "def main() -> i32:",
         "    widget: native_cpp.Widget = native_cpp.Widget(3)",
@@ -60,7 +60,7 @@ native_source = "\n".join(
 )
 missing_native_source = "\n".join(
     [
-        'import c "./native_headers/does_not_exist.h"',
+        "from c.path import ./native_headers/does_not_exist.h",
         "",
         "def main() -> i32:",
         "    return 0",

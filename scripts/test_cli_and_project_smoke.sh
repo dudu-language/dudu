@@ -104,7 +104,7 @@ paths = ["include"]
 dir = "build"
 TOML
 cat >"$cache_smoke/src/main.dd" <<'DD'
-import cpp "../include/simple_cpp.hpp"
+from cpp.path import ../include/simple_cpp.hpp
 
 
 def main() -> i32:

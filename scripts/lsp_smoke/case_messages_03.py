@@ -71,7 +71,7 @@ messages.extend([
                     "version": 1,
                     "text": "\n".join(
                         [
-                            'import c "raylib.h"',
+                            "from c import raylib.h",
                             "",
                             "def main() -> i32:",
                             "    return 0",

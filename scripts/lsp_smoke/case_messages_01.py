@@ -138,7 +138,7 @@ messages.extend([
                     "version": 1,
                     "text": "\n".join(
                         [
-                            'import c "native_headers/simple_c.h"',
+                            "from c.path import ./native_headers/simple_c.h",
                             "",
                             "def main() -> i32:",
                             "    event: DuduNativeEvent",
@@ -201,7 +201,7 @@ messages.extend([
             "method": "textDocument/definition",
             "params": {
                 "textDocument": {"uri": direct_native_uri},
-                "position": {"line": 0, "character": 18},
+                "position": {"line": 0, "character": 22},
             },
         }
     ),
@@ -329,7 +329,7 @@ messages.extend([
                     "version": 1,
                     "text": "\n".join(
                         [
-                            'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+                            "from cpp.path import native_headers/simple_cpp.hpp as native_cpp",
                             "",
                             "def main() -> i32:",
                             "    amount: f32 = 2.0",
@@ -383,7 +383,7 @@ messages.extend([
                     "version": 1,
                     "text": "\n".join(
                         [
-                            'import c "stdio.h"',
+                            "from c import stdio.h",
                             "",
                             "def main() -> i32:",
                             "    return 0",
