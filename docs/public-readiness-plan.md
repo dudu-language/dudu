@@ -231,6 +231,8 @@ value type, symbolic/concrete shape mismatches, `dyn` arithmetic rejection, and
 an explicit overload set where one candidate fails by arity and another fails by
 argument type. The formatter is implemented in `sema_operator_diagnostics.cpp`
 so the normal operator resolver remains separate from diagnostic presentation.
+Direct LSP diagnostics now have a fixture proving the same failed-index
+candidate reasons reach editor diagnostics from the compiler diagnostic path.
 
 ## 5. Implement Dudu Dependency Bootstrapping
 

@@ -61,6 +61,34 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.front().code.starts_with("dudu.sema."));
 }
 
+void test_lsp_index_diagnostic_preserves_candidate_reasons() {
+    const dudu::Document doc{.uri = "",
+                             .path = "bad_index_candidate_diag.dd",
+                             .text = "class Choice:\n"
+                                     "    @operator(\"[]\")\n"
+                                     "    def by_value(self, index: i32) -> i32:\n"
+                                     "        return index\n"
+                                     "\n"
+                                     "    @operator(\"[]\")\n"
+                                     "    def by_pair(self, row: i32, col: i32) -> i32:\n"
+                                     "        return row + col\n"
+                                     "\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    value = Choice()\n"
+                                     "    return value[1, \"bad\"]\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    assert(diags.size() == 1);
+    assert(diags.front().source == "dudu/sema");
+    assert(diags.front().message.find("no matching @operator(\"[]\")") != std::string::npos);
+    assert(diags.front().message.find(
+               "candidate Choice.by_value(i32) -> i32 rejected: expects 1 arguments, got 2") !=
+           std::string::npos);
+    assert(diags.front().message.find(
+               "candidate Choice.by_pair(i32, i32) -> i32 rejected: argument 2 expects i32, got str") !=
+           std::string::npos);
+}
+
 void test_lsp_block_header_diagnostics_use_extra_token_location() {
     const dudu::Document doc{.uri = "",
                              .path = "bad_if_header.dd",
@@ -694,6 +722,7 @@ void test_lsp_project_index_cache_records_native_warm_hits() {
 int main() {
     try {
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_index_diagnostic_preserves_candidate_reasons();
         test_lsp_block_header_diagnostics_use_extra_token_location();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_lints_do_not_leak_from_dependency_modules();
