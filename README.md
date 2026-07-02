@@ -167,6 +167,9 @@ Fetch or refresh missing source dependencies with:
 dudu deps fetch
 ```
 
+Path and Git dependencies must resolve to a Dudu package root containing
+`dudu.toml`; if a package has `src/`, that directory is used as its module root.
+
 Native C/C++ libraries still belong to CMake, pkg-config, system packages, or
 vendored native code. Dudu source dependencies are for `.dd` packages.
 
