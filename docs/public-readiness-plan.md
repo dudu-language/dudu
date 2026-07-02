@@ -62,11 +62,8 @@ Already implemented and should stay protected by tests:
 - fixed-array and tensor indexing shortcuts were audited against
   [Indexing Dispatch Model](indexing-dispatch-model.md); fixed arrays use the
   generic `array_view[T]` path and tensor indexing uses operator hooks
-
-Remaining language work:
-
-- improve rejected shape-expression diagnostics so unsupported operators,
-  malformed expressions, and compile-time requirements point at Dudu source
+- shape diagnostics cover folded mismatches, unsupported operators, and `dyn`
+  used inside compile-time arithmetic
 
 Required fixtures:
 

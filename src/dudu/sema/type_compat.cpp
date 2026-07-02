@@ -1,9 +1,10 @@
 #include "dudu/sema/type_compat.hpp"
 
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/shape_value_expr.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/type_compat_literals.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
@@ -144,6 +145,21 @@ bool is_numeric_literal_expr(const Expr& expr) {
         return is_numeric_literal_expr(expr.children.front());
     }
     return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
+std::optional<std::string> dyn_shape_arithmetic_expr(const TypeRef& type) {
+    if (type.kind == TypeKind::Value && trim_copy(type.value) != "dyn") {
+        const std::set<std::string> ids = shape_value_expr_identifiers(type.value);
+        if (ids.contains("dyn")) {
+            return normalize_shape_value_expr(type.value);
+        }
+    }
+    for (const TypeRef& child : type.children) {
+        if (const std::optional<std::string> found = dyn_shape_arithmetic_expr(child)) {
+            return found;
+        }
+    }
+    return std::nullopt;
 }
 
 std::string simple_literal_type(const Expr& expr) {
@@ -414,8 +430,12 @@ namespace {
 
 std::string assignment_error_display(const std::string& expected, const Expr& expr,
                                      const TypeRef& got) {
-    return "cannot assign " + assignment_type_display(expr, got) + " to " + expected +
-           " without an explicit cast";
+    std::string message = "cannot assign " + assignment_type_display(expr, got) + " to " +
+                          expected + " without an explicit cast";
+    if (const std::optional<std::string> dyn_expr = dyn_shape_arithmetic_expr(got)) {
+        message += "; shape expression uses runtime dyn in compile-time arithmetic: " + *dyn_expr;
+    }
+    return message;
 }
 
 } // namespace
