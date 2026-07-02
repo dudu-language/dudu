@@ -315,8 +315,8 @@ Status: `/home/vega/Coding/ML/dudu-datascience` now has a package-shaped
 `src/ndad.dd` plus `src/ndad/backends.dd` for the CPU/OpenBLAS tensor surface.
 Default `dudu run` uses `ndad` and links OpenBLAS without OpenCL. The optional
 OpenCL target still uses the older `dudu_tensor` prototype so CPU-only `ndad`
-users do not pull GPU native headers or libraries. The pending autograd target
-now sketches `mald` imports on top of `ndad`.
+users do not pull GPU native headers or libraries. The `mald` package now
+graduates a tiny autograd/training target on top of `ndad`.
 
 ## External Baseline
 
@@ -1030,12 +1030,12 @@ Status:
   `/home/vega/Coding/ML/dudu-datascience/spec/target_api/manifest.tsv` and
   verified by `/home/vega/Coding/ML/dudu-datascience/scripts/check_target_api.sh`.
   The graduated specs `tensor_surface.dd`, `advanced_indexing.dd`,
-  `blas_backend.dd`, and `gpu_backend.dd` have named runnable `dudu` targets.
-  The pending spec `autograd_training.dd` stays listed with an explicit missing
-  implementation reason instead of silently rotting.
-- Remaining for the actual target API: finish the reusable `dudu_tensor`
-  library and autograd modules so the pending target file graduates too,
-  including autograd parameters/modules, backward, optimizers, and diagnostics.
+  `blas_backend.dd`, `gpu_backend.dd`, and `autograd_training.dd` have named
+  runnable `dudu` targets.
+- Remaining for the actual numeric stack: move the optional OpenCL backend
+  under `ndad.backends.opencl` once extension-module boundaries are cleaner,
+  and grow `mald` from minimal parameter/loss/SGD plumbing into a richer
+  dynamic autograd library.
 
 ### 3. Optional OpenBLAS Probe
 
@@ -1117,7 +1117,11 @@ Status:
 
 ### 5. Autograd Prototype
 
-Implement a small autograd graph in Dudu using ordinary classes:
+Status: `/home/vega/Coding/ML/dudu-datascience/src/target_autograd_training.dd`
+now runs a small `mald` proof using ordinary Dudu classes, parameter pointers,
+`Loss.backward()`, and `SGD` to train an OR classifier on top of `ndad`.
+
+Continue growing the autograd graph in Dudu using ordinary classes:
 
 - `Value` or `TensorNode`
 - operation enum / tagged node kind

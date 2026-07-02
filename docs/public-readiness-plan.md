@@ -124,8 +124,7 @@ Concrete work:
 - remove direct user exposure of `dudu_tensor/index_native.hpp`-style helpers
 - make CPU-only examples work without linking OpenCL
 - keep OpenBLAS/OpenCL demos as optional backend examples
-- make a tiny `mald` target with basic autograd if compiler features are
-  sufficient; if not, document the missing language feature precisely
+- make a tiny `mald` target with basic autograd
 
 Acceptance:
 
@@ -133,13 +132,14 @@ Acceptance:
 - optional backend sample imports `ndad.backends.openblas` and runs matmul
 - optional OpenCL sample stays isolated from CPU-only `ndad` imports until
   Dudu has clean extension-module boundaries for backend-specific methods
+- `mald` sample imports normal Dudu packages and runs a tiny training loop
 - no user-facing example needs native helper headers
 
 Status: `/home/vega/Coding/ML/dudu-datascience` now bottles the CPU/OpenBLAS
 surface as `ndad`, keeps OpenCL in the older optional `dudu_tensor` target, and
-documents the pending `mald` autograd layer. `dudu run --timings` and
-`./scripts/check_target_api.sh` passed on 2026-07-02 after installing the
-current Dudu checkout.
+graduates a small `mald` autograd/training layer on top of `ndad`.
+`DUDU_BIN=/home/vega/Coding/LangDev/dudu/build/dudu ./scripts/check_target_api.sh`
+passed on 2026-07-02 with 5 graduated specs and 0 pending specs.
 
 ## 3. Improve Tensor/Generic Editor Intelligence
 
@@ -304,7 +304,7 @@ Required examples:
 - CPU-only `ndad` tensor sample
 - optional OpenBLAS backend sample
 - optional OpenCL backend sample
-- pending/optional `mald` autograd sample
+- `mald` autograd/training sample
 
 Required validation commands:
 

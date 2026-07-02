@@ -141,6 +141,33 @@ void test_module_loader_rejects_duplicate_from_aliases() {
     assert(failed);
 }
 
+void test_module_loader_resolves_source_root_import_from_submodule() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_submodule_root_import_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "mald");
+    write_file(dir / "ndad.dd", "class Tensor:\n"
+                                "    value: i32\n");
+    write_file(dir / "mald" / "losses.dd", "from ndad import Tensor\n"
+                                           "\n"
+                                           "def make_tensor() -> Tensor:\n"
+                                           "    return Tensor(42)\n");
+    write_file(dir / "main.dd", "from mald.losses import make_tensor\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return make_tensor().value\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    assert(module.module_units.size() == 3);
+    assert(module.module_units[0].module_path == "ndad");
+    assert(module.module_units[1].module_path == "mald.losses");
+    assert(module.module_units[2].module_path == "main");
+    assert(module.module_units[1].dependencies.size() == 1);
+    assert(module.module_units[1].dependencies[0].import_module_path == "ndad");
+    assert(module.module_units[1].dependencies[0].resolved_module_path == "ndad");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_project_index_records_module_graph() {
     const std::filesystem::path root =
         std::filesystem::path(DUDU_REPO_ROOT) / "tests" / "fixtures" / "project_import_metadata";
@@ -571,6 +598,7 @@ int main() {
     try {
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
+        test_module_loader_resolves_source_root_import_from_submodule();
         test_project_index_records_module_graph();
         test_project_index_resolves_path_dependency_modules();
         test_project_index_source_stamps_detect_changed_modules();

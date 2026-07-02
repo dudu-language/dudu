@@ -1329,17 +1329,17 @@ push. They are not release packaging work.
    The external `dudu-datascience` dogfood target API is now tracked by
    `spec/target_api/manifest.tsv` and verified by
    `scripts/check_target_api.sh`: `tensor_surface.dd`,
-   `advanced_indexing.dd`, `blas_backend.dd`, and `gpu_backend.dd` have
-   graduated into named runnable `dudu` targets. The GPU target uses normal
+   `advanced_indexing.dd`, `blas_backend.dd`, `gpu_backend.dd`, and
+   `autograd_training.dd` have graduated into named runnable `dudu` targets.
+   The GPU target uses normal
    method overloads for `tensor.to(device)`, OpenCL device buffers, a tiny
    matmul kernel, device row slicing, and explicit `.cpu()` download.
-   `autograd_training.dd` remains explicitly pending for PyTorch-like autograd
-   modules, parameters, backward, and optimizers.
    The same dogfood repo now bottles the CPU/OpenBLAS tensor surface behind
    `ndad`, keeps OpenCL isolated in the older optional `dudu_tensor` target
-   until extension-module boundaries are cleaner, and sketches the future
-   autograd layer as `mald` on top of `ndad`. Default `dudu run` and
-   `scripts/check_target_api.sh` passed in that repo on 2026-07-02.
+   until extension-module boundaries are cleaner, and bottles a small `mald`
+   layer on top of `ndad` with parameters, backward plumbing, SGD, and a tiny
+   OR-classifier training target. `scripts/check_target_api.sh` passed in that
+   repo on 2026-07-02 with 5 graduated specs and 0 pending specs.
    Remaining Dudu-language polish for this numeric stack is not library
    implementation but better compile-time shape arithmetic: symbolic
    dimensions such as `M`, `K`, and `N` already flow through shaped metadata,

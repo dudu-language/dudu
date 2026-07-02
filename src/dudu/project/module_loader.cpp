@@ -58,7 +58,8 @@ module_root_for_source(const std::filesystem::path& entry_root, const std::files
 }
 
 std::filesystem::path
-resolve_import_path(const std::filesystem::path& current_path, const std::string& module_path,
+resolve_import_path(const std::filesystem::path& current_path, const std::filesystem::path& root,
+                    const std::string& module_path,
                     const std::map<std::string, std::filesystem::path>& module_roots) {
     const std::filesystem::path local =
         module_path_to_file(current_path.parent_path(), module_path);
@@ -67,6 +68,10 @@ resolve_import_path(const std::filesystem::path& current_path, const std::string
     }
     const auto found = module_roots.find(import_package_name(module_path));
     if (found == module_roots.end()) {
+        const std::filesystem::path rooted = module_path_to_file(root, module_path);
+        if (std::filesystem::exists(rooted)) {
+            return rooted;
+        }
         return local;
     }
     return module_path_to_file(found->second, module_path);
@@ -350,7 +355,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
             continue;
         }
         const std::filesystem::path dependency =
-            resolve_import_path(path, import.module_path, module_roots);
+            resolve_import_path(path, root, import.module_path, module_roots);
         const std::filesystem::path canonical_dependency =
             std::filesystem::weakly_canonical(dependency);
         if (std::find(stack.begin(), stack.end(), canonical_dependency) != stack.end()) {
@@ -400,7 +405,7 @@ void collect_files(const std::filesystem::path& path,
             continue;
         }
         const std::filesystem::path dependency =
-            resolve_import_path(path, import.module_path, module_roots);
+            resolve_import_path(path, root, import.module_path, module_roots);
         const std::filesystem::path canonical_dependency =
             std::filesystem::weakly_canonical(dependency);
         if (std::find(stack.begin(), stack.end(), canonical_dependency) != stack.end()) {
