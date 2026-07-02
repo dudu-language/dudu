@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <deque>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -228,6 +229,54 @@ ParamHints builtin_member_param_hints(const std::string& method_name) {
         return {.names = {"index", "value"}};
     }
     return {};
+}
+
+void add_imported_class_symbol(Symbols& symbols, std::deque<ClassDecl>& storage,
+                               const std::string& name, const ClassDecl& klass,
+                               const ModuleAst& imported) {
+    if (name.empty()) {
+        return;
+    }
+    ClassDecl copy = klass;
+    copy.name = name;
+    if (!imported.source_path.empty()) {
+        copy.location.file = SourceFileName(imported.source_path.string());
+    }
+    storage.push_back(std::move(copy));
+    const ClassDecl& stored = storage.back();
+    symbols.types.insert(name);
+    symbols.classes[name] = &stored;
+}
+
+void merge_imported_presentation_symbols(Symbols& symbols, const ProjectIndex& index,
+                                         const ModuleAst& module,
+                                         std::deque<ClassDecl>& imported_class_storage) {
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
+        }
+        const ModuleAst* imported = index.imported_unit(module, import);
+        if (imported == nullptr) {
+            continue;
+        }
+        if (import.kind == ImportKind::Module) {
+            const std::string prefix = bound_import_name(import);
+            for (const ClassDecl& klass : imported->classes) {
+                add_imported_class_symbol(symbols, imported_class_storage,
+                                          prefix + "." + klass.name, klass, *imported);
+            }
+            continue;
+        }
+        const std::string bound = bound_import_name(import);
+        for (const ClassDecl& klass : imported->classes) {
+            if (klass.name == import.imported_name) {
+                add_imported_class_symbol(symbols, imported_class_storage, bound, klass, *imported);
+                add_imported_class_symbol(symbols, imported_class_storage,
+                                          import.module_path + "." + klass.name, klass, *imported);
+                break;
+            }
+        }
+    }
 }
 
 ParamHints method_param_hints_for_class(const ClassDecl& klass, const std::string& method_name) {
@@ -498,7 +547,9 @@ std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions 
     try {
         const ProjectIndex& index = project_index_for_document(doc, true, false);
         const ModuleAst& module = index.visible_unit_for_path(doc.path);
-        const Symbols symbols = collect_symbols(module);
+        Symbols symbols = collect_symbols(module);
+        std::deque<ClassDecl> imported_class_storage;
+        merge_imported_presentation_symbols(symbols, index, module, imported_class_storage);
         for (const FunctionDecl& fn : module.functions) {
             collect_hints_for_function(doc, symbols, fn, {}, options, hints);
         }

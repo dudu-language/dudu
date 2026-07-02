@@ -1108,6 +1108,8 @@ void test_lsp_index_operator_definition_and_hover() {
 
     const std::string hover = dudu::hover_json(doc, "", &bracket_params);
     assert(hover.find("def at(self: &Self, index: i32) -> i32") != std::string::npos);
+    assert(hover.find("Selected `@operator(\\\"[]\\\")` overload.") != std::string::npos);
+    assert(hover.find("Result type: `i32`.") != std::string::npos);
     assert(hover.find("Indexed read docs.") != std::string::npos);
 
     dudu::Json index_arg_params =

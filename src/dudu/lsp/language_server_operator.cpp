@@ -8,13 +8,14 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_index.hpp"
-#include "dudu/sema/sema_scope.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/sema_ops.hpp"
+#include "dudu/sema/sema_scope.hpp"
 #include "dudu/sema/type_compat.hpp"
 
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 
 namespace dudu {
@@ -28,6 +29,21 @@ std::optional<std::string> operator_name_for_method(const FunctionDecl& method) 
         }
     }
     return std::nullopt;
+}
+
+std::string operator_doc_comment(const FunctionDecl& method, const std::string& op) {
+    std::ostringstream out;
+    out << "Selected `@operator(\"" << op << "\")` overload.";
+    if (function_has_return_type(method)) {
+        out << "\n\nResult type: `" << type_ref_text(method.return_type_ref) << "`.";
+    }
+    out << "\n\nCopy/view/backend behavior is library policy; use the overload docs and "
+           "result type to tell whether this returns a value, view, owning container, or "
+           "backend-specific handle.";
+    if (!method.doc_comment.empty()) {
+        out << "\n\n" << method.doc_comment;
+    }
+    return out.str();
 }
 
 bool operator_method_accepts_rhs(const FunctionDecl& method, const Expr& right_expr,
@@ -56,8 +72,7 @@ std::vector<TypeRef> infer_arg_type_refs(FunctionScope& scope, const std::vector
     return out;
 }
 
-std::optional<Symbol> dudu_index_operator_symbol_for_expr(const ModuleAst& module,
-                                                          const Expr& expr,
+std::optional<Symbol> dudu_index_operator_symbol_for_expr(const ModuleAst& module, const Expr& expr,
                                                           int one_based_line) {
     if (expr.kind != ExprKind::Index || expr.children.size() != 2) {
         return std::nullopt;
@@ -71,8 +86,7 @@ std::optional<Symbol> dudu_index_operator_symbol_for_expr(const ModuleAst& modul
         if (target.receiver == nullptr) {
             return std::nullopt;
         }
-        const TypeRef receiver_type =
-            infer_expr_type_ast(scope, *target.receiver, nullptr);
+        const TypeRef receiver_type = infer_expr_type_ast(scope, *target.receiver, nullptr);
         if (!has_type_ref(receiver_type)) {
             return std::nullopt;
         }
@@ -95,7 +109,7 @@ std::optional<Symbol> dudu_index_operator_symbol_for_expr(const ModuleAst& modul
                           .location = method.location,
                           .kind = lsp_symbol_kind::Method,
                           .native_identity_key = std::nullopt,
-                          .doc_comment = method.doc_comment};
+                          .doc_comment = operator_doc_comment(method, target.read_operator)};
         }
     } catch (const std::exception&) {
     }
@@ -156,7 +170,7 @@ std::optional<Symbol> dudu_operator_symbol_for_expr(const ModuleAst& module, con
                               .location = method.location,
                               .kind = lsp_symbol_kind::Method,
                               .native_identity_key = std::nullopt,
-                              .doc_comment = method.doc_comment};
+                              .doc_comment = operator_doc_comment(method, std::string(expr.op))};
             }
         }
     } catch (const std::exception&) {

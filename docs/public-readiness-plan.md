@@ -178,6 +178,12 @@ Acceptance:
 - editor output is derived from AST/sema/native metadata, not text regexes
 - unresolved or unsupported shape facts report honestly instead of guessing
 
+Status: Dudu operator hover now reports the selected `@operator(...)` overload
+and result type for indexed/operator expressions, while preserving any attached
+method docs. Inlay type labels for imported shaped classes now expose hoverable
+definition previews and clickable label parts that jump back to the imported
+module source, including module-qualified labels such as `tensor.Tensor`.
+
 ## 4. Improve Generic And Index Diagnostics
 
 Goal: make failed indexing/generic code actionable.

@@ -95,6 +95,13 @@ the operator use-site jump, not only the operator method declaration. Hover and
 find-references use the same `Class.method` operator identity, so the operator
 token shows the method signature/docs and references include both the operator
 method declaration and typed operator uses.
+Operator hover now also reports the selected overload and result type for
+indexed/operator expressions, so `tensor[...]` can explain which
+`@operator("[]")` method was selected without naming a particular tensor
+library. Inlay type labels for imported shaped classes now include hoverable
+Dudu definition previews and clickable label-part locations that point at the
+imported module source, including module-qualified labels such as
+`tensor.Tensor`.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

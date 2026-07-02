@@ -328,6 +328,10 @@ void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"line\":7") != std::string::npos);
     assert(hints.find("Tensor[f32][dyn, 2]") != std::string::npos);
+    assert(hints.find("\"value\":\"Tensor\"") != std::string::npos);
+    assert(hints.find("class Tensor") != std::string::npos);
+    assert(hints.find("\"location\"") != std::string::npos);
+    assert(hints.find("tensor.dd") != std::string::npos);
     assert(hints.find("\"value\":\"dyn\"") != std::string::npos);
 }
 
