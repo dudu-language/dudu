@@ -1,7 +1,8 @@
 #include "dudu/parser/ast_type_token_parser.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/shape_value_expr.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -18,22 +19,6 @@ SourceLocation token_end_location(const Token& token) {
     SourceLocation end = token.location;
     end.column += static_cast<int>(token.text.size());
     return end;
-}
-
-TypeRef shape_dim_ref(TypeRef dim) {
-    if (dim.kind == TypeKind::Named && dim.name == "dyn") {
-        dim.kind = TypeKind::Value;
-        dim.value = "dyn";
-        dim.name = {};
-    }
-    return dim;
-}
-
-std::vector<TypeRef> shape_dim_refs(std::vector<TypeRef> dims) {
-    for (TypeRef& dim : dims) {
-        dim = shape_dim_ref(std::move(dim));
-    }
-    return dims;
 }
 
 bool type_metadata_base_args_are_types(const TypeRef& type) {
@@ -356,7 +341,14 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
     type.name = text;
     while (match(TokenKind::LBracket)) {
         const size_t inner_begin = cursor_;
-        std::vector<TypeRef> args = parse_list_until(TokenKind::RBracket);
+        std::vector<TypeRef> args;
+        const bool shape_args = (type.kind == TypeKind::Template && type.name == "array") ||
+                                type_metadata_base_args_are_types(type);
+        if (shape_args) {
+            args = parse_shape_list_until(TokenKind::RBracket);
+        } else {
+            args = parse_list_until(TokenKind::RBracket);
+        }
         const size_t inner_end = cursor_;
         if (!match(TokenKind::RBracket)) {
             return make_node(TypeKind::Unknown, begin, cursor_);
@@ -373,7 +365,6 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         if (type.kind == TypeKind::Template && type.name == "array") {
             TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
             fixed.children.push_back(std::move(type));
-            args = shape_dim_refs(std::move(args));
             fixed.children.insert(fixed.children.end(), std::make_move_iterator(args.begin()),
                                   std::make_move_iterator(args.end()));
             fixed.value = trim_string(text_between(inner_begin, inner_end));
@@ -383,7 +374,6 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         if (type_metadata_base_args_are_types(type)) {
             TypeRef shaped = make_node(TypeKind::Shaped, begin, cursor_);
             shaped.children.push_back(std::move(type));
-            args = shape_dim_refs(std::move(args));
             shaped.children.insert(shaped.children.end(), std::make_move_iterator(args.begin()),
                                    std::make_move_iterator(args.end()));
             shaped.value = trim_string(text_between(inner_begin, inner_end));
@@ -459,6 +449,85 @@ std::vector<TypeRef> TypeTokenParser::parse_list_until(TokenKind close) {
             continue;
         }
         out.push_back(parse_type({close, TokenKind::Comma}));
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+        }
+    }
+    return out;
+}
+
+TypeRef TypeTokenParser::parse_shape_dim(size_t begin, size_t end) const {
+    while (begin < end && tokens_[begin].kind == TokenKind::Comma) {
+        ++begin;
+    }
+    while (end > begin && tokens_[end - 1].kind == TokenKind::Comma) {
+        --end;
+    }
+    if (begin >= end) {
+        return make_node(TypeKind::Unknown, begin, end);
+    }
+    if (end == begin + 1 && tokens_[begin].kind == TokenKind::Identifier) {
+        TypeRef type =
+            make_node(tokens_[begin].text == "dyn" ? TypeKind::Value : TypeKind::Named, begin, end);
+        if (type.kind == TypeKind::Value) {
+            type.value = "dyn";
+        } else {
+            type.name = std::string(tokens_[begin].text);
+        }
+        return type;
+    }
+    if (end == begin + 1 && tokens_[begin].kind == TokenKind::Number) {
+        TypeRef type = make_node(TypeKind::Value, begin, end);
+        type.value = std::string(tokens_[begin].text);
+        return type;
+    }
+    if (end == begin + 2 && tokens_[begin].kind == TokenKind::Identifier &&
+        tokens_[begin + 1].kind == TokenKind::Ellipsis) {
+        TypeRef inner = make_node(TypeKind::Named, begin, begin + 1);
+        inner.name = std::string(tokens_[begin].text);
+        TypeRef type = make_node(TypeKind::PackExpansion, begin, end);
+        type.children.push_back(std::move(inner));
+        return type;
+    }
+
+    const std::string text = trim_string(text_between(begin, end));
+    const std::string normalized = normalize_shape_value_expr(text);
+    if (normalized.empty()) {
+        TypeRef type = make_node(TypeKind::Unknown, begin, end);
+        type.value = text;
+        return type;
+    }
+    TypeRef type = make_node(TypeKind::Value, begin, end);
+    type.value = normalized;
+    return type;
+}
+
+std::vector<TypeRef> TypeTokenParser::parse_shape_list_until(TokenKind close) {
+    std::vector<TypeRef> out;
+    while (!at_end() && !at(close)) {
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+            continue;
+        }
+        const size_t begin = cursor_;
+        int paren_depth = 0;
+        int bracket_depth = 0;
+        while (!at_end()) {
+            if (paren_depth == 0 && bracket_depth == 0 && (at(TokenKind::Comma) || at(close))) {
+                break;
+            }
+            if (at(TokenKind::LParen)) {
+                ++paren_depth;
+            } else if (at(TokenKind::RParen) && paren_depth > 0) {
+                --paren_depth;
+            } else if (at(TokenKind::LBracket)) {
+                ++bracket_depth;
+            } else if (at(TokenKind::RBracket) && bracket_depth > 0) {
+                --bracket_depth;
+            }
+            ++cursor_;
+        }
+        out.push_back(parse_shape_dim(begin, cursor_));
         if (at(TokenKind::Comma)) {
             ++cursor_;
         }

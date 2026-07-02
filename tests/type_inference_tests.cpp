@@ -196,6 +196,36 @@ void test_index_type_inference_uses_type_ast() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_explicit_shape_value_generic_call_inference() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("class Tensor[T]:\n"
+                           "    data: list[T]\n"
+                           "\n"
+                           "    def flatten(self) -> Tensor[T]:\n"
+                           "        return self\n"
+                           "\n"
+                           "def flatten_static[T, B, C, H, W](\n"
+                           "    value: Tensor[T][B, C, H, W],\n"
+                           ") -> Tensor[T][B, C * H * W]:\n"
+                           "    flat = value.flatten()\n"
+                           "    return assume_shape[Tensor[T][B, C * H * W]](flat)\n",
+                           "shape_generic_call.dd");
+    dudu::Symbols symbols = dudu::collect_symbols(module);
+    dudu::check_declarations(module, symbols);
+    dudu::FunctionScope scope(symbols);
+    scope.local_type_refs["x"] = dudu::parse_type_text("Tensor[i32][2, 3, 2, 2]");
+    const dudu::Expr call = dudu::parse_expr_text("flatten_static[i32, 2, 3, 2, 2](x)");
+    const dudu::TypeRef got = dudu::infer_expr_type_ast(scope, call, nullptr);
+    assert(dudu::type_ref_text(got) == "Tensor[i32][2, 12]");
+    const dudu::SourceLocation location{
+        .file = dudu::SourceFileName("shape_generic_call.dd"), .line = 9, .column = 12};
+    const dudu::TypeRef checked_got = dudu::infer_expr_type_ast(scope, call, &location);
+    assert(dudu::type_ref_text(checked_got) == "Tensor[i32][2, 12]");
+    const dudu::TypeRef emitted_got =
+        dudu::infer_emitted_local_type_ref(call, scope.local_type_refs, {}, &symbols);
+    assert(dudu::type_ref_text(emitted_got) == "Tensor[i32][2, 12]");
+}
+
 void test_direct_call_return_type_inference_uses_type_ast() {
     const dudu::ModuleAst module =
         dudu::parse_source("def make_matrix() -> array[i32][2, 2]:\n"
@@ -280,6 +310,7 @@ int main() {
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();
+        test_explicit_shape_value_generic_call_inference();
         test_direct_call_return_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
         test_tuple_expression_inference_uses_type_ast();

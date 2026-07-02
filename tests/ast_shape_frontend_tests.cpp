@@ -465,13 +465,34 @@ void test_type_ast_shape() {
     assert(shaped_tensor.kind == dudu::TypeKind::Shaped);
     assert(dudu::type_ref_text(shaped_tensor) == "Tensor[f32][dyn, 784]");
     assert(dudu::lower_cpp_type(shaped_tensor) == "Tensor<float>");
+    const dudu::TypeRef arithmetic_shape = dudu::parse_type_text("Tensor[T][B, C * H * W]");
+    assert(arithmetic_shape.kind == dudu::TypeKind::Shaped);
+    assert(arithmetic_shape.children.size() == 3);
+    assert(arithmetic_shape.children[1].kind == dudu::TypeKind::Named);
+    assert(arithmetic_shape.children[1].name == "B");
+    assert(arithmetic_shape.children[2].kind == dudu::TypeKind::Value);
+    assert(arithmetic_shape.children[2].value == "C * H * W");
+    assert(dudu::type_ref_text(arithmetic_shape) == "Tensor[T][B, C * H * W]");
+    const dudu::Expr shape_call = dudu::parse_expr_text("flatten_static[i32, 2, 3, 2, 2](x)");
+    assert(shape_call.kind == dudu::ExprKind::TemplateCall);
+    assert(dudu::expr_template_type_args(shape_call).size() == 5);
+    assert(dudu::type_ref_text(dudu::expr_template_type_args(shape_call)[3]) == "2");
+    dudu::FunctionDecl shape_fn;
+    shape_fn.name = "flatten_static";
+    shape_fn.generic_params = {"T", "B", "C", "H", "W"};
+    shape_fn.return_type_ref = arithmetic_shape;
+    const dudu::FunctionSignature shape_signature = dudu::instantiate_generic_signature(
+        shape_fn,
+        {dudu::parse_type_text("i32"), dudu::parse_type_text("2"), dudu::parse_type_text("3"),
+         dudu::parse_type_text("2"), dudu::parse_type_text("2")});
+    assert(dudu::type_ref_text(dudu::signature_return_type_ref(shape_signature)) ==
+           "Tensor[i32][2, 12]");
     const std::map<std::string, dudu::TypeRef> module_type_substitutions{
         {"Tensor", dudu::named_type_ref("tensor.Tensor")},
         {"T", dudu::named_type_ref("f32")},
     };
-    const dudu::TypeRef substituted_shaped_tensor =
-        dudu::substitute_type_ref(dudu::parse_type_text("Tensor[T][dyn, 2]"),
-                                  module_type_substitutions);
+    const dudu::TypeRef substituted_shaped_tensor = dudu::substitute_type_ref(
+        dudu::parse_type_text("Tensor[T][dyn, 2]"), module_type_substitutions);
     assert(dudu::type_ref_text(substituted_shaped_tensor) == "tensor.Tensor[f32][dyn, 2]");
     assert(dudu::substitute_type_ref_text(dudu::parse_type_text("Tensor[T][dyn, 2]"),
                                           {{"Tensor", "tensor.Tensor"}, {"T", "f32"}}) ==
@@ -555,6 +576,10 @@ void test_type_ast_shape() {
            "std::array<std::array<int32_t, 2>, 2>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("array[f32][4, 4]")) ==
            "std::array<std::array<float, 4>, 4>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("array[f32][2 * 2, 3 + 1]")) ==
+           "std::array<std::array<float, 4>, 4>");
+    assert(dudu::type_ref_equivalent(dudu::parse_type_text("array[f32][2 * 2, 3 + 1]"),
+                                     dudu::parse_type_text("array[f32][4, 4]")));
     assert(dudu::type_ref_equivalent(dudu::parse_type_text("array[f32][4, 4]"),
                                      dudu::parse_type_text("array[f32][4,4]")));
     assert(dudu::type_ref_same_shape(dudu::parse_type_text("array[f32][4, 4]"),

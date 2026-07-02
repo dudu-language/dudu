@@ -1,7 +1,8 @@
 #include "dudu/core/array_shape.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/shape_value_expr.hpp"
 
 #include <optional>
 #include <sstream>
@@ -27,14 +28,11 @@ std::optional<std::vector<size_t>> explicit_array_shape_from_type(const TypeRef&
         if (dim.kind != TypeKind::Value || dim.value.empty()) {
             return std::nullopt;
         }
-        size_t value = 0;
-        for (const char c : dim.value) {
-            if (c < '0' || c > '9') {
-                return std::nullopt;
-            }
-            value = value * 10 + static_cast<size_t>(c - '0');
+        const auto value = shape_value_expr_eval(dim.value);
+        if (!value || *value < 0) {
+            return std::nullopt;
         }
-        shape.push_back(value);
+        shape.push_back(static_cast<size_t>(*value));
     }
     return shape;
 }

@@ -1,0 +1,19 @@
+# Target: shaped generic value expressions substitute and fold through tensor
+# metadata. assume_shape proves metadata only; runtime tensor shape remains
+# library-owned.
+
+from ndad import Tensor
+from ndad import zeros
+
+
+def flatten_static[T, B, C, H, W](
+    value: Tensor[T][B, C, H, W],
+) -> Tensor[T][B, C * H * W]:
+    flat = value.flatten()
+    return assume_shape[Tensor[T][B, C * H * W]](flat)
+
+
+def main() -> i32:
+    x: Tensor[i32][2, 3, 2, 2] = zeros[i32](2, 3, 2, 2)
+    flat: Tensor[i32][2, 12] = flatten_static[i32, 2, 3, 2, 2](x)
+    return i32(flat.count())

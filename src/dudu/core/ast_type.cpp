@@ -1,7 +1,8 @@
 #include "dudu/core/ast_type.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/shape_value_expr.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 
 #include <sstream>
 #include <utility>
@@ -65,6 +66,15 @@ std::string substitution_lookup_key(const TypeRef& type) {
     default:
         return {};
     }
+}
+
+std::map<std::string, std::string>
+substitution_texts(const std::map<std::string, TypeRef>& substitutions) {
+    std::map<std::string, std::string> out;
+    for (const auto& [name, type] : substitutions) {
+        out.emplace(name, substitute_type_ref_text(type, {}));
+    }
+    return out;
 }
 
 } // namespace
@@ -244,7 +254,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
         }
         return substitute_type_ref_text(type.children[0], substitutions) + "...";
     case TypeKind::Value:
-        return trim_copy(type.value);
+        return shape_value_expr_substitute(type.value, substitutions);
     case TypeKind::Named:
     case TypeKind::Qualified:
         return trim_copy(type.name);
@@ -314,7 +324,7 @@ bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
         left.malformed != right.malformed || left.name != right.name) {
         return false;
     }
-    if (left.kind == TypeKind::Value && trim_copy(left.value) != trim_copy(right.value)) {
+    if (left.kind == TypeKind::Value && !shape_value_expr_equivalent(left.value, right.value)) {
         return false;
     }
     for (size_t i = 0; i < left.children.size(); ++i) {
@@ -339,7 +349,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
         }
         break;
     case TypeKind::Value:
-        if (trim_copy(left.value) != trim_copy(right.value)) {
+        if (!shape_value_expr_equivalent(left.value, right.value)) {
             return false;
         }
         break;
@@ -469,6 +479,12 @@ TypeRef substitute_type_ref(const TypeRef& type,
             out.location = type.location;
             return out;
         }
+    }
+
+    if (type.kind == TypeKind::Value) {
+        TypeRef out = type;
+        out.value = shape_value_expr_substitute(type.value, substitution_texts(substitutions));
+        return out;
     }
 
     TypeRef out = type;

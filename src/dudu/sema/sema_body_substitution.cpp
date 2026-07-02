@@ -2,8 +2,10 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/shape_value_expr.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
+#include <map>
 #include <sstream>
 
 namespace dudu {
@@ -11,6 +13,15 @@ namespace {
 
 TypeRef substitute_type_ref_pack_aware(const TypeRef& type,
                                        const BodyTypeSubstitutions& substitutions);
+
+std::map<std::string, std::string>
+scalar_binding_texts(const std::map<std::string, TypeRef>& substitutions) {
+    std::map<std::string, std::string> out;
+    for (const auto& [name, type] : substitutions) {
+        out.emplace(name, substitute_type_ref_text(type, {}));
+    }
+    return out;
+}
 
 bool pack_expansion_name(const TypeRef& type, std::string& out) {
     if (type.kind != TypeKind::PackExpansion || type.children.size() != 1) {
@@ -42,7 +53,8 @@ TypeRef substitute_type_ref_pack_aware(const TypeRef& type,
                                        const BodyTypeSubstitutions& substitutions) {
     const std::string key = type_ref_head_name(type);
     if (!key.empty()) {
-        if (const auto found = substitutions.scalar.find(key); found != substitutions.scalar.end()) {
+        if (const auto found = substitutions.scalar.find(key);
+            found != substitutions.scalar.end()) {
             if (type.kind == TypeKind::Template && !type.children.empty()) {
                 TypeRef out = type;
                 out.name = type_ref_head_name(found->second);
@@ -55,13 +67,19 @@ TypeRef substitute_type_ref_pack_aware(const TypeRef& type,
             return out;
         }
     }
+    if (type.kind == TypeKind::Value) {
+        TypeRef out = type;
+        out.value =
+            shape_value_expr_substitute(type.value, scalar_binding_texts(substitutions.scalar));
+        return out;
+    }
     TypeRef out = type;
     out.children = substitute_type_ref_list_pack_aware(out.children, substitutions);
     return out;
 }
 
-BodyTypeSubstitutions scalar_body_type_substitutions(
-    const std::map<std::string, TypeRef>& substitutions) {
+BodyTypeSubstitutions
+scalar_body_type_substitutions(const std::map<std::string, TypeRef>& substitutions) {
     BodyTypeSubstitutions out;
     out.scalar = substitutions;
     return out;
@@ -77,8 +95,8 @@ void substitute_expr_types(Expr& expr, const BodyTypeSubstitutions& substitution
     }
     if (has_expr_template_type_args(expr)) {
         std::vector<TypeRef> type_args = expr_template_type_args(expr);
-        set_expr_template_type_args(
-            expr, substitute_type_ref_list_pack_aware(type_args, substitutions));
+        set_expr_template_type_args(expr,
+                                    substitute_type_ref_list_pack_aware(type_args, substitutions));
     }
     for (Expr& child : expr.children) {
         substitute_expr_types(child, substitutions);

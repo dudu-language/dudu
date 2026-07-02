@@ -23,6 +23,7 @@ ndad_item_runtime.dd	run	0
 ndad_reduction_shape_runtime.dd	run	0
 ndad_assume_shape_runtime.dd	run	11
 ndad_shape_preserving_helpers.dd	run	7
+ndad_shape_arithmetic_runtime.dd	run	24
 symbolic_dims.dd	pass
 bad_missing_variadic_hook.dd	xfail	no matching @operator("[]") for indexed access to value
 bad_fixed_arity_ellipsis.dd	xfail	no matching @operator("[]") for indexed access to value
@@ -32,5 +33,6 @@ bad_multiple_ellipsis.dd	xfail	index expression may contain at most one ellipsis
 bad_symbolic_dim_mismatch.dd	xfail	expects Tensor[f32][784, 10], got Tensor[f32][512, 10]
 bad_scatter_value_type.dd	xfail	expects Tensor[f32], got Tensor[i32][dyn, 784]
 bad_shape_preserving_helper_mismatch.dd	xfail	argument 2 for add_same[i32, 2, 3] expects Tensor[i32][2, 3], got Tensor[i32][3, 2]
+bad_shape_arithmetic_mismatch.dd	xfail	cannot assign Tensor[i32][2, 12] to Tensor[i32][2, 11] without an explicit cast
 bad_ndad_dyn_to_concrete_without_assume.dd	xfail	argument 1 for expect_concrete expects Tensor[i32][2, 2], got Tensor[i32][dyn, 2]
 bad_ndad_assume_shape_base_type.dd	xfail	assume_shape value expects Tensor[f32], got Tensor[i32][dyn, 2]

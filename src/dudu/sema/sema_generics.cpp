@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/shape_value_expr.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_function_type.hpp"
@@ -68,6 +69,15 @@ bool pack_expansion_name(const TypeRef& type, std::string& out) {
 
 TypeRef substitute_generic_type_ref(const TypeRef& type, const GenericTypeBindings& bindings);
 
+std::map<std::string, std::string>
+scalar_binding_texts(const std::map<std::string, TypeRef>& bindings) {
+    std::map<std::string, std::string> out;
+    for (const auto& [name, type] : bindings) {
+        out.emplace(name, substitute_type_ref_text(type, {}));
+    }
+    return out;
+}
+
 std::vector<TypeRef> substitute_generic_type_ref_list(const std::vector<TypeRef>& types,
                                                       const GenericTypeBindings& bindings) {
     std::vector<TypeRef> out;
@@ -94,6 +104,11 @@ TypeRef substitute_generic_type_ref(const TypeRef& type, const GenericTypeBindin
             return out;
         }
     }
+    if (type.kind == TypeKind::Value) {
+        TypeRef out = type;
+        out.value = shape_value_expr_substitute(type.value, scalar_binding_texts(bindings.scalar));
+        return out;
+    }
     TypeRef out = type;
     out.children = substitute_generic_type_ref_list(type.children, bindings);
     if ((out.kind == TypeKind::FixedArray || out.kind == TypeKind::Shaped) &&
@@ -118,6 +133,12 @@ bool same_generic_param_name(const TypeRef& dim, const std::string& param) {
     const std::string base = generic_param_base_name(param);
     if (same_name(type_ref_head_name(dim), base)) {
         return true;
+    }
+    if (dim.kind == TypeKind::Value) {
+        const std::set<std::string> identifiers = shape_value_expr_identifiers(dim.value);
+        if (identifiers.contains(base)) {
+            return true;
+        }
     }
     if (dim.kind == TypeKind::PackExpansion && dim.children.size() == 1) {
         return same_name(type_ref_head_name(dim.children.front()), base);

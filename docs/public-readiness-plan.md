@@ -52,16 +52,16 @@ Already implemented and should stay protected by tests:
 - `basic_index` / `scalar_index` category matching
 - direct advanced indexing through library-defined index object types
 - shaped metadata such as `Tensor[f32][dyn, 784]`
+- shape/value generic arithmetic in shaped metadata, including expressions such
+  as `B, C * H * W`
 - arbitrary-rank reference fixtures through `tests/targets/tensor_indexing`
 
 Remaining language work:
 
-- implement shape/value generic arithmetic from
-  [Generics Plan](generics-plan.md#shape-and-const-arithmetic)
-- support useful compile-time shape expressions such as `M * N`,
-  `H - K + 1`, and equality constraints
-- reject unsupported shape expressions with Dudu-source diagnostics instead of
-  silently widening to `dyn`
+- broaden shape-arithmetic fixtures from flatten-style products into matmul,
+  reshape, conv-like output shape, and fixed-size vector/matrix math
+- improve rejected shape-expression diagnostics so unsupported operators,
+  malformed expressions, and compile-time requirements point at Dudu source
 - make scalar extraction policy explicit: one-element tensor/view results use
   `.item()` unless and until rank/pack-count constraints can prove scalar
   return safely
