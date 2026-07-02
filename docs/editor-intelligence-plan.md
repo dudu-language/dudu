@@ -19,6 +19,13 @@ client, so normal LSP capability registration is available to the editor.
 Remaining gaps are server/index coverage, richer symbol facts, and making every
 position-based request fast and identity-aware.
 
+The editor must also stay useful while the user is typing invalid code. See
+[Invalid-Code Editor Model](language-server-plan.md#invalid-code-editor-model).
+The current lexical semantic-token fallback is only a safety floor; the target
+is partial AST recovery, isolated semantic failures, and last-good index reuse
+so hover, definition, completion, references, diagnostics, inlay hints, and
+semantic tokens continue to work outside the broken region.
+
 Some intelligence also remains incomplete server-side:
 
 - go-to-definition should work for functions, constants, fields, methods, enum

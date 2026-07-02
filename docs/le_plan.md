@@ -2453,6 +2453,16 @@ push. They are not release packaging work.
    JSON-RPC plumbing and use standard language-client integration so capabilities
    such as semantic tokens are not missed by the client layer.
 
+   Invalid code must degrade locally, not collapse editor intelligence
+   globally. A half-written or non-compiling file should still have useful
+   diagnostics, semantic highlighting for recoverable regions, hover/navigation
+   where symbols are still known, and completion from the current partial AST
+   plus the last-good project index. The lexical semantic-token fallback is a
+   safety floor only; the required architecture is parser recovery, partial
+   module indexing, function/body-level sema isolation, and last-good
+   `ProjectIndex` reuse. See
+   [Language Server Plan](language-server-plan.md#invalid-code-editor-model).
+
    Inlay hints are part of the same editor-quality target. The immediate hint
    set is inferred local binding types, inferred loop binding types, the
    implicit receiver type behind bare `self`, and positional call parameter

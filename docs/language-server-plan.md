@@ -59,6 +59,62 @@ other position-based requests now rejects missing or non-numeric
 `position.line` / `position.character` with a JSON-RPC error instead of
 silently defaulting to the start of the file.
 
+## Invalid-Code Editor Model
+
+Invalid source must not make the language server behave as if the document or
+workspace no longer exists. A normal edit loop contains broken code constantly:
+half-written calls, temporarily wrong types, missing imports, unfinished
+blocks, and syntax errors. The editor must keep as much intelligence as can be
+derived from the surviving source.
+
+The long-term target is Rust-Analyzer/clangd-style degradation:
+
+- lexing and baseline syntax coloring always work
+- parser recovery builds a partial AST around malformed statements
+- semantic tokens come from the partial AST first, then from semantic facts
+  where available
+- diagnostics are independent from semantic highlighting and navigation
+- one bad function or statement does not poison unrelated symbols in the same
+  file
+- the server keeps a last-known-good project/module index for navigation,
+  hover, completion, and references outside the broken region
+- current-buffer partial AST facts override stale last-good facts where they
+  are valid
+- request handlers return a valid LSP response even when the current document
+  cannot be fully parsed or type-checked
+
+The lexical semantic-token fallback is only the emergency floor. It prevents
+VS Code from losing all rich coloring when project indexing or semantic
+analysis fails, but it is not the final editor architecture. The final
+architecture should preserve class/function/import/type/member structure from
+the partial AST and then enrich it with semantic facts from the current
+successful scopes and the last-good index.
+
+Required implementation work:
+
+- parser recovery for common incomplete edit states: missing colons, unfinished
+  calls, unfinished indexes, bad block headers, incomplete imports, and
+  unterminated expression continuations
+- partial module indexing that records declarations before and after a bad
+  statement when their syntax is recoverable
+- function/body-level semantic isolation so a sema failure in one body does not
+  discard module declarations or unrelated functions
+- last-good `ProjectIndex` cache keyed by workspace/module graph and document
+  version
+- diagnostics that can report parse/sema failure ranges without replacing all
+  other editor facts with a single root error
+- semantic-token fixtures proving invalid source still has declaration,
+  import, type, parameter, local, field, function, method, decorator, and native
+  token classifications where recoverable
+- LSP JSON-RPC fixtures proving hover, definition, completion, references,
+  inlay hints, and semantic tokens respond while the current file has parser or
+  sema errors
+
+Definition of done: editing a Dudu file into a temporarily non-compiling state
+must show useful squiggles, keep semantic highlighting for recoverable regions,
+keep hover/navigation/completion alive outside the broken region, and recover
+after the edit is fixed without restarting VS Code or running a terminal build.
+
 ## JSON-RPC Request Validation
 
 Required LSP protocol fields must fail loudly when they are missing or have the
