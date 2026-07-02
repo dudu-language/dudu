@@ -47,7 +47,9 @@ tooling solid enough for real projects.
 Current language coverage includes Dudu-native generics, payload enums with
 exhaustive `match`, fixed arrays with matrix/tensor-style indexing and slices,
 operator overloads, native inheritance, generated CMake module builds, and
-initial LSP support.
+initial LSP support. Project tooling includes path/Git Dudu source dependencies
+with a lockfile, so early Dudu packages can be consumed before a central package
+registry exists.
 
 ## Install
 
@@ -226,12 +228,17 @@ dudu-lsp
 - [x] Add native generics, payload enums, fixed arrays, slicing, operator
       overloads, and inheritance.
 - [x] Emit separate generated files through the generated-CMake backend.
+- [x] Add path/Git Dudu source dependencies and stable lockfile generation.
+- [x] Add shaped generics and library-owned indexing hooks for tensor-style
+      APIs without tensor package special cases in the compiler.
 - [x] Complete the core AST/destringing migration for normal Dudu statements,
       expressions, types, sema, codegen, and lint paths.
 - [x] Keep module imports canonical so the same `.dd` file reached through
       multiple import routes is one module, not duplicate declarations.
 - [ ] Add module-level compiler invalidation for faster Dudu-side rebuilds.
 - [ ] Harden native interop against common C++ libraries.
+- [ ] Keep expanding public dogfood projects and optional native/library
+      compatibility probes.
 - [ ] Finish LSP hover, go-to-definition, references, diagnostics, and formatter
       support on top of the real AST.
 - [ ] Add a broad compatibility suite for real libraries and larger examples.

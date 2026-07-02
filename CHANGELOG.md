@@ -195,6 +195,14 @@
   controls and lines-per-second summaries.
 - Expanded compiler benchmarks with selectable generated code shapes for
   functions, classes, expression-heavy bodies, and multi-module import graphs.
+- Added path and Git Dudu source dependencies in `dudu.toml`, `dudu deps fetch`,
+  and a stable `dudu.lock` model for early package bootstrapping.
+- Added public-readiness tensor/indexing target fixtures covering shaped
+  generics, variadic index hooks, shape arithmetic, and negative diagnostics
+  without tensor package special cases in the compiler.
+- Added a public validation matrix that separates fast compiler checks,
+  editor/LSP checks, optional native probes, dogfood repos, numeric-stack
+  checks, and release-candidate validation.
 
 ### Changed
 
