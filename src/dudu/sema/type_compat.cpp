@@ -1,9 +1,9 @@
 #include "dudu/sema/type_compat.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/shape_value_expr.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/type_compat_literals.hpp"
 #include "dudu/sema/type_compat_native.hpp"
@@ -13,6 +13,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace dudu {
@@ -355,9 +356,8 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     return structural_type_assignment_allowed(expected, got) ||
            is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
-           is_index_category_assignment(expected, got) ||
-           is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
-           is_native_function_pointer(expected, got) ||
+           is_index_category_assignment(expected, got) || is_value_from_reference(expected, got) ||
+           is_value_from_const(expected, got) || is_native_function_pointer(expected, got) ||
            native_associated_type_assignment_allowed(expected, got) ||
            normalized_type_assignment_allowed(normalized_expected_ref, normalized_got_ref);
 }
@@ -438,10 +438,66 @@ std::string assignment_error_display(const std::string& expected, const Expr& ex
     return message;
 }
 
+std::string shape_dim_text(const TypeRef& dim) {
+    return substitute_type_ref_text(dim, {});
+}
+
+std::string shape_list_text(const TypeRef& type) {
+    std::string out = "[";
+    if (type.kind == TypeKind::Shaped) {
+        for (size_t i = 1; i < type.children.size(); ++i) {
+            if (i > 1) {
+                out += ", ";
+            }
+            out += shape_dim_text(type.children[i]);
+        }
+    }
+    out += "]";
+    return out;
+}
+
+bool shape_dim_accepts(const TypeRef& expected, const TypeRef& got) {
+    return (expected.kind == TypeKind::Value && trim_copy(expected.value) == "dyn") ||
+           type_ref_equivalent(expected, got);
+}
+
+std::optional<std::string> shape_assignment_detail(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind != TypeKind::Shaped || got.kind != TypeKind::Shaped ||
+        expected.children.empty() || got.children.empty() ||
+        !type_assignment_allowed(expected.children.front(), got.children.front())) {
+        return std::nullopt;
+    }
+
+    const size_t expected_rank = expected.children.size() - 1;
+    const size_t got_rank = got.children.size() - 1;
+    if (expected_rank != got_rank) {
+        return "shape mismatch: expected rank " + std::to_string(expected_rank) + " " +
+               shape_list_text(expected) + ", got rank " + std::to_string(got_rank) + " " +
+               shape_list_text(got);
+    }
+
+    for (size_t axis = 0; axis < expected_rank; ++axis) {
+        const TypeRef& expected_dim = expected.children[axis + 1];
+        const TypeRef& got_dim = got.children[axis + 1];
+        if (!shape_dim_accepts(expected_dim, got_dim)) {
+            return "shape mismatch: expected " + shape_list_text(expected) + ", got " +
+                   shape_list_text(got) + " (axis " + std::to_string(axis) + " expected " +
+                   shape_dim_text(expected_dim) + ", got " + shape_dim_text(got_dim) + ")";
+        }
+    }
+
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string assignment_error(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    return assignment_error_display(substitute_type_ref_text(expected, {}), expr, got);
+    std::string message =
+        assignment_error_display(substitute_type_ref_text(expected, {}), expr, got);
+    if (const std::optional<std::string> detail = shape_assignment_detail(expected, got)) {
+        message += "; " + *detail;
+    }
+    return message;
 }
 
 } // namespace dudu

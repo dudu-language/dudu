@@ -143,6 +143,14 @@ ranks. Separate compiler branches such as "row slice", "column slice",
 The LSP inlay and hover layers should surface the same result shape that sema
 uses, so `col = matrix[:, 1]` should display `col: array_view[i32][rows]`, not
 plain `array_view[i32]` or the source matrix shape.
+If a user writes an explicit shaped type that disagrees with the inferred view,
+the diagnostic should explain the shape failure, including rank and axis when
+known:
+
+```text
+cannot assign array_view[i32][3] to array_view[i32][4] without an explicit cast;
+shape mismatch: expected [4], got [3] (axis 0 expected 4, got 3)
+```
 
 ### Library Types
 

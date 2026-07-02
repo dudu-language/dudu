@@ -56,6 +56,19 @@ void test_ast_assignment_display_types() {
     unknown.kind = dudu::ExprKind::Unknown;
     assert(dudu::assignment_error(bool_type, unknown, missing_type) ==
            "cannot assign  to bool without an explicit cast");
+
+    const dudu::Expr matrix_slice = dudu::parse_expr_text("matrix[:, 1]");
+    assert(dudu::assignment_error(dudu::parse_type_text("array_view[i32][4]"), matrix_slice,
+                                  dudu::parse_type_text("array_view[i32][3]")) ==
+           "cannot assign array_view[i32][3] to array_view[i32][4] without an explicit cast; "
+           "shape mismatch: expected [4], got [3] (axis 0 expected 4, got 3)");
+    assert(dudu::assignment_error(dudu::parse_type_text("array_view[i32][dyn]"), matrix_slice,
+                                  dudu::parse_type_text("array_view[i32][3]")) ==
+           "cannot assign array_view[i32][3] to array_view[i32][dyn] without an explicit cast");
+    assert(dudu::assignment_error(dudu::parse_type_text("array_view[i32][3, 1]"), matrix_slice,
+                                  dudu::parse_type_text("array_view[i32][3]")) ==
+           "cannot assign array_view[i32][3] to array_view[i32][3, 1] without an explicit cast; "
+           "shape mismatch: expected rank 2 [3, 1], got rank 1 [3]");
 }
 
 void test_missing_expression_is_not_unknown() {

@@ -88,6 +88,27 @@ void test_lsp_index_diagnostic_preserves_candidate_reasons() {
                                       "argument 2 expects i32, got str") != std::string::npos);
 }
 
+void test_lsp_shape_mismatch_diagnostic_explains_axis() {
+    const dudu::Document doc{.uri = "",
+                             .path = "bad_shape_annotation.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    matrix: array[i32] = [\n"
+                                     "        [1, 2, 3, 4],\n"
+                                     "        [10, 20, 30, 40],\n"
+                                     "        [100, 200, 300, 400],\n"
+                                     "    ]\n"
+                                     "    col: array_view[i32][4] = matrix[:, 1]\n"
+                                     "    return col[0]\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    assert(diags.size() == 1);
+    assert(diags.front().source == "dudu/sema");
+    assert(diags.front().message.find("cannot assign array_view[i32][3] to "
+                                      "array_view[i32][4]") != std::string::npos);
+    assert(diags.front().message.find("shape mismatch: expected [4], got [3]") !=
+           std::string::npos);
+    assert(diags.front().message.find("axis 0 expected 4, got 3") != std::string::npos);
+}
+
 void test_lsp_block_header_diagnostics_use_extra_token_location() {
     const dudu::Document doc{.uri = "",
                              .path = "bad_if_header.dd",
@@ -779,6 +800,7 @@ int main() {
     try {
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_index_diagnostic_preserves_candidate_reasons();
+        test_lsp_shape_mismatch_diagnostic_explains_axis();
         test_lsp_block_header_diagnostics_use_extra_token_location();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_lints_do_not_leak_from_dependency_modules();
