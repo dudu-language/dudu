@@ -296,7 +296,8 @@ exists, and Dudu imports stay logical, for example
 `rev`, `tag`, or `branch`, and record the resolved commit in the lockfile.
 Dependency smoke tests cover successful path/Git dependencies, lockfile
 stability, missing paths, existing folders that are not Dudu package roots, bad
-Git repos, bad Git refs, and native pkg-config failures as distinct diagnostics.
+Git repos, Git authentication-style failures, bad Git refs, and native
+pkg-config failures as distinct diagnostics.
 
 ## 6. Public Example And Validation Matrix
 

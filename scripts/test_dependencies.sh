@@ -205,6 +205,35 @@ DD
         "$dudu_bin" deps fetch --quiet
 )
 
+auth_git_bin="$work_root/fake_auth_git"
+auth_git_app="$work_root/auth_git_app"
+mkdir -p "$auth_git_bin" "$auth_git_app/src"
+cat >"$auth_git_bin/git" <<'SH'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "clone" ]]; then
+    printf 'fatal: Authentication failed for requested repository\n' >&2
+    exit 128
+fi
+exec /usr/bin/git "$@"
+SH
+chmod +x "$auth_git_bin/git"
+cat >"$auth_git_app/dudu.toml" <<'TOML'
+name = "auth_git_app"
+entry = "src/main.dd"
+
+[deps]
+private_math = { git = "https://example.invalid/private_math.git", rev = "abc123" }
+TOML
+cat >"$auth_git_app/src/main.dd" <<'DD'
+def main() -> i32:
+    return 0
+DD
+(
+    cd "$auth_git_app"
+    expect_failure_contains "Authentication failed for requested repository" \
+        env PATH="$auth_git_bin:$PATH" "$dudu_bin" deps fetch --quiet
+)
+
 native_dep_app="$work_root/native_dep_app"
 mkdir -p "$native_dep_app/src"
 cat >"$native_dep_app/dudu.toml" <<'TOML'

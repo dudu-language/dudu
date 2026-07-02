@@ -43,8 +43,15 @@ std::string capture_command(const std::string& command) {
 }
 
 void run_command_or_fail(const std::string& command, bool quiet, const std::string& message) {
-    const std::string effective = quiet ? command + " >/dev/null 2>&1" : command;
-    if (std::system(effective.c_str()) != 0) {
+    if (quiet) {
+        try {
+            (void)capture_command(command);
+            return;
+        } catch (const std::runtime_error& error) {
+            fail_dependency(message + "\n" + error.what());
+        }
+    }
+    if (std::system(command.c_str()) != 0) {
         fail_dependency(message + "\ncommand: " + command);
     }
 }
