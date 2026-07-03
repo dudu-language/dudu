@@ -223,10 +223,23 @@ bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_ty
     }
 
     if ((param_type.kind == TypeKind::Pointer || param_type.kind == TypeKind::Reference) &&
-        param_type.kind == arg_type.kind && param_type.children.size() == 1 &&
-        arg_type.children.size() == 1) {
-        return infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
-                                          params, bindings, error);
+        param_type.children.size() == 1) {
+        if (param_type.kind == arg_type.kind && arg_type.children.size() == 1) {
+            return infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
+                                              params, bindings, error);
+        }
+        if (param_type.kind == TypeKind::Reference) {
+            return infer_generic_binding_pack(param_type.children.front(), arg_type, params,
+                                              bindings, error);
+        }
+    }
+    if (param_type.kind == TypeKind::Const && param_type.children.size() == 1) {
+        if (arg_type.kind == TypeKind::Const && arg_type.children.size() == 1) {
+            return infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
+                                              params, bindings, error);
+        }
+        return infer_generic_binding_pack(param_type.children.front(), arg_type, params, bindings,
+                                          error);
     }
     if (param_type.kind != arg_type.kind) {
         return true;

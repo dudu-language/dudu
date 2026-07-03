@@ -34,7 +34,7 @@ def matvec_shape[T, Rows, Cols](
 
 def main() -> i32:
     batch: Tensor[f32][2, 3, 2, 2] = zeros[f32](2, 3, 2, 2)
-    flat: Tensor[f32][2, 12] = flatten_static[f32, 2, 3, 2, 2](batch)
+    flat: Tensor[f32][2, 12] = flatten_static(batch)
 
     packed: Tensor[f32][6, 4] = zeros[f32](6, 4)
     reshaped: Tensor[f32][2, 3, 4] = reshape_static[f32, 2, 3, 4](packed)
@@ -44,10 +44,10 @@ def main() -> i32:
 
     left: Tensor[f32][2, 3] = zeros[f32](2, 3)
     right: Tensor[f32][3, 4] = zeros[f32](3, 4)
-    product: Tensor[f32][2, 4] = matmul[f32, 2, 3, 4](left, right)
+    product: Tensor[f32][2, 4] = matmul(left, right)
 
     vector: Tensor[f32][3] = zeros[f32](3)
-    reduced: Tensor[f32][2] = matvec_shape[f32, 2, 3](left, vector)
+    reduced: Tensor[f32][2] = matvec_shape(left, vector)
 
     return i32(
         flat.shape[0]
