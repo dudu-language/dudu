@@ -1340,12 +1340,21 @@ push. They are not release packaging work.
    layer on top of `ndad` with parameters, backward plumbing, SGD, and a tiny
    OR-classifier training target. `scripts/check_target_api.sh` passed in that
    repo on 2026-07-02 with 5 graduated specs and 0 pending specs.
-   Remaining Dudu-language polish for this numeric stack is not library
-   implementation but better compile-time shape arithmetic: symbolic
-   dimensions such as `M`, `K`, and `N` already flow through shaped metadata,
-   but expressions such as `C * H * W` or `H - K + 1` should become checked
-   compile-time shape/value expressions instead of forcing APIs to widen to
-   `dyn`.
+   The numeric-stack policy is runtime-first with optional static precision:
+   Dudu should support ordinary dynamic-shape `ndad`/`mald` code without
+   requiring shape annotations, while `Tensor[T][shape]` remains available for
+   API boundaries, fixed buffers, GPU/layout contracts, and user-requested
+   compile-time shape assertions. One-element tensor/view selections use
+   PyTorch-style `.item()` for scalar extraction until rank/pack-count
+   constraints justify direct scalar return typing. Shape generic inference
+   should work when argument types uniquely carry the facts, such as
+   convolution image/kernel extents, but underdetermined reshape-style APIs
+   should spell the target shape explicitly. Remaining Dudu-language polish for
+   this numeric stack is better compile-time shape arithmetic where it pays:
+   symbolic dimensions such as `M`, `K`, and `N` already flow through shaped
+   metadata, but expressions such as `C * H * W` or `H - K + 1` should stay
+   checked compile-time shape/value expressions instead of forcing APIs to
+   widen to `dyn`.
    The source of truth is [Generics Plan](generics-plan.md#shape-and-const-arithmetic).
    The separate ecosystem proof is to bottle the reference surface into
    ordinary Dudu packages such as `ndad` and `mald` so user code imports clean

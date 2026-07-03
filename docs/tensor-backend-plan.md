@@ -231,6 +231,59 @@ The core representation is rank-independent: `shape`, `strides`, and `offset`.
 `rows` and `cols` are allowed convenience methods on rank-2 values, not the
 foundation.
 
+## Runtime-First Shapes, Optional Static Precision
+
+The numeric stack should feel like compiled Python first. Library tensors must
+work well with runtime shape metadata:
+
+```python
+x = ndad.zeros[f32](batch, 784)
+w = ndad.zeros[f32](784, classes)
+logits = x.matmul(w)
+```
+
+Static shape metadata is an opt-in precision tool, not a tax on everyday
+numeric code:
+
+```python
+x: Tensor[f32][B, 784] = ndad.zeros[f32](batch, 784)
+w: Tensor[f32][784, Classes] = ndad.zeros[f32](784, classes)
+logits: Tensor[f32][B, Classes] = x.matmul(w)
+```
+
+Use static shapes when they represent API boundaries, compile-time layout,
+fixed buffers, GPU/kernel contracts, or assertions the user wants checked at
+compile time. Do not require static shapes merely to make local tensor code
+compile. A tensor library should be useful in dynamic-shape mode and become
+more checked as users add shape annotations.
+
+Shape generics should infer from arguments when the input types uniquely carry
+the facts, as in convolution:
+
+```python
+def apply_conv2d[H, W, K](
+    image: &array[f32][H, W],
+    kernel: &array[f32][K, K],
+) -> array[f32][H - K + 1, W - K + 1]:
+    ...
+
+out = apply_conv2d(image, kernel)
+```
+
+Some APIs are inherently underdetermined from inputs alone. For example, from
+`Tensor[f32][6, 4]` and a parameter type `Tensor[T][A * B, C]`, the compiler
+can infer `T = f32`, `C = 4`, and `A * B = 6`, but it cannot know whether the
+user wants `A, B = 1, 6`, `2, 3`, `3, 2`, or `6, 1`. Such APIs should expose
+the desired shape explicitly:
+
+```python
+reshaped = value.reshape[2, 3, 4]()
+```
+
+Expected-return-type-guided generic inference may make some assignment forms
+less verbose later, but it is not required for the first serious `ndad`/`mald`
+libraries.
+
 Status: the in-repo `tests/targets/tensor_indexing/ndad.dd` reference surface
 now stores rank-independent `shape`, `strides`, and `offset` on `Tensor[T]` and
 `TensorView[T]`. Arbitrary-rank index normalization is implemented as ordinary
@@ -248,7 +301,10 @@ view results expose PyTorch-style `.item()`; `ndad_item_runtime.dd` covers
 scalar-looking basic selections, one-element slices, and one-element advanced
 gathers. Returning a scalar directly when scalar indexes consume every tensor
 axis still needs a rank/pack-count constraint feature; until that exists,
-scalar extraction stays explicit rather than compiler policy.
+scalar extraction stays explicit rather than compiler policy. This is a
+deliberate pressure valve: `tensor[i, j].item()` keeps the library usable
+without forcing Dudu to grow full type-level result computation before the
+numeric stack is real.
 
 ## Bottled Library Prototypes
 
