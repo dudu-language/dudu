@@ -55,6 +55,11 @@ C++ OOP includes:
 Dudu should expose the parts that make systems code nicer and consume the rest
 through native interop when imported C++ APIs require it.
 
+Design pressure around abstract classes as protocols, third-party conformance,
+and Serde-like libraries is recorded in
+[Protocols And Serde Design Notes](protocols-serde-design-notes.md). That file
+is a design notebook, not accepted OOP syntax.
+
 ## Classes
 
 Dudu-native classes are value types by default and lower to C++ struct-like

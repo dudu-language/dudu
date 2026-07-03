@@ -9,6 +9,11 @@ is enough to support serde-like derives, bindings, tests, reflection metadata,
 and small code-generation helpers without turning normal code into a macro
 language.
 
+Serde, third-party adapters, and protocol-shaped abstract classes are discussed
+in [Protocols And Serde Design Notes](protocols-serde-design-notes.md). That
+document records candidate syntax and tradeoffs without making them language
+features.
+
 ## Principles
 
 - Normal code should look like normal Dudu.

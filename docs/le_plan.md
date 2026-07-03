@@ -416,6 +416,10 @@ Examples of the expected bar:
 - macro prerequisites should include serde-like derives, binary serialization,
   reflection metadata, generated tests, and export-table generation as target
   examples
+- protocol and Serde design pressure is tracked separately in
+  [Protocols And Serde Design Notes](protocols-serde-design-notes.md); that
+  document records candidate syntax and tradeoffs, not accepted language
+  features
 
 ## 1. Finish The Project Driver
 
@@ -1449,6 +1453,7 @@ push. They are not release packaging work.
 7. Native Inheritance
 
    Primary plan: [Inheritance Plan](inheritance-plan.md).
+   Related notes: [Protocols And Serde Design Notes](protocols-serde-design-notes.md).
 
    Implement method-only `@abstract`, `@virtual`, `@override`, `super`, current
    class static access, strict multiple inheritance, and interface-like abstract
@@ -1479,6 +1484,7 @@ push. They are not release packaging work.
 8. Macro Surface Prerequisites
 
    Primary plan: [Macro Syntax Plan](macro-syntax-plan.md).
+   Related notes: [Protocols And Serde Design Notes](protocols-serde-design-notes.md).
 
    Start with target syntax for derives, field attributes, serde-like codegen,
    tests, reflection metadata, binary serialization, and binding generation.
