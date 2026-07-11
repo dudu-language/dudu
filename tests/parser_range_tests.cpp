@@ -29,6 +29,24 @@ void test_statement_source_range_uses_token_span() {
     assert(assign.value_expr.range.start.column == 18);
 }
 
+void test_declaration_ranges_cover_complete_bodies() {
+    const dudu::ModuleAst module = dudu::parse_source("class Player:\n"
+                                                      "    hp: i32\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    return 0\n"
+                                                      "\n"
+                                                      "enum Mode:\n"
+                                                      "    Play\n",
+                                                      "declaration_ranges.dd");
+    assert(module.classes.front().range.start.line == 1);
+    assert(module.classes.front().range.end.line == 4);
+    assert(module.functions.front().range.start.line == 4);
+    assert(module.functions.front().range.end.line == 7);
+    assert(module.enums.front().range.start.line == 7);
+    assert(module.enums.front().range.end.line > 7);
+}
+
 void test_digit_suffixed_member_receiver() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    sdl3.InitForSDLRenderer()\n"
@@ -200,6 +218,7 @@ void test_misplaced_docstrings_are_rejected() {
 int main() {
     try {
         test_statement_source_range_uses_token_span();
+        test_declaration_ranges_cover_complete_bodies();
         test_digit_suffixed_member_receiver();
         test_keyword_statements_keep_token_ranges();
         test_block_headers_reject_same_line_tokens_after_colon();

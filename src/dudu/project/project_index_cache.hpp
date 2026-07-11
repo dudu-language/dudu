@@ -35,6 +35,7 @@ class ProjectIndexCache {
         bool allow_module_tree = false;
         bool include_native_headers = false;
         bool include_native_headers_in_merged_module = false;
+        bool recover_syntax = false;
         bool check_semantics = false;
         bool check_bodies = false;
 

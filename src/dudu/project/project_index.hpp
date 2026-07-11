@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/core/ast.hpp"
+#include "dudu/parser/parse_result.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/sema/sema.hpp"
 
@@ -25,6 +26,7 @@ struct ProjectIndexOptions {
     bool allow_module_tree = true;
     bool include_native_headers = true;
     bool include_native_headers_in_merged_module = false;
+    bool recover_syntax = false;
     bool check_semantics = true;
     SemanticOptions semantic_options{};
 };
@@ -48,6 +50,9 @@ class ProjectIndex {
     const std::vector<ProjectModuleSummary>& modules() const {
         return modules_;
     }
+    const std::vector<ParseDiagnostic>& parse_diagnostics() const {
+        return parse_diagnostics_;
+    }
     std::vector<std::filesystem::path> source_files() const;
     const ProjectModuleSummary* summary_for_path(const std::filesystem::path& path) const;
     const ProjectModuleSummary* summary_for_module(std::string_view module_path) const;
@@ -67,6 +72,7 @@ class ProjectIndex {
 
   private:
     ModuleAst module_;
+    std::vector<ParseDiagnostic> parse_diagnostics_;
     std::vector<ProjectModuleSummary> modules_;
     std::map<std::string, size_t> source_path_to_index_;
     std::map<std::string, size_t> module_path_to_index_;

@@ -21,6 +21,7 @@
 #include "dudu/lsp/language_server_types.hpp"
 #include "dudu/lsp/language_server_workspace.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <algorithm>
@@ -352,10 +353,19 @@ class LanguageServer {
             return "{\"data\":[]}";
         }
         try {
-            const ProjectIndex& index = project_index_for_document(found->second, false);
-            const ProjectIndex& native_index = project_index_for_document(found->second, true);
+            const ProjectIndex& index =
+                project_index_for_document(found->second, false, false, false);
+            const ProjectIndex& native_index =
+                project_index_for_document(found->second, true, false, false);
             return semantic_tokens_json(index, found->second.path, native_index);
         } catch (const std::exception&) {
+            const ParseResult recovered =
+                parse_source_recovering(found->second.text, found->second.path);
+            if (!recovered.module.imports.empty() || !recovered.module.aliases.empty() ||
+                !recovered.module.enums.empty() || !recovered.module.classes.empty() ||
+                !recovered.module.constants.empty() || !recovered.module.functions.empty()) {
+                return semantic_tokens_json(recovered.module);
+            }
             return lexical_semantic_tokens_json(found->second.text);
         }
     }

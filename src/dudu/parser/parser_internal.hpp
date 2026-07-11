@@ -10,7 +10,8 @@ namespace dudu {
 
 class Parser {
   public:
-    explicit Parser(std::span<const Token> tokens);
+    explicit Parser(std::span<const Token> tokens,
+                    std::vector<ParseDiagnostic>* diagnostics = nullptr);
 
     ModuleAst parse();
 
@@ -25,6 +26,7 @@ class Parser {
   private:
     std::span<const Token> tokens_;
     size_t cursor_ = 0;
+    std::vector<ParseDiagnostic>* diagnostics_ = nullptr;
 
     const Token& current() const;
     const Token& previous() const;
@@ -46,6 +48,11 @@ class Parser {
     const Token& consume(TokenKind kind, std::string_view message);
     const Token& consume_identifier(std::string_view message);
     [[noreturn]] void fail_current(const std::string& message) const;
+    bool recovering() const;
+    void record_diagnostic(const CompileError& error);
+    int layout_depth_before(size_t cursor) const;
+    void synchronize_top_level(size_t failed_cursor);
+    void synchronize_block_item(size_t failed_cursor);
 
     void skip_newlines();
     void require_no_decorators(const std::vector<Decorator>& decorators,
@@ -65,6 +72,7 @@ class Parser {
                           const std::vector<Decorator>& decorators);
     FieldDecl parse_field();
     EnumDecl parse_enum(const Token& start);
+    EnumValueDecl parse_enum_value();
     void parse_type_decl(const Token& start, ModuleAst& module);
     FunctionDecl parse_function(const Token& start, Visibility visibility,
                                 const std::vector<Decorator>& decorators,

@@ -25,8 +25,8 @@ TypeRef bare_self_type_ref(SourceLocation location) {
 
 ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                               const std::vector<Decorator>& decorators) {
-    (void)start;
     ClassDecl klass;
+    klass.range.start = start.location;
     klass.visibility = visibility;
     klass.decorators = decorators;
     const Token& name = consume_identifier("expected class name");
@@ -65,61 +65,72 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             match(TokenKind::Newline);
             continue;
         }
-        if (can_accept_docstring && at(TokenKind::String)) {
-            require_no_decorators(member_decorators, "class docstring");
-            const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
-            const Expr expr = parse_expr_piece(doc);
-            klass.doc_comment = normalize_docstring_text(expr.value);
-            ++cursor_;
-            consume(TokenKind::Newline, "expected newline after class docstring");
+        const size_t item_begin = cursor_;
+        try {
+            if (can_accept_docstring && at(TokenKind::String)) {
+                require_no_decorators(member_decorators, "class docstring");
+                const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
+                const Expr expr = parse_expr_piece(doc);
+                klass.doc_comment = normalize_docstring_text(expr.value);
+                ++cursor_;
+                consume(TokenKind::Newline, "expected newline after class docstring");
+                can_accept_docstring = false;
+                continue;
+            }
             can_accept_docstring = false;
-            continue;
-        }
-        can_accept_docstring = false;
-        if (at(TokenKind::String)) {
-            throw CompileError(current().location,
-                               "misplaced docstring; class docstrings must be the first "
-                               "statement in the class body",
-                               "dudu.parser.misplaced_docstring");
-        }
-        if (match(TokenKind::At)) {
-            member_decorators.push_back(parse_decorator(previous()));
-            continue;
-        }
-        const Visibility member_visibility = parse_visibility();
-        if (match_identifier("def")) {
-            klass.methods.push_back(
-                parse_function(previous(), member_visibility, member_decorators, klass.name));
+            if (at(TokenKind::String)) {
+                throw CompileError(current().location,
+                                   "misplaced docstring; class docstrings must be the first "
+                                   "statement in the class body",
+                                   "dudu.parser.misplaced_docstring");
+            }
+            if (match(TokenKind::At)) {
+                member_decorators.push_back(parse_decorator(previous()));
+                continue;
+            }
+            const Visibility member_visibility = parse_visibility();
+            if (match_identifier("def")) {
+                klass.methods.push_back(
+                    parse_function(previous(), member_visibility, member_decorators, klass.name));
+                member_decorators.clear();
+                continue;
+            }
+            if (is_all_caps_identifier(current())) {
+                require_no_decorators(member_decorators, "class constant");
+                klass.constants.push_back(parse_constant());
+                continue;
+            }
+            require_no_decorators(member_decorators, "field");
+            FieldDecl field = parse_field();
+            if (field.type_ref.kind == TypeKind::Static) {
+                if (expr_missing(field.value_expr)) {
+                    throw CompileError(field.location, "static field requires an initializer");
+                }
+                ConstDecl static_field;
+                static_field.name = field.name;
+                if (field.type_ref.children.empty()) {
+                    throw CompileError(field.location,
+                                       "malformed static field type: missing child type");
+                }
+                static_field.type_ref = field.type_ref.children[0];
+                static_field.value_expr = field.value_expr;
+                static_field.location = field.location;
+                klass.static_fields.push_back(std::move(static_field));
+            } else {
+                klass.fields.push_back(std::move(field));
+            }
+        } catch (const CompileError& error) {
+            if (!recovering()) {
+                throw;
+            }
+            record_diagnostic(error);
             member_decorators.clear();
-            continue;
-        }
-        if (is_all_caps_identifier(current())) {
-            require_no_decorators(member_decorators, "class constant");
-            klass.constants.push_back(parse_constant());
-            continue;
-        }
-        require_no_decorators(member_decorators, "field");
-        FieldDecl field = parse_field();
-        if (field.type_ref.kind == TypeKind::Static) {
-            if (expr_missing(field.value_expr)) {
-                throw CompileError(field.location, "static field requires an initializer");
-            }
-            ConstDecl static_field;
-            static_field.name = field.name;
-            if (field.type_ref.children.empty()) {
-                throw CompileError(field.location,
-                                   "malformed static field type: missing child type");
-            }
-            static_field.type_ref = field.type_ref.children[0];
-            static_field.value_expr = field.value_expr;
-            static_field.location = field.location;
-            klass.static_fields.push_back(std::move(static_field));
-        } else {
-            klass.fields.push_back(std::move(field));
+            synchronize_block_item(item_begin);
         }
     }
     require_no_decorators(member_decorators, "class body");
     consume(TokenKind::Dedent, "expected dedent after class body");
+    klass.range.end = current().location;
     return klass;
 }
 
@@ -143,8 +154,8 @@ FieldDecl Parser::parse_field() {
 }
 
 EnumDecl Parser::parse_enum(const Token& start) {
-    (void)start;
     EnumDecl en;
+    en.range.start = start.location;
     const Token& name = consume_identifier("expected enum name");
     en.location = name.location;
     en.name = name.text;
@@ -162,74 +173,88 @@ EnumDecl Parser::parse_enum(const Token& start) {
         if (match(TokenKind::Newline)) {
             continue;
         }
-        if (can_accept_docstring && at(TokenKind::String)) {
-            const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
-            const Expr expr = parse_expr_piece(doc);
-            en.doc_comment = normalize_docstring_text(expr.value);
-            ++cursor_;
-            consume(TokenKind::Newline, "expected newline after enum docstring");
+        const size_t item_begin = cursor_;
+        try {
+            if (can_accept_docstring && at(TokenKind::String)) {
+                const JoinedTokens doc = join_tokens(cursor_, cursor_ + 1);
+                const Expr expr = parse_expr_piece(doc);
+                en.doc_comment = normalize_docstring_text(expr.value);
+                ++cursor_;
+                consume(TokenKind::Newline, "expected newline after enum docstring");
+                can_accept_docstring = false;
+                continue;
+            }
             can_accept_docstring = false;
-            continue;
-        }
-        can_accept_docstring = false;
-        if (at(TokenKind::String)) {
-            throw CompileError(current().location,
-                               "misplaced docstring; enum docstrings must be the first "
-                               "statement in the enum body",
-                               "dudu.parser.misplaced_docstring");
-        }
-        EnumValueDecl value;
-        const Token& name = consume_identifier("expected enum value");
-        value.name = name.text;
-        value.location = name.location;
-        if (match(TokenKind::LParen)) {
-            value.tuple_payload = true;
-            if (!at(TokenKind::RParen)) {
-                size_t index = 0;
-                while (true) {
-                    EnumPayloadField field;
-                    field.name = "_" + std::to_string(index);
-                    field.location = current().location;
-                    const JoinedTokens type =
-                        join_until_with_range({TokenKind::Comma, TokenKind::RParen});
-                    if (!type.has_tokens) {
-                        throw CompileError(field.location, "enum payload field requires a type");
-                    }
-                    field.type_ref = parse_type_piece(type);
-                    value.payload_fields.push_back(std::move(field));
-                    ++index;
-                    if (match(TokenKind::Comma)) {
-                        continue;
-                    }
-                    break;
-                }
+            if (at(TokenKind::String)) {
+                throw CompileError(current().location,
+                                   "misplaced docstring; enum docstrings must be the first "
+                                   "statement in the enum body",
+                                   "dudu.parser.misplaced_docstring");
             }
-            consume(TokenKind::RParen, "expected ) after enum payload fields");
-        } else if (match(TokenKind::Colon)) {
-            consume(TokenKind::Newline, "expected newline after enum payload header");
-            if (!match(TokenKind::Indent)) {
-                fail_current("expected indented enum payload fields");
+            en.values.push_back(parse_enum_value());
+        } catch (const CompileError& error) {
+            if (!recovering()) {
+                throw;
             }
-            while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
-                if (match(TokenKind::Newline)) {
-                    continue;
-                }
-                const FieldDecl field = parse_field();
-                value.payload_fields.push_back(
-                    {.name = field.name, .type_ref = field.type_ref, .location = field.location});
-            }
-            consume(TokenKind::Dedent, "expected dedent after enum payload fields");
-            en.values.push_back(std::move(value));
-            continue;
-        } else if (match(TokenKind::Assign)) {
-            const JoinedTokens expr = join_until_with_range({TokenKind::Newline});
-            value.value_expr = parse_expr_piece(expr);
+            record_diagnostic(error);
+            can_accept_docstring = false;
+            synchronize_block_item(item_begin);
         }
-        consume(TokenKind::Newline, "expected newline after enum value");
-        en.values.push_back(std::move(value));
     }
     consume(TokenKind::Dedent, "expected dedent after enum body");
+    en.range.end = current().location;
     return en;
+}
+
+EnumValueDecl Parser::parse_enum_value() {
+    EnumValueDecl value;
+    const Token& name = consume_identifier("expected enum value");
+    value.name = name.text;
+    value.location = name.location;
+    if (match(TokenKind::LParen)) {
+        value.tuple_payload = true;
+        if (!at(TokenKind::RParen)) {
+            size_t index = 0;
+            while (true) {
+                EnumPayloadField field;
+                field.name = "_" + std::to_string(index);
+                field.location = current().location;
+                const JoinedTokens type =
+                    join_until_with_range({TokenKind::Comma, TokenKind::RParen});
+                if (!type.has_tokens) {
+                    throw CompileError(field.location, "enum payload field requires a type");
+                }
+                field.type_ref = parse_type_piece(type);
+                value.payload_fields.push_back(std::move(field));
+                ++index;
+                if (match(TokenKind::Comma)) {
+                    continue;
+                }
+                break;
+            }
+        }
+        consume(TokenKind::RParen, "expected ) after enum payload fields");
+    } else if (match(TokenKind::Colon)) {
+        consume(TokenKind::Newline, "expected newline after enum payload header");
+        if (!match(TokenKind::Indent)) {
+            fail_current("expected indented enum payload fields");
+        }
+        while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+            if (match(TokenKind::Newline)) {
+                continue;
+            }
+            const FieldDecl field = parse_field();
+            value.payload_fields.push_back(
+                {.name = field.name, .type_ref = field.type_ref, .location = field.location});
+        }
+        consume(TokenKind::Dedent, "expected dedent after enum payload fields");
+        return value;
+    } else if (match(TokenKind::Assign)) {
+        const JoinedTokens expr = join_until_with_range({TokenKind::Newline});
+        value.value_expr = parse_expr_piece(expr);
+    }
+    consume(TokenKind::Newline, "expected newline after enum value");
+    return value;
 }
 
 void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
@@ -255,8 +280,8 @@ void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
 FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
                                     const std::vector<Decorator>& decorators,
                                     std::string_view receiver_type) {
-    (void)start;
     FunctionDecl fn;
+    fn.range.start = start.location;
     fn.visibility = visibility;
     fn.decorators = decorators;
     const Token& name = consume_identifier("expected function name");
@@ -289,6 +314,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     consume(TokenKind::Colon, "expected : after function header");
     consume(TokenKind::Newline, "expected newline after function header");
     fn.statements = parse_statement_block();
+    fn.range.end = current().location;
     return fn;
 }
 

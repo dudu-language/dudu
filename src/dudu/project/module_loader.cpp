@@ -9,6 +9,7 @@
 #include "dudu/project/module_names.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <set>
@@ -332,7 +333,8 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
                           const std::map<std::string, std::filesystem::path>& module_roots,
                           std::vector<std::filesystem::path>& stack,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
-                          std::vector<std::filesystem::path>& ordered) {
+                          std::vector<std::filesystem::path>& ordered,
+                          std::vector<ParseDiagnostic>* diagnostics) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
     if (loaded.contains(canonical)) {
         return loaded.at(canonical);
@@ -344,9 +346,18 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
     stack.push_back(canonical);
 
     const auto source_override = source_overrides.find(canonical);
-    ModuleAst parsed = parse_source(
-        source_override == source_overrides.end() ? read_text_file(path) : source_override->second,
-        path);
+    const std::string source =
+        source_override == source_overrides.end() ? read_text_file(path) : source_override->second;
+    ModuleAst parsed;
+    if (diagnostics == nullptr) {
+        parsed = parse_source(source, path);
+    } else {
+        ParseResult recovered = parse_source_recovering(source, path);
+        parsed = std::move(recovered.module);
+        diagnostics->insert(diagnostics->end(),
+                            std::make_move_iterator(recovered.diagnostics.begin()),
+                            std::make_move_iterator(recovered.diagnostics.end()));
+    }
     stamp_module_origin(
         parsed, canonical,
         module_name_from_file(module_root_for_source(root, canonical, module_roots), canonical));
@@ -362,8 +373,8 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
             throw CompileError(import.location,
                                module_cycle_message(root, stack, canonical_dependency));
         }
-        const ModuleAst& dependency_module =
-            load_one(dependency, root, source_overrides, module_roots, stack, loaded, ordered);
+        const ModuleAst& dependency_module = load_one(
+            dependency, root, source_overrides, module_roots, stack, loaded, ordered, diagnostics);
         parsed.dependencies.push_back({.kind = import.kind,
                                        .import_module_path = import.module_path,
                                        .resolved_module_path = dependency_module.module_path,
@@ -419,7 +430,7 @@ void collect_files(const std::filesystem::path& path,
 
 } // namespace
 
-ModuleAst load_source_tree(const LoadSourceTreeOptions& options) {
+LoadSourceTreeResult load_source_tree_impl(const LoadSourceTreeOptions& options, bool recovering) {
     const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(options.entry);
     const std::filesystem::path root = canonical_entry.parent_path();
     std::map<std::filesystem::path, std::string> canonical_overrides;
@@ -433,10 +444,11 @@ ModuleAst load_source_tree(const LoadSourceTreeOptions& options) {
     std::vector<std::filesystem::path> stack;
     std::map<std::filesystem::path, ModuleAst> loaded;
     std::vector<std::filesystem::path> ordered;
+    LoadSourceTreeResult result;
     (void)load_one(canonical_entry, root, canonical_overrides, canonical_module_roots, stack,
-                   loaded, ordered);
+                   loaded, ordered, recovering ? &result.diagnostics : nullptr);
 
-    ModuleAst merged;
+    ModuleAst& merged = result.module;
     merged.source_path = canonical_entry;
     merged.module_path = module_name_from_file(root, canonical_entry);
     for (const std::filesystem::path& path : ordered) {
@@ -447,7 +459,15 @@ ModuleAst load_source_tree(const LoadSourceTreeOptions& options) {
         append_module(merged, unit);
     }
     add_from_import_aliases(merged);
-    return merged;
+    return result;
+}
+
+ModuleAst load_source_tree(const LoadSourceTreeOptions& options) {
+    return std::move(load_source_tree_impl(options, false).module);
+}
+
+LoadSourceTreeResult load_source_tree_recovering(const LoadSourceTreeOptions& options) {
+    return load_source_tree_impl(options, true);
 }
 
 ModuleAst load_source_tree(const std::filesystem::path& entry,

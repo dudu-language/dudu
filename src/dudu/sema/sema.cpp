@@ -9,6 +9,7 @@
 #include "dudu/sema/sema_scan.hpp"
 #include "dudu/sema/unsupported.hpp"
 
+#include <iterator>
 #include <map>
 #include <set>
 
@@ -27,6 +28,24 @@ void analyze_module_in_tree(const ModuleAst& module, const ModuleAst* module_tre
     if (options.check_bodies) {
         check_bodies(module, symbols);
     }
+}
+
+std::vector<CompileError> analyze_module_in_tree_collecting(const ModuleAst& module,
+                                                            const ModuleAst* module_tree,
+                                                            SemanticOptions options) {
+    Symbols symbols = collect_symbols(module);
+    symbols.module_tree = module_tree;
+    try {
+        check_build_flags(module);
+        check_naming(module);
+        check_unsupported_python(module);
+        check_declarations(module, symbols);
+        check_constexpr_uses(module);
+    } catch (const CompileError& error) {
+        return {error};
+    }
+    return options.check_bodies ? check_bodies_collecting(module, symbols)
+                                : std::vector<CompileError>{};
 }
 
 void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation>>& names,
@@ -48,6 +67,11 @@ void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation
 
 void analyze_module(const ModuleAst& module, SemanticOptions options) {
     analyze_module_in_tree(module, nullptr, options);
+}
+
+std::vector<CompileError> analyze_module_collecting(const ModuleAst& module,
+                                                    SemanticOptions options) {
+    return analyze_module_in_tree_collecting(module, nullptr, options);
 }
 
 void reject_merged_output_module_conflicts(const ModuleAst& module) {
@@ -82,6 +106,21 @@ void analyze_module_tree(const ModuleAst& module, SemanticOptions options) {
     for (const ModuleAst& unit : module.module_units) {
         analyze_module_in_tree(unit, &module, options);
     }
+}
+
+std::vector<CompileError> analyze_module_tree_collecting(const ModuleAst& module,
+                                                         SemanticOptions options) {
+    if (module.module_units.empty()) {
+        return analyze_module_collecting(module, options);
+    }
+    std::vector<CompileError> diagnostics;
+    for (const ModuleAst& unit : module.module_units) {
+        std::vector<CompileError> unit_diagnostics =
+            analyze_module_in_tree_collecting(unit, &module, options);
+        diagnostics.insert(diagnostics.end(), std::make_move_iterator(unit_diagnostics.begin()),
+                           std::make_move_iterator(unit_diagnostics.end()));
+    }
+    return diagnostics;
 }
 
 void analyze_module_tree(const ModuleAst& module, const std::vector<std::string>& module_paths,

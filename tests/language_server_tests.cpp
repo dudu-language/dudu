@@ -7,6 +7,7 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
+#include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbol_results.hpp"
 #include "dudu/native/native_headers.hpp"
@@ -59,6 +60,124 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.size() == 1);
     assert(sema_diags.front().source == "dudu/sema");
     assert(sema_diags.front().code.starts_with("dudu.sema."));
+}
+
+void test_lsp_parser_recovery_reports_multiple_diagnostics() {
+    const dudu::Document doc{.uri = "",
+                             .path = "recover_multiple.dd",
+                             .text = "not a declaration\n"
+                                     "\n"
+                                     "def broken() -> i32\n"
+                                     "    return 1\n"
+                                     "\n"
+                                     "def usable() -> i32:\n"
+                                     "    return 2\n"};
+    const std::vector<dudu::Diagnostic> diagnostics = dudu::diagnostics_for_document(doc);
+    assert(diagnostics.size() == 2);
+    assert(diagnostics[0].source == "dudu/parser");
+    assert(diagnostics[1].source == "dudu/parser");
+    assert(diagnostics[0].location.line == 1);
+    assert(diagnostics[1].location.line == 3);
+}
+
+void test_lsp_semantic_recovery_reports_independent_body_errors() {
+    const dudu::Document doc{.uri = "",
+                             .path = "recover_semantic_bodies.dd",
+                             .text = "def wrong_number() -> i32:\n"
+                                     "    return \"bad\"\n"
+                                     "\n"
+                                     "def wrong_bool() -> bool:\n"
+                                     "    return 1\n"
+                                     "\n"
+                                     "def usable() -> i32:\n"
+                                     "    return 3\n"};
+    const std::vector<dudu::Diagnostic> diagnostics = dudu::diagnostics_for_document(doc);
+    assert(diagnostics.size() == 2);
+    assert(diagnostics[0].source == "dudu/sema");
+    assert(diagnostics[1].source == "dudu/sema");
+    assert(diagnostics[0].location.line == 2);
+    assert(diagnostics[1].location.line == 5);
+
+    const dudu::ProjectIndex& project = dudu::project_index_for_document(doc, false);
+    assert(project.merged_module().functions.size() == 3);
+    assert(project.merged_module().functions.back().name == "usable");
+}
+
+void test_lsp_parser_error_only_suppresses_its_damaged_body() {
+    const dudu::Document doc{.uri = "",
+                             .path = "recover_parser_and_sema.dd",
+                             .text = "def damaged() -> i32:\n"
+                                     "    broken = call(\n"
+                                     "    return missing_after_broken_statement\n"
+                                     "\n"
+                                     "def independently_wrong() -> bool:\n"
+                                     "    return 1\n"};
+    const std::vector<dudu::Diagnostic> diagnostics = dudu::diagnostics_for_document(doc);
+    assert(diagnostics.size() == 2);
+    assert(diagnostics[0].source == "dudu/parser");
+    assert(diagnostics[0].location.line == 2);
+    assert(diagnostics[1].source == "dudu/sema");
+    assert(diagnostics[1].location.line == 6);
+    assert(diagnostics[1].message.find("missing_after_broken_statement") == std::string::npos);
+}
+
+void test_lsp_editor_requests_use_recovered_current_ast() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_recovered_editor_requests";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, "def main() -> i32:\n"
+                     "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(path),
+                             .path = path,
+                             .text = "not a declaration\n"
+                                     "\n"
+                                     "def usable(value: i32) -> i32:\n"
+                                     "    return value + 1\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    result = usable(1)\n"
+                                     "    return result\n"};
+    dudu::clear_language_server_module_cache();
+
+    dudu::Json call_params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":15}}").parse();
+    const std::string definition = dudu::definition_json(doc, &call_params);
+    assert(definition.find(doc.uri) != std::string::npos);
+    assert(definition.find("\"line\":2") != std::string::npos);
+
+    const std::string hover = dudu::hover_json(doc, "usable", &call_params);
+    assert(hover.find("def usable(value: i32) -> i32") != std::string::npos);
+
+    dudu::Json declaration_params =
+        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":5}}").parse();
+    const std::string references =
+        dudu::references_json(doc, &declaration_params, {{doc.uri, doc}});
+    assert(references.find("\"line\":6") != std::string::npos);
+
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("\"value\":\"i32\"") != std::string::npos);
+
+    const dudu::ProjectIndex& project = dudu::project_index_for_document(doc, false);
+    const std::string tokens = dudu::semantic_tokens_json(project, path, project);
+    assert(tokens != "{\"data\":[]}");
+
+    const dudu::Document completion_doc{.uri = doc.uri,
+                                        .path = doc.path,
+                                        .text = "not a declaration\n"
+                                                "\n"
+                                                "def usable(value: i32) -> i32:\n"
+                                                "    return value + 1\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    return usa\n"};
+    dudu::Json completion_params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":14}}").parse();
+    const std::string completions = dudu::completion_json(&completion_doc, &completion_params);
+    assert(completions.find("\"label\":\"usable\"") != std::string::npos);
+    dudu::clear_language_server_module_cache();
 }
 
 void test_lsp_index_diagnostic_preserves_candidate_reasons() {
@@ -419,19 +538,18 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
 }
 
 void test_lsp_inlay_hints_type_value_generic_extents_as_usize() {
-    const dudu::Document doc{
-        .uri = "",
-        .path = "value_generic_extent_inlay.dd",
-        .text = "def apply_conv2d[H, W, K](\n"
-                "    image: &array[f32][H, W],\n"
-                "    kernel: &array[f32][K, K],\n"
-                ") -> i32:\n"
-                "    out_h = H - K + 1\n"
-                "    out_w = W - K + 1\n"
-                "    total = 0\n"
-                "    for y in range(out_h):\n"
-                "        total += i32(y)\n"
-                "    return total + i32(out_w)\n"};
+    const dudu::Document doc{.uri = "",
+                             .path = "value_generic_extent_inlay.dd",
+                             .text = "def apply_conv2d[H, W, K](\n"
+                                     "    image: &array[f32][H, W],\n"
+                                     "    kernel: &array[f32][K, K],\n"
+                                     ") -> i32:\n"
+                                     "    out_h = H - K + 1\n"
+                                     "    out_w = W - K + 1\n"
+                                     "    total = 0\n"
+                                     "    for y in range(out_h):\n"
+                                     "        total += i32(y)\n"
+                                     "    return total + i32(out_w)\n"};
 
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"line\":4") != std::string::npos);
@@ -783,6 +901,44 @@ void test_lsp_project_index_cache_records_warm_hits() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_project_index_reuses_last_good_after_broken_edit() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_last_good_index_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, "def answer() -> i32:\n"
+                     "    return 42\n");
+
+    const dudu::Document good{.uri = dudu::file_uri(path),
+                              .path = path,
+                              .text = "def answer() -> i32:\n"
+                                      "    return 42\n"};
+    dudu::clear_language_server_module_cache();
+    const dudu::ProjectIndex& current = dudu::project_index_for_document(good, false);
+    assert(current.merged_module().functions.size() == 1);
+    assert(current.merged_module().functions.front().name == "answer");
+
+    const dudu::Document broken{.uri = good.uri,
+                                .path = path,
+                                .text = "def answer() -> i32\n"
+                                        "    return 42\n"};
+    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(broken, false);
+    assert(recovered.merged_module().functions.empty());
+    assert(recovered.parse_diagnostics().size() == 1);
+
+    const dudu::Document missing_import{.uri = good.uri,
+                                        .path = path,
+                                        .text = "import module_that_does_not_exist\n"
+                                                "\n"
+                                                "def answer() -> i32:\n"
+                                                "    return 42\n"};
+    const dudu::ProjectIndex& last_good = dudu::project_index_for_document(missing_import, false);
+    assert(last_good.merged_module().functions.size() == 1);
+    assert(last_good.merged_module().functions.front().name == "answer");
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_project_index_cache_records_native_warm_hits() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_project_index_stats_test";
@@ -821,6 +977,10 @@ void test_lsp_project_index_cache_records_native_warm_hits() {
 int main() {
     try {
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_parser_recovery_reports_multiple_diagnostics();
+        test_lsp_semantic_recovery_reports_independent_body_errors();
+        test_lsp_parser_error_only_suppresses_its_damaged_body();
+        test_lsp_editor_requests_use_recovered_current_ast();
         test_lsp_index_diagnostic_preserves_candidate_reasons();
         test_lsp_shape_mismatch_diagnostic_explains_axis();
         test_lsp_block_header_diagnostics_use_extra_token_location();
@@ -847,6 +1007,7 @@ int main() {
         test_lsp_project_index_uses_open_imported_document_sources();
         test_lsp_hover_uses_open_imported_document_sources();
         test_lsp_project_index_cache_records_warm_hits();
+        test_lsp_project_index_reuses_last_good_after_broken_edit();
         test_lsp_project_index_cache_records_native_warm_hits();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";

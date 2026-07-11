@@ -95,7 +95,12 @@ void analyze_project_module(const ModuleAst& module, const ProjectIndexOptions& 
     analyze_module_tree(module, options.semantic_options);
 }
 
-ModuleAst load_project_module(const ProjectIndexOptions& options) {
+struct ProjectModuleLoad {
+    ModuleAst module;
+    std::vector<ParseDiagnostic> diagnostics;
+};
+
+ProjectModuleLoad load_project_module(const ProjectIndexOptions& options) {
     const auto stamp_single_module = [&](ModuleAst module) {
         if (!options.entry_path.empty() && module.source_path.empty()) {
             module.source_path = canonical_key_path(options.entry_path);
@@ -108,25 +113,52 @@ ModuleAst load_project_module(const ProjectIndexOptions& options) {
         return module;
     };
     if (options.entry_path.empty()) {
-        return parse_source(std::string(options.entry_source), options.entry_path);
+        if (options.recover_syntax) {
+            ParseResult recovered =
+                parse_source_recovering(std::string(options.entry_source), options.entry_path);
+            return {.module = std::move(recovered.module),
+                    .diagnostics = std::move(recovered.diagnostics)};
+        }
+        return {.module = parse_source(std::string(options.entry_source), options.entry_path),
+                .diagnostics = {}};
     }
     std::map<std::filesystem::path, std::string> source_overrides = options.source_overrides;
     if (!options.entry_source.empty() && !source_overrides.contains(options.entry_path)) {
         source_overrides[options.entry_path] = std::string(options.entry_source);
     }
     if (options.allow_module_tree && options.force_module_tree) {
-        return load_source_tree({.entry = options.entry_path,
-                                 .source_overrides = source_overrides,
-                                 .module_roots = dependency_module_roots(options.config)});
+        const LoadSourceTreeOptions load_options{.entry = options.entry_path,
+                                                 .source_overrides = source_overrides,
+                                                 .module_roots =
+                                                     dependency_module_roots(options.config)};
+        if (options.recover_syntax) {
+            LoadSourceTreeResult recovered = load_source_tree_recovering(load_options);
+            return {.module = std::move(recovered.module),
+                    .diagnostics = std::move(recovered.diagnostics)};
+        }
+        return {.module = load_source_tree(load_options), .diagnostics = {}};
     }
-    ModuleAst parsed =
-        stamp_single_module(parse_source(std::string(options.entry_source), options.entry_path));
+    ParseResult recovered;
+    ModuleAst parsed;
+    if (options.recover_syntax) {
+        recovered = parse_source_recovering(std::string(options.entry_source), options.entry_path);
+        parsed = stamp_single_module(std::move(recovered.module));
+    } else {
+        parsed = stamp_single_module(
+            parse_source(std::string(options.entry_source), options.entry_path));
+    }
     if (options.allow_module_tree && has_dudu_module_imports(parsed)) {
-        return load_source_tree({.entry = options.entry_path,
-                                 .source_overrides = source_overrides,
-                                 .module_roots = dependency_module_roots(options.config)});
+        const LoadSourceTreeOptions load_options{.entry = options.entry_path,
+                                                 .source_overrides = source_overrides,
+                                                 .module_roots =
+                                                     dependency_module_roots(options.config)};
+        if (options.recover_syntax) {
+            LoadSourceTreeResult tree = load_source_tree_recovering(load_options);
+            return {.module = std::move(tree.module), .diagnostics = std::move(tree.diagnostics)};
+        }
+        return {.module = load_source_tree(load_options), .diagnostics = {}};
     }
-    return parsed;
+    return {.module = std::move(parsed), .diagnostics = std::move(recovered.diagnostics)};
 }
 
 void add_export_names(ProjectModuleSummary& summary, const ModuleAst& module) {
@@ -257,7 +289,9 @@ std::vector<SourceStamp> parse_source_stamp_file(const std::filesystem::path& pa
 
 ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
     ProjectIndex index;
-    index.module_ = load_project_module(options);
+    ProjectModuleLoad loaded = load_project_module(options);
+    index.module_ = std::move(loaded.module);
+    index.parse_diagnostics_ = std::move(loaded.diagnostics);
     apply_project_context_to_tree(index.module_, options);
     if (options.include_native_headers) {
         merge_native_headers_for_tree(index.module_, options);

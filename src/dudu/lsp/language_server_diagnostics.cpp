@@ -6,12 +6,17 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/parser/parser.hpp"
+#include "dudu/sema/sema.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <iterator>
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <tuple>
 
 namespace dudu {
 namespace {
@@ -42,6 +47,83 @@ std::optional<std::string> missing_pkg_config_package(const ProjectConfig& confi
     return std::nullopt;
 }
 
+Diagnostic parser_diagnostic(const ParseDiagnostic& diagnostic) {
+    return {.location = diagnostic.location,
+            .message = diagnostic.message,
+            .source = diagnostic_source(diagnostic.code),
+            .severity = 1,
+            .code = diagnostic.code,
+            .data_name = diagnostic.data_name,
+            .fix_range = std::nullopt};
+}
+
+Diagnostic compile_diagnostic(const CompileError& error) {
+    return {.location = error.location(),
+            .message = error.what(),
+            .source = diagnostic_source(error.code()),
+            .severity = 1,
+            .code = error.code(),
+            .data_name = error.data_name(),
+            .fix_range = std::nullopt};
+}
+
+bool location_belongs_to_document(const SourceLocation& location, const Document& doc) {
+    if (location.file.empty()) {
+        return true;
+    }
+    std::error_code error;
+    const std::filesystem::path location_path =
+        std::filesystem::weakly_canonical(std::string(location.file), error);
+    if (error) {
+        return std::filesystem::path(std::string(location.file)).lexically_normal() ==
+               doc.path.lexically_normal();
+    }
+    const std::filesystem::path document_path = std::filesystem::weakly_canonical(doc.path, error);
+    return !error && location_path == document_path;
+}
+
+bool position_precedes(int left_line, int left_column, int right_line, int right_column) {
+    return std::tie(left_line, left_column) < std::tie(right_line, right_column);
+}
+
+bool location_in_range(const SourceLocation& location, const SourceRange& range) {
+    if (range.start.line <= 0 || range.end.line <= 0) {
+        return false;
+    }
+    if (!location.file.empty() && !range.start.file.empty() && location.file != range.start.file) {
+        return false;
+    }
+    return !position_precedes(location.line, location.column, range.start.line,
+                              range.start.column) &&
+           position_precedes(location.line, location.column, range.end.line, range.end.column);
+}
+
+bool range_contains_parse_error(const SourceRange& range,
+                                const std::vector<ParseDiagnostic>& diagnostics) {
+    return std::any_of(diagnostics.begin(), diagnostics.end(), [&](const ParseDiagnostic& item) {
+        return location_in_range(item.location, range);
+    });
+}
+
+void suppress_damaged_function_bodies(ModuleAst& module,
+                                      const std::vector<ParseDiagnostic>& diagnostics) {
+    for (FunctionDecl& function : module.functions) {
+        if (range_contains_parse_error(function.range, diagnostics)) {
+            function.body_syntax_damaged = true;
+        }
+    }
+    for (ClassDecl& klass : module.classes) {
+        for (FunctionDecl& method : klass.methods) {
+            if (range_contains_parse_error(method.range, diagnostics)) {
+                method.body_syntax_damaged = true;
+            }
+        }
+    }
+    for (ModuleAst& unit : module.module_units) {
+        suppress_damaged_function_bodies(unit, diagnostics);
+    }
+}
+
 } // namespace
 
 std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
@@ -69,9 +151,38 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .data_name = "",
                  .fix_range = std::nullopt}};
         }
-        const ProjectIndex& index = project_index_for_document(doc, true, true);
-        return ast_lint_diagnostics(index.merged_module(), doc);
+        const ProjectIndex& index = project_index_for_document(doc, true, false, false);
+        std::vector<Diagnostic> diagnostics;
+        for (const ParseDiagnostic& diagnostic : index.parse_diagnostics()) {
+            if (location_belongs_to_document(diagnostic.location, doc)) {
+                diagnostics.push_back(parser_diagnostic(diagnostic));
+            }
+        }
+        ModuleAst diagnostic_module = index.merged_module();
+        suppress_damaged_function_bodies(diagnostic_module, index.parse_diagnostics());
+        const std::vector<CompileError> semantic =
+            analyze_module_tree_collecting(diagnostic_module, {.check_bodies = true});
+        for (const CompileError& error : semantic) {
+            if (location_belongs_to_document(error.location(), doc)) {
+                diagnostics.push_back(compile_diagnostic(error));
+            }
+        }
+        std::vector<Diagnostic> lints = ast_lint_diagnostics(diagnostic_module, doc);
+        diagnostics.insert(diagnostics.end(), std::make_move_iterator(lints.begin()),
+                           std::make_move_iterator(lints.end()));
+        return diagnostics;
     } catch (const CompileError& error) {
+        if (error.code().starts_with("dudu.parser.") || error.code().starts_with("dudu.lexer.")) {
+            const ParseResult recovered = parse_source_recovering(doc.text, doc.path);
+            if (!recovered.diagnostics.empty()) {
+                std::vector<Diagnostic> diagnostics;
+                diagnostics.reserve(recovered.diagnostics.size());
+                for (const ParseDiagnostic& diagnostic : recovered.diagnostics) {
+                    diagnostics.push_back(parser_diagnostic(diagnostic));
+                }
+                return diagnostics;
+            }
+        }
         return {{.location = error.location(),
                  .message = error.what(),
                  .source = diagnostic_source(error.code()),

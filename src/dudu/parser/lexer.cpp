@@ -7,15 +7,35 @@ namespace {
 
 class Lexer {
   public:
-    Lexer(std::string_view source, std::filesystem::path file)
-        : source_(source), file_(std::move(file).string()) {
+    Lexer(std::string_view source, std::filesystem::path file,
+          std::vector<ParseDiagnostic>* diagnostics = nullptr)
+        : source_(source), file_(std::move(file).string()), diagnostics_(diagnostics) {
     }
 
     std::vector<Token> run() {
         indents_.push_back(0);
         tokens_.reserve((source_.size() / 2) + 16);
         while (!done()) {
-            lex_line();
+            const size_t line_start = cursor_;
+            const int source_line = line_;
+            const size_t token_count = tokens_.size();
+            const std::vector<int> indents = indents_;
+            try {
+                lex_line();
+            } catch (const CompileError& error) {
+                if (diagnostics_ == nullptr) {
+                    throw;
+                }
+                diagnostics_->push_back({.location = error.location(),
+                                         .message = error.what(),
+                                         .code = error.code(),
+                                         .data_name = error.data_name()});
+                tokens_.resize(token_count);
+                indents_ = indents;
+                cursor_ = line_start;
+                line_ = source_line;
+                skip_to_next_line();
+            }
         }
         close_indents();
         push(TokenKind::End, "", line_, 1);
@@ -29,6 +49,7 @@ class Lexer {
     int line_ = 1;
     std::vector<int> indents_;
     std::vector<Token> tokens_;
+    std::vector<ParseDiagnostic>* diagnostics_ = nullptr;
 
     bool done() const {
         return cursor_ >= source_.size();
@@ -325,6 +346,12 @@ class Lexer {
 
 std::vector<Token> lex_source(std::string_view source, const std::filesystem::path& file) {
     return Lexer(source, file).run();
+}
+
+LexResult lex_source_recovering(std::string_view source, const std::filesystem::path& file) {
+    LexResult result;
+    result.tokens = Lexer(source, file, &result.diagnostics).run();
+    return result;
 }
 
 } // namespace dudu

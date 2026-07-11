@@ -5,6 +5,7 @@
 #include "dudu/parser/parser_internal.hpp"
 #include "dudu/parser/parser_statement_ops.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <string_view>
 
@@ -435,43 +436,64 @@ std::vector<Stmt> Parser::parse_statement_block() {
         if (match(TokenKind::Newline)) {
             continue;
         }
-        std::vector<Stmt> children;
-        const size_t statement_start = cursor_;
-        int bracket_depth = 0;
-        int paren_depth = 0;
-        int brace_depth = 0;
-        while (!at(TokenKind::End)) {
-            const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
-            if (!inside_group && at(TokenKind::Newline)) {
-                break;
+        const size_t item_begin = cursor_;
+        try {
+            std::vector<Stmt> children;
+            const size_t statement_start = cursor_;
+            int bracket_depth = 0;
+            int paren_depth = 0;
+            int brace_depth = 0;
+            int layout_depth = 0;
+            while (!at(TokenKind::End)) {
+                const bool inside_group =
+                    bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+                if (recovering() && inside_group && at(TokenKind::Newline) && layout_depth == 0 &&
+                    !at_next(TokenKind::Indent)) {
+                    throw CompileError(current().location,
+                                       "unfinished expression group before end of line",
+                                       "dudu.parser.unfinished_group");
+                }
+                if (!inside_group && at(TokenKind::Newline)) {
+                    break;
+                }
+                if (current().kind == TokenKind::Indent) {
+                    ++layout_depth;
+                } else if (current().kind == TokenKind::Dedent) {
+                    layout_depth = std::max(0, layout_depth - 1);
+                } else if (current().kind == TokenKind::LBracket) {
+                    ++bracket_depth;
+                } else if (current().kind == TokenKind::RBracket) {
+                    --bracket_depth;
+                } else if (current().kind == TokenKind::LParen) {
+                    ++paren_depth;
+                } else if (current().kind == TokenKind::RParen) {
+                    --paren_depth;
+                } else if (current().kind == TokenKind::LBrace) {
+                    ++brace_depth;
+                } else if (current().kind == TokenKind::RBrace) {
+                    --brace_depth;
+                }
+                ++cursor_;
             }
-            if (current().kind == TokenKind::LBracket) {
-                ++bracket_depth;
-            } else if (current().kind == TokenKind::RBracket) {
-                --bracket_depth;
-            } else if (current().kind == TokenKind::LParen) {
-                ++paren_depth;
-            } else if (current().kind == TokenKind::RParen) {
-                --paren_depth;
-            } else if (current().kind == TokenKind::LBrace) {
-                ++brace_depth;
-            } else if (current().kind == TokenKind::RBrace) {
-                --brace_depth;
+            size_t statement_end = cursor_;
+            consume(TokenKind::Newline, "expected newline after statement");
+            if (starts_statement_continuation(cursor_)) {
+                statement_end = consume_statement_continuation_block();
             }
-            ++cursor_;
+            if (at(TokenKind::Indent)) {
+                children = parse_statement_block();
+            }
+            const size_t after_statement = cursor_;
+            cursor_ = statement_start;
+            out.push_back(parse_statement(std::move(children), statement_end));
+            cursor_ = after_statement;
+        } catch (const CompileError& error) {
+            if (!recovering()) {
+                throw;
+            }
+            record_diagnostic(error);
+            synchronize_block_item(item_begin);
         }
-        size_t statement_end = cursor_;
-        consume(TokenKind::Newline, "expected newline after statement");
-        if (starts_statement_continuation(cursor_)) {
-            statement_end = consume_statement_continuation_block();
-        }
-        if (at(TokenKind::Indent)) {
-            children = parse_statement_block();
-        }
-        const size_t after_statement = cursor_;
-        cursor_ = statement_start;
-        out.push_back(parse_statement(std::move(children), statement_end));
-        cursor_ = after_statement;
     }
     consume(TokenKind::Dedent, "expected dedent after block");
     return out;

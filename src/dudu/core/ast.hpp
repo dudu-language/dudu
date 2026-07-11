@@ -360,6 +360,7 @@ struct EnumDecl {
     std::string origin_module;
     std::vector<EnumValueDecl> values;
     SourceLocation location;
+    SourceRange range;
     std::string doc_comment{};
 };
 
@@ -375,7 +376,9 @@ struct FunctionDecl {
     TypeRef return_type_ref;
     std::string origin_module;
     std::vector<Stmt> statements;
+    bool body_syntax_damaged = false;
     SourceLocation location;
+    SourceRange range;
     std::string doc_comment{};
 };
 
@@ -408,6 +411,7 @@ struct ClassDecl {
     std::vector<FunctionDecl> methods;
     std::string origin_module;
     SourceLocation location;
+    SourceRange range;
     std::string doc_comment{};
 };
 

@@ -342,14 +342,20 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
     dst.local_type_refs = src.local_type_refs;
 }
 
-} // namespace
-
-void check_function_body_statements(FunctionScope& scope, const std::vector<Stmt>& body,
-                                    const TypeRef& return_type_ref) {
-    check_block(scope, body, return_type_ref, 0);
+template <typename Action>
+void check_body_region(std::vector<CompileError>* diagnostics, Action&& action) {
+    try {
+        action();
+    } catch (const CompileError& error) {
+        if (diagnostics == nullptr) {
+            throw;
+        }
+        diagnostics->push_back(error);
+    }
 }
 
-void check_bodies(const ModuleAst& module, const Symbols& symbols) {
+void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
+                       std::vector<CompileError>* diagnostics) {
     FunctionScope base{symbols};
     const auto mode = module.build_values.find("TARGET_MODE");
     if (mode != module.build_values.end()) {
@@ -360,26 +366,29 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        const ArrayShapeInference inferred =
-            infer_array_literal_shape_type(constant.type_ref, constant.value_expr);
-        if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
-            sema_fail(diagnostic_location(constant.location, constant.value_expr),
-                      "array shape cannot be inferred from an empty literal");
-        }
-        if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
-            sema_fail(diagnostic_location(constant.location, constant.value_expr),
-                      "ragged array literal");
-        }
-        const TypeRef constant_type =
-            inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : constant.type_ref;
-        if (inferred.status == ArrayShapeStatus::Inferred &&
-            is_array_literal(constant.value_expr)) {
-            check_array_literal_elements(
-                base, inferred.element_type_ref, constant.value_expr,
-                diagnostic_location(constant.location, constant.value_expr));
-        }
-        bind_local(base, constant.name, constant_type);
-        base.constants.insert(constant.name);
+        check_body_region(diagnostics, [&] {
+            const ArrayShapeInference inferred =
+                infer_array_literal_shape_type(constant.type_ref, constant.value_expr);
+            if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
+                sema_fail(diagnostic_location(constant.location, constant.value_expr),
+                          "array shape cannot be inferred from an empty literal");
+            }
+            if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
+                sema_fail(diagnostic_location(constant.location, constant.value_expr),
+                          "ragged array literal");
+            }
+            const TypeRef constant_type = inferred.status == ArrayShapeStatus::Inferred
+                                              ? inferred.type_ref
+                                              : constant.type_ref;
+            if (inferred.status == ArrayShapeStatus::Inferred &&
+                is_array_literal(constant.value_expr)) {
+                check_array_literal_elements(
+                    base, inferred.element_type_ref, constant.value_expr,
+                    diagnostic_location(constant.location, constant.value_expr));
+            }
+            bind_local(base, constant.name, constant_type);
+            base.constants.insert(constant.name);
+        });
     }
     for (const ClassDecl& klass : module.classes) {
         std::optional<Symbols> class_symbol_storage;
@@ -392,55 +401,79 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         class_symbol_storage = with_self_type(*class_symbols, klass.name);
         class_symbols = &*class_symbol_storage;
         for (const FunctionDecl& method : klass.methods) {
-            if (function_has_decorator(method, "abstract")) {
+            if (method.body_syntax_damaged || function_has_decorator(method, "abstract")) {
                 continue;
             }
-            std::optional<Symbols> method_symbol_storage;
-            const Symbols* method_symbols = class_symbols;
-            if (!method.generic_params.empty()) {
-                method_symbol_storage =
-                    with_generic_params(*class_symbols, method.generic_params,
-                                        generic_value_params_for_function(method));
-                method_symbols = &*method_symbol_storage;
-            }
-            FunctionScope scope{*method_symbols};
-            copy_base_scope_state(scope, base);
-            scope.current_class = klass.name;
-            scope.allow_super_init = method.name == "init";
-            scope.return_type_ref = function_return_type_ref(method);
-            for (const ParamDecl& param : method.params) {
-                bind_local(scope, param.name,
-                           substitute_method_self_type(klass, param.type_ref, param.location));
-            }
-            const TypeRef return_type_ref = scope.return_type_ref;
-            check_block(scope, method.statements, return_type_ref, 0);
-            if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
-                !block_guarantees_return(method.statements)) {
-                sema_fail(method.location, "missing return in function: " + method.name);
-            }
+            check_body_region(diagnostics, [&] {
+                std::optional<Symbols> method_symbol_storage;
+                const Symbols* method_symbols = class_symbols;
+                if (!method.generic_params.empty()) {
+                    method_symbol_storage =
+                        with_generic_params(*class_symbols, method.generic_params,
+                                            generic_value_params_for_function(method));
+                    method_symbols = &*method_symbol_storage;
+                }
+                FunctionScope scope{*method_symbols};
+                copy_base_scope_state(scope, base);
+                scope.current_class = klass.name;
+                scope.allow_super_init = method.name == "init";
+                scope.return_type_ref = function_return_type_ref(method);
+                for (const ParamDecl& param : method.params) {
+                    bind_local(scope, param.name,
+                               substitute_method_self_type(klass, param.type_ref, param.location));
+                }
+                const TypeRef return_type_ref = scope.return_type_ref;
+                check_block(scope, method.statements, return_type_ref, 0);
+                if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
+                    !block_guarantees_return(method.statements)) {
+                    sema_fail(method.location, "missing return in function: " + method.name);
+                }
+            });
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        std::optional<Symbols> function_symbol_storage;
-        const Symbols* function_symbols = &symbols;
-        if (!fn.generic_params.empty()) {
-            function_symbol_storage = with_generic_params(symbols, fn.generic_params,
-                                                          generic_value_params_for_function(fn));
-            function_symbols = &*function_symbol_storage;
+        if (fn.body_syntax_damaged) {
+            continue;
         }
-        FunctionScope scope{*function_symbols};
-        copy_base_scope_state(scope, base);
-        scope.return_type_ref = function_return_type_ref(fn);
-        for (const ParamDecl& param : fn.params) {
-            bind_local(scope, param.name, param.type_ref);
-        }
-        const TypeRef return_type_ref = function_return_type_ref(fn);
-        check_block(scope, fn.statements, return_type_ref, 0);
-        if (function_has_return_type(fn) && !type_ref_is_void(return_type_ref) &&
-            !block_guarantees_return(fn.statements)) {
-            sema_fail(fn.location, "missing return in function: " + fn.name);
-        }
+        check_body_region(diagnostics, [&] {
+            std::optional<Symbols> function_symbol_storage;
+            const Symbols* function_symbols = &symbols;
+            if (!fn.generic_params.empty()) {
+                function_symbol_storage = with_generic_params(
+                    symbols, fn.generic_params, generic_value_params_for_function(fn));
+                function_symbols = &*function_symbol_storage;
+            }
+            FunctionScope scope{*function_symbols};
+            copy_base_scope_state(scope, base);
+            scope.return_type_ref = function_return_type_ref(fn);
+            for (const ParamDecl& param : fn.params) {
+                bind_local(scope, param.name, param.type_ref);
+            }
+            const TypeRef return_type_ref = function_return_type_ref(fn);
+            check_block(scope, fn.statements, return_type_ref, 0);
+            if (function_has_return_type(fn) && !type_ref_is_void(return_type_ref) &&
+                !block_guarantees_return(fn.statements)) {
+                sema_fail(fn.location, "missing return in function: " + fn.name);
+            }
+        });
     }
+}
+
+} // namespace
+
+void check_function_body_statements(FunctionScope& scope, const std::vector<Stmt>& body,
+                                    const TypeRef& return_type_ref) {
+    check_block(scope, body, return_type_ref, 0);
+}
+
+void check_bodies(const ModuleAst& module, const Symbols& symbols) {
+    check_bodies_impl(module, symbols, nullptr);
+}
+
+std::vector<CompileError> check_bodies_collecting(const ModuleAst& module, const Symbols& symbols) {
+    std::vector<CompileError> diagnostics;
+    check_bodies_impl(module, symbols, &diagnostics);
+    return diagnostics;
 }
 
 } // namespace dudu

@@ -110,6 +110,21 @@ Required implementation work:
   inlay hints, and semantic tokens respond while the current file has parser or
   sema errors
 
+Status (2026-07-11): the lexer and parser now expose a shared recovering parse
+result, and recovery is used across the full module graph rather than only for
+the active file. It preserves later top-level declarations, surrounding
+function statements, class members, enum values, and declarations following
+unfinished expression groups. Recovered project indexes retain parser
+diagnostics and current-buffer declarations; an unrecoverable graph load can
+reuse the last known good index. Semantic body checking collects independent
+function/method failures, and declaration source ranges let diagnostics skip
+only a syntax-damaged body while still checking unaffected bodies. Direct LSP
+fixtures now cover hover, definition, references, completion, inlay hints, and
+semantic tokens against a malformed current buffer. Remaining work in this
+milestone is broader incomplete-edit coverage, native/import token coverage,
+protocol-level JSON-RPC fixtures, and dogfood verification that fixing the edit
+restores the current index without an editor restart.
+
 Definition of done: editing a Dudu file into a temporarily non-compiling state
 must show useful squiggles, keep semantic highlighting for recoverable regions,
 keep hover/navigation/completion alive outside the broken region, and recover

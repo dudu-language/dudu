@@ -3,6 +3,8 @@
 #include "dudu/project/project_index_cache.hpp"
 
 #include <algorithm>
+#include <compare>
+#include <exception>
 #include <filesystem>
 #include <sstream>
 #include <string>
@@ -12,6 +14,16 @@ namespace {
 
 ProjectIndexCache project_index_cache;
 std::map<std::filesystem::path, std::string> open_document_sources;
+
+struct LastGoodProjectKey {
+    std::string entry_path;
+    std::string manifest_path;
+    bool include_native_headers = false;
+
+    friend auto operator<=>(const LastGoodProjectKey&, const LastGoodProjectKey&) = default;
+};
+
+std::map<LastGoodProjectKey, ProjectIndex> last_good_project_indexes;
 
 std::filesystem::path canonical_overlay_path(const std::filesystem::path& path) {
     std::error_code error;
@@ -70,15 +82,17 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
 }
 
 const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
-                                               bool check_semantics) {
-    const ProjectConfig config = config_for_file(doc.path);
-    std::map<std::filesystem::path, std::string> source_overrides = open_document_sources;
-    source_overrides[canonical_overlay_path(doc.path)] = doc.text;
+                                               bool check_semantics, bool allow_last_good) {
+    const LastGoodProjectKey last_good_key{
+        .entry_path = canonical_overlay_path(doc.path).string(),
+        .manifest_path = canonical_overlay_path(project_config_path(doc.path)).string(),
+        .include_native_headers = include_native_headers,
+    };
     ProjectIndexOptions options;
     options.entry_path = doc.path;
     options.entry_source = doc.text;
-    options.source_overrides = std::move(source_overrides);
-    options.config = config;
+    options.source_overrides = open_document_sources;
+    options.source_overrides[canonical_overlay_path(doc.path)] = doc.text;
     options.source_dir = doc.path.parent_path();
     options.allow_module_tree =
         doc.path.has_parent_path() && std::filesystem::exists(doc.path.parent_path());
@@ -86,7 +100,31 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     options.include_native_headers_in_merged_module = false;
     options.check_semantics = check_semantics;
     options.semantic_options = {.check_bodies = true};
-    return project_index_cache.get(options);
+    try {
+        options.config = config_for_file(doc.path);
+        const ProjectIndex& index = project_index_cache.get(options);
+        if (!check_semantics) {
+            last_good_project_indexes.insert_or_assign(last_good_key, index);
+        }
+        return index;
+    } catch (const std::exception&) {
+        const std::exception_ptr current_error = std::current_exception();
+        if (!check_semantics) {
+            try {
+                options.recover_syntax = true;
+                options.check_semantics = false;
+                return project_index_cache.get(options);
+            } catch (const std::exception&) {
+            }
+        }
+        if (!check_semantics && allow_last_good) {
+            if (const auto found = last_good_project_indexes.find(last_good_key);
+                found != last_good_project_indexes.end()) {
+                return found->second;
+            }
+        }
+        std::rethrow_exception(current_error);
+    }
 }
 
 ProjectIndexCacheStats language_server_project_index_cache_stats() {
@@ -104,6 +142,7 @@ void set_language_server_open_documents(const std::map<std::string, Document>& d
 void clear_language_server_module_cache() {
     project_index_cache.clear();
     open_document_sources.clear();
+    last_good_project_indexes.clear();
 }
 
 int leading_spaces(const std::string& line) {

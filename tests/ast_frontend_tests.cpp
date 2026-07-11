@@ -252,6 +252,177 @@ void test_lexical_semantic_tokens_survive_invalid_source() {
     require_decoded_semantic_token(tokens, "250", token_number, 0);
 }
 
+void test_parser_recovery_preserves_top_level_declarations() {
+    const std::string source = "def before() -> i32:\n"
+                               "    return 1\n"
+                               "\n"
+                               "this is not a declaration\n"
+                               "\n"
+                               "def after() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_top_level.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[0].name == "before");
+    assert(result.module.functions[1].name == "after");
+}
+
+void test_parser_recovery_preserves_function_around_bad_statement() {
+    const std::string source = "def main() -> i32:\n"
+                               "    before = 1\n"
+                               "    if before\n"
+                               "        ignored = 2\n"
+                               "    after = 3\n"
+                               "    return after\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_statement.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 1);
+    const std::vector<dudu::Stmt>& statements = result.module.functions.front().statements;
+    assert(statements.size() == 3);
+    assert(dudu::stmt_target_expr(statements[0]).name == "before");
+    assert(dudu::stmt_target_expr(statements[1]).name == "after");
+    assert(statements[2].kind == dudu::StmtKind::Return);
+}
+
+void test_parser_recovery_preserves_class_around_bad_member() {
+    const std::string source = "class Player:\n"
+                               "    hp: i32\n"
+                               "    broken i32\n"
+                               "    speed: f32\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_class.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.classes.size() == 1);
+    assert(result.module.classes.front().fields.size() == 2);
+    assert(result.module.classes.front().fields[0].name == "hp");
+    assert(result.module.classes.front().fields[1].name == "speed");
+}
+
+void test_parser_recovery_preserves_enum_around_bad_value() {
+    const std::string source = "enum Message:\n"
+                               "    Ready\n"
+                               "    Broken(i32, )\n"
+                               "    Data(i32)\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_enum.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.enums.size() == 1);
+    assert(result.module.enums.front().values.size() == 2);
+    assert(result.module.enums.front().values[0].name == "Ready");
+    assert(result.module.enums.front().values[1].name == "Data");
+}
+
+void test_parser_recovery_skips_nested_bad_enum_payload() {
+    const std::string source = "enum Message:\n"
+                               "    Broken:\n"
+                               "        value i32\n"
+                               "        ignored: i32\n"
+                               "    Ready\n"
+                               "\n"
+                               "def after() -> i32:\n"
+                               "    return 1\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_enum_payload.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.enums.size() == 1);
+    assert(result.module.enums.front().values.size() == 1);
+    assert(result.module.enums.front().values.front().name == "Ready");
+    assert(result.module.functions.size() == 1);
+    assert(result.module.functions.front().name == "after");
+}
+
+void test_parser_recovery_stops_unfinished_call_at_statement_boundary() {
+    const std::string source = "def main() -> i32:\n"
+                               "    before = 1\n"
+                               "    broken = call(\n"
+                               "    after = 2\n"
+                               "    return after\n"
+                               "\n"
+                               "def later() -> i32:\n"
+                               "    return 3\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_unfinished_call.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[0].statements.size() == 3);
+    assert(dudu::stmt_target_expr(result.module.functions[0].statements[0]).name == "before");
+    assert(dudu::stmt_target_expr(result.module.functions[0].statements[1]).name == "after");
+    assert(result.module.functions[0].statements[2].kind == dudu::StmtKind::Return);
+    assert(result.module.functions[1].name == "later");
+}
+
+void test_parser_recovery_skips_bad_declaration_body() {
+    const std::string source = "def broken() -> i32\n"
+                               "    return 1\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_declaration.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 1);
+    assert(result.module.functions.front().name == "usable");
+}
+
+void test_lexer_recovery_preserves_later_declarations() {
+    const std::string source = "def before() -> i32:\n"
+                               "    return 1\n"
+                               "\n"
+                               "BROKEN: str = \"unterminated\n"
+                               "\n"
+                               "def after() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_lexer.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.diagnostics.front().code == "dudu.lexer.syntax");
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[0].name == "before");
+    assert(result.module.functions[1].name == "after");
+}
+
+void test_lexer_recovery_preserves_function_body_after_bad_indent() {
+    const std::string source = "def main() -> i32:\n"
+                               "    before = 1\n"
+                               "  broken = 2\n"
+                               "    after = 3\n"
+                               "    return after\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_indent.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.diagnostics.front().code == "dudu.lexer.syntax");
+    assert(result.module.functions.size() == 1);
+    const std::vector<dudu::Stmt>& statements = result.module.functions.front().statements;
+    assert(statements.size() == 3);
+    assert(dudu::stmt_target_expr(statements[0]).name == "before");
+    assert(dudu::stmt_target_expr(statements[1]).name == "after");
+}
+
+void test_recovered_ast_preserves_semantic_token_kinds() {
+    const std::string source = "class Player:\n"
+                               "    hp: i32\n"
+                               "\n"
+                               "def update(player: Player, amount: i32) -> i32:\n"
+                               "    before = player.hp\n"
+                               "    if amount\n"
+                               "        ignored = 1\n"
+                               "    after = before + amount\n"
+                               "    return after\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_semantic_tokens.dd");
+    assert(result.diagnostics.size() == 1);
+    const std::vector<DecodedSemanticToken> tokens =
+        decoded_semantic_tokens(source, dudu::semantic_tokens_json(result.module));
+    constexpr int token_class = 2;
+    constexpr int token_function = 4;
+    constexpr int token_variable = 6;
+    constexpr int token_parameter = 7;
+    constexpr int token_property = 8;
+    require_decoded_semantic_token(tokens, "Player", token_class, 1);
+    require_decoded_semantic_token(tokens, "hp", token_property, 1);
+    require_decoded_semantic_token(tokens, "update", token_function, 1);
+    require_decoded_semantic_token(tokens, "player", token_parameter, 1);
+    require_decoded_semantic_token(tokens, "amount", token_parameter, 1);
+    require_decoded_semantic_token(tokens, "before", token_variable, 1);
+    require_decoded_semantic_token(tokens, "after", token_variable, 1);
+}
+
 void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     const std::string source = "GLOBAL: i32 = 1\n"
                                "\n"
@@ -868,6 +1039,16 @@ int main() {
         test_native_semantic_tokens();
         test_native_import_semantic_token_ranges();
         test_lexical_semantic_tokens_survive_invalid_source();
+        test_parser_recovery_preserves_top_level_declarations();
+        test_parser_recovery_preserves_function_around_bad_statement();
+        test_parser_recovery_preserves_class_around_bad_member();
+        test_parser_recovery_preserves_enum_around_bad_value();
+        test_parser_recovery_skips_nested_bad_enum_payload();
+        test_parser_recovery_stops_unfinished_call_at_statement_boundary();
+        test_parser_recovery_skips_bad_declaration_body();
+        test_lexer_recovery_preserves_later_declarations();
+        test_lexer_recovery_preserves_function_body_after_bad_indent();
+        test_recovered_ast_preserves_semantic_token_kinds();
         test_decoded_semantic_tokens_cover_core_dudu_kinds();
         test_unresolved_semantic_tokens_are_marked();
         test_project_semantic_tokens_are_import_aware();

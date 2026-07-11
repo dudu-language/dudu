@@ -9,6 +9,7 @@
 #include "dudu/parser/parser_utils.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <sstream>
 #include <vector>
 
@@ -86,7 +87,8 @@ std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
 
 } // namespace
 
-Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
+Parser::Parser(std::span<const Token> tokens, std::vector<ParseDiagnostic>* diagnostics)
+    : tokens_(tokens), diagnostics_(diagnostics) {
 }
 
 ModuleAst Parser::parse() {
@@ -121,38 +123,48 @@ ModuleAst Parser::parse() {
             continue;
         }
 
-        Visibility visibility = parse_visibility();
-        if (match_identifier("import")) {
-            require_no_decorators(decorators, "import");
-            module.imports.push_back(parse_import(previous()));
-        } else if (match_identifier("from")) {
-            require_no_decorators(decorators, "from import");
-            module.imports.push_back(parse_from_import(previous()));
-        } else if (match_identifier("class")) {
-            module.classes.push_back(parse_class(previous(), visibility, decorators));
-            decorators.clear();
-        } else if (match_identifier("enum")) {
-            require_no_decorators(decorators, "enum");
-            module.enums.push_back(parse_enum(previous()));
-        } else if (match_identifier("type")) {
-            require_no_decorators(decorators, "type declaration");
-            parse_type_decl(previous(), module);
-        } else if (match_identifier("def")) {
-            FunctionDecl fn = parse_function(previous(), visibility, decorators);
-            if (!function_has_receiver_type(fn)) {
-                module.functions.push_back(std::move(fn));
+        const size_t item_begin = cursor_;
+        try {
+            Visibility visibility = parse_visibility();
+            if (match_identifier("import")) {
+                require_no_decorators(decorators, "import");
+                module.imports.push_back(parse_import(previous()));
+            } else if (match_identifier("from")) {
+                require_no_decorators(decorators, "from import");
+                module.imports.push_back(parse_from_import(previous()));
+            } else if (match_identifier("class")) {
+                module.classes.push_back(parse_class(previous(), visibility, decorators));
+                decorators.clear();
+            } else if (match_identifier("enum")) {
+                require_no_decorators(decorators, "enum");
+                module.enums.push_back(parse_enum(previous()));
+            } else if (match_identifier("type")) {
+                require_no_decorators(decorators, "type declaration");
+                parse_type_decl(previous(), module);
+            } else if (match_identifier("def")) {
+                FunctionDecl fn = parse_function(previous(), visibility, decorators);
+                if (!function_has_receiver_type(fn)) {
+                    module.functions.push_back(std::move(fn));
+                } else {
+                    attach_out_of_line_method(module, std::move(fn));
+                }
+                decorators.clear();
+            } else if (current().kind == TokenKind::Identifier && at_next(TokenKind::Colon)) {
+                require_no_decorators(decorators, "constant");
+                module.constants.push_back(parse_constant());
+            } else if (check_text("static_assert")) {
+                require_no_decorators(decorators, "static_assert");
+                module.static_asserts.push_back(parse_static_assert());
             } else {
-                attach_out_of_line_method(module, std::move(fn));
+                fail_current("expected top-level import, class, def, or constant");
             }
+        } catch (const CompileError& error) {
+            if (!recovering()) {
+                throw;
+            }
+            record_diagnostic(error);
             decorators.clear();
-        } else if (current().kind == TokenKind::Identifier && at_next(TokenKind::Colon)) {
-            require_no_decorators(decorators, "constant");
-            module.constants.push_back(parse_constant());
-        } else if (check_text("static_assert")) {
-            require_no_decorators(decorators, "static_assert");
-            module.static_asserts.push_back(parse_static_assert());
-        } else {
-            fail_current("expected top-level import, class, def, or constant");
+            synchronize_top_level(item_begin);
         }
     }
 
@@ -210,6 +222,70 @@ const Token& Parser::consume_identifier(std::string_view message) {
 
 void Parser::fail_current(const std::string& message) const {
     throw CompileError(current().location, message, "dudu.parser.syntax");
+}
+
+bool Parser::recovering() const {
+    return diagnostics_ != nullptr;
+}
+
+void Parser::record_diagnostic(const CompileError& error) {
+    diagnostics_->push_back({.location = error.location(),
+                             .message = error.what(),
+                             .code = error.code(),
+                             .data_name = error.data_name()});
+}
+
+int Parser::layout_depth_before(size_t cursor) const {
+    int depth = 0;
+    for (size_t index = 0; index < cursor && index < tokens_.size(); ++index) {
+        if (tokens_[index].kind == TokenKind::Indent) {
+            ++depth;
+        } else if (tokens_[index].kind == TokenKind::Dedent) {
+            depth = std::max(0, depth - 1);
+        }
+    }
+    return depth;
+}
+
+void Parser::synchronize_block_item(size_t failed_cursor) {
+    const int target_depth = layout_depth_before(failed_cursor);
+    if (cursor_ <= failed_cursor && !at(TokenKind::End)) {
+        ++cursor_;
+    }
+    int depth = layout_depth_before(cursor_);
+    bool crossed_line = false;
+    while (!at(TokenKind::End)) {
+        if (at(TokenKind::Dedent)) {
+            if (depth <= target_depth) {
+                return;
+            }
+            --depth;
+            ++cursor_;
+            crossed_line = true;
+            continue;
+        }
+        if (at(TokenKind::Indent)) {
+            ++depth;
+            ++cursor_;
+            continue;
+        }
+        if (at(TokenKind::Newline)) {
+            ++cursor_;
+            crossed_line = true;
+            continue;
+        }
+        if (crossed_line && depth == target_depth) {
+            return;
+        }
+        ++cursor_;
+    }
+}
+
+void Parser::synchronize_top_level(size_t failed_cursor) {
+    synchronize_block_item(failed_cursor);
+    while (at(TokenKind::Dedent) || at(TokenKind::Newline)) {
+        ++cursor_;
+    }
 }
 
 void Parser::skip_newlines() {
@@ -422,8 +498,14 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
+    int layout_depth = 0;
     while (!at(TokenKind::End)) {
         const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (recovering() && inside_group && at(TokenKind::Newline) && layout_depth == 0 &&
+            !at_next(TokenKind::Indent)) {
+            throw CompileError(current().location, "unfinished expression group before end of line",
+                               "dudu.parser.unfinished_group");
+        }
         if (!inside_group) {
             bool stop = false;
             for (TokenKind kind : stops) {
@@ -436,6 +518,11 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         if (inside_group &&
             (at(TokenKind::Newline) || at(TokenKind::Indent) || at(TokenKind::Dedent))) {
             joined.has_layout_tokens = true;
+            if (at(TokenKind::Indent)) {
+                ++layout_depth;
+            } else if (at(TokenKind::Dedent)) {
+                layout_depth = std::max(0, layout_depth - 1);
+            }
             ++cursor_;
             continue;
         }
@@ -565,10 +652,26 @@ ModuleAst parse_module(std::span<const Token> tokens) {
     return Parser(tokens).parse();
 }
 
+ParseResult parse_module_recovering(std::span<const Token> tokens) {
+    ParseResult result;
+    result.module = Parser(tokens, &result.diagnostics).parse();
+    return result;
+}
+
 ModuleAst parse_source(std::string_view source, const std::filesystem::path& file) {
     ModuleAst module = parse_module(lex_source(source, file));
     attach_leading_doc_comments(module, source);
     return module;
+}
+
+ParseResult parse_source_recovering(std::string_view source, const std::filesystem::path& file) {
+    LexResult lexed = lex_source_recovering(source, file);
+    ParseResult result = parse_module_recovering(lexed.tokens);
+    result.diagnostics.insert(result.diagnostics.begin(),
+                              std::make_move_iterator(lexed.diagnostics.begin()),
+                              std::make_move_iterator(lexed.diagnostics.end()));
+    attach_leading_doc_comments(result.module, source);
+    return result;
 }
 
 } // namespace dudu

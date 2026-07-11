@@ -2481,6 +2481,18 @@ push. They are not release packaging work.
    `ProjectIndex` reuse. See
    [Language Server Plan](language-server-plan.md#invalid-code-editor-model).
 
+   Status: shared lexer/parser recovery now feeds partial AST modules through
+   module loading and `ProjectIndex`. Recovery preserves declarations and
+   block members around malformed source, including nested enum payload errors
+   and unfinished expression groups. Semantic diagnostics collect independent
+   body errors and suppress only the function body whose declaration range
+   contains a parser error. Current malformed buffers retain hover,
+   definition, references, completion, inlay hints, and semantic tokens in
+   direct LSP fixtures, with last-good indexes reserved for failures where a
+   current partial graph cannot be built. Protocol-level invalid-edit fixtures
+   and dogfood edit/fix validation remain before this editor milestone is
+   complete.
+
    Inlay hints are part of the same editor-quality target. The immediate hint
    set is inferred local binding types, inferred loop binding types, the
    implicit receiver type behind bare `self`, and positional call parameter
