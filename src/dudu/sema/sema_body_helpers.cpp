@@ -45,7 +45,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                     continue;
                 }
                 const TypeRef signature_return = signature_return_type_ref(method.signature);
-                if (type_assignment_allowed(expected_ref, signature_return) ||
+                if (type_assignment_allowed(scope.symbols, expected_ref, signature_return) ||
                     can_assign_ast(scope, expected_ref, expr, signature_return)) {
                     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
                     check_call_args_ast(scope, scoped_callee.key, method.signature, expr.children,
@@ -66,7 +66,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                                                        method->receiver_type, method->receiver_args,
                                                        method->method_args, location);
                 const TypeRef signature_return = signature_return_type_ref(method->signature);
-                if (type_assignment_allowed(expected_ref, signature_return) ||
+                if (type_assignment_allowed(scope.symbols, expected_ref, signature_return) ||
                     can_assign_ast(scope, expected_ref, expr, signature_return)) {
                     return;
                 }
@@ -74,7 +74,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         }
     }
     const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
-    if (!type_assignment_allowed(expected_ref, got_ref) &&
+    if (!type_assignment_allowed(scope.symbols, expected_ref, got_ref) &&
         !can_assign_ast(scope, expected_ref, expr, got_ref)) {
         if (!mismatch_label.empty()) {
             const std::string expected_display = substitute_type_ref_text(expected_ref, {});
@@ -107,8 +107,8 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
         return;
     }
     const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
-    if (!type_assignment_allowed(expected, got_ref) &&
-        !assignment_type_allowed(expected, expr, got_ref) &&
+    if (!type_assignment_allowed(scope.symbols, expected, got_ref) &&
+        !assignment_type_allowed(scope.symbols, expected, expr, got_ref) &&
         !can_assign_ast(scope, expected, expr, got_ref)) {
         if (!mismatch_label.empty()) {
             const std::string expected_display = substitute_type_ref_text(expected, {});
@@ -124,7 +124,7 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
                                   const Expr& expr, const SourceLocation& location) {
     if (expr.kind != ExprKind::ListLiteral) {
         const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
-        if (!type_assignment_allowed(element_type, got_ref) &&
+        if (!type_assignment_allowed(scope.symbols, element_type, got_ref) &&
             !can_assign_ast(scope, element_type, expr, got_ref)) {
             const std::string expected_display = substitute_type_ref_text(element_type, {});
             const std::string got_display = substitute_type_ref_text(got_ref, {});

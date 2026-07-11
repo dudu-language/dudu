@@ -593,6 +593,13 @@ concrete class-template specialization coverage now exercises arbitrary fixture
 names, pointer patterns, exact-over-partial precedence, ambiguity, nested
 namespace lookup, cross-header merge, and cold/warm scan parity.
 
+Semantic native type compatibility now resolves aliases and canonicalizes
+scanned native type heads through `NativeSymbolId` before structural checking.
+The symbol-aware path is used for assignments, returns, constructors, loop
+bindings, matches, and operators. Same-tail qualified spellings are not treated
+as compatible; focused fixtures prove same-identity aliases match while
+distinct namespace declarations with the same tail name do not.
+
 ## 5. Polish The Test System
 
 Primary plan: [Dudu Tests](tests.md).

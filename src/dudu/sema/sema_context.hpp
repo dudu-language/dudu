@@ -39,6 +39,7 @@ struct Symbols {
     std::set<std::string> native_explicit_template_prefixes;
     std::set<std::string> native_types;
     std::map<std::string, const NativeTypeDecl*> native_type_decls;
+    std::map<std::string, std::string> native_type_identity_keys;
     std::map<std::string, TypeRef> native_value_type_refs;
     std::set<std::string> native_enum_values;
     std::map<std::string, const EnumDecl*> enums;
@@ -55,6 +56,7 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
 void check_known_type_ref(const Symbols& symbols, const SourceLocation& location,
                           const TypeRef& type, const std::string& message);
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type);
+TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type);
 std::vector<std::string> split_cpp_escape_top_level(std::string text);
 size_t find_cpp_escape_top_level_char(const std::string& text, char wanted);
 Symbols collect_symbols(const ModuleAst& module);

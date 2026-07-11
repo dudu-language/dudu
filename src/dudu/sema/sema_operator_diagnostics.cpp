@@ -139,9 +139,8 @@ bool pack_expansion_arg_matches(const Symbols& symbols, const FunctionSignature&
     if (param_index != signature_variadic_param_index(signature)) {
         return false;
     }
-    return assignment_type_allowed(resolve_alias_ref(symbols, expected),
-                                   args[arg_index].children.front(),
-                                   resolve_alias_ref(symbols, got.children.front()));
+    return assignment_type_allowed(symbols, expected, args[arg_index].children.front(),
+                                   got.children.front());
 }
 
 std::string operator_rejection_reason(const Symbols& symbols, const FunctionSignature& signature,
@@ -166,8 +165,7 @@ std::string operator_rejection_reason(const Symbols& symbols, const FunctionSign
         }
         const size_t param_index = signature_param_index_for_arg(signature, i, args.size());
         const TypeRef expected = signature_param_type_ref(signature, param_index);
-        if (assignment_type_allowed(resolve_alias_ref(symbols, expected), args[i],
-                                    resolve_alias_ref(symbols, arg_types[i])) ||
+        if (assignment_type_allowed(symbols, expected, args[i], arg_types[i]) ||
             pack_expansion_arg_matches(symbols, signature, i, args, expected, arg_types[i])) {
             continue;
         }

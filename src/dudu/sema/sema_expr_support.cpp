@@ -75,8 +75,8 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
     if (is_native_enum_value_expr(scope, expr, resolved_expected)) {
         return true;
     }
-    return assignment_type_allowed(expected, expr, got) ||
-           assignment_type_allowed(resolved_expected, expr, resolved_got) ||
+    return assignment_type_allowed(scope.symbols, expected, expr, got) ||
+           assignment_type_allowed(scope.symbols, resolved_expected, expr, resolved_got) ||
            native_base_assignable(scope.symbols, expected, got);
 }
 

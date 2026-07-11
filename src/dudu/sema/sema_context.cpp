@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
@@ -60,6 +61,17 @@ std::string strip_c_type_tag(std::string type) {
         }
     }
     return type;
+}
+
+std::string native_identity_atom(std::string_view identity) {
+    static constexpr char hex[] = "0123456789abcdef";
+    std::string out = "__dudu_native_identity_";
+    out.reserve(out.size() + identity.size() * 2);
+    for (const unsigned char ch : identity) {
+        out.push_back(hex[ch >> 4]);
+        out.push_back(hex[ch & 0x0f]);
+    }
+    return out;
 }
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -266,6 +278,21 @@ TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     return resolve_alias_ref_impl(symbols, std::move(type), seen);
 }
 
+TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type) {
+    type = resolve_alias_ref(symbols, std::move(type));
+    for (TypeRef& child : type.children) {
+        child = canonical_native_type_ref(symbols, std::move(child));
+    }
+    if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
+        type.kind == TypeKind::Template) {
+        const auto identity = symbols.native_type_identity_keys.find(type_ref_head_name(type));
+        if (identity != symbols.native_type_identity_keys.end()) {
+            type.name = native_identity_atom(identity->second);
+        }
+    }
+    return type;
+}
+
 std::vector<std::string> split_cpp_escape_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;
@@ -369,6 +396,10 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
         symbols.native_type_decls[type.name] = &type;
+        if (const std::string identity = native_symbol_identity_key(type.identity);
+            !identity.empty()) {
+            symbols.native_type_identity_keys[type.name] = identity;
+        }
         add_native_path_prefix(symbols, type.name);
         if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&
             !symbols.alias_type_refs.contains(type.name)) {
@@ -422,10 +453,18 @@ Symbols collect_symbols(const ModuleAst& module) {
         const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
         (void)inserted;
         symbols.classes[klass.name] = &it->second;
+        if (const std::string identity = native_symbol_identity_key(klass.identity);
+            !identity.empty()) {
+            symbols.native_type_identity_keys[klass.name] = identity;
+        }
         const std::string untagged = strip_c_type_tag(klass.name);
         if (untagged != klass.name) {
             symbols.types.insert(untagged);
             symbols.classes[untagged] = &it->second;
+            if (const std::string identity = native_symbol_identity_key(klass.identity);
+                !identity.empty()) {
+                symbols.native_type_identity_keys[untagged] = identity;
+            }
         }
     }
     for (const FunctionDecl& fn : module.functions) {

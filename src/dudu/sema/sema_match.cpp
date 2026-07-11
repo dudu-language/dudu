@@ -265,8 +265,9 @@ void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& re
                 diagnostic_location(child.location, stmt_pattern_expr(child));
             const TypeRef pattern_ref =
                 infer_expr_type_ast(scope, stmt_pattern_expr(child), &pattern_location);
-            if (!assignment_type_allowed(subject_ref, stmt_pattern_expr(child), pattern_ref) &&
-                !type_assignment_allowed(pattern_ref, subject_ref)) {
+            if (!assignment_type_allowed(scope.symbols, subject_ref, stmt_pattern_expr(child),
+                                         pattern_ref) &&
+                !type_assignment_allowed(scope.symbols, pattern_ref, subject_ref)) {
                 sema_fail(pattern_location, "case pattern type mismatch: expected " +
                                                 type_ref_text(subject_ref) + ", got " +
                                                 type_ref_text(pattern_ref));

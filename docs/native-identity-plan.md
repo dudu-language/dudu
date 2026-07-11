@@ -130,11 +130,15 @@ In progress.
 - Canonical namespace USRs intentionally join namespace declarations reopened
   across different headers, matching C++ namespace identity rather than header
   spelling.
+- Semantic symbol collection now indexes native type bindings by canonical
+  identity. Assignment, return, constructor, loop, match, and operator checks
+  resolve aliases and compare canonicalized native heads before structural
+  compatibility. Qualified declarations no longer become compatible merely
+  because their tail names match.
 
 Still missing:
 
 - Identity-aware symbol maps as the primary sema key.
-- Identity-aware type compatibility when both sides carry native identity facts.
 - Broader LSP reference indexing keyed directly by canonical native identity.
 
 ## Definition Of Done

@@ -24,7 +24,7 @@ std::string constructor_param_type_display(const ConstructorParam& param) {
 bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorParam& expected,
                                 const Expr& value, const TypeRef& got_ref) {
     if (has_type_ref(expected.type_ref) && has_type_ref(got_ref) &&
-        type_assignment_allowed(expected.type_ref, got_ref)) {
+        type_assignment_allowed(scope.symbols, expected.type_ref, got_ref)) {
         return true;
     }
     return can_assign_ast(scope, expected.type_ref, value, got_ref);

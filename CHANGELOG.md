@@ -24,6 +24,9 @@
 - Fixed Clang AST source ranges that combine an explicit file with `line:N:C`
   shorthand so prelude-assisted C header scans retain the imported declaration
   location for LSP navigation.
+- Added symbol-aware native type compatibility keyed by canonical declaration
+  identity across assignments, returns, constructors, loop bindings, matches,
+  and operators, and removed qualified tail-name compatibility.
 
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and

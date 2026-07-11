@@ -53,12 +53,15 @@ bool same_generic_param_type(const Symbols& symbols, const TypeRef& left, const 
            symbols.generic_params.contains(head);
 }
 
-bool numeric_operand_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
+bool numeric_operand_allowed(const Symbols& symbols, const TypeRef& expected, const Expr& expr,
+                             const TypeRef& got) {
+    return is_numeric_type(expected) && assignment_type_allowed(symbols, expected, expr, got);
 }
 
-bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeRef& right) {
-    return assignment_type_allowed(left, right_expr, right) || type_assignment_allowed(right, left);
+bool same_or_assignable(const Symbols& symbols, const TypeRef& left, const Expr& right_expr,
+                        const TypeRef& right) {
+    return assignment_type_allowed(symbols, left, right_expr, right) ||
+           type_assignment_allowed(symbols, right, left);
 }
 
 bool pack_expansion_type_matches(const Symbols& symbols, const FunctionSignature& signature,
@@ -71,8 +74,7 @@ bool pack_expansion_type_matches(const Symbols& symbols, const FunctionSignature
     if (param_index != signature_variadic_param_index(signature)) {
         return false;
     }
-    return type_assignment_allowed(resolve_alias_ref(symbols, expected),
-                                   resolve_alias_ref(symbols, got.children.front()));
+    return type_assignment_allowed(symbols, expected, got.children.front());
 }
 
 bool pack_expansion_arg_matches(const Symbols& symbols, const FunctionSignature& signature,
@@ -84,9 +86,8 @@ bool pack_expansion_arg_matches(const Symbols& symbols, const FunctionSignature&
     if (!pack_expansion_type_matches(symbols, signature, arg_index, args.size(), expected, got)) {
         return false;
     }
-    return assignment_type_allowed(resolve_alias_ref(symbols, expected),
-                                   args[arg_index].children.front(),
-                                   resolve_alias_ref(symbols, got.children.front()));
+    return assignment_type_allowed(symbols, expected, args[arg_index].children.front(),
+                                   got.children.front());
 }
 
 bool is_supported_dudu_operator(const std::string& op) {
@@ -225,8 +226,7 @@ bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature
         }
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, arg_types.size()));
-        if (!type_assignment_allowed(resolve_alias_ref(symbols, expected),
-                                     resolve_alias_ref(symbols, arg_types[i])) &&
+        if (!type_assignment_allowed(symbols, expected, arg_types[i]) &&
             !pack_expansion_type_matches(symbols, signature, i, arg_types.size(), expected,
                                          arg_types[i])) {
             return false;
@@ -250,8 +250,7 @@ bool signature_matches_args(const Symbols& symbols, const FunctionSignature& sig
         }
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, args.size()));
-        if (!assignment_type_allowed(resolve_alias_ref(symbols, expected), args[i],
-                                     resolve_alias_ref(symbols, arg_types[i])) &&
+        if (!assignment_type_allowed(symbols, expected, args[i], arg_types[i]) &&
             !pack_expansion_arg_matches(symbols, signature, i, args, expected, arg_types[i])) {
             return false;
         }
@@ -290,12 +289,13 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
         }
         for (FunctionSignature signature : found->second) {
             if (signature_param_count(signature) < 2 ||
-                !type_assignment_allowed(signature_param_type_ref(signature, 0), value_left_ref)) {
+                !type_assignment_allowed(symbols, signature_param_type_ref(signature, 0),
+                                         value_left_ref)) {
                 continue;
             }
             if (right_expr != nullptr &&
-                !assignment_type_allowed(signature_param_type_ref(signature, 1), *right_expr,
-                                         value_right_ref)) {
+                !assignment_type_allowed(symbols, signature_param_type_ref(signature, 1),
+                                         *right_expr, value_right_ref)) {
                 continue;
             }
             std::vector<TypeRef> remaining_params;
@@ -492,18 +492,18 @@ bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeR
         return true;
     }
     if (op == "+" && type_ref_is_name(value_left_ref, "str")) {
-        return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
+        return assignment_type_allowed(symbols, value_left_ref, right_expr, value_right_ref);
     }
     if (op == "+" || op == "-") {
         return (resolved_left.kind == TypeKind::Pointer && type_ref_is_integer(value_right_ref)) ||
-               numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
+               numeric_operand_allowed(symbols, value_left_ref, right_expr, value_right_ref);
     }
     if (op == "*" || op == "/") {
-        return numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
+        return numeric_operand_allowed(symbols, value_left_ref, right_expr, value_right_ref);
     }
     if (op == "%" || op == "^" || op == "&" || op == "|" || op == "<<" || op == ">>") {
         return type_ref_is_integer(value_left_ref) &&
-               (assignment_type_allowed(value_left_ref, right_expr, value_right_ref) ||
+               (assignment_type_allowed(symbols, value_left_ref, right_expr, value_right_ref) ||
                 type_ref_is_integer(value_right_ref));
     }
     return false;
@@ -511,7 +511,8 @@ bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeR
 
 bool comparison_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeRef& left,
                             const Expr& right_expr, const TypeRef& right) {
-    if ((op == "==" || op == "!=") && same_or_assignable(left, right_expr, right)) {
+    if ((op == "==" || op == "!=") &&
+        same_or_assignable(symbols, left, right_expr, right)) {
         return true;
     }
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
@@ -527,12 +528,12 @@ bool comparison_rhs_allowed(const Symbols& symbols, std::string_view op, const T
         return true;
     }
     if (op == "==" || op == "!=") {
-        return same_or_assignable(value_left_ref, right_expr, value_right_ref);
+        return same_or_assignable(symbols, value_left_ref, right_expr, value_right_ref);
     }
     if (type_ref_is_name(value_left_ref, "str")) {
-        return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
+        return assignment_type_allowed(symbols, value_left_ref, right_expr, value_right_ref);
     }
-    return numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
+    return numeric_operand_allowed(symbols, value_left_ref, right_expr, value_right_ref);
 }
 
 } // namespace dudu

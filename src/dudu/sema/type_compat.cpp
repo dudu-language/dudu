@@ -5,6 +5,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/shape_value_expr.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/type_compat_literals.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
@@ -362,6 +363,18 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            normalized_type_assignment_allowed(normalized_expected_ref, normalized_got_ref);
 }
 
+bool type_assignment_allowed(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
+    const TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
+    const TypeRef resolved_got = resolve_alias_ref(symbols, got);
+    const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
+    const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
+    if (!type_ref_same_shape(canonical_expected, resolved_expected) &&
+        !type_ref_same_shape(canonical_got, resolved_got)) {
+        return type_assignment_allowed(canonical_expected, canonical_got);
+    }
+    return type_assignment_allowed(resolved_expected, resolved_got);
+}
+
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const TypeRef normalized_expected_ref = normalize_cpp_type_artifacts_ref(expected);
     const TypeRef normalized_got_ref = normalize_cpp_type_artifacts_ref(got);
@@ -417,6 +430,19 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            (is_cstr_type(normalized_expected_ref) && is_string_type(normalized_got_ref) &&
             expr.kind == ExprKind::StringLiteral) ||
            (is_numeric_type(normalized_expected_ref) && is_numeric_literal_expr(expr));
+}
+
+bool assignment_type_allowed(const Symbols& symbols, const TypeRef& expected, const Expr& expr,
+                             const TypeRef& got) {
+    const TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
+    const TypeRef resolved_got = resolve_alias_ref(symbols, got);
+    const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
+    const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
+    if (!type_ref_same_shape(canonical_expected, resolved_expected) &&
+        !type_ref_same_shape(canonical_got, resolved_got)) {
+        return assignment_type_allowed(canonical_expected, expr, canonical_got);
+    }
+    return assignment_type_allowed(resolved_expected, expr, resolved_got);
 }
 
 std::string assignment_type_display(const Expr& expr, const TypeRef& got) {
