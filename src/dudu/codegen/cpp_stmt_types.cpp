@@ -110,7 +110,7 @@ TypeRef infer_call_type_ref(const std::string& callee,
         return fn->second;
     }
     if (symbols != nullptr &&
-        (symbols->classes.contains(callee) || symbols->native_classes.contains(callee) ||
+        (symbols->classes.contains(callee) || is_native_class_binding(*symbols, callee) ||
          symbols->types.contains(callee))) {
         return named_type_ref(callee, location);
     }
@@ -132,11 +132,12 @@ TypeRef instantiate_native_function_return_type_ref(const NativeFunctionDecl& fn
 
 TypeRef infer_native_template_call_type_ref(const Symbols& symbols, const std::string& callee,
                                             const std::vector<TypeRef>& type_args) {
-    const auto native = symbols.native_function_decls.find(callee);
-    if (native == symbols.native_function_decls.end()) {
+    const std::vector<const NativeFunctionDecl*> native =
+        native_function_decls_for_binding(symbols, callee);
+    if (native.empty()) {
         return {};
     }
-    for (const NativeFunctionDecl* fn : native->second) {
+    for (const NativeFunctionDecl* fn : native) {
         if (fn == nullptr || fn->template_params.empty()) {
             continue;
         }
@@ -228,7 +229,7 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
                 type.children = type_args;
                 return type;
             }
-            if ((symbols->native_classes.contains(callee.name) ||
+            if ((is_native_class_binding(*symbols, callee.name) ||
                  symbols->types.contains(callee.name)) &&
                 !type_args.empty()) {
                 TypeRef type = named_type_ref(callee.name, callee.location);

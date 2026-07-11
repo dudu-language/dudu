@@ -11,6 +11,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
@@ -170,10 +171,12 @@ void test_native_semantic_tokens() {
                                "    return 0\n";
     dudu::ModuleAst module = dudu::parse_source(source, "native_semantic_tokens.dd");
     dudu::ModuleAst native_symbols = module;
-    native_symbols.native_types.push_back({.name = "DuduNativeEvent",
-                                           .native_spelling = "DuduNativeEvent",
-                                           .type_ref = dudu::parse_type_text("DuduNativeEvent"),
-                                           .location = {}});
+    native_symbols.native_types.push_back(
+        {.name = "DuduNativeEvent",
+         .native_spelling = "DuduNativeEvent",
+         .type_ref = dudu::parse_type_text("DuduNativeEvent"),
+         .identity = dudu::native_identity("DuduNativeEvent", "native_semantic_tokens.h"),
+         .location = {}});
     native_symbols.native_values.push_back({.name = "DUDU_NATIVE_MAGIC",
                                             .native_spelling = "i32",
                                             .type_ref = dudu::parse_type_text("i32"),
@@ -186,6 +189,7 @@ void test_native_semantic_tokens() {
          .param_type_refs = {dudu::parse_type_text("i32"), dudu::parse_type_text("i32")},
          .return_native_spelling = "i32",
          .return_type_ref = dudu::parse_type_text("i32"),
+         .identity = dudu::native_identity("dudu_native_add", "native_semantic_tokens.h"),
          .location = {}});
     native_symbols.native_macros.push_back(
         {.name = "DUDU_NATIVE_CHECK", .arity = 0, .function_like = true, .location = {}});

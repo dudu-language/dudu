@@ -37,6 +37,12 @@
   including namespaced static receivers, and made LSP references follow the
   selected method USR. Native reference searches now prune unrelated modules
   through structured AST name-segment indexing before loading native metadata.
+- Made canonical identity the primary semantic key for native types, classes,
+  and functions. Visible C/C++ names now resolve through binding-to-identity
+  indexes into identity-owned declaration tables, while alias-specific views
+  retain their substituted types and diagnostics. Missing identity metadata is
+  a compile error, and source-level native `type` declarations receive an
+  explicit declared identity during parsing.
 
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and

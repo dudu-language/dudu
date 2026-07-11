@@ -118,7 +118,7 @@ bool native_fixed_extent_template(const Symbols& symbols, const TypeRef& type,
     }
     const std::string head = type_ref_head_name(type);
     if (!native_alias && !symbols.native_types.contains(head) &&
-        !symbols.native_classes.contains(head) && head.find('.') == std::string::npos &&
+        !is_native_class_binding(symbols, head) && head.find('.') == std::string::npos &&
         head.find("::") == std::string::npos) {
         return false;
     }
@@ -233,8 +233,8 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
         return shaped_array_type_ref(
             element, std::vector<std::string>(shape.begin() + index_count, shape.end()));
     }
-    if (template_head_is(*type, {"dict", "std.map", "std::map", "std.unordered_map",
-                                 "std::unordered_map"}) &&
+    if (template_head_is(
+            *type, {"dict", "std.map", "std::map", "std.unordered_map", "std::unordered_map"}) &&
         type->children.size() == 2) {
         if (is_slice || index_count != 1) {
             throw CompileError(location, "map indexing requires exactly one key: " + label);

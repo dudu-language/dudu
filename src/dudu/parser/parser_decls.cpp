@@ -273,6 +273,7 @@ void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
     NativeTypeDecl type;
     type.location = name.location;
     type.name = name.text;
+    type.identity.canonical_path = type.name;
     consume(TokenKind::Newline, "expected = or newline after type name");
     module.native_types.push_back(std::move(type));
 }

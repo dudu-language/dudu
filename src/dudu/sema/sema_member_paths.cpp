@@ -103,10 +103,6 @@ const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& 
     if (const auto klass = symbols.classes.find(name); klass != symbols.classes.end()) {
         return klass->second;
     }
-    if (const auto imported = symbols.native_classes.find(name);
-        imported != symbols.native_classes.end()) {
-        return &imported->second;
-    }
     return nullptr;
 }
 

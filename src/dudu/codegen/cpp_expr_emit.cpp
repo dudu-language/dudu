@@ -194,7 +194,7 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
         }
         const std::string name = render_expr_path(*path);
         if (symbols->classes.contains(name) || symbols->enums.contains(name) ||
-            symbols->native_classes.contains(name)) {
+            is_native_class_binding(*symbols, name)) {
             return true;
         }
         const size_t dot = name.find('.');
@@ -212,7 +212,7 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
         return false;
     }
     return symbols->classes.contains(receiver.name) || symbols->enums.contains(receiver.name) ||
-           symbols->native_classes.contains(receiver.name) ||
+           is_native_class_binding(*symbols, receiver.name) ||
            symbols->native_path_prefixes.contains(receiver.name) ||
            symbols->module_import_prefixes.contains(receiver.name);
 }

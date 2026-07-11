@@ -278,7 +278,7 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
                           const Expr* right_expr, const TypeRef& right) {
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
     const std::string left_class = receiver_class_name(symbols, value_left_ref);
-    if (symbols.classes.contains(left_class) && !symbols.native_classes.contains(left_class)) {
+    if (symbols.classes.contains(left_class) && !is_native_class_binding(symbols, left_class)) {
         return std::nullopt;
     }
     const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
@@ -511,8 +511,7 @@ bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeR
 
 bool comparison_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeRef& left,
                             const Expr& right_expr, const TypeRef& right) {
-    if ((op == "==" || op == "!=") &&
-        same_or_assignable(symbols, left, right_expr, right)) {
+    if ((op == "==" || op == "!=") && same_or_assignable(symbols, left, right_expr, right)) {
         return true;
     }
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);

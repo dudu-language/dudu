@@ -8,10 +8,10 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_index.hpp"
+#include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_context.hpp"
-#include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
@@ -190,11 +190,7 @@ const ClassDecl* class_for_name(const Symbols& symbols, const std::string& name)
     if (const auto found = symbols.classes.find(name); found != symbols.classes.end()) {
         return found->second;
     }
-    if (const auto found = symbols.native_classes.find(name);
-        found != symbols.native_classes.end()) {
-        return &found->second;
-    }
-    return nullptr;
+    return native_class_decl_for_binding(symbols, name);
 }
 
 const ClassDecl* class_for_type(const Symbols& symbols, const TypeRef& type) {
@@ -236,11 +232,12 @@ ParamHints native_function_param_hints(const NativeFunctionDecl& fn) {
 
 ParamHints first_native_function_param_hints(const Symbols& symbols, const std::string& name,
                                              size_t arg_count) {
-    const auto found = symbols.native_function_decls.find(name);
-    if (found == symbols.native_function_decls.end()) {
+    const std::vector<const NativeFunctionDecl*> declarations =
+        native_function_decls_for_binding(symbols, name);
+    if (declarations.empty()) {
         return {};
     }
-    for (const NativeFunctionDecl* fn : found->second) {
+    for (const NativeFunctionDecl* fn : declarations) {
         if (fn == nullptr || fn->param_names.size() < arg_count) {
             continue;
         }

@@ -75,7 +75,7 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
 bool known_template_constructor_type(const FunctionScope& scope, const TypeRef& callee_type) {
     const std::string base = base_type(callee_type);
     if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
-        return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||
+        return scope.symbols.types.contains(base) || is_native_class_binding(scope.symbols, base) ||
                class_for_receiver_type(scope.symbols, callee_type) != nullptr;
     }
     return known_type_ref(scope.symbols, callee_type) ||

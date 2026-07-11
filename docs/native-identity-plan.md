@@ -77,7 +77,7 @@ field, value, enum, namespace, and macro should have:
 
 ## Status
 
-In progress.
+Complete.
 
 - The compiler has a dedicated libclang C-API boundary that collects stable
   cursor USRs by declaration kind, spelling, and exact source location. Header
@@ -152,10 +152,13 @@ In progress.
   segments, then loads native metadata only for candidates that can contain a
   use. Canonical identity remains the final authority, so differently aliased
   imports stay connected without scanning every unrelated workspace file.
-
-Still missing:
-
-- Identity-aware symbol maps as the primary sema key.
+- Sema stores native types, classes, and functions in identity-primary tables.
+  Source-visible bindings resolve to canonical identities before declaration
+  lookup. Each identity retains binding-specific declaration views so aliases
+  preserve substituted `TypeRef`s and useful diagnostics without becoming
+  separate semantic declarations. Source-level native `type` declarations
+  receive explicit declared identities, and metadata that reaches sema without
+  an identity is rejected.
 
 ## Definition Of Done
 

@@ -414,18 +414,16 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
         receiver_template_type_ref(scope.symbols, constructor_type);
     if (const ClassDecl* klass = class_for_receiver_type(scope.symbols, resolved_constructor_type);
         klass != nullptr && !klass->generic_params.empty()) {
-        const auto alias = scope.symbols.native_type_decls.find(callee_base);
-        const bool alias_template = alias != scope.symbols.native_type_decls.end() &&
-                                    !alias->second->generic_params.empty();
+        const NativeTypeDecl* alias = native_type_decl_for_binding(scope.symbols, callee_base);
+        const bool alias_template = alias != nullptr && !alias->generic_params.empty();
         if (location != nullptr && alias_template &&
-            !generic_decl_arity_matches(alias->second->generic_params,
-                                        alias->second->generic_min_args, source_type_args.size())) {
-            sema_expr_fail(
-                *location,
-                "type " + callee_base + " expects " +
-                    std::to_string(generic_decl_min_arity(alias->second->generic_params,
-                                                          alias->second->generic_min_args)) +
-                    " type arguments, got " + std::to_string(source_type_args.size()));
+            !generic_decl_arity_matches(alias->generic_params, alias->generic_min_args,
+                                        source_type_args.size())) {
+            sema_expr_fail(*location,
+                           "type " + callee_base + " expects " +
+                               std::to_string(generic_decl_min_arity(alias->generic_params,
+                                                                     alias->generic_min_args)) +
+                               " type arguments, got " + std::to_string(source_type_args.size()));
         }
         const std::vector<TypeRef> class_type_args =
             template_arg_refs_from_type(resolved_constructor_type);

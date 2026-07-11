@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <optional>
 #include <sstream>
 
@@ -154,23 +155,15 @@ std::string class_preview(const ClassDecl& klass, bool native) {
 const ClassDecl* class_for_type_name(const Symbols& symbols, const std::string& name,
                                      bool& native) {
     if (const auto found = symbols.classes.find(name); found != symbols.classes.end()) {
-        native = false;
+        native = native_class_decl_for_binding(symbols, name) != nullptr &&
+                 std::filesystem::path(found->second->location.file.str()).extension() != ".dd";
         return found->second;
-    }
-    if (const auto found = symbols.native_classes.find(name);
-        found != symbols.native_classes.end()) {
-        native = true;
-        return &found->second;
     }
     return nullptr;
 }
 
 const NativeTypeDecl* native_type_for_name(const Symbols& symbols, const std::string& name) {
-    if (const auto found = symbols.native_type_decls.find(name);
-        found != symbols.native_type_decls.end()) {
-        return found->second;
-    }
-    return nullptr;
+    return native_type_decl_for_binding(symbols, name);
 }
 
 std::string type_token_tooltip(const Symbols& symbols, const std::string& name) {

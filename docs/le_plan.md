@@ -611,6 +611,12 @@ the same selected-signature index in compiler sema and LSP reference lookup,
 including structured namespaced static receivers. Workspace reference lookup
 uses parsed AST name segments to discard irrelevant modules before loading
 native metadata, while canonical identity remains the final match criterion.
+Native sema lookup is also identity-primary: visible type, class, and function
+bindings resolve to canonical identities and then to identity-owned declaration
+tables. Binding-specific declaration views preserve alias-substituted types,
+while missing identity metadata is diagnosed instead of falling back to raw
+spelling. Source-level native `type` declarations receive an explicit declared
+identity during parsing.
 
 ## 5. Polish The Test System
 

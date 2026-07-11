@@ -449,12 +449,8 @@ match_native_signature_declaration(const FunctionScope& scope, const std::string
                 }
             }
         }
-        const auto declarations = scope.symbols.native_function_decls.find(lookup);
         const NativeFunctionDecl* declaration =
-            declarations != scope.symbols.native_function_decls.end() &&
-                    selected_index < declarations->second.size()
-                ? declarations->second[selected_index]
-                : nullptr;
+            native_function_decl_for_overload(scope.symbols, lookup, selected_index);
         return NativeSignatureMatch{.signature = std::move(*selected), .declaration = declaration};
     }
     bool has_variadic_candidate = false;

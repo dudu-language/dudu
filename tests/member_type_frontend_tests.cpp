@@ -11,6 +11,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
@@ -359,6 +360,7 @@ void test_static_method_signature_lookup_uses_type_ast_receiver() {
 void test_namespaced_static_method_overload_uses_structured_receiver() {
     dudu::ClassDecl picker;
     picker.name = "native.Picker";
+    picker.identity = dudu::native_identity("native.Picker", "native_static_overload.hpp");
 
     dudu::FunctionDecl integer;
     integer.name = "select";

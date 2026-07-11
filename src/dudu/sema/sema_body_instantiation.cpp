@@ -120,11 +120,12 @@ std::vector<const FunctionDecl*> imported_function_declarations(const FunctionSc
     if (scope.symbols.module_tree == nullptr) {
         return out;
     }
-    const auto aliases = scope.symbols.native_function_decls.find(callee);
-    if (aliases == scope.symbols.native_function_decls.end()) {
+    const std::vector<const NativeFunctionDecl*> aliases =
+        native_function_decls_for_binding(scope.symbols, callee);
+    if (aliases.empty()) {
         return out;
     }
-    for (const NativeFunctionDecl* alias : aliases->second) {
+    for (const NativeFunctionDecl* alias : aliases) {
         if (alias == nullptr || alias->identity.canonical_path.empty()) {
             continue;
         }

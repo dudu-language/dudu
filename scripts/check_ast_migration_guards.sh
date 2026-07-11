@@ -136,6 +136,12 @@ if rg -n "std::function|#include <functional>" "$repo_root/src/dudu/core/ast.hpp
     exit 1
 fi
 
+if rg -n "symbols\.native_classes|\.native_type_decls\b|\.native_function_decls\b|\.native_type_identity_keys\b" \
+    "$repo_root/src/dudu"; then
+    echo "native sema declarations must resolve binding -> canonical identity -> declaration" >&2
+    exit 1
+fi
+
 if rg -n "\\braw_type\\b|\\braw_receiver_type\\b|\\braw_native_alias\\b" \
     "$repo_root/src/dudu/sema/sema_index.cpp" "$repo_root/src/dudu/sema/sema_index_type_ref.cpp" \
     "$repo_root/src/dudu/sema/sema_index_type_ref.hpp"; then

@@ -63,19 +63,18 @@ std::string strip_c_type_tag(std::string type) {
     return type;
 }
 
-std::string native_identity_atom(std::string_view identity) {
-    static constexpr char hex[] = "0123456789abcdef";
-    std::string out = "__dudu_native_identity_";
-    out.reserve(out.size() + identity.size() * 2);
-    for (const unsigned char ch : identity) {
-        out.push_back(hex[ch >> 4]);
-        out.push_back(hex[ch & 0x0f]);
-    }
-    return out;
-}
-
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
+}
+
+std::string require_native_identity(const NativeSymbolId& identity, std::string_view kind,
+                                    std::string_view name, const SourceLocation& location) {
+    const std::string key = native_symbol_identity_key(identity);
+    if (key.empty()) {
+        fail(location, "native " + std::string(kind) +
+                           " is missing canonical identity: " + std::string(name));
+    }
+    return key;
 }
 
 void add_name(std::map<std::string, SourceLocation>& names, const std::string& name,
@@ -278,21 +277,6 @@ TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     return resolve_alias_ref_impl(symbols, std::move(type), seen);
 }
 
-TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type) {
-    type = resolve_alias_ref(symbols, std::move(type));
-    for (TypeRef& child : type.children) {
-        child = canonical_native_type_ref(symbols, std::move(child));
-    }
-    if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
-        type.kind == TypeKind::Template) {
-        const auto identity = symbols.native_type_identity_keys.find(type_ref_head_name(type));
-        if (identity != symbols.native_type_identity_keys.end()) {
-            type.name = native_identity_atom(identity->second);
-        }
-    }
-    return type;
-}
-
 std::vector<std::string> split_cpp_escape_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;
@@ -393,13 +377,12 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.alias_type_refs[alias.name] = alias.type_ref;
     }
     for (const NativeTypeDecl& type : module.native_types) {
+        const std::string identity =
+            require_native_identity(type.identity, "type", type.name, type.location);
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
-        symbols.native_type_decls[type.name] = &type;
-        if (const std::string identity = native_symbol_identity_key(type.identity);
-            !identity.empty()) {
-            symbols.native_type_identity_keys[type.name] = identity;
-        }
+        symbols.native_type_identity_by_binding[type.name] = identity;
+        symbols.native_type_decls_by_identity[identity][type.name] = &type;
         add_native_path_prefix(symbols, type.name);
         if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&
             !symbols.alias_type_refs.contains(type.name)) {
@@ -450,21 +433,17 @@ Symbols collect_symbols(const ModuleAst& module) {
             symbols.native_class_specializations[klass.name].push_back(klass);
             continue;
         }
-        const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
-        (void)inserted;
-        symbols.classes[klass.name] = &it->second;
-        if (const std::string identity = native_symbol_identity_key(klass.identity);
-            !identity.empty()) {
-            symbols.native_type_identity_keys[klass.name] = identity;
-        }
+        const std::string identity =
+            require_native_identity(klass.identity, "class", klass.name, klass.location);
+        symbols.native_type_identity_by_binding[klass.name] = identity;
+        symbols.native_class_decls_by_identity[identity][klass.name] = &klass;
+        symbols.classes[klass.name] = &klass;
         const std::string untagged = strip_c_type_tag(klass.name);
         if (untagged != klass.name) {
             symbols.types.insert(untagged);
-            symbols.classes[untagged] = &it->second;
-            if (const std::string identity = native_symbol_identity_key(klass.identity);
-                !identity.empty()) {
-                symbols.native_type_identity_keys[untagged] = identity;
-            }
+            symbols.native_type_identity_by_binding[untagged] = identity;
+            symbols.native_class_decls_by_identity[identity][untagged] = &klass;
+            symbols.classes[untagged] = &klass;
         }
     }
     for (const FunctionDecl& fn : module.functions) {
@@ -494,6 +473,8 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.function_overload_decls[fn.name].push_back(&fn);
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
+        const std::string identity =
+            require_native_identity(fn.identity, "function", fn.name, fn.location);
         FunctionSignature signature;
         signature.template_params = fn.template_params;
         set_signature_param_types(signature, native_function_param_type_refs(fn));
@@ -505,7 +486,8 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         signature.has_native_template_return_spelling = !fn.return_native_spelling.empty();
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
-        symbols.native_function_decls[fn.name].push_back(&fn);
+        symbols.native_function_identities_by_binding[fn.name].push_back(identity);
+        symbols.native_function_decls_by_identity[identity][fn.name] = &fn;
         add_native_path_prefix(symbols, fn.name);
     }
     for (const ConstDecl& constant : module.constants) {
