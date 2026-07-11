@@ -7,6 +7,9 @@
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and
   last-known-good LSP project indexes.
+- Added protocol-level invalid-edit LSP coverage across diagnostics, hover,
+  definition, references, completion, inlay hints, semantic tokens, native
+  symbols, and edit recovery without a server restart.
 - Added the Dudu project driver plan.
 - Added `dudu init` and `dudu new` project scaffolding commands.
 - Added `dudu init <path>` support.

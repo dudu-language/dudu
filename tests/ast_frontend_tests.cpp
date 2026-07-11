@@ -349,6 +349,50 @@ void test_parser_recovery_stops_unfinished_call_at_statement_boundary() {
     assert(result.module.functions[1].name == "later");
 }
 
+void test_parser_recovery_stops_unfinished_index_at_statement_boundary() {
+    const std::string source = "def main() -> i32:\n"
+                               "    values: list[i32] = []\n"
+                               "    broken = values[\n"
+                               "    after = 2\n"
+                               "    return after\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_unfinished_index.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.diagnostics.front().code == "dudu.parser.unfinished_group");
+    assert(result.module.functions.size() == 1);
+    assert(result.module.functions.front().statements.size() == 3);
+    assert(dudu::stmt_target_expr(result.module.functions.front().statements[1]).name == "after");
+}
+
+void test_parser_recovery_preserves_declaration_after_incomplete_import() {
+    const std::string source = "from helper import\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_incomplete_import.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 1);
+    assert(result.module.functions.front().name == "usable");
+}
+
+void test_recovering_parser_accepts_valid_multiline_groups() {
+    const std::string source = "def add(a: i32, b: i32) -> i32:\n"
+                               "    return a + b\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    value = add(\n"
+                               "        20,\n"
+                               "        22,\n"
+                               "    )\n"
+                               "    return value\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_valid_multiline.dd");
+    assert(result.diagnostics.empty());
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions.back().statements.size() == 2);
+}
+
 void test_parser_recovery_skips_bad_declaration_body() {
     const std::string source = "def broken() -> i32\n"
                                "    return 1\n"
@@ -1045,6 +1089,9 @@ int main() {
         test_parser_recovery_preserves_enum_around_bad_value();
         test_parser_recovery_skips_nested_bad_enum_payload();
         test_parser_recovery_stops_unfinished_call_at_statement_boundary();
+        test_parser_recovery_stops_unfinished_index_at_statement_boundary();
+        test_parser_recovery_preserves_declaration_after_incomplete_import();
+        test_recovering_parser_accepts_valid_multiline_groups();
         test_parser_recovery_skips_bad_declaration_body();
         test_lexer_recovery_preserves_later_declarations();
         test_lexer_recovery_preserves_function_body_after_bad_indent();

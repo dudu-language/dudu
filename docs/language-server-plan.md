@@ -119,11 +119,17 @@ diagnostics and current-buffer declarations; an unrecoverable graph load can
 reuse the last known good index. Semantic body checking collects independent
 function/method failures, and declaration source ranges let diagnostics skip
 only a syntax-damaged body while still checking unaffected bodies. Direct LSP
-fixtures now cover hover, definition, references, completion, inlay hints, and
-semantic tokens against a malformed current buffer. Remaining work in this
-milestone is broader incomplete-edit coverage, native/import token coverage,
-protocol-level JSON-RPC fixtures, and dogfood verification that fixing the edit
-restores the current index without an editor restart.
+fixtures cover hover, definition, references, completion, inlay hints, and
+semantic tokens against a malformed current buffer. A protocol-level JSON-RPC
+fixture now opens valid source, applies a malformed edit, verifies all of those
+requests plus native C/C++ semantic classification against the partial index,
+then fixes the edit and verifies diagnostics clear without restarting the
+server. Parser fixtures cover missing declaration syntax, bad indentation,
+incomplete imports, malformed nested enum payloads, and unfinished calls and
+indexes while retaining valid multiline continuation syntax. The normal
+raymarch-dd and dudu-webserver LSP dogfood latency probe remains green. Further
+work is incremental recovery granularity and cold-index performance rather than
+the previous all-or-nothing invalid-buffer behavior.
 
 Definition of done: editing a Dudu file into a temporarily non-compiling state
 must show useful squiggles, keep semantic highlighting for recoverable regions,
