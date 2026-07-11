@@ -389,6 +389,22 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                                             : target_selective_document
                                                 ? selective_target->member_name
                                                 : query;
+        std::vector<std::string> candidate_queries = {candidate_query};
+        if (!module_target.has_value() && !selective_target.has_value() &&
+            native_identity.has_value()) {
+            const ProjectIndex* native_candidate_index =
+                workspace_candidate_index(current_index, candidate, include_native);
+            if (native_candidate_index == nullptr) {
+                continue;
+            }
+            const std::set<std::string> identity_queries =
+                native_candidate_index->native_queries_for_identity(candidate.path,
+                                                                    *native_identity);
+            if (identity_queries.empty()) {
+                continue;
+            }
+            candidate_queries.assign(identity_queries.begin(), identity_queries.end());
+        }
         std::vector<ReferenceLocation> locations;
         if (scope == ReferenceScope::CurrentDocument && candidate.uri == doc.uri &&
             current_unit != nullptr &&
@@ -398,20 +414,14 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                                                   position.line + 1)
                             .value_or(std::vector<ReferenceLocation>{});
         } else {
-            locations = references_in(*candidate_unit, candidate, candidate_query);
+            for (const std::string& identity_query : candidate_queries) {
+                std::vector<ReferenceLocation> found =
+                    references_in(*candidate_unit, candidate, identity_query);
+                locations.insert(locations.end(), found.begin(), found.end());
+            }
         }
         if (locations.empty()) {
             continue;
-        }
-        if (!module_target.has_value() && !selective_target.has_value() &&
-            native_identity.has_value()) {
-            const ProjectIndex* native_candidate_index =
-                workspace_candidate_index(current_index, candidate, include_native);
-            if (native_candidate_index == nullptr ||
-                !native_candidate_index->module_has_native_identity_for_query(
-                    candidate.path, candidate_query, *native_identity)) {
-                continue;
-            }
         }
         for (const ReferenceLocation& location : locations) {
             out.push_back(location);

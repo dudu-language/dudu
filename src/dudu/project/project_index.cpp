@@ -242,6 +242,17 @@ native_identity_index_for_module(const ModuleAst& module) {
     return out;
 }
 
+std::map<std::string, std::set<std::string>> reverse_native_identity_index(
+    const std::map<std::string, std::set<std::string>>& by_name) {
+    std::map<std::string, std::set<std::string>> out;
+    for (const auto& [name, identities] : by_name) {
+        for (const std::string& identity : identities) {
+            out[identity].insert(name);
+        }
+    }
+    return out;
+}
+
 std::vector<const ModuleAst*> indexed_units(const ModuleAst& module) {
     std::vector<const ModuleAst*> out;
     if (module.module_units.empty()) {
@@ -310,7 +321,10 @@ ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
         index.source_path_to_index_[path_key(unit->source_path)] = index_id;
         index.module_path_to_index_[unit->module_path] = index_id;
         index.modules_.push_back(std::move(summary));
-        index.native_identities_by_module_.push_back(native_identity_index_for_module(*unit));
+        std::map<std::string, std::set<std::string>> native_identities =
+            native_identity_index_for_module(*unit);
+        index.native_queries_by_identity_.push_back(
+            reverse_native_identity_index(native_identities));
     }
 
     for (ProjectModuleSummary& summary : index.modules_) {
@@ -526,23 +540,20 @@ const ModuleAst* ProjectIndex::imported_unit(const ModuleAst& current,
     return unit_for_module(resolved_module_path);
 }
 
-bool ProjectIndex::module_has_native_identity_for_query(const std::filesystem::path& path,
-                                                        std::string_view query,
-                                                        std::string_view identity) const {
-    if (query.empty() || identity.empty()) {
-        return false;
+std::set<std::string>
+ProjectIndex::native_queries_for_identity(const std::filesystem::path& path,
+                                          std::string_view identity) const {
+    if (identity.empty()) {
+        return {};
     }
     const auto found = source_path_to_index_.find(path_key(path));
     if (found == source_path_to_index_.end() ||
-        found->second >= native_identities_by_module_.size()) {
-        return false;
+        found->second >= native_queries_by_identity_.size()) {
+        return {};
     }
-    const auto& by_name = native_identities_by_module_[found->second];
-    const auto identities = by_name.find(std::string(query));
-    if (identities == by_name.end()) {
-        return false;
-    }
-    return identities->second.contains(std::string(identity));
+    const auto& by_identity = native_queries_by_identity_[found->second];
+    const auto queries = by_identity.find(std::string(identity));
+    return queries == by_identity.end() ? std::set<std::string>{} : queries->second;
 }
 
 } // namespace dudu

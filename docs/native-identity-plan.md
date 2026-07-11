@@ -135,11 +135,16 @@ In progress.
   resolve aliases and compare canonicalized native heads before structural
   compatibility. Qualified declarations no longer become compatible merely
   because their tail names match.
+- `ProjectIndex` stores native reference candidates as canonical identity to
+  visible-query sets. Workspace references follow one declaration across
+  differently aliased imports while excluding a same-spelled declaration from
+  another header.
 
 Still missing:
 
 - Identity-aware symbol maps as the primary sema key.
-- Broader LSP reference indexing keyed directly by canonical native identity.
+- Overload-call-aware LSP identity selection when several native declarations
+  share one source query.
 
 ## Definition Of Done
 

@@ -600,6 +600,12 @@ bindings, matches, and operators. Same-tail qualified spellings are not treated
 as compatible; focused fixtures prove same-identity aliases match while
 distinct namespace declarations with the same tail name do not.
 
+Workspace native-reference indexing is identity-primary: each module records
+the visible query spellings for every canonical native identity. References
+therefore cross different import aliases for the same declaration and reject
+same-spelled declarations with different identities. Selecting one declaration
+from a native overload set still requires call-aware identity resolution.
+
 ## 5. Polish The Test System
 
 Primary plan: [Dudu Tests](tests.md).

@@ -66,9 +66,8 @@ class ProjectIndex {
     const ModuleAst* unit_for_module(std::string_view module_path) const;
     const ModuleAst& visible_unit_for_path(const std::filesystem::path& path) const;
     const ModuleAst* imported_unit(const ModuleAst& current, const ImportDecl& import) const;
-    bool module_has_native_identity_for_query(const std::filesystem::path& path,
-                                              std::string_view query,
-                                              std::string_view identity) const;
+    std::set<std::string> native_queries_for_identity(const std::filesystem::path& path,
+                                                      std::string_view identity) const;
 
   private:
     ModuleAst module_;
@@ -76,7 +75,7 @@ class ProjectIndex {
     std::vector<ProjectModuleSummary> modules_;
     std::map<std::string, size_t> source_path_to_index_;
     std::map<std::string, size_t> module_path_to_index_;
-    std::vector<std::map<std::string, std::set<std::string>>> native_identities_by_module_;
+    std::vector<std::map<std::string, std::set<std::string>>> native_queries_by_identity_;
 };
 
 bool source_stamp_file_current(const std::filesystem::path& path);

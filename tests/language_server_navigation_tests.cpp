@@ -938,10 +938,10 @@ void test_lsp_native_references_filter_by_identity() {
                                 "\n"
                                 "def main() -> i32:\n"
                                 "    return n.shared_name()\n");
-    write_file(dir / "same.dd", "import c \"./left.h\" as n\n"
+    write_file(dir / "same.dd", "import c \"./left.h\" as other_alias\n"
                                 "\n"
                                 "def same() -> i32:\n"
-                                "    return n.shared_name()\n");
+                                "    return other_alias.shared_name()\n");
     write_file(dir / "other.dd", "import c \"./right.h\" as n\n"
                                  "\n"
                                  "def other() -> i32:\n"
