@@ -736,7 +736,7 @@ void test_typed_for_emission() {
                                                       "typed_for.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("for (auto index = 0; index < 3; index += 1)") != std::string::npos);
+    assert(cpp.find("for (int32_t index = 0; index < 3; index += 1)") != std::string::npos);
     assert(cpp.find("for (Item& item : items)") != std::string::npos);
     assert(cpp.find("for (ItemAlias alias_item : items)") != std::string::npos);
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);

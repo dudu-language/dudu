@@ -349,7 +349,8 @@ std::map<std::string, TypeRef> local_type_refs_before_location(const ModuleAst& 
             if (!function_contains_location(fn, location)) {
                 continue;
             }
-            FunctionScope fn_scope(symbols_for_lsp_function(symbols, fn));
+            const Symbols function_symbols = symbols_for_lsp_function(symbols, fn);
+            FunctionScope fn_scope(function_symbols);
             collect_function_locals(fn_scope, fn, location.line);
             scope.local_type_refs = std::move(fn_scope.local_type_refs);
             return scope.local_type_refs;
