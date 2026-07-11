@@ -43,6 +43,7 @@ struct Symbols {
     std::set<std::string> native_enum_values;
     std::map<std::string, const EnumDecl*> enums;
     std::map<std::string, ClassDecl> native_classes;
+    std::map<std::string, std::vector<ClassDecl>> native_class_specializations;
     std::map<std::string, const ClassDecl*> classes;
 };
 

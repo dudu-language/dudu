@@ -566,9 +566,9 @@ types through those aliases; the compiler no longer guesses that names such as
 `_Tp`, `value_type`, or `mapped_type` correspond to fixed template argument
 positions. Omitted arguments are materialized in declaration order, so a later
 default may depend on earlier explicit or defaulted arguments. Native scan cache
-version 21 preserves the same metadata, structured associated types, and
-canonical Clang USRs on warm
-scans. The `native_dependent_alias_metadata` scanner and execution fixtures
+version 24 preserves the same metadata, structured associated types, canonical
+Clang USRs, and class specialization patterns on warm scans. The
+`native_dependent_alias_metadata` scanner and execution fixtures
 cover arbitrary parameter names, non-type literal defaults, dependent type
 defaults, scalar and nested template aliases, reordered and defaulted
 alias-template arguments, fields, emitted
@@ -576,22 +576,22 @@ C++, and warm-cache parity. Standard-library execution fixtures cover the same
 path through `vector`, `optional`, `span`, and `unordered_set`.
 
 Clang USRs are now collected through libclang, attached to text-AST declarations,
-and preserved through raw and parsed native caches. Identity-aware specialization
-modeling remains required before the scanner can represent every class-template
-specialization independently. Some libstdc++ implementation
-classes currently collapse to one visible Dudu name even when Clang reports
-specializations with different template arities. This must be solved with
-canonical declaration identity, not import-name heuristics or positional
-template guesses.
+and preserved through raw and parsed native caches. Class-template primary,
+partial-specialization, and concrete-specialization declarations remain distinct
+through scan deduplication, cross-header merge, and cache version 24. Associated
+type resolution structurally matches specialization patterns, including pointer
+patterns and non-type arguments, and leaves equal-priority ambiguity unresolved.
+This generic mechanism replaces the previous libstdc++ helper-name rewrites.
 
 Dependent native types such as `Owner[T].Item` now use a real `Associated`
 `TypeRef` node through parsing, substitution, cache serialization, diagnostics,
 and C++ emission. Imported `std.vector`, `std.map`, `std.optional`, and related
 container methods use scanned class metadata instead of the language-owned
 `list`/`dict`/`Option` method table. Library-neutral execution coverage proves
-associated-result substitution without naming an STL facility. Partial class
-template specialization selection remains the blocker for removing the last
-SFINAE normalization cases.
+associated-result substitution without naming an STL facility. Partial and
+concrete class-template specialization coverage now exercises arbitrary fixture
+names, pointer patterns, exact-over-partial precedence, ambiguity, nested
+namespace lookup, cross-header merge, and cold/warm scan parity.
 
 ## 5. Polish The Test System
 

@@ -1,12 +1,13 @@
 #include "dudu/native/native_header_merge.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/native/native_header_collision.hpp"
 #include "dudu/native/native_header_identity.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <type_traits>
 
 namespace dudu {
@@ -38,6 +39,30 @@ void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& so
     }
 }
 
+bool contains_equivalent_method(const std::vector<FunctionDecl>& methods,
+                                const FunctionDecl& candidate) {
+    return std::ranges::any_of(methods, [&](const FunctionDecl& method) {
+        if (method.name != candidate.name ||
+            !type_ref_equivalent(function_return_type_ref(method),
+                                 function_return_type_ref(candidate)) ||
+            method.params.size() != candidate.params.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < method.params.size(); ++i) {
+            if (!type_ref_equivalent(method.params[i].type_ref, candidate.params[i].type_ref)) {
+                return false;
+            }
+        }
+        return true;
+    });
+}
+
+bool has_equivalent_base_class(const ClassDecl& klass, const TypeRef& type) {
+    return std::ranges::any_of(klass.base_class_refs, [&](const BaseClassDecl& base) {
+        return type_ref_equivalent(base.type_ref, type);
+    });
+}
+
 } // namespace
 
 bool type_ref_lists_equivalent(const std::vector<TypeRef>& lhs, const std::vector<TypeRef>& rhs) {
@@ -66,6 +91,76 @@ bool contains_equivalent_native_function(const std::vector<NativeFunctionDecl>& 
     return std::ranges::any_of(functions, [&](const NativeFunctionDecl& fn) {
         return native_function_equivalent(fn, candidate);
     });
+}
+
+void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source) {
+    if (target.cpp_name.empty()) {
+        target.cpp_name = source.cpp_name;
+    }
+    if (target.identity.usr.empty()) {
+        target.identity.usr = source.identity.usr;
+    }
+    if (target.identity.canonical_path.empty()) {
+        target.identity.canonical_path = source.identity.canonical_path;
+    }
+    if (target.generic_params.empty()) {
+        target.generic_params = source.generic_params;
+    }
+    if (!target.generic_min_args && source.generic_min_args) {
+        target.generic_min_args = source.generic_min_args;
+    }
+    if (target.generic_default_args.empty()) {
+        target.generic_default_args = source.generic_default_args;
+    }
+    if (target.native_specialization_args.empty()) {
+        target.native_specialization_args = source.native_specialization_args;
+    }
+    target.native_partial_specialization =
+        target.native_partial_specialization || source.native_partial_specialization;
+    target.native_declaration = target.native_declaration || source.native_declaration;
+    if (target.origin_module.empty()) {
+        target.origin_module = source.origin_module;
+    }
+    if (target.doc_comment.empty()) {
+        target.doc_comment = source.doc_comment;
+    }
+    if (target.location.line == 0 && source.location.line != 0) {
+        target.location = source.location;
+    }
+
+    for (const BaseClassDecl& base : source.base_class_refs) {
+        if (!has_equivalent_base_class(target, base.type_ref)) {
+            target.base_class_refs.push_back(base);
+        }
+    }
+    std::set<std::string> fields;
+    for (const FieldDecl& field : target.fields) {
+        fields.insert(field.name);
+    }
+    for (const FieldDecl& field : source.fields) {
+        if (fields.insert(field.name).second) {
+            target.fields.push_back(field);
+        }
+    }
+    for (const FunctionDecl& method : source.methods) {
+        if (!contains_equivalent_method(target.methods, method)) {
+            target.methods.push_back(method);
+        }
+    }
+    std::map<std::string, size_t> aliases;
+    for (size_t i = 0; i < target.type_aliases.size(); ++i) {
+        aliases.emplace(target.type_aliases[i].name, i);
+    }
+    for (const TypeAliasDecl& alias : source.type_aliases) {
+        const auto existing = aliases.find(alias.name);
+        if (existing == aliases.end()) {
+            aliases.emplace(alias.name, target.type_aliases.size());
+            target.type_aliases.push_back(alias);
+        } else if (!has_type_ref(target.type_aliases[existing->second].type_ref) &&
+                   has_type_ref(alias.type_ref)) {
+            target.type_aliases[existing->second] = alias;
+        }
+    }
 }
 
 void append_unique_native_functions(std::vector<NativeFunctionDecl>& target,
@@ -99,7 +194,25 @@ void append_unique_native_namespaces(std::vector<NativeNamespaceDecl>& target,
 
 void append_unique_native_classes(std::vector<ClassDecl>& target,
                                   const std::vector<ClassDecl>& source) {
-    append_unique_native_decls(target, source, "class");
+    std::map<std::string, size_t> seen;
+    for (size_t i = 0; i < target.size(); ++i) {
+        seen[native_class_binding_key(target[i])] = i;
+    }
+    for (const ClassDecl& item : source) {
+        const std::string binding = native_class_binding_key(item);
+        const auto existing = seen.find(binding);
+        if (existing == seen.end()) {
+            seen.emplace(binding, target.size());
+            target.push_back(item);
+            continue;
+        }
+        ClassDecl& current = target[existing->second];
+        if (native_decl_identity_key(current) != native_decl_identity_key(item) &&
+            native_decl_collision_is_error(item.name, item.location)) {
+            throw CompileError(item.location, "native class name collision: " + item.name);
+        }
+        merge_native_class_declaration(current, item);
+    }
 }
 
 } // namespace dudu

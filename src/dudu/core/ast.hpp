@@ -411,6 +411,8 @@ struct ClassDecl {
     std::vector<std::string> generic_params;
     std::optional<size_t> generic_min_args;
     std::vector<TypeRef> generic_default_args;
+    std::vector<TypeRef> native_specialization_args;
+    bool native_partial_specialization = false;
     std::vector<BaseClassDecl> base_class_refs;
     std::vector<TypeAliasDecl> type_aliases;
     std::vector<Decorator> decorators;

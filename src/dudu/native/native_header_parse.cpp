@@ -121,6 +121,34 @@ TypeRef normalize_native_type_ref(TypeRef type) {
     return type;
 }
 
+void replace_native_type_placeholder(TypeRef& type, std::string_view placeholder,
+                                     std::string_view replacement) {
+    if ((type.kind == TypeKind::Named || type.kind == TypeKind::Qualified) &&
+        type.name == placeholder) {
+        type.name = std::string(replacement);
+    }
+    for (TypeRef& child : type.children) {
+        replace_native_type_placeholder(child, placeholder, replacement);
+    }
+}
+
+std::string native_type_placeholder(std::string_view index) {
+    return "__dudu_native_type_parameter_" + std::string(index);
+}
+
+std::string preserve_native_type_placeholders(std::string text) {
+    static const std::regex placeholder(R"(type-parameter-0-([0-9]+))");
+    std::string out;
+    std::smatch match;
+    while (std::regex_search(text, match, placeholder)) {
+        out += match.prefix().str();
+        out += native_type_placeholder(match[1].str());
+        text = match.suffix().str();
+    }
+    out += text;
+    return out;
+}
+
 int ast_depth(const std::string& line) {
     const size_t branch = line.find("|-");
     const size_t last = line.find("`-");
@@ -177,7 +205,7 @@ SourceLocation ast_source_location(const std::string& line, const SourceLocation
     out.line = std::stoi(match[2].str());
     out.column = std::stoi(match[3].str());
     if (std::regex_search(line, named_line_match, named_line_spelling)) {
-        if (!current_file.empty()) {
+        if (relative_location && !current_file.empty()) {
             out.file = SourceFileName(current_file);
         }
         out.line = std::stoi(named_line_match[1].str());
@@ -329,6 +357,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex record_decl(
         R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
+    static const std::regex specialization_decl(
+        R"((ClassTemplate(Partial)?SpecializationDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex enum_decl(R"(EnumDecl.*\b([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex template_type_param(
         R"(TemplateTypeParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
@@ -336,6 +366,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"(NonTypeTemplateParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex template_type_default(R"(TemplateArgument type '([^']+)')");
     static const std::regex template_value_default(R"(TemplateArgument integral (.+)$)");
+    static const std::regex template_param_index(R"(\bindex ([0-9]+) )");
     static const std::regex template_integer_default(R"(IntegerLiteral.* ([+-]?[0-9]+)$)");
     static const std::regex template_bool_default(R"(CXXBoolLiteralExpr.* (true|false)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
@@ -413,6 +444,43 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         templates.back().param_has_default.push_back(false);
         templates.back().param_defaults.emplace_back();
         templates.back().last_param_depth = depth;
+    }
+    if (!classes.empty() && depth == classes.back().first + 1 &&
+        line.find("TemplateArgument") != std::string::npos) {
+        ClassDecl& klass = scan.classes[classes.back().second];
+        std::string argument;
+        if (std::regex_search(line, match, template_type_default)) {
+            argument = dudu_type(preserve_native_type_placeholders(match[1].str()));
+        } else if (std::regex_search(line, match, template_value_default)) {
+            argument = trim_copy(match[1].str());
+        }
+        if (!argument.empty()) {
+            argument = qualify_scoped_type(scan, namespaces, classes, std::move(argument));
+            klass.native_specialization_args.push_back(
+                parse_native_type_text(argument, decl_location));
+        }
+    }
+    if (!classes.empty() && depth == classes.back().first + 1 &&
+        (line.find("TemplateTypeParmDecl") != std::string::npos ||
+         line.find("NonTypeTemplateParmDecl") != std::string::npos)) {
+        ClassDecl& klass = scan.classes[classes.back().second];
+        const std::regex& parameter = line.find("TemplateTypeParmDecl") != std::string::npos
+                                          ? template_type_param
+                                          : template_value_param;
+        std::smatch parameter_match;
+        std::smatch index_match;
+        if (std::regex_search(line, parameter_match, parameter) &&
+            std::regex_search(line, index_match, template_param_index)) {
+            const std::string name =
+                parameter_match[2].str() + (parameter_match[1].matched ? "..." : "");
+            klass.generic_params.push_back(name);
+            const std::string placeholder = native_type_placeholder(index_match[1].str());
+            const std::string base_name =
+                name.ends_with("...") ? name.substr(0, name.size() - 3) : name;
+            for (TypeRef& argument : klass.native_specialization_args) {
+                replace_native_type_placeholder(argument, placeholder, base_name);
+            }
+        }
     }
     if (!templates.empty() && !templates.back().param_has_default.empty() &&
         line.find("TemplateArgument") != std::string::npos &&
@@ -511,6 +579,23 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
         }
+    } else if ((line.find("ClassTemplatePartialSpecializationDecl") != std::string::npos ||
+                (line.find("ClassTemplateSpecializationDecl") != std::string::npos &&
+                 line.find("implicit_instantiation") == std::string::npos)) &&
+               std::regex_search(line, match, specialization_decl)) {
+        const std::string raw_name = match[4].str();
+        const std::string name = class_name(scan, namespaces, classes, raw_name);
+        ClassDecl klass;
+        klass.name = name;
+        klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                          decl_location, name, current_file);
+        klass.native_declaration = true;
+        klass.native_partial_specialization = match[2].matched;
+        klass.location = decl_location;
+        scan.classes.push_back(std::move(klass));
+        classes.push_back({depth, scan.classes.size() - 1});
+        comment_targets.push_back(
+            {.depth = depth, .kind = CommentTargetKind::Class, .primary = scan.classes.size() - 1});
     } else if ((line.find("RecordDecl") != std::string::npos ||
                 line.find("CXXRecordDecl") != std::string::npos) &&
                std::regex_search(line, match, record_decl)) {

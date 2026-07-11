@@ -121,13 +121,18 @@ In progress.
   before falling back to the structured alias target `TypeRef` head. References
   now handle source-level qualified member paths, so an imported native class
   annotation and constructor call are found together.
+- Class-template primary declarations, partial specializations, and concrete
+  specializations now remain distinct through scanning, deduplication,
+  cross-header merge, and parsed scan caches. Sema selects associated aliases
+  by structurally matching specialization arguments and rejects equal-priority
+  ambiguity instead of choosing by declaration order. This removed the
+  libstdc++ `_NonArray` and `__enable_if_is_duration` name rewrites.
+- Canonical namespace USRs intentionally join namespace declarations reopened
+  across different headers, matching C++ namespace identity rather than header
+  spelling.
 
 Still missing:
 
-- Distinct metadata and semantic selection for class-template primary
-  declarations, partial specializations, and concrete specializations that
-  share a visible import name. Clang USRs are available; scanner and sema maps
-  must stop collapsing those declarations by binding name.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
 - Broader LSP reference indexing keyed directly by canonical native identity.

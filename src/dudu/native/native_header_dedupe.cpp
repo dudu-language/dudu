@@ -1,15 +1,13 @@
-#include "dudu/native/native_header_parse.hpp"
-
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/native/native_header_collision.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_merge.hpp"
-#include "dudu/core/source.hpp"
+#include "dudu/native/native_header_parse.hpp"
 
 #include <algorithm>
 #include <map>
-#include <set>
 #include <type_traits>
 
 namespace dudu {
@@ -45,28 +43,11 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, std::stri
         out.push_back(std::move(value));
         return;
     }
-    if (existing->second != identity && native_decl_collision_is_error(value.name, value.location)) {
+    if (existing->second != identity &&
+        native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location,
                            "native " + std::string(kind) + " name collision: " + value.name);
     }
-}
-
-bool contains_equivalent_method(const std::vector<FunctionDecl>& methods,
-                                const FunctionDecl& candidate) {
-    return std::ranges::any_of(methods, [&](const FunctionDecl& method) {
-        if (method.name != candidate.name ||
-            !type_ref_equivalent(function_return_type_ref(method),
-                                 function_return_type_ref(candidate)) ||
-            method.params.size() != candidate.params.size()) {
-            return false;
-        }
-        for (size_t i = 0; i < method.params.size(); ++i) {
-            if (!type_ref_equivalent(method.params[i].type_ref, candidate.params[i].type_ref)) {
-                return false;
-            }
-        }
-        return true;
-    });
 }
 
 void add_unique_function(std::vector<NativeFunctionDecl>& out, NativeFunctionDecl value) {
@@ -75,49 +56,23 @@ void add_unique_function(std::vector<NativeFunctionDecl>& out, NativeFunctionDec
     }
 }
 
-bool has_equivalent_base_class(const ClassDecl& klass, const TypeRef& type) {
-    return std::ranges::any_of(klass.base_class_refs, [&](const BaseClassDecl& base) {
-        return type_ref_equivalent(base.type_ref, type);
-    });
-}
-
-void merge_class(ClassDecl& target, const ClassDecl& source) {
-    for (const BaseClassDecl& base : source.base_class_refs) {
-        if (!has_equivalent_base_class(target, base.type_ref)) {
-            target.base_class_refs.push_back(base);
-        }
-    }
-    std::set<std::string> fields;
-    for (const FieldDecl& field : target.fields) {
-        fields.insert(field.name);
-    }
-    for (const FieldDecl& field : source.fields) {
-        if (fields.insert(field.name).second) {
-            target.fields.push_back(field);
-        }
-    }
-    for (const FunctionDecl& method : source.methods) {
-        if (!contains_equivalent_method(target.methods, method)) {
-            target.methods.push_back(method);
-        }
-    }
-}
-
 void add_unique_class(std::vector<ClassDecl>& out, std::map<std::string, std::string>& seen,
                       ClassDecl value) {
     const std::string identity = native_decl_identity_key(value);
-    const auto existing = seen.find(value.name);
+    const std::string binding = native_class_binding_key(value);
+    const auto existing = seen.find(binding);
     if (existing == seen.end()) {
-        seen[value.name] = identity;
+        seen[binding] = identity;
         out.push_back(std::move(value));
         return;
     }
-    if (existing->second != identity && native_decl_collision_is_error(value.name, value.location)) {
+    if (existing->second != identity &&
+        native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location, "native class name collision: " + value.name);
     }
     for (ClassDecl& klass : out) {
-        if (klass.name == value.name) {
-            merge_class(klass, value);
+        if (native_class_binding_key(klass) == binding) {
+            merge_native_class_declaration(klass, value);
         }
     }
 }

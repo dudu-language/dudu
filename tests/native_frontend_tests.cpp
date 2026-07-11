@@ -2,12 +2,14 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_header_cache_deps.hpp"
+#include "dudu/native/native_header_merge.hpp"
 #include "dudu/native/native_header_parse.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_header_usr.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
+#include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat.hpp"
 
@@ -848,6 +850,93 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
            "depmeta.Wrapper[Payload]");
 }
 
+void test_native_class_partial_specialization_metadata(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build/native-partial-specialization-cache";
+    std::filesystem::remove_all(config.build_dir);
+
+    const auto scan_and_check = [&]() {
+        dudu::ModuleAst module =
+            dudu::parse_source("from cpp.path import native_headers/simple_cpp.hpp\n",
+                               source_dir / "native_partial_specialization.dd");
+        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+        const std::string class_name = "dudu_native.AssociatedResult";
+        size_t primary_count = 0;
+        size_t specialization_count = 0;
+        for (const dudu::ClassDecl& klass : module.native_classes) {
+            if (klass.name != class_name) {
+                continue;
+            }
+            if (klass.native_specialization_args.empty()) {
+                ++primary_count;
+                assert((klass.generic_params == std::vector<std::string>{"T", "Enabled"}));
+                continue;
+            }
+            ++specialization_count;
+            assert(klass.native_partial_specialization);
+            assert((klass.generic_params == std::vector<std::string>{"T"}));
+            assert(klass.native_specialization_args.size() == 2);
+            assert(dudu::type_ref_text(klass.native_specialization_args[0]) == "T");
+            assert(dudu::type_ref_text(klass.native_specialization_args[1]) == "1");
+            assert(klass.type_aliases.size() == 1);
+            assert(klass.type_aliases.front().name == "type");
+            assert(dudu::type_ref_text(klass.type_aliases.front().type_ref) == "T");
+        }
+        assert(primary_count == 1);
+        assert(specialization_count == 1);
+
+        const dudu::Symbols symbols = dudu::collect_symbols(module);
+        const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
+            symbols, dudu::parse_type_text("dudu_native.AssociatedResult[i32, true].type"));
+        assert(dudu::type_ref_text(resolved) == "i32");
+
+        const dudu::TypeRef pointer_pattern = dudu::resolve_associated_type_ref(
+            symbols, dudu::parse_type_text("dudu_native.PatternResult[*i32].type"));
+        assert(dudu::type_ref_text(pointer_pattern) == "i32");
+
+        const dudu::TypeRef exact_specialization = dudu::resolve_associated_type_ref(
+            symbols, dudu::parse_type_text("dudu_native.PatternResult[i32].type"));
+        assert(dudu::type_ref_text(exact_specialization) == "f32");
+
+        const dudu::TypeRef ambiguous = dudu::resolve_associated_type_ref(
+            symbols, dudu::parse_type_text("dudu_native.AmbiguousResult[Condition, i32].type"));
+        assert(dudu::type_ref_text(ambiguous) ==
+               "dudu_native.AmbiguousResult[Condition, i32].type");
+    };
+
+    scan_and_check();
+    scan_and_check();
+}
+
+void test_native_class_redeclarations_merge_specialization_metadata() {
+    dudu::ClassDecl declaration;
+    declaration.name = "native.Result";
+    declaration.identity.usr = "c:@N@native@Result";
+    declaration.generic_params = {"T"};
+    declaration.native_specialization_args = {dudu::parse_type_text("*T")};
+    declaration.native_partial_specialization = true;
+
+    dudu::ClassDecl definition = declaration;
+    dudu::TypeAliasDecl alias;
+    alias.name = "type";
+    alias.type_ref = dudu::parse_type_text("T");
+    definition.type_aliases.push_back(std::move(alias));
+    dudu::FieldDecl field;
+    field.name = "value";
+    field.type_ref = dudu::parse_type_text("T");
+    definition.fields.push_back(std::move(field));
+
+    std::vector<dudu::ClassDecl> merged = {declaration};
+    dudu::append_unique_native_classes(merged, {definition});
+    assert(merged.size() == 1);
+    assert(merged.front().native_partial_specialization);
+    assert(merged.front().type_aliases.size() == 1);
+    assert(merged.front().fields.size() == 1);
+}
+
 void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     assert(dudu::dudu_type("unsigned char[16]") == "array[u8][16]");
     assert(dudu::dudu_type("int[2][3]") == "array[i32][2, 3]");
@@ -1013,6 +1102,8 @@ int main() {
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_class_templates_preserve_declared_metadata(root);
+        test_native_class_partial_specialization_metadata(root);
+        test_native_class_redeclarations_merge_specialization_metadata();
         test_native_fixed_array_typedef_alias(root);
         test_native_scan_retries_with_c_prelude_for_context_headers(root);
         test_aliased_c_import_prefixes_visible_transitive_functions(root);

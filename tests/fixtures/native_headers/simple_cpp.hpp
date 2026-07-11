@@ -100,14 +100,48 @@ inline int overloaded_pair(float first, int second) {
     return static_cast<int>(first) + second;
 }
 
-template <typename T> class AssociatedResult {
+template <typename T, bool Enabled> class AssociatedResult {};
+
+template <typename T> class AssociatedResult<T, true> {
   public:
     using type = T;
 };
 
-template <typename T> inline typename AssociatedResult<T>::type associated_identity(T value) {
+template <typename T> inline typename AssociatedResult<T, true>::type associated_identity(T value) {
     return value;
 }
+
+template <typename T> class PatternResult {};
+
+template <typename T> class PatternResult<T*> {
+  public:
+    using type = T;
+};
+
+template <> class PatternResult<int> {
+  public:
+    using type = float;
+};
+
+template <bool Enabled, typename T> class AmbiguousResult {};
+
+template <typename T> class AmbiguousResult<true, T> {
+  public:
+    using type = T;
+};
+
+template <typename T> class AmbiguousResult<false, T> {
+  public:
+    using type = T;
+};
+
+namespace associated_scope {
+template <typename T> using NestedAssociatedResult = typename AssociatedResult<T, true>::type;
+
+template <typename T> inline NestedAssociatedResult<T> nested_associated_identity(T value) {
+    return value;
+}
+} // namespace associated_scope
 } // namespace dudu_native
 
 using DuduWidgetAlias = dudu_native::Widget;

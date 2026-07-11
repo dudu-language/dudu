@@ -972,6 +972,51 @@ void test_lsp_project_index_cache_records_native_warm_hits() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_native_context_header_field_definition() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_context_field_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path header = dir / "needs_c_context.h";
+    write_file(header, "#pragma once\n"
+                       "struct DuduNeedsContext {\n"
+                       "    size_t count;\n"
+                       "    int state;\n"
+                       "};\n");
+    const std::string source = "from c.path import ./needs_c_context.h as native\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    value: native.DuduNeedsContext\n"
+                               "    value.count = 7\n"
+                               "    value.state = 35\n"
+                               "    return i32(value.count) + value.state\n";
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    const dudu::ProjectIndex& index = dudu::project_index_for_document(doc, true);
+    const dudu::ModuleAst& unit = index.visible_unit_for_path(path);
+    bool saw_class = false;
+    bool saw_field = false;
+    for (const dudu::ClassDecl& klass : unit.native_classes) {
+        if (klass.name != "native.DuduNeedsContext") {
+            continue;
+        }
+        saw_class = true;
+        for (const dudu::FieldDecl& field : klass.fields) {
+            saw_field = saw_field || field.name == "count";
+        }
+    }
+    assert(saw_class);
+    assert(saw_field);
+
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":11}}").parse();
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find(dudu::file_uri(header)) != std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
 } // namespace
 
 int main() {
@@ -1009,6 +1054,7 @@ int main() {
         test_lsp_project_index_cache_records_warm_hits();
         test_lsp_project_index_reuses_last_good_after_broken_edit();
         test_lsp_project_index_cache_records_native_warm_hits();
+        test_lsp_native_context_header_field_definition();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

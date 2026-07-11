@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/core/ast.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <string>
 #include <utility>
@@ -48,6 +49,21 @@ inline NativeSymbolId native_class_member_identity(const ClassDecl& klass,
 inline std::string native_class_member_symbol_identity_key(const ClassDecl& klass,
                                                            const std::string& member) {
     return native_symbol_identity_key(native_class_member_identity(klass, member));
+}
+
+inline std::string native_class_binding_key(const ClassDecl& klass) {
+    std::string key = klass.name;
+    if (!klass.native_specialization_args.empty()) {
+        key += "[";
+        for (size_t i = 0; i < klass.native_specialization_args.size(); ++i) {
+            if (i > 0) {
+                key += ",";
+            }
+            key += type_ref_text(klass.native_specialization_args[i]);
+        }
+        key += "]";
+    }
+    return key;
 }
 
 template <typename T> std::string native_decl_identity_key(const T& decl) {

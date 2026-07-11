@@ -18,6 +18,12 @@
   them across raw and parsed scanner caches.
 - Added structured associated types such as `Owner[T].Item`, including native
   alias resolution, substitution, cache preservation, and C++ lowering.
+- Added scanner-derived C++ class-template partial and concrete specialization
+  selection for associated types, including pointer patterns, non-type
+  arguments, ambiguity handling, cross-header merge, and warm-cache parity.
+- Fixed Clang AST source ranges that combine an explicit file with `line:N:C`
+  shorthand so prelude-assisted C header scans retain the imported declaration
+  location for LSP navigation.
 
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and

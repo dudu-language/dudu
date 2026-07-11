@@ -415,6 +415,10 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const ClassDecl& klass : module.native_classes) {
         symbols.types.insert(klass.name);
         add_native_path_prefix(symbols, klass.name);
+        if (!klass.native_specialization_args.empty()) {
+            symbols.native_class_specializations[klass.name].push_back(klass);
+            continue;
+        }
         const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
         (void)inserted;
         symbols.classes[klass.name] = &it->second;

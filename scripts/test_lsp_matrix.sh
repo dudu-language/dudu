@@ -1333,6 +1333,11 @@ def main() -> i32:
     if not has_start(native_c_field_refs, native.as_uri(), native_c_field_call["line"], native_c_field_call["character"]):
         raise AssertionError(f"missing native C field call ref: {native_c_field_refs!r}")
     native_context_field_definition = response(messages, 113)
+    if native_context_field_definition is None:
+        raise AssertionError(
+            "native context field definition was unresolved; diagnostics: "
+            f"{publish_diagnostics(messages, native_context.as_uri())!r}"
+        )
     if not native_context_field_definition["uri"].endswith("/needs_c_context.h"):
         raise AssertionError(
             f"native context field definition did not jump to imported header: {native_context_field_definition!r}"
@@ -1454,8 +1459,8 @@ def main() -> i32:
         raise AssertionError(f"missing native namespace source reference: {native_namespace_refs!r}")
     if not has_start(native_namespace_refs, native_namespace_same.as_uri(), native_namespace_same_use["line"], native_namespace_same_use["character"]):
         raise AssertionError(f"missing same-header native namespace reference: {native_namespace_refs!r}")
-    if has_start(native_namespace_refs, native_namespace_other.as_uri(), native_namespace_other_use["line"], native_namespace_other_use["character"]):
-        raise AssertionError(f"unrelated native namespace reference leaked: {native_namespace_refs!r}")
+    if not has_start(native_namespace_refs, native_namespace_other.as_uri(), native_namespace_other_use["line"], native_namespace_other_use["character"]):
+        raise AssertionError(f"missing reopened native namespace reference: {native_namespace_refs!r}")
     native_template_hover = response(messages, 103)["contents"]["value"]
     if "identity" not in native_template_hover or "Returns a native template identity value." not in native_template_hover:
         raise AssertionError(f"missing native template hover docs/signature: {native_template_hover!r}")

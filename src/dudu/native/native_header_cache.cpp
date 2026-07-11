@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v21";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v24";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -252,8 +252,8 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                        .identity = symbol_id(fields, 1, 2),
                                        .location = cached_location(fields, 4, location),
                                        .doc_comment = fields[3]});
-        } else if (tag == "CLS" && fields.size() == 12) {
-            const SourceLocation decl_location = cached_location(fields, 9, location);
+        } else if (tag == "CLS" && fields.size() == 14) {
+            const SourceLocation decl_location = cached_location(fields, 11, location);
             ClassDecl klass;
             klass.name = fields[0];
             klass.cpp_name = fields[1];
@@ -264,8 +264,10 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                 klass.generic_min_args = static_cast<size_t>(std::stoull(fields[5]));
             }
             klass.generic_default_args = cached_type_refs(fields[6], decl_location);
-            klass.origin_module = fields[7];
-            klass.doc_comment = fields[8];
+            klass.native_specialization_args = cached_type_refs(fields[7], decl_location);
+            klass.native_partial_specialization = fields[8] == "1";
+            klass.origin_module = fields[9];
+            klass.doc_comment = fields[10];
             klass.location = decl_location;
             scan.classes.push_back(std::move(klass));
             current_class = &scan.classes.back();
@@ -368,6 +370,8 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
             native_cache_join_strings(klass.generic_params),
             klass.generic_min_args ? std::to_string(*klass.generic_min_args) : "",
             native_cache_join_strings(cached_type_texts(klass.generic_default_args)),
+            native_cache_join_strings(cached_type_texts(klass.native_specialization_args)),
+            klass.native_partial_specialization ? "1" : "0",
             klass.origin_module,
             klass.doc_comment};
         append_location_fields(fields, klass.location);

@@ -91,15 +91,6 @@ TypeRef normalize_tuple_element(const TypeRef& type) {
     return normalize_tuple_element(tuple_type.children[index]);
 }
 
-bool nonarray_template_name(const std::string& name) {
-    return name == "_NonArray" || name.ends_with("._NonArray") || name.ends_with("::_NonArray");
-}
-
-bool type_traits_template_name(const std::string& name) {
-    return name == "__enable_if_is_duration" || name.ends_with(".__enable_if_is_duration") ||
-           name.ends_with("::__enable_if_is_duration");
-}
-
 std::optional<TypeKind> builtin_wrapper_template_kind(const std::string& name) {
     if (name == "atomic" || name == "std.atomic" || name == "std::atomic") {
         return TypeKind::Atomic;
@@ -192,10 +183,6 @@ TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
              out.name == "std::basic_string") &&
             !out.children.empty() && type_ref_is_native_char(out.children.front())) {
             return named_type_ref("std.string", out.location);
-        }
-        if ((nonarray_template_name(out.name) || type_traits_template_name(out.name)) &&
-            out.children.size() == 1) {
-            return out.children.front();
         }
         const std::string original = type_ref_head_name(out);
         const std::string normalized = normalize_cpp_primitive_type(original);

@@ -42,6 +42,23 @@ class_scoped_type_name(const NativeHeaderScan& scan,
     return std::nullopt;
 }
 
+std::optional<std::string>
+namespace_scoped_type_name(const NativeHeaderScan& scan,
+                           const std::vector<std::pair<int, std::string>>& namespaces,
+                           const std::string& name) {
+    for (size_t count = namespaces.size(); count > 0; --count) {
+        std::string scoped;
+        for (size_t i = 0; i < count; ++i) {
+            scoped += namespaces[i].second + ".";
+        }
+        scoped += name;
+        if (scan_has_type(scan, scoped)) {
+            return scoped;
+        }
+    }
+    return std::nullopt;
+}
+
 std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
                                      const std::vector<std::pair<int, std::string>>& namespaces,
                                      const std::vector<std::pair<int, size_t>>* classes,
@@ -88,8 +105,10 @@ std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
     if (const auto scoped = class_scoped_type_name(scan, classes, type)) {
         return *scoped;
     }
-    const std::string scoped = join_scope(namespaces, type);
-    return scan_has_type(scan, scoped) ? scoped : type;
+    if (const auto scoped = namespace_scoped_type_name(scan, namespaces, type)) {
+        return *scoped;
+    }
+    return type;
 }
 
 } // namespace
