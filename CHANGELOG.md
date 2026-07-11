@@ -33,6 +33,10 @@
 - Made native overload selection prefer exact argument types over conversions
   and return the selected declaration to LSP reference indexing, isolating
   same-named C++ function overload references by canonical identity.
+- Added exact overload selection for native instance and static class methods,
+  including namespaced static receivers, and made LSP references follow the
+  selected method USR. Native reference searches now prune unrelated modules
+  through structured AST name-segment indexing before loading native metadata.
 
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and

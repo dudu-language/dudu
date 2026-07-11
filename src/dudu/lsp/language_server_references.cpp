@@ -15,7 +15,9 @@
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_generics.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
@@ -195,6 +197,38 @@ std::optional<std::string> native_identity_for_selection(const AstSelection& sel
                     native_symbol_identity_key(matched->declaration->identity);
                 if (!identity.empty()) {
                     return identity;
+                }
+            }
+            if (has_expr_callee(call) && expr_callee(call).front().kind == ExprKind::Member &&
+                expr_callee(call).front().children.size() == 1) {
+                const Expr& member = expr_callee(call).front();
+                const std::optional<TypeRef> static_receiver =
+                    static_class_receiver_type_ref(scope, member.children.front());
+                const TypeRef receiver = static_receiver.value_or(
+                    infer_expr_type_ast(scope, member.children.front(), nullptr));
+                const std::vector<DuduMethodInstantiation> methods =
+                    static_receiver
+                        ? dudu_static_method_instantiations_for_type(scope.symbols, receiver,
+                                                                     member.name, explicit_args)
+                        : dudu_method_instantiations_for_type(scope.symbols, receiver, member.name,
+                                                              explicit_args);
+                if (!methods.empty()) {
+                    std::vector<FunctionSignature> signatures;
+                    signatures.reserve(methods.size());
+                    for (const DuduMethodInstantiation& method : methods) {
+                        signatures.push_back(method.signature);
+                    }
+                    if (const std::optional<size_t> matched =
+                            matching_signature_index_ast(scope, signatures, call.children);
+                        matched && methods[*matched].method != nullptr &&
+                        std::filesystem::path(methods[*matched].method->location.file)
+                                .extension() != ".dd") {
+                        const std::string identity =
+                            native_symbol_identity_key(methods[*matched].method->native_identity);
+                        return identity.empty() ? std::nullopt
+                                                : std::optional<std::string>{identity};
+                    }
+                    return std::nullopt;
                 }
             }
         } catch (const std::exception&) {
@@ -457,6 +491,11 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
         std::vector<std::string> candidate_queries = {candidate_query};
         if (!module_target.has_value() && !selective_target.has_value() &&
             native_identity.has_value()) {
+            const std::string symbol_segment = dotted_tail(query);
+            if (candidate.uri != doc.uri &&
+                !module_may_reference_name_segment(*candidate_unit, symbol_segment)) {
+                continue;
+            }
             const ProjectIndex* native_candidate_index =
                 workspace_candidate_index(current_index, candidate, include_native);
             if (native_candidate_index == nullptr) {

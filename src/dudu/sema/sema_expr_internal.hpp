@@ -1,12 +1,12 @@
 #pragma once
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/project/build_flags.hpp"
 #include "dudu/core/control_flow.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/escapes.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/project/build_flags.hpp"
 #include "dudu/sema/sema_alloc.hpp"
 #include "dudu/sema/sema_bindings.hpp"
 #include "dudu/sema/sema_body.hpp"
@@ -73,6 +73,9 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
 std::optional<FunctionSignature>
 matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
                        const std::vector<Expr>& args);
+std::optional<size_t> matching_signature_index_ast(const FunctionScope& scope,
+                                                   const std::vector<FunctionSignature>& options,
+                                                   const std::vector<Expr>& args);
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const TypeRef& got);
 bool is_builtin_call(const std::string& callee);

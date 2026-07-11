@@ -1018,6 +1018,101 @@ void test_lsp_native_overload_references_use_selected_identity() {
     assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
 }
 
+void test_lsp_native_method_overload_references_use_selected_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_method_overload_reference_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "methods.hpp", "class Picker {\n"
+                                    "public:\n"
+                                    "    int choose(int value) { return value; }\n"
+                                    "    int choose(double value) { return int(value); }\n"
+                                    "    static int select(int value) { return value; }\n"
+                                    "    static int select(double value) { return int(value); }\n"
+                                    "};\n");
+    const auto write_use = [&](const std::string& file, const std::string& function,
+                               const std::string& value) {
+        write_file(dir / file, "from cpp.path import ./methods.hpp as n\n\n"
+                               "def " +
+                                   function +
+                                   "() -> i32:\n"
+                                   "    picker: n.Picker\n"
+                                   "    return picker.choose(" +
+                                   value + ")\n");
+    };
+    write_use("main.dd", "main", "1");
+    write_use("same.dd", "same", "2");
+    write_use("other.dd", "other", "2.0");
+    const auto write_static_use = [&](const std::string& file, const std::string& function,
+                                      const std::string& value) {
+        write_file(dir / file, "from cpp.path import ./methods.hpp as n\n\n"
+                               "def " +
+                                   function +
+                                   "() -> i32:\n"
+                                   "    return n.Picker.select(" +
+                                   value + ")\n");
+    };
+    write_static_use("static_main.dd", "static_main", "1");
+    write_static_use("static_same.dd", "static_same", "2");
+    write_static_use("static_other.dd", "static_other", "2.0");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ModuleAst& unit = index.visible_unit_for_path(main_doc.path);
+    std::set<std::string> overload_identities;
+    for (const dudu::ClassDecl& klass : unit.native_classes) {
+        if (klass.name != "n.Picker") {
+            continue;
+        }
+        for (const dudu::FunctionDecl& method : klass.methods) {
+            if (method.name == "choose" && !method.native_identity.usr.empty()) {
+                overload_identities.insert(method.native_identity.usr);
+            }
+        }
+    }
+    assert(overload_identities.size() == 2);
+    const std::map<std::string, dudu::Document> workspace{
+        {main_doc.uri, main_doc},
+        {dudu::file_uri(dir / "same.dd"),
+         {.uri = dudu::file_uri(dir / "same.dd"),
+          .path = dir / "same.dd",
+          .text = read_file(dir / "same.dd")}},
+        {dudu::file_uri(dir / "other.dd"),
+         {.uri = dudu::file_uri(dir / "other.dd"),
+          .path = dir / "other.dd",
+          .text = read_file(dir / "other.dd")}},
+        {dudu::file_uri(dir / "static_main.dd"),
+         {.uri = dudu::file_uri(dir / "static_main.dd"),
+          .path = dir / "static_main.dd",
+          .text = read_file(dir / "static_main.dd")}},
+        {dudu::file_uri(dir / "static_same.dd"),
+         {.uri = dudu::file_uri(dir / "static_same.dd"),
+          .path = dir / "static_same.dd",
+          .text = read_file(dir / "static_same.dd")}},
+        {dudu::file_uri(dir / "static_other.dd"),
+         {.uri = dudu::file_uri(dir / "static_other.dd"),
+          .path = dir / "static_other.dd",
+          .text = read_file(dir / "static_other.dd")}},
+    };
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":20}}").parse();
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
+
+    const dudu::Document static_doc{.uri = dudu::file_uri(dir / "static_main.dd"),
+                                    .path = dir / "static_main.dd",
+                                    .text = read_file(dir / "static_main.dd")};
+    dudu::Json static_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":22}}").parse();
+    const std::string static_refs = dudu::references_json(static_doc, &static_params, workspace);
+    assert(static_refs.find(dudu::file_uri(dir / "static_main.dd")) != std::string::npos);
+    assert(static_refs.find(dudu::file_uri(dir / "static_same.dd")) != std::string::npos);
+    assert(static_refs.find(dudu::file_uri(dir / "static_other.dd")) == std::string::npos);
+}
+
 void test_lsp_references_track_member_path_root_segments() {
     const dudu::Document doc{.uri = "file:///member_root.dd",
                              .path = "member_root.dd",
@@ -1206,6 +1301,7 @@ int main() {
         test_lsp_selective_import_references_include_target_declaration();
         test_lsp_native_references_filter_by_identity();
         test_lsp_native_overload_references_use_selected_identity();
+        test_lsp_native_method_overload_references_use_selected_identity();
         test_lsp_references_track_member_path_root_segments();
         test_lsp_native_namespace_reference_query_uses_selected_segment();
         test_lsp_static_class_member_definition_hover_and_references();

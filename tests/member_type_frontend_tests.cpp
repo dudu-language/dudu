@@ -1,16 +1,16 @@
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/match_patterns.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
-#include "dudu/core/match_patterns.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
@@ -300,8 +300,7 @@ void test_method_signature_lookup_uses_shaped_receiver_template_args() {
     assert(dudu::method_signature_for_type(symbols, dudu::parse_type_text("Box[f32][2, 2]"),
                                            "value", signature, nullptr));
     assert(dudu::signature_param_count(signature) == 0);
-    assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(signature), {}) ==
-           "f32");
+    assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(signature), {}) == "f32");
 }
 
 void test_method_signature_list_uses_type_ast_receiver() {
@@ -355,6 +354,31 @@ void test_static_method_signature_lookup_uses_type_ast_receiver() {
                                                   signature, nullptr));
     assert(dudu::signature_param_count(signature) == 0);
     assert(dudu::signature_return_type_ref(signature).name == "f32");
+}
+
+void test_namespaced_static_method_overload_uses_structured_receiver() {
+    dudu::ClassDecl picker;
+    picker.name = "native.Picker";
+
+    dudu::FunctionDecl integer;
+    integer.name = "select";
+    integer.params.push_back({"value", dudu::parse_type_text("i32"), {}});
+    integer.return_type_ref = dudu::parse_type_text("i32");
+    picker.methods.push_back(integer);
+
+    dudu::FunctionDecl floating;
+    floating.name = "select";
+    floating.params.push_back({"value", dudu::parse_type_text("f64"), {}});
+    floating.return_type_ref = dudu::parse_type_text("f64");
+    picker.methods.push_back(floating);
+
+    dudu::ModuleAst module = dudu::parse_source("def integer_choice() -> i32:\n"
+                                                "    return native.Picker.select(1)\n\n"
+                                                "def floating_choice() -> f64:\n"
+                                                "    return native.Picker.select(1.0)\n",
+                                                "native_static_overload.dd");
+    module.native_classes.push_back(std::move(picker));
+    dudu::analyze_module(module, {.check_bodies = true});
 }
 
 void test_inferred_generic_method_uses_type_ast_receiver() {
@@ -466,6 +490,7 @@ int main() {
         test_method_signature_lookup_uses_shaped_receiver_template_args();
         test_method_signature_list_uses_type_ast_receiver();
         test_static_method_signature_lookup_uses_type_ast_receiver();
+        test_namespaced_static_method_overload_uses_structured_receiver();
         test_inferred_generic_method_uses_type_ast_receiver();
         test_expected_generic_method_uses_type_ast_receiver();
         test_auto_member_call_receiver_uses_type_ast();

@@ -48,8 +48,8 @@ bool pack_expansion_arg_matches(const FunctionScope& scope, const FunctionSignat
 }
 
 bool call_arg_matches_ast(const FunctionScope& scope, const FunctionSignature& signature,
-                          size_t arg_index, const std::vector<Expr>& args,
-                          const TypeRef& expected, const TypeRef& got) {
+                          size_t arg_index, const std::vector<Expr>& args, const TypeRef& expected,
+                          const TypeRef& got) {
     return can_assign_ast(scope, expected, args[arg_index], got) ||
            pack_expansion_arg_matches(scope, signature, arg_index, args.size(), args[arg_index],
                                       expected, got);
@@ -207,8 +207,20 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
     }
 }
 
-bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& signature,
-                         const std::vector<Expr>& args) {
+std::vector<TypeRef> infer_call_arg_types(const FunctionScope& scope,
+                                          const std::vector<Expr>& args) {
+    std::vector<TypeRef> types;
+    types.reserve(args.size());
+    for (const Expr& arg : args) {
+        const std::optional<TypeRef> marker_type = index_marker_type_ref(arg);
+        types.push_back(marker_type ? *marker_type : infer_expr_type_ast(scope, arg, nullptr));
+    }
+    return types;
+}
+
+bool call_args_match_with_types(const FunctionScope& scope, const FunctionSignature& signature,
+                                const std::vector<Expr>& args,
+                                const std::vector<TypeRef>& arg_types) {
     const size_t param_count = signature_param_count(signature);
     const size_t min_arg_count = signature_min_arg_count(signature);
     if ((!signature.variadic && args.size() != param_count) ||
@@ -216,27 +228,58 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         return false;
     }
     for (size_t i = 0; i < args.size(); ++i) {
-        const std::optional<TypeRef> marker_type = index_marker_type_ref(args[i]);
-        const TypeRef got =
-            marker_type ? *marker_type : infer_expr_type_ast(scope, args[i], nullptr);
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, args.size()));
-        if (!call_arg_matches_ast(scope, signature, i, args, expected, got)) {
+        if (!call_arg_matches_ast(scope, signature, i, args, expected, arg_types[i])) {
             return false;
         }
     }
     return true;
 }
 
+bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& signature,
+                         const std::vector<Expr>& args) {
+    return call_args_match_with_types(scope, signature, args, infer_call_arg_types(scope, args));
+}
+
 std::optional<FunctionSignature>
 matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
                        const std::vector<Expr>& args) {
-    for (const FunctionSignature& signature : options) {
-        if (call_args_match_ast(scope, signature, args)) {
-            return signature;
+    const std::optional<size_t> index = matching_signature_index_ast(scope, options, args);
+    return index ? std::optional<FunctionSignature>{options[*index]} : std::nullopt;
+}
+
+std::optional<size_t> matching_signature_index_ast(const FunctionScope& scope,
+                                                   const std::vector<FunctionSignature>& options,
+                                                   const std::vector<Expr>& args) {
+    if (options.empty()) {
+        return std::nullopt;
+    }
+    const std::vector<TypeRef> arg_types = infer_call_arg_types(scope, args);
+    std::optional<size_t> selected;
+    int selected_score = 0;
+    for (size_t option_index = 0; option_index < options.size(); ++option_index) {
+        const FunctionSignature& signature = options[option_index];
+        if (!call_args_match_with_types(scope, signature, args, arg_types)) {
+            continue;
+        }
+        int score = 0;
+        for (size_t arg_index = 0; arg_index < args.size(); ++arg_index) {
+            const size_t param_index =
+                signature_param_index_for_arg(signature, arg_index, args.size());
+            const TypeRef expected =
+                resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, param_index));
+            const TypeRef got = resolve_alias_ref(scope.symbols, arg_types[arg_index]);
+            if (!type_ref_equivalent(expected, got)) {
+                ++score;
+            }
+        }
+        if (!selected || score < selected_score) {
+            selected = option_index;
+            selected_score = score;
         }
     }
-    return std::nullopt;
+    return selected;
 }
 
 std::string template_call_callee(const FunctionScope& scope, const Expr& expr,

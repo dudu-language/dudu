@@ -143,11 +143,19 @@ In progress.
   its instantiated signature. Reference collection retains structured source
   ranges and re-runs that matcher per call occurrence, so exact numeric
   overloads remain isolated across a workspace.
+- Native instance and static class method calls use the same exact-over-
+  conversion overload ranking in compiler sema and LSP reference identity
+  selection. Structured static receiver paths such as `namespace.Class` are
+  resolved as class types instead of degrading to `auto`, and references to
+  overloaded methods are filtered by the selected method USR.
+- Native reference lookup first prunes candidate modules using parsed AST name
+  segments, then loads native metadata only for candidates that can contain a
+  use. Canonical identity remains the final authority, so differently aliased
+  imports stay connected without scanning every unrelated workspace file.
 
 Still missing:
 
 - Identity-aware symbol maps as the primary sema key.
-- Receiver-aware LSP identity selection for overloaded native class methods.
 
 ## Definition Of Done
 

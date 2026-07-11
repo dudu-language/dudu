@@ -10,6 +10,7 @@
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <utility>
@@ -237,6 +238,25 @@ FunctionSignature instantiate_method_signature(const Symbols& symbols, const Cla
 
 } // namespace
 
+std::optional<TypeRef> static_class_receiver_type_ref(const FunctionScope& scope,
+                                                      const Expr& receiver) {
+    if (receiver.kind == ExprKind::Name && receiver.name == "class" &&
+        !scope.current_class.empty()) {
+        return named_type_ref(scope.current_class, receiver.location);
+    }
+    const std::optional<ExprPath> path = expr_path_from_expr(receiver);
+    if (!path || path->segments.empty() ||
+        path->segments.front().kind != ExprPathSegmentKind::Name ||
+        scope.local_type_refs.contains(path->segments.front().text)) {
+        return std::nullopt;
+    }
+    const std::string name = render_expr_path(*path);
+    if (!scope.symbols.classes.contains(name)) {
+        return std::nullopt;
+    }
+    return named_type_ref(name, receiver.location);
+}
+
 bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
@@ -272,6 +292,18 @@ dudu_method_instantiations_for_type(const Symbols& symbols, const TypeRef& recei
                                     const std::vector<TypeRef>& method_args) {
     return dudu_method_instantiations_for_type_impl(symbols, receiver_type, method_name,
                                                     method_args);
+}
+
+std::vector<DuduMethodInstantiation>
+dudu_static_method_instantiations_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                                           const std::string& method_name,
+                                           const std::vector<TypeRef>& method_args) {
+    std::vector<DuduMethodInstantiation> methods =
+        dudu_method_instantiations_for_type_impl(symbols, receiver_type, method_name, method_args);
+    std::erase_if(methods, [](const DuduMethodInstantiation& method) {
+        return method.method == nullptr || !method_is_static(*method.method);
+    });
+    return methods;
 }
 
 std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type(

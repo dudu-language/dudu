@@ -13,6 +13,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string_view>
 #include <utility>
 
 namespace dudu {
@@ -21,10 +22,16 @@ namespace {
 std::optional<std::string> self_owner_at_location(const ModuleAst& module,
                                                   const SourceLocation& location);
 
+std::string dotted_tail(std::string_view name) {
+    const size_t dot = name.rfind('.');
+    return dot == std::string_view::npos ? std::string(name) : std::string(name.substr(dot + 1));
+}
+
 struct ReferenceCollector {
     const ModuleAst& module;
     const Document& doc;
     const std::string& query;
+    bool match_any_path_segment = false;
     std::vector<ReferenceLocation> out;
     std::set<std::pair<int, int>> seen;
 
@@ -54,14 +61,14 @@ struct ReferenceCollector {
     }
 
     void add(const std::string& name, const SourceLocation& location) {
-        if (name == query) {
+        if (name == query || (match_any_path_segment && dotted_tail(name) == query)) {
             add_matched(name, location);
         }
     }
 
     void add_member_decl(const std::string& owner, const std::string& member,
                          const SourceLocation& location) {
-        if (owner + "." + member == query) {
+        if (owner + "." + member == query || (match_any_path_segment && member == query)) {
             add_matched(member, location);
         }
     }
@@ -92,7 +99,10 @@ struct ReferenceCollector {
     }
 
     void visit_type(const TypeRef& type) {
-        add(type_ref_text(type), type.location);
+        const std::string text = type_ref_text(type);
+        if (text == query || (match_any_path_segment && dotted_tail(text) == query)) {
+            add_matched(text, type.location);
+        }
     }
 
     void visit_type_tree(const TypeRef& type) {
@@ -103,6 +113,10 @@ struct ReferenceCollector {
         if (expr.kind == ExprKind::Name) {
             add(expr.name, expr_name_location(expr));
         } else if (expr.kind == ExprKind::Member) {
+            if (match_any_path_segment && expr.name == query) {
+                add_matched(expr.name, expr_name_location(expr));
+                return;
+            }
             if (const std::optional<ExprPath> path = expr_path_from_expr(expr);
                 path.has_value() && render_expr_path(*path) == query) {
                 add_matched(expr.name, expr_name_location(expr));
@@ -206,8 +220,12 @@ bool function_binds_name(const FunctionDecl& function, const std::string& query)
 std::vector<ReferenceLocation> references_in_function(const FunctionDecl& function,
                                                       const ModuleAst& module, const Document& doc,
                                                       const std::string& query) {
-    ReferenceCollector collector{
-        .module = module, .doc = doc, .query = query, .out = {}, .seen = {}};
+    ReferenceCollector collector{.module = module,
+                                 .doc = doc,
+                                 .query = query,
+                                 .match_any_path_segment = false,
+                                 .out = {},
+                                 .seen = {}};
     for (const ParamDecl& param : function.params) {
         collector.add(param.name, param.location);
         collector.visit_type_tree(param.type_ref);
@@ -220,13 +238,18 @@ std::vector<ReferenceLocation> references_in_function(const FunctionDecl& functi
 
 } // namespace
 
-std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Document& doc,
-                                             const std::string& query) {
+std::vector<ReferenceLocation> references_in_impl(const ModuleAst& module, const Document& doc,
+                                                  const std::string& query,
+                                                  bool match_any_path_segment) {
     if (query.empty()) {
         return {};
     }
-    ReferenceCollector collector{
-        .module = module, .doc = doc, .query = query, .out = {}, .seen = {}};
+    ReferenceCollector collector{.module = module,
+                                 .doc = doc,
+                                 .query = query,
+                                 .match_any_path_segment = match_any_path_segment,
+                                 .out = {},
+                                 .seen = {}};
     const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
         collector.visit_statements(statements);
     };
@@ -312,6 +335,15 @@ std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Docu
         visit_stmts(fn.statements);
     }
     return std::move(collector.out);
+}
+
+std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Document& doc,
+                                             const std::string& query) {
+    return references_in_impl(module, doc, query, false);
+}
+
+bool module_may_reference_name_segment(const ModuleAst& module, const std::string& segment) {
+    return !references_in_impl(module, Document{}, segment, true).empty();
 }
 
 std::optional<std::vector<ReferenceLocation>> references_in_local_scope(const ModuleAst& module,

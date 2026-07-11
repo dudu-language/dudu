@@ -13,8 +13,10 @@ struct ReferenceLocation;
 
 std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Document& doc,
                                              const std::string& query);
-std::optional<std::vector<ReferenceLocation>>
-references_in_local_scope(const ModuleAst& module, const Document& doc, const std::string& query,
-                          int one_based_line);
+bool module_may_reference_name_segment(const ModuleAst& module, const std::string& segment);
+std::optional<std::vector<ReferenceLocation>> references_in_local_scope(const ModuleAst& module,
+                                                                        const Document& doc,
+                                                                        const std::string& query,
+                                                                        int one_based_line);
 
 } // namespace dudu

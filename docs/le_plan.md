@@ -606,8 +606,11 @@ therefore cross different import aliases for the same declaration and reject
 same-spelled declarations with different identities. Selecting one declaration
 from a native free-function overload set reuses compiler overload matching per
 call occurrence and filters references by the selected USR. Exact argument
-types outrank numeric conversions. Receiver-aware declaration identity for
-overloaded native class methods remains separate work.
+types outrank numeric conversions. Native instance and static class methods use
+the same selected-signature index in compiler sema and LSP reference lookup,
+including structured namespaced static receivers. Workspace reference lookup
+uses parsed AST name segments to discard irrelevant modules before loading
+native metadata, while canonical identity remains the final match criterion.
 
 ## 5. Polish The Test System
 

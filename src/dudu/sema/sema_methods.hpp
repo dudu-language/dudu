@@ -19,6 +19,9 @@ struct DuduMethodInstantiation {
     FunctionSignature signature;
 };
 
+std::optional<TypeRef> static_class_receiver_type_ref(const FunctionScope& scope,
+                                                      const Expr& receiver);
+
 TypeRef member_expr_type_ref(const Symbols& symbols,
                              const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,
@@ -53,6 +56,10 @@ std::vector<DuduMethodInstantiation>
 dudu_method_instantiations_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                     const std::string& method_name,
                                     const std::vector<TypeRef>& method_args);
+std::vector<DuduMethodInstantiation>
+dudu_static_method_instantiations_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                                           const std::string& method_name,
+                                           const std::vector<TypeRef>& method_args);
 std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location);
