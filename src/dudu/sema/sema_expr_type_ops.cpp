@@ -229,6 +229,10 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                        ", got " + right_display);
                 }
             }
+            if (location != nullptr) {
+                check_instantiated_dudu_operator_body(scope, expr.op, left_ref, {expr.children[1]},
+                                                      {right_ref}, *location);
+            }
             return signature_return_type_ref(*signature);
         }
         if (location != nullptr && has_type_ref(left_ref) && has_type_ref(right_ref) &&
@@ -258,6 +262,10 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         if (location != nullptr) {
             check_call_args_ast(scope, std::string(expr.op), *signature,
                                 std::vector<Expr>{expr.children[1]}, location);
+        }
+        if (location != nullptr) {
+            check_instantiated_dudu_operator_body(scope, expr.op, left_ref, {expr.children[1]},
+                                                  {right_ref}, *location);
         }
         return signature_return_type_ref(*signature);
     }

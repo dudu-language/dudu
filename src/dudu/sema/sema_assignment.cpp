@@ -102,9 +102,9 @@ TypeRef assignment_template_receiver_type(const Symbols& symbols, TypeRef type) 
 
 bool is_map_like_assignment_receiver(const TypeRef& type) {
     static const std::set<std::string_view> names = {"dict", "std.map", "std::map",
-                                                     "std.unordered_map",
-                                                     "std::unordered_map"};
-    return type.kind == TypeKind::Template && type.children.size() == 2 && names.contains(type.name);
+                                                     "std.unordered_map", "std::unordered_map"};
+    return type.kind == TypeKind::Template && type.children.size() == 2 &&
+           names.contains(type.name);
 }
 
 bool index_args_include_view_marker(const std::vector<Expr>& args) {
@@ -152,11 +152,10 @@ void check_declared_index_assignment_operator_if_any(
     const std::string& label, const std::vector<Expr>& args, const SourceLocation& location) {
     if (const auto signature = dudu_operator_signature(scope.symbols, op, receiver_type)) {
         (void)signature;
-        sema_fail(location,
-                  dudu_operator_no_match_message_for_args(
-                      scope.symbols, op, receiver_type, args,
-                      infer_assignment_arg_type_refs(scope, args, &location),
-                      "indexed assignment", label));
+        sema_fail(location, dudu_operator_no_match_message_for_args(
+                                scope.symbols, op, receiver_type, args,
+                                infer_assignment_arg_type_refs(scope, args, &location),
+                                "indexed assignment", label));
     }
 }
 
@@ -188,10 +187,13 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
             check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
+            const std::vector<TypeRef> arg_types =
+                infer_assignment_arg_type_refs(scope, args, &target_location);
             if (const auto signature = dudu_operator_signature_for_args(
-                    scope.symbols, "[]=", receiver_type, args,
-                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
+                    scope.symbols, "[]=", receiver_type, args, arg_types)) {
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
+                check_instantiated_dudu_operator_body(scope, "[]=", receiver_type, args, arg_types,
+                                                      target_location);
                 return {};
             }
             check_declared_index_assignment_operator_if_any(scope, receiver_type, "[]=", name, args,
@@ -201,11 +203,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
                 return *map_target;
             }
             if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-                sema_fail(target_location, dudu_operator_no_match_message_for_args(
-                                               scope.symbols, "[]=", receiver_type, args,
-                                               infer_assignment_arg_type_refs(scope, args,
-                                                                             &target_location),
-                                               "indexed assignment", name));
+                sema_fail(target_location,
+                          dudu_operator_no_match_message_for_args(
+                              scope.symbols, "[]=", receiver_type, args,
+                              infer_assignment_arg_type_refs(scope, args, &target_location),
+                              "indexed assignment", name));
             }
         }
         return indexed_value_type_ref(scope.symbols, scope.local_type_refs, target_location, name,
@@ -226,12 +228,15 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
             check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
+            const std::vector<TypeRef> arg_types =
+                infer_assignment_arg_type_refs(scope, args, &target_location);
             if (const auto signature = dudu_operator_signature_for_args(
-                    scope.symbols, target.write_operator, receiver_type, args,
-                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
+                    scope.symbols, target.write_operator, receiver_type, args, arg_types)) {
                 check_call_args_ast(scope,
                                     indexed_assignment_label(receiver) + target.write_operator,
                                     *signature, args, &target_location);
+                check_instantiated_dudu_operator_body(scope, target.write_operator, receiver_type,
+                                                      args, arg_types, target_location);
                 return {};
             }
             check_declared_index_assignment_operator_if_any(
@@ -259,12 +264,17 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
             check_index_arg_exprs(args, &target_location);
             args.push_back(stmt.value_expr);
-            if (const auto signature = dudu_operator_signature_for_args(
-                    scope.symbols, target.write_operator, inferred_receiver_type, args,
-                    infer_assignment_arg_type_refs(scope, args, &target_location))) {
+            const std::vector<TypeRef> arg_types =
+                infer_assignment_arg_type_refs(scope, args, &target_location);
+            if (const auto signature =
+                    dudu_operator_signature_for_args(scope.symbols, target.write_operator,
+                                                     inferred_receiver_type, args, arg_types)) {
                 check_call_args_ast(scope,
                                     indexed_assignment_label(receiver) + target.write_operator,
                                     *signature, args, &target_location);
+                check_instantiated_dudu_operator_body(scope, target.write_operator,
+                                                      inferred_receiver_type, args, arg_types,
+                                                      target_location);
                 return {};
             }
             check_declared_index_assignment_operator_if_any(
@@ -376,6 +386,7 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
     std::vector<Expr> args = index_arg_exprs(target.children[1]);
     check_index_arg_exprs(args, &target_location);
     std::vector<TypeRef> arg_types = infer_assignment_arg_type_refs(scope, args, &target_location);
+    args.push_back(compound_value);
     arg_types.push_back(compound_type);
     if (!dudu_operator_signature_for_arg_types(scope.symbols, index_target.write_operator,
                                                receiver_type, arg_types)) {
@@ -385,6 +396,8 @@ TypeRef compound_assignment_target_type_ref(FunctionScope& scope, const Stmt& st
                       "\") accepting the indexed value type; use an explicit read/modify value "
                       "and indexed assignment");
     }
+    check_instantiated_dudu_operator_body(scope, index_target.write_operator, receiver_type, args,
+                                          arg_types, target_location);
     return compound_type;
 }
 

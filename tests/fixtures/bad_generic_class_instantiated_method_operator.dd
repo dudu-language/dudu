@@ -1,0 +1,14 @@
+class Player:
+    hp: i32
+
+
+class Pair[T]:
+    value: T
+
+    def add(self, other: T) -> T:
+        return self.value + other
+
+
+def main() -> i32:
+    pair = Pair[Player](Player(1))
+    return pair.add(Player(2)).hp

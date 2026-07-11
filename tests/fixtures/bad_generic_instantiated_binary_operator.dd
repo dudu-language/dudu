@@ -1,0 +1,13 @@
+class Player:
+    hp: i32
+
+
+class Ops:
+    @operator("+")
+    def add[T](self, other: T) -> T:
+        return other + other
+
+
+def main() -> i32:
+    ops = Ops()
+    return (ops + Player(1)).hp

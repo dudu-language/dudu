@@ -1,0 +1,9 @@
+from imported_generic_function_helper import combine
+
+
+class Player:
+    hp: i32
+
+
+def main() -> i32:
+    return combine[Player](Player(1), Player(2)).hp

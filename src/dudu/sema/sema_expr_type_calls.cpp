@@ -3,6 +3,7 @@
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_body.hpp"
+#include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -206,16 +207,19 @@ std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const
     for (const Expr& arg : expr.children) {
         arg_types.push_back(infer_expr_type_ast(scope, arg, location));
     }
-    if (const auto signature =
-            dudu_operator_signature_for_args(scope.symbols, "()", receiver_type, expr.children,
-                                             arg_types)) {
+    if (const auto signature = dudu_operator_signature_for_args(scope.symbols, "()", receiver_type,
+                                                                expr.children, arg_types)) {
         check_call_args_ast(scope, callee, *signature, expr.children, location);
+        if (location != nullptr) {
+            check_instantiated_dudu_operator_body(scope, "()", receiver_type, expr.children,
+                                                  arg_types, *location);
+        }
         return signature_return_type_ref(*signature);
     }
 
     if (location != nullptr && class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-        sema_expr_fail(*location, type_ref_text(receiver_type) +
-                                      " is not callable; define @operator(\"()\")");
+        sema_expr_fail(*location,
+                       type_ref_text(receiver_type) + " is not callable; define @operator(\"()\")");
     }
     return std::nullopt;
 }
@@ -314,6 +318,10 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         return std::nullopt;
     }
     if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
+        if (location != nullptr) {
+            check_instantiated_imported_generic_function_body(scope, callee, expr.children,
+                                                              std::nullopt, *location);
+        }
         return signature_return_type_ref(*signature);
     }
     if (const auto callable = callable_value_type_ref(scope, expr, callee, location)) {
@@ -425,10 +433,26 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             template_constructor_type_ref(expr, callee_base, type_args);
         reject_abstract_construction(scope.symbols, constructor_type, location);
         check_constructor_args_ast(scope, instantiated, expr.children, location);
+        if (location != nullptr) {
+            if (const FunctionDecl* init =
+                    matching_constructor_method_ast(scope, instantiated, expr.children, location)) {
+                const size_t method_index = static_cast<size_t>(init - instantiated.methods.data());
+                if (method_index < klass->methods.size()) {
+                    check_instantiated_generic_method_body(
+                        scope, *klass, klass->methods[method_index], constructor_type, type_args,
+                        {}, *location);
+                }
+            }
+        }
         return constructor_type;
     }
     if (const auto signature = match_native_signature(scope, callee_base, template_type_refs(expr),
                                                       expr.children, location)) {
+        if (location != nullptr) {
+            check_instantiated_imported_generic_function_body(
+                scope, callee_base, expr.children,
+                std::optional<std::vector<TypeRef>>{template_type_refs(expr)}, *location);
+        }
         return signature_return_type_ref(*signature);
     }
     if (const auto method_type =

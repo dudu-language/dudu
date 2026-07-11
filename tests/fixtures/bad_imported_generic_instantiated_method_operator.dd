@@ -1,0 +1,10 @@
+from imported_generic_method_helper import Box
+
+
+class Player:
+    hp: i32
+
+
+def main() -> i32:
+    box = Box[Player](Player(1))
+    return box.add(Player(2)).hp

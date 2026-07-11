@@ -169,6 +169,10 @@ BodyTypeSubstitutions body_type_substitutions(const std::vector<std::string>& pa
     return out;
 }
 
+TypeRef substitute_body_type_ref(const TypeRef& type, const BodyTypeSubstitutions& substitutions) {
+    return substitute_type_ref_pack_aware(type, substitutions);
+}
+
 std::string body_instantiated_label(const std::string& name, const std::vector<TypeRef>& args) {
     std::ostringstream out;
     out << name << "[";

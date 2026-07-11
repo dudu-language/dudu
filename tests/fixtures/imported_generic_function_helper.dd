@@ -1,0 +1,14 @@
+def keep[T](value: T) -> T:
+    return value
+
+
+def combine[T](left: T, right: T) -> T:
+    return keep(left) + right
+
+
+def overloaded[T](value: T) -> T:
+    return value
+
+
+def overloaded[T](left: T, right: T) -> T:
+    return left + right

@@ -1,0 +1,16 @@
+class Player:
+    hp: i32
+
+
+class Value[T]:
+    value: T
+
+    @operator("+")
+    def add(self, other: Value[T]) -> T:
+        return self.value + other.value
+
+
+def main() -> i32:
+    left = Value[Player](Player(1))
+    right = Value[Player](Player(2))
+    return (left + right).hp

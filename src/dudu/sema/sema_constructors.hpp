@@ -14,6 +14,10 @@ struct ConstructorParam {
 };
 
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass);
+const FunctionDecl* matching_constructor_method_ast(const FunctionScope& scope,
+                                                    const ClassDecl& klass,
+                                                    const std::vector<Expr>& args,
+                                                    const SourceLocation* location);
 void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& klass,
                                 const std::vector<Expr>& args, const SourceLocation* location);
 

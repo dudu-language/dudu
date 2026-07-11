@@ -3,6 +3,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
+#include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
@@ -37,24 +38,34 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
         if (!receiver_is_bare_path) {
             const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, &location);
-            const std::vector<FunctionSignature> signatures =
-                method_signatures_for_type(scope.symbols, receiver_ref, member.name);
-            if (const auto signature = matching_signature_ast(scope, signatures, expr.children)) {
-                const TypeRef signature_return = signature_return_type_ref(*signature);
+            const std::vector<DuduMethodInstantiation> methods =
+                dudu_method_instantiations_for_type(scope.symbols, receiver_ref, member.name, {});
+            for (const DuduMethodInstantiation& method : methods) {
+                if (!matching_signature_ast(scope, {method.signature}, expr.children)) {
+                    continue;
+                }
+                const TypeRef signature_return = signature_return_type_ref(method.signature);
                 if (type_assignment_allowed(expected_ref, signature_return) ||
                     can_assign_ast(scope, expected_ref, expr, signature_return)) {
                     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
-                    check_call_args_ast(scope, scoped_callee.key, *signature, expr.children,
+                    check_call_args_ast(scope, scoped_callee.key, method.signature, expr.children,
                                         &location);
+                    check_instantiated_generic_method_body(
+                        scope, *method.owner, *method.method, method.receiver_type,
+                        method.receiver_args, method.method_args, location);
                     return;
                 }
             }
-            if (const auto signature = inferred_generic_method_signature_for_type(
+            if (const auto method = inferred_dudu_method_instantiation_for_type(
                     scope, receiver_ref, member.name, expr.children,
                     std::optional<TypeRef>{expected_ref}, &location)) {
                 const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
-                check_call_args_ast(scope, scoped_callee.key, *signature, expr.children, &location);
-                const TypeRef signature_return = signature_return_type_ref(*signature);
+                check_call_args_ast(scope, scoped_callee.key, method->signature, expr.children,
+                                    &location);
+                check_instantiated_generic_method_body(scope, *method->owner, *method->method,
+                                                       method->receiver_type, method->receiver_args,
+                                                       method->method_args, location);
+                const TypeRef signature_return = signature_return_type_ref(method->signature);
                 if (type_assignment_allowed(expected_ref, signature_return) ||
                     can_assign_ast(scope, expected_ref, expr, signature_return)) {
                     return;

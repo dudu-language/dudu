@@ -1,12 +1,12 @@
 #include "dudu/sema/sema.hpp"
 
-#include "dudu/project/build_flags.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/core/source.hpp"
+#include "dudu/project/build_flags.hpp"
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_constexpr.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_scan.hpp"
-#include "dudu/core/source.hpp"
 #include "dudu/sema/unsupported.hpp"
 
 #include <map>
@@ -14,6 +14,20 @@
 
 namespace dudu {
 namespace {
+
+void analyze_module_in_tree(const ModuleAst& module, const ModuleAst* module_tree,
+                            SemanticOptions options) {
+    Symbols symbols = collect_symbols(module);
+    symbols.module_tree = module_tree;
+    check_build_flags(module);
+    check_naming(module);
+    check_unsupported_python(module);
+    check_declarations(module, symbols);
+    check_constexpr_uses(module);
+    if (options.check_bodies) {
+        check_bodies(module, symbols);
+    }
+}
 
 void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation>>& names,
                      const std::string& module_path, const std::string& name,
@@ -33,15 +47,7 @@ void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation
 } // namespace
 
 void analyze_module(const ModuleAst& module, SemanticOptions options) {
-    const Symbols symbols = collect_symbols(module);
-    check_build_flags(module);
-    check_naming(module);
-    check_unsupported_python(module);
-    check_declarations(module, symbols);
-    check_constexpr_uses(module);
-    if (options.check_bodies) {
-        check_bodies(module, symbols);
-    }
+    analyze_module_in_tree(module, nullptr, options);
 }
 
 void reject_merged_output_module_conflicts(const ModuleAst& module) {
@@ -74,7 +80,7 @@ void analyze_module_tree(const ModuleAst& module, SemanticOptions options) {
         return;
     }
     for (const ModuleAst& unit : module.module_units) {
-        analyze_module(unit, options);
+        analyze_module_in_tree(unit, &module, options);
     }
 }
 
@@ -92,7 +98,7 @@ void analyze_module_tree(const ModuleAst& module, const std::vector<std::string>
     for (const ModuleAst& unit : module.module_units) {
         if (selected.contains(unit.module_path)) {
             matched_any = true;
-            analyze_module(unit, options);
+            analyze_module_in_tree(unit, &module, options);
         }
     }
     if (!matched_any) {

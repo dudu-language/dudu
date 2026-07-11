@@ -2,6 +2,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
@@ -269,7 +270,8 @@ std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const Typ
     if (klass == nullptr) {
         return std::nullopt;
     }
-    return field_type_ref_for_class(symbols, *klass, receiver_type, field);
+    return field_type_ref_for_class(symbols, *klass,
+                                    receiver_template_type_ref(symbols, receiver_type), field);
 }
 
 } // namespace dudu

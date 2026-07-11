@@ -1,0 +1,15 @@
+class Player:
+    hp: i32
+
+
+class Ops:
+    def add[T](self, left: T, right: T) -> T:
+        return left + right
+
+
+def main() -> i32:
+    ops = Ops()
+    first = Player(1)
+    second = Player(2)
+    value = ops.add(first, second)
+    return value.hp

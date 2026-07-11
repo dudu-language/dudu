@@ -1,12 +1,13 @@
 #include "dudu/sema/sema_constructors.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
-#include "dudu/core/source.hpp"
 #include "dudu/sema/type_compat.hpp"
 
+#include <algorithm>
 #include <set>
 
 namespace dudu {
@@ -75,6 +76,24 @@ bool positional_constructor_matches_ast(const FunctionScope& scope,
             return false;
     }
     return true;
+}
+
+const FunctionDecl* matching_constructor_method_ast(const FunctionScope& scope,
+                                                    const ClassDecl& klass,
+                                                    const std::vector<Expr>& args,
+                                                    const SourceLocation* location) {
+    const bool has_named_arg =
+        std::ranges::any_of(args, [](const Expr& arg) { return arg.kind == ExprKind::NamedArg; });
+    for (const FunctionDecl& method : klass.methods) {
+        if (method.name != "init") {
+            continue;
+        }
+        if (has_named_arg || positional_constructor_matches_ast(
+                                 scope, method_constructor_params(method), args, location)) {
+            return &method;
+        }
+    }
+    return nullptr;
 }
 
 void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& klass,

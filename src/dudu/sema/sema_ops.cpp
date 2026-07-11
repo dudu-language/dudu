@@ -3,6 +3,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -105,11 +106,6 @@ bool method_has_operator(const FunctionDecl& method, const std::string& op) {
     return false;
 }
 
-struct DuduOperatorCandidate {
-    std::string method_name;
-    FunctionSignature signature;
-};
-
 TypeRef operator_self_type_ref(const Symbols& symbols, const TypeRef& receiver,
                                const ClassDecl& klass) {
     TypeRef self = unwrap_value_type_ref(symbols, receiver);
@@ -186,7 +182,7 @@ size_t method_first_argument_param(const FunctionDecl& method) {
     return !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
 }
 
-std::optional<DuduOperatorCandidate> dudu_operator_candidate_for_arg_types(
+std::optional<DuduOperatorInstantiation> dudu_operator_candidate_for_arg_types(
     const Symbols& symbols, const std::string& op, const TypeRef& left, const ClassDecl& klass,
     const FunctionDecl& method, const std::vector<TypeRef>& arg_types) {
     if (!method_has_operator(method, op)) {
@@ -203,8 +199,16 @@ std::optional<DuduOperatorCandidate> dudu_operator_candidate_for_arg_types(
         }
         method_args = *inferred;
     }
-    return DuduOperatorCandidate{
-        method.name, operator_method_signature(symbols, left, klass, method, method_args)};
+    FunctionSignature signature =
+        operator_method_signature(symbols, left, klass, method, method_args);
+    return DuduOperatorInstantiation{
+        .owner = &klass,
+        .method = &method,
+        .receiver_type = operator_self_type_ref(symbols, left, klass),
+        .receiver_args = receiver_template_args(symbols, left),
+        .method_args = std::move(method_args),
+        .signature = std::move(signature),
+    };
 }
 
 bool signature_matches_arg_types(const Symbols& symbols, const FunctionSignature& signature,
@@ -331,6 +335,14 @@ std::optional<FunctionSignature>
 dudu_operator_signature_for_args(const Symbols& symbols, std::string_view op, const TypeRef& left,
                                  const std::vector<Expr>& args,
                                  const std::vector<TypeRef>& arg_types) {
+    const auto candidate = dudu_operator_instantiation_for_args(symbols, op, left, args, arg_types);
+    return candidate ? std::optional<FunctionSignature>{candidate->signature} : std::nullopt;
+}
+
+std::optional<DuduOperatorInstantiation>
+dudu_operator_instantiation_for_args(const Symbols& symbols, std::string_view op,
+                                     const TypeRef& left, const std::vector<Expr>& args,
+                                     const std::vector<TypeRef>& arg_types) {
     const std::string op_text(op);
     const ClassDecl* klass = class_for_receiver_type(symbols, left);
     if (klass == nullptr) {
@@ -343,7 +355,7 @@ dudu_operator_signature_for_args(const Symbols& symbols, std::string_view op, co
             continue;
         }
         if (signature_matches_args(symbols, candidate->signature, args, arg_types)) {
-            return candidate->signature;
+            return candidate;
         }
     }
     return std::nullopt;
@@ -386,7 +398,7 @@ dudu_operator_method_name_for_arg_types(const Symbols& symbols, std::string_view
             continue;
         }
         if (signature_matches_arg_types(symbols, candidate->signature, arg_types)) {
-            return candidate->method_name;
+            return candidate->method->name;
         }
     }
     return std::nullopt;
@@ -408,7 +420,7 @@ dudu_operator_method_name_for_args(const Symbols& symbols, std::string_view op, 
             continue;
         }
         if (signature_matches_args(symbols, candidate->signature, args, arg_types)) {
-            return candidate->method_name;
+            return candidate->method->name;
         }
     }
     return std::nullopt;
@@ -447,6 +459,21 @@ std::optional<FunctionSignature> binary_operator_signature(const Symbols& symbol
         return signature;
     }
     return native_operator_signature(symbols, op_text, left, &right_expr, right);
+}
+
+void check_instantiated_dudu_operator_body(const FunctionScope& scope, std::string_view op,
+                                           const TypeRef& receiver_type,
+                                           const std::vector<Expr>& args,
+                                           const std::vector<TypeRef>& arg_types,
+                                           const SourceLocation& instantiation_site) {
+    const auto candidate =
+        dudu_operator_instantiation_for_args(scope.symbols, op, receiver_type, args, arg_types);
+    if (!candidate || candidate->owner == nullptr || candidate->method == nullptr) {
+        return;
+    }
+    check_instantiated_generic_method_body(scope, *candidate->owner, *candidate->method,
+                                           candidate->receiver_type, candidate->receiver_args,
+                                           candidate->method_args, instantiation_site);
 }
 
 bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeRef& left,

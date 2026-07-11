@@ -19,6 +19,21 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     if (const auto native = native_member_expr_type_ref(scope.symbols, expr, type_location)) {
         return *native;
     }
+    if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Index) {
+        const TypeRef receiver_ref = infer_expr_type_ast(scope, expr.children.front(), location);
+        if (const auto field = field_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
+            return *field;
+        }
+        if (const auto swizzle =
+                swizzle_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
+            return *swizzle;
+        }
+        if (location != nullptr) {
+            sema_expr_fail(*location,
+                           "unknown field: " + type_ref_text(receiver_ref) + "." + expr.name);
+        }
+        return std::nullopt;
+    }
     if (const TypeRef found = member_expr_type_ref(scope.symbols, scope.local_type_refs, location,
                                                    expr, {}, scope.current_class);
         has_type_ref(found)) {

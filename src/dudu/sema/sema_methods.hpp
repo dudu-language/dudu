@@ -10,6 +10,15 @@
 
 namespace dudu {
 
+struct DuduMethodInstantiation {
+    const ClassDecl* owner = nullptr;
+    const FunctionDecl* method = nullptr;
+    TypeRef receiver_type;
+    std::vector<TypeRef> receiver_args;
+    std::vector<TypeRef> method_args;
+    FunctionSignature signature;
+};
+
 TypeRef member_expr_type_ref(const Symbols& symbols,
                              const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,
@@ -37,6 +46,17 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location);
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
+    const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
+    const SourceLocation* location);
+std::vector<DuduMethodInstantiation>
+dudu_method_instantiations_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                                    const std::string& method_name,
+                                    const std::vector<TypeRef>& method_args);
+std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type(
+    const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const SourceLocation* location);
+std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
     const SourceLocation* location);

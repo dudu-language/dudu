@@ -93,11 +93,16 @@ operator validation to instantiation. Executable fixtures now cover a generic
 `Result[T, E]`, generic span math over `span[T]`, and generic method type
 arguments inferred from typed return/assignment context, such as
 `value: i32 = box.make()` and `return box.make()` from an `i32` function.
-Free-function generic calls re-check instantiated bodies with concrete type
-arguments, so unsupported operator use such as `add[Player]` fails in Dudu sema
-instead of surfacing only as C++ compiler output. Richer instantiated
-diagnostics for generic methods and classes remain. Non-type generic value parameters are
-implemented for fixed-array extents such as `array[T][N]`; they lower to C++
+Generic free functions, instance methods, static methods, class constructors,
+and operator hooks re-check instantiated bodies with concrete type arguments,
+so unsupported operations such as `add[Player]`, `Pair[Player].add`, or a
+generic `@operator("[]")` fail in Dudu sema instead of surfacing only as C++
+compiler output. Imported generic functions and methods are checked in their
+declaration module so helpers and implementation details resolve in the
+correct scope.
+Diagnostics identify both the generic declaration failure and concrete
+call-site instantiation. Non-type generic value parameters are implemented for
+fixed-array extents such as `array[T][N]`; they lower to C++
 `size_t` template parameters and are visible as compile-time values, not type
 names.
 Multi-parameter generic functions and classes such as `Pair[str, i32]`

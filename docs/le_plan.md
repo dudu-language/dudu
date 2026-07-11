@@ -1407,10 +1407,13 @@ push. They are not release packaging work.
    `i32` function. Non-type generic value parameters now cover fixed-array
    extents such as `class SmallVec[T, N]` with `items: array[T][N]`, lowering
    to `template <typename T, size_t N>` and rejecting value parameters used as
-   types. Free-function generic calls re-check instantiated bodies with
-   concrete type arguments, so unsupported operator use such as `add[Player]`
-   fails in Dudu sema instead of surfacing only as C++ compiler output. Richer
-   instantiated diagnostics for generic methods and classes remain.
+   types. Generic free functions, instance methods, static methods, class
+   constructors, and operator hooks re-check instantiated bodies with concrete
+   type arguments. Unsupported operations such as `add[Player]`,
+   `Pair[Player].add`, or a generic `@operator("[]")` therefore fail in Dudu
+   sema rather than surfacing only as C++ compiler output. Imported generic
+   function and method bodies are checked in their declaration-module scope,
+   and diagnostics identify the concrete call-site instantiation.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, generic

@@ -1,0 +1,15 @@
+class Player:
+    hp: i32
+
+
+class Value[T]:
+    value: T
+
+    @operator("()")
+    def call(self, next_value: T) -> T:
+        return self.value + next_value
+
+
+def main() -> i32:
+    value = Value[Player](Player(1))
+    return value(Player(2)).hp

@@ -1,0 +1,11 @@
+class Player:
+    hp: i32
+
+
+class Ops:
+    def add[T](left: T, right: T) -> T:
+        return left + right
+
+
+def main() -> i32:
+    return Ops.add[Player](Player(1), Player(2)).hp

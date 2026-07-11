@@ -15,6 +15,7 @@ struct BodyTypeSubstitutions {
 
 BodyTypeSubstitutions body_type_substitutions(const std::vector<std::string>& params,
                                               const std::vector<TypeRef>& args);
+TypeRef substitute_body_type_ref(const TypeRef& type, const BodyTypeSubstitutions& substitutions);
 std::string body_instantiated_label(const std::string& name, const std::vector<TypeRef>& args);
 std::vector<Stmt> substitute_body_types(std::vector<Stmt> body,
                                         const std::map<std::string, TypeRef>& substitutions);

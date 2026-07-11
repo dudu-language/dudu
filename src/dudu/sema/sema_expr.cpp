@@ -265,12 +265,18 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                     const TypeRef receiver_type =
                         local_type_ref(scope, hook_receiver.name, index_location);
                     const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+                    const std::vector<TypeRef> arg_types =
+                        infer_arg_type_refs(scope, args, location);
                     if (const auto signature = dudu_operator_signature_for_args(
-                            scope.symbols, target.read_operator, receiver_type, args,
-                            infer_arg_type_refs(scope, args, location))) {
+                            scope.symbols, target.read_operator, receiver_type, args, arg_types)) {
                         check_call_args_ast(scope,
                                             index_receiver_label(receiver) + target.read_operator,
                                             *signature, args, location);
+                        if (location != nullptr) {
+                            check_instantiated_dudu_operator_body(scope, target.read_operator,
+                                                                  receiver_type, args, arg_types,
+                                                                  *location);
+                        }
                         return signature_return_type_ref(*signature);
                     }
                     check_declared_index_operator_if_any(scope, receiver_type, target.read_operator,
@@ -288,12 +294,18 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                     : TypeRef{};
             if (has_type_ref(receiver_member_type)) {
                 const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
-                if (const auto signature = dudu_operator_signature_for_args(
-                        scope.symbols, target.read_operator, receiver_member_type, args,
-                        infer_arg_type_refs(scope, args, location))) {
+                const std::vector<TypeRef> arg_types = infer_arg_type_refs(scope, args, location);
+                if (const auto signature =
+                        dudu_operator_signature_for_args(scope.symbols, target.read_operator,
+                                                         receiver_member_type, args, arg_types)) {
                     check_call_args_ast(scope,
                                         index_receiver_label(receiver) + target.read_operator,
                                         *signature, args, location);
+                    if (location != nullptr) {
+                        check_instantiated_dudu_operator_body(scope, target.read_operator,
+                                                              receiver_member_type, args, arg_types,
+                                                              *location);
+                    }
                     return signature_return_type_ref(*signature);
                 }
                 check_declared_index_operator_if_any(
@@ -306,17 +318,21 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const TypeRef receiver_type = infer_expr_type_ast(scope, hook_receiver, location);
             if (has_type_ref(receiver_type)) {
                 const std::vector<Expr> args = index_arg_exprs(expr.children[1]);
+                const std::vector<TypeRef> arg_types = infer_arg_type_refs(scope, args, location);
                 if (const auto signature = dudu_operator_signature_for_args(
-                        scope.symbols, target.read_operator, receiver_type, args,
-                        infer_arg_type_refs(scope, args, location))) {
+                        scope.symbols, target.read_operator, receiver_type, args, arg_types)) {
                     check_call_args_ast(scope,
                                         index_receiver_label(receiver) + target.read_operator,
                                         *signature, args, location);
+                    if (location != nullptr) {
+                        check_instantiated_dudu_operator_body(
+                            scope, target.read_operator, receiver_type, args, arg_types, *location);
+                    }
                     return signature_return_type_ref(*signature);
                 }
-                check_declared_index_operator_if_any(
-                    scope, receiver_type, target.read_operator, index_receiver_label(receiver),
-                    args, location);
+                check_declared_index_operator_if_any(scope, receiver_type, target.read_operator,
+                                                     index_receiver_label(receiver), args,
+                                                     location);
                 return indexed_type_ref_from_type(scope.symbols, index_location, receiver_type,
                                                   expr.children[1], index_receiver_label(receiver));
             }

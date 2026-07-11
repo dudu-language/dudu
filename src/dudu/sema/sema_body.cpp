@@ -11,7 +11,7 @@
 #include "dudu/sema/sema_assignment.hpp"
 #include "dudu/sema/sema_bindings.hpp"
 #include "dudu/sema/sema_body_helpers.hpp"
-#include "dudu/sema/sema_body_substitution.hpp"
+#include "dudu/sema/sema_body_internal.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
@@ -21,7 +21,6 @@
 #include "dudu/sema/sema_super.hpp"
 
 #include <optional>
-#include <set>
 
 namespace dudu {
 namespace {
@@ -345,6 +344,11 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
 
 } // namespace
 
+void check_function_body_statements(FunctionScope& scope, const std::vector<Stmt>& body,
+                                    const TypeRef& return_type_ref) {
+    check_block(scope, body, return_type_ref, 0);
+}
+
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     FunctionScope base{symbols};
     const auto mode = module.build_values.find("TARGET_MODE");
@@ -439,42 +443,4 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     }
 }
 
-void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
-                                              const FunctionDecl& fn,
-                                              const std::vector<TypeRef>& type_args,
-                                              const std::string& label,
-                                              const SourceLocation& site) {
-    static thread_local std::set<std::string> active_instantiations;
-    const std::string instantiation =
-        label.empty() ? body_instantiated_label(fn.name, type_args) : label;
-    if (active_instantiations.contains(instantiation)) {
-        return;
-    }
-
-    const BodyTypeSubstitutions substitutions = body_type_substitutions(fn.generic_params, type_args);
-    std::vector<Stmt> body = substitute_body_types(fn.statements, substitutions);
-    TypeRef return_type_ref = function_has_return_type(fn)
-                                  ? substitute_type_ref(fn.return_type_ref, substitutions.scalar)
-                                  : void_type_ref(fn.location);
-
-    FunctionScope scope{caller_scope.symbols};
-    scope.constants = caller_scope.constants;
-    scope.target_mode = caller_scope.target_mode;
-    scope.return_type_ref = return_type_ref;
-    for (const ParamDecl& param : fn.params) {
-        bind_local(scope, param.name, substitute_type_ref(param.type_ref, substitutions.scalar));
-    }
-
-    active_instantiations.insert(instantiation);
-    try {
-        check_block(scope, body, return_type_ref, 0);
-    } catch (const CompileError& error) {
-        active_instantiations.erase(instantiation);
-        throw CompileError(error.location(),
-                           std::string(error.what()) + " while instantiating " + instantiation +
-                               " at " + format_location(site),
-                           error.code(), error.data_name());
-    }
-    active_instantiations.erase(instantiation);
-}
 } // namespace dudu

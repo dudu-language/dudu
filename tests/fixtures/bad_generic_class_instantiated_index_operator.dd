@@ -1,0 +1,15 @@
+class Player:
+    hp: i32
+
+
+class Value[T]:
+    value: T
+
+    @operator("[]")
+    def at(self, index: i32) -> T:
+        return self.value + self.value
+
+
+def main() -> i32:
+    value = Value[Player](Player(1))
+    return value[0].hp

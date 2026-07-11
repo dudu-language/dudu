@@ -1,0 +1,5 @@
+class Box[T]:
+    value: T
+
+    def add(self, other: T) -> T:
+        return self.value + other
