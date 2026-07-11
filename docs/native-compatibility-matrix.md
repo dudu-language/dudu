@@ -76,7 +76,7 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | Vulkan | graphics | header import, object setup smoke, link | pass | `scripts/probe_optional.sh` / `examples/vulkan_triangle.dd` | no |
 | FFmpeg libavcodec | media | direct C header import, package link, packet alloc/free smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | no |
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |
-| Native C++ templates | C++ templates | explicit template calls, method templates, dependent returns | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd` | no |
+| Native C++ templates | C++ templates | explicit template calls, method templates, dependent fields and returns, nested and namespace alias templates, non-type/defaulted class parameters, warm scan cache | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd`, `native_dependent_alias_metadata.dd`, `cpp_stdlib_interop.dd` | Class-template specializations still need canonical Clang identities when multiple declarations collapse to one visible name. |
 
 ## External Dogfood Repos
 

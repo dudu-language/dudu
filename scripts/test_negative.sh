@@ -76,6 +76,7 @@ expect_fail bad_native_overload_multi_reason --emit-cpp "reason: parameter 1 exp
 expect_fail bad_native_overload_multi_reason --emit-cpp "reason: parameter 2 expects i32, got str"
 expect_fail bad_native_template_function --emit-cpp "candidate: dudu_template.identity(i32) -> i32"
 expect_fail bad_native_template_function --emit-cpp "reason: parameter 1 expects i32, got bool"
+expect_fail bad_native_alias_template_arity --emit-cpp "type depmeta.AliasCarrier expects 2 type arguments, got 1"
 expect_fail bad_unknown_method --emit-cpp "unknown method: Counter.add"
 expect_fail bad_duplicate_method_overload --check "duplicate method overload: Tensor.to"
 expect_fail bad_out_of_line_method_class --emit-cpp "out-of-line method receiver is not a known class: Missing"

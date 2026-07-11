@@ -7,6 +7,7 @@
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat.hpp"
 
 #include <cassert>
@@ -14,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -253,8 +255,7 @@ void test_native_header_alias_preserves_identity(const std::filesystem::path& ro
     assert(saw_prefixed_function);
 }
 
-void test_direct_cpp_import_preserves_namespace_type_aliases(
-    const std::filesystem::path& root) {
+void test_direct_cpp_import_preserves_namespace_type_aliases(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-direct-namespace-alias";
     const std::filesystem::path header = source_dir / "namespaced_alias.hpp";
     std::filesystem::remove_all(source_dir);
@@ -300,8 +301,7 @@ void test_direct_cpp_import_preserves_namespace_type_aliases(
     assert(cpp.find("box.get()") != std::string::npos);
 }
 
-void test_native_operator_does_not_hijack_dudu_class_operator(
-    const std::filesystem::path& root) {
+void test_native_operator_does_not_hijack_dudu_class_operator(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-operator-hijack";
     const std::filesystem::path header = source_dir / "native_operator.hpp";
     std::filesystem::remove_all(source_dir);
@@ -723,6 +723,75 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
     assert(cpp.find("std::string text = holder.text();") != std::string::npos);
 }
 
+void test_native_class_templates_preserve_declared_metadata(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    const auto require_class = [](const dudu::ModuleAst& scanned,
+                                  std::string_view name) -> const dudu::ClassDecl& {
+        for (const dudu::ClassDecl& klass : scanned.native_classes) {
+            if (klass.name == name) {
+                return klass;
+            }
+        }
+        throw std::runtime_error(std::string(name) + " was not scanned");
+    };
+    const auto require_type = [](const dudu::ModuleAst& scanned,
+                                 std::string_view name) -> const dudu::NativeTypeDecl& {
+        for (const dudu::NativeTypeDecl& type : scanned.native_types) {
+            if (type.name == name) {
+                return type;
+            }
+        }
+        throw std::runtime_error(std::string(name) + " was not scanned");
+    };
+    dudu::ModuleAst module =
+        dudu::parse_source("from cpp.path import native_dependent_alias_metadata.hpp\n",
+                           source_dir / "native_dependent_alias_metadata_scan.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    const dudu::ClassDecl& envelope = require_class(module, "depmeta.Envelope");
+    assert((envelope.generic_params ==
+            std::vector<std::string>{"LeftPayload", "RightPayload", "Extent"}));
+
+    bool saw_selected = false;
+    bool saw_wrapped = false;
+    for (const dudu::TypeAliasDecl& alias : envelope.type_aliases) {
+        if (alias.name == "selected_result") {
+            saw_selected = dudu::type_ref_text(alias.type_ref) == "RightPayload";
+        }
+        if (alias.name == "wrapped_result") {
+            saw_wrapped = dudu::type_ref_text(alias.type_ref) == "depmeta.Wrapper[RightPayload]";
+        }
+    }
+    assert(saw_selected);
+    assert(saw_wrapped);
+
+    const dudu::TypeRef selected = dudu::substitute_receiver_template_type(
+        dudu::parse_type_text("selected_result"), envelope,
+        {dudu::parse_type_text("i32"), dudu::parse_type_text("f32"), dudu::parse_type_text("4")});
+    assert(dudu::type_ref_text(selected) == "f32");
+    const dudu::ClassDecl& defaulted = require_class(module, "depmeta.DefaultedEnvelope");
+    assert(defaulted.generic_params.size() == 2);
+    assert(defaulted.generic_min_args == 1);
+    const dudu::NativeTypeDecl& carrier = require_type(module, "depmeta.AliasCarrier");
+    assert((carrier.generic_params == std::vector<std::string>{"Selected", "Left"}));
+    assert(carrier.generic_min_args == 2);
+
+    dudu::ModuleAst cached =
+        dudu::parse_source("from cpp.path import native_dependent_alias_metadata.hpp\n",
+                           source_dir / "native_dependent_alias_metadata_cached.dd");
+    dudu::merge_native_header_types(cached, {.config = config, .source_dir = source_dir});
+    const dudu::ClassDecl& cached_envelope = require_class(cached, "depmeta.Envelope");
+    assert(cached_envelope.generic_params == envelope.generic_params);
+    assert(cached_envelope.type_aliases.size() == envelope.type_aliases.size());
+    const dudu::ClassDecl& cached_defaulted = require_class(cached, "depmeta.DefaultedEnvelope");
+    assert(cached_defaulted.generic_min_args == defaulted.generic_min_args);
+    const dudu::NativeTypeDecl& cached_carrier = require_type(cached, "depmeta.AliasCarrier");
+    assert(cached_carrier.generic_params == carrier.generic_params);
+}
+
 void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     assert(dudu::dudu_type("unsigned char[16]") == "array[u8][16]");
     assert(dudu::dudu_type("int[2][3]") == "array[i32][2, 3]");
@@ -886,6 +955,7 @@ int main() {
         test_native_header_cache_invalidates_included_header(root);
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
+        test_native_class_templates_preserve_declared_metadata(root);
         test_native_fixed_array_typedef_alias(root);
         test_native_scan_retries_with_c_prelude_for_context_headers(root);
         test_aliased_c_import_prefixes_visible_transitive_functions(root);

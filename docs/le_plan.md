@@ -556,6 +556,28 @@ Important areas:
 - inherited C++ classes
 - diagnostics when Clang tooling or include paths are wrong
 
+Status: imported class templates now retain their declared type and non-type
+template parameters, defaulted-parameter minimum arity, and nested
+`using`/`typedef` aliases as structured class metadata. Namespace-level alias
+templates retain their own ordered parameters and substitute the underlying
+`TypeRef` by declaration position. Dependent field and method-result
+substitution follows lexical class scope and recursively resolves associated
+types through those aliases; the compiler no longer guesses that names such as
+`_Tp`, `value_type`, or `mapped_type` correspond to fixed template argument
+positions. Native scan cache version 16 preserves the same metadata on warm
+scans. The `native_dependent_alias_metadata` scanner and execution fixtures
+cover arbitrary parameter names, non-type/defaulted parameters, scalar and
+nested template aliases, reordered alias-template arguments, fields, emitted
+C++, and warm-cache parity. Standard-library execution fixtures cover the same
+path through `vector`, `optional`, `span`, and `unordered_set`.
+
+Clang USR collection remains required before the scanner can represent every
+class-template specialization independently. Some libstdc++ implementation
+classes currently collapse to one visible Dudu name even when Clang reports
+specializations with different template arities. This must be solved with
+canonical declaration identity, not import-name heuristics or positional
+template guesses.
+
 ## 5. Polish The Test System
 
 Primary plan: [Dudu Tests](tests.md).

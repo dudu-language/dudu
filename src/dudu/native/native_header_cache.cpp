@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v11";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v16";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -194,14 +194,19 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
         }
         const std::string& tag = parsed->first;
         const std::vector<std::string>& fields = parsed->second;
-        if (tag == "NT" && fields.size() == 9) {
+        if (tag == "NT" && fields.size() == 11) {
             const SourceLocation decl_location = cached_location(fields, 6, location);
-            scan.types.push_back({.name = fields[0],
-                                  .native_spelling = fields[1],
-                                  .type_ref = cached_type_ref(fields[2], decl_location),
-                                  .identity = symbol_id(fields, 3, 4),
-                                  .location = decl_location,
-                                  .doc_comment = fields[5]});
+            NativeTypeDecl type{.name = fields[0],
+                                .native_spelling = fields[1],
+                                .type_ref = cached_type_ref(fields[2], decl_location),
+                                .identity = symbol_id(fields, 3, 4),
+                                .location = decl_location,
+                                .doc_comment = fields[5]};
+            type.generic_params = native_cache_split_strings(fields[9]);
+            if (!fields[10].empty()) {
+                type.generic_min_args = static_cast<size_t>(std::stoull(fields[10]));
+            }
+            scan.types.push_back(std::move(type));
         } else if (tag == "NV" && fields.size() == 10) {
             const SourceLocation decl_location = cached_location(fields, 7, location);
             scan.values.push_back({.name = fields[0],
@@ -239,15 +244,19 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                        .identity = symbol_id(fields, 1, 2),
                                        .location = cached_location(fields, 4, location),
                                        .doc_comment = fields[3]});
-        } else if (tag == "CLS" && fields.size() == 10) {
-            const SourceLocation decl_location = cached_location(fields, 7, location);
+        } else if (tag == "CLS" && fields.size() == 11) {
+            const SourceLocation decl_location = cached_location(fields, 8, location);
             ClassDecl klass;
             klass.name = fields[0];
             klass.cpp_name = fields[1];
             klass.identity = symbol_id(fields, 2, 3);
+            klass.native_declaration = true;
             klass.generic_params = native_cache_split_strings(fields[4]);
-            klass.origin_module = fields[5];
-            klass.doc_comment = fields[6];
+            if (!fields[5].empty()) {
+                klass.generic_min_args = static_cast<size_t>(std::stoull(fields[5]));
+            }
+            klass.origin_module = fields[6];
+            klass.doc_comment = fields[7];
             klass.location = decl_location;
             scan.classes.push_back(std::move(klass));
             current_class = &scan.classes.back();
@@ -255,6 +264,15 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
             const SourceLocation decl_location = cached_location(fields, 1, location);
             current_class->base_class_refs.push_back(
                 {.type_ref = cached_type_ref(fields[0], decl_location), .location = decl_location});
+        } else if (tag == "TAL" && fields.size() == 8 && current_class != nullptr) {
+            const SourceLocation decl_location = cached_location(fields, 5, location);
+            current_class->type_aliases.push_back(
+                {.name = fields[0],
+                 .cpp_name = fields[1],
+                 .type_ref = cached_type_ref(fields[2], decl_location),
+                 .origin_module = fields[3],
+                 .location = decl_location,
+                 .doc_comment = fields[4]});
         } else if (tag == "FLD" && fields.size() == 6 && current_class != nullptr) {
             const SourceLocation decl_location = cached_location(fields, 3, location);
             current_class->fields.push_back({.name = fields[0],
@@ -286,6 +304,8 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
             item.name,         item.native_spelling,         cached_type_text(item.type_ref),
             item.identity.usr, item.identity.canonical_path, item.doc_comment};
         append_location_fields(fields, item.location);
+        fields.push_back(native_cache_join_strings(item.generic_params));
+        fields.push_back(item.generic_min_args ? std::to_string(*item.generic_min_args) : "");
         write_record(out, "NT", fields);
     }
     for (const NativeValueDecl& item : scan.values) {
@@ -330,19 +350,28 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
         write_record(out, "NN", fields);
     }
     for (const ClassDecl& klass : scan.classes) {
-        std::vector<std::string> fields = {klass.name,
-                                           klass.cpp_name,
-                                           klass.identity.usr,
-                                           klass.identity.canonical_path,
-                                           native_cache_join_strings(klass.generic_params),
-                                           klass.origin_module,
-                                           klass.doc_comment};
+        std::vector<std::string> fields = {
+            klass.name,
+            klass.cpp_name,
+            klass.identity.usr,
+            klass.identity.canonical_path,
+            native_cache_join_strings(klass.generic_params),
+            klass.generic_min_args ? std::to_string(*klass.generic_min_args) : "",
+            klass.origin_module,
+            klass.doc_comment};
         append_location_fields(fields, klass.location);
         write_record(out, "CLS", fields);
         for (const BaseClassDecl& base : klass.base_class_refs) {
             std::vector<std::string> base_fields = {cached_type_text(base.type_ref)};
             append_location_fields(base_fields, base.location);
             write_record(out, "BASE", base_fields);
+        }
+        for (const TypeAliasDecl& alias : klass.type_aliases) {
+            std::vector<std::string> alias_fields = {alias.name, alias.cpp_name,
+                                                     cached_type_text(alias.type_ref),
+                                                     alias.origin_module, alias.doc_comment};
+            append_location_fields(alias_fields, alias.location);
+            write_record(out, "TAL", alias_fields);
         }
         for (const FieldDecl& field : klass.fields) {
             std::vector<std::string> field_fields = {field.name, cached_type_text(field.type_ref),

@@ -26,6 +26,7 @@ struct Symbols {
     std::set<std::string> types;
     std::set<std::string> generic_params;
     std::map<std::string, TypeRef> alias_type_refs;
+    std::map<std::string, std::vector<std::string>> alias_generic_params;
     std::map<std::string, FunctionSignature> function_signatures;
     std::map<std::string, const FunctionDecl*> function_decls;
     std::map<std::string, std::vector<FunctionSignature>> function_overload_signatures;

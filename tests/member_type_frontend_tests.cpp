@@ -43,9 +43,21 @@
 namespace {
 
 void test_receiver_template_substitution_uses_type_ast() {
-    auto substitute = [](std::string_view type, std::vector<dudu::TypeRef> receiver_args) {
+    dudu::ClassDecl container;
+    container.name = "Container";
+    container.generic_params = {"T"};
+    dudu::TypeAliasDecl value_type;
+    value_type.name = "value_type";
+    value_type.type_ref = dudu::parse_type_text("T");
+    container.type_aliases.push_back(value_type);
+    dudu::TypeAliasDecl element_type;
+    element_type.name = "element_type";
+    element_type.type_ref = dudu::parse_type_text("T");
+    container.type_aliases.push_back(element_type);
+    auto substitute = [&](std::string_view type, std::vector<dudu::TypeRef> receiver_args) {
         return dudu::substitute_type_ref_text(
-            dudu::substitute_receiver_template_type(dudu::parse_type_text(type), receiver_args),
+            dudu::substitute_receiver_template_type(dudu::parse_type_text(type), container,
+                                                    receiver_args),
             {});
     };
     assert(substitute("list[value_type]", {dudu::parse_type_text("i32")}) == "list[i32]");
@@ -55,8 +67,8 @@ void test_receiver_template_substitution_uses_type_ast() {
            "std::vector<i32>");
 
     const dudu::TypeRef vector_type = dudu::parse_type_text("std::vector<value_type>");
-    const dudu::TypeRef vector_substituted =
-        dudu::substitute_receiver_template_type(vector_type, {dudu::parse_type_text("i32")});
+    const dudu::TypeRef vector_substituted = dudu::substitute_receiver_template_type(
+        vector_type, container, {dudu::parse_type_text("i32")});
     assert(dudu::substitute_type_ref_text(vector_substituted, {}) == "std::vector<i32>");
 
     const std::vector<dudu::TypeRef> receiver_arg_refs =

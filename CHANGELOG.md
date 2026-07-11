@@ -4,6 +4,10 @@
 
 ### Added
 
+- Added scanner-derived C++ class and alias-template parameters, defaulted
+  template arity, nested type aliases, lexical associated-type resolution,
+  dependent field/method substitution, and native scan-cache preservation
+  without STL-name heuristics.
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and
   last-known-good LSP project indexes.

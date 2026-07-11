@@ -1,0 +1,17 @@
+from cpp.path import native_dependent_alias_metadata.hpp
+
+
+def main() -> i32:
+    envelope: depmeta.Envelope[i32, i32, 4] = depmeta.Envelope[i32, i32, 4]()
+    envelope.left = 1
+    envelope.right = 37
+    left: i32 = envelope.left
+    right: i32 = envelope.right
+    selected: i32 = envelope.selected()
+    wrapped: depmeta.Wrapper[i32] = envelope.wrapped()
+    defaulted: depmeta.DefaultedEnvelope[i32] = depmeta.DefaultedEnvelope[i32]()
+    defaulted.value = 9
+    carrier: depmeta.AliasCarrier[i32, f32] = depmeta.AliasCarrier[i32, f32]()
+    carrier.right = 5
+    carrier_value: i32 = carrier.selected()
+    return left + right + selected + wrapped.get() + defaulted.get() + carrier_value - 84

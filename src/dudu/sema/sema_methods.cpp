@@ -33,17 +33,18 @@ TypeRef self_type_ref_for_method(const ClassDecl& klass, const std::vector<TypeR
     return type;
 }
 
-TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
-                                    const TypeRef& type, const std::vector<TypeRef>& receiver_args,
+TypeRef instantiate_method_type_ref(const Symbols& symbols, const ClassDecl& klass,
+                                    const FunctionDecl& method, const TypeRef& type,
+                                    const std::vector<TypeRef>& receiver_args,
                                     const std::vector<TypeRef>& method_args) {
     TypeRef out = substitute_generic_type_ref(method.generic_params, method_args, type);
-    out = substitute_generic_type_ref(klass.generic_params, receiver_args, out);
     out = substitute_type_ref(
         out, {{"Self", self_type_ref_for_method(klass, receiver_args, type.location)}});
-    return substitute_receiver_template_type(out, receiver_args);
+    return substitute_receiver_template_type(out, symbols, klass, receiver_args);
 }
 
-FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
+FunctionSignature instantiate_method_signature(const Symbols& symbols, const ClassDecl& klass,
+                                               const FunctionDecl& method,
                                                const std::vector<TypeRef>& receiver_args,
                                                const std::vector<TypeRef>& method_args);
 
@@ -70,7 +71,8 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
         if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
-        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
+        signature =
+            instantiate_method_signature(symbols, *klass, method, receiver_args, method_args);
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
@@ -108,7 +110,8 @@ method_signatures_for_type_impl(const Symbols& symbols, const TypeRef& receiver_
         if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
-        out.push_back(instantiate_method_signature(*klass, method, receiver_args, method_args));
+        out.push_back(
+            instantiate_method_signature(symbols, *klass, method, receiver_args, method_args));
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         std::vector<FunctionSignature> base_signatures =
@@ -139,8 +142,8 @@ dudu_method_instantiations_for_type_impl(const Symbols& symbols, const TypeRef& 
                        .receiver_type = concrete_receiver,
                        .receiver_args = receiver_args,
                        .method_args = method_args,
-                       .signature = instantiate_method_signature(*klass, method, receiver_args,
-                                                                 method_args)});
+                       .signature = instantiate_method_signature(symbols, *klass, method,
+                                                                 receiver_args, method_args)});
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         const TypeRef base_type =
@@ -176,7 +179,8 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
         if (!generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
-        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
+        signature =
+            instantiate_method_signature(symbols, *klass, method, receiver_args, method_args);
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
@@ -196,7 +200,8 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
     return false;
 }
 
-FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
+FunctionSignature instantiate_method_signature(const Symbols& symbols, const ClassDecl& klass,
+                                               const FunctionDecl& method,
                                                const std::vector<TypeRef>& receiver_args,
                                                const std::vector<TypeRef>& method_args) {
     FunctionSignature signature;
@@ -205,8 +210,8 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     std::vector<TypeRef> param_types;
     param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        TypeRef param_type = instantiate_method_type_ref(klass, method, method.params[i].type_ref,
-                                                         receiver_args, method_args);
+        TypeRef param_type = instantiate_method_type_ref(
+            symbols, klass, method, method.params[i].type_ref, receiver_args, method_args);
         if (method.params[i].variadic &&
             generic_pack_param_named(method.generic_params,
                                      type_ref_head_name(method.params[i].type_ref))) {
@@ -224,7 +229,7 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     }
     set_signature_return_type(
         signature, function_has_return_type(method)
-                       ? instantiate_method_type_ref(klass, method, method.return_type_ref,
+                       ? instantiate_method_type_ref(symbols, klass, method, method.return_type_ref,
                                                      receiver_args, method_args)
                        : void_type_ref(method.location));
     return signature;
@@ -297,7 +302,8 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
             .receiver_type = concrete_receiver,
             .receiver_args = receiver_args,
             .method_args = *inferred,
-            .signature = instantiate_method_signature(*klass, method, receiver_args, *inferred)};
+            .signature = instantiate_method_signature(scope.symbols, *klass, method, receiver_args,
+                                                      *inferred)};
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         const TypeRef base_type =
@@ -343,7 +349,8 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
             .receiver_type = concrete_receiver,
             .receiver_args = receiver_args,
             .method_args = *inferred,
-            .signature = instantiate_method_signature(*klass, method, receiver_args, *inferred)};
+            .signature = instantiate_method_signature(scope.symbols, *klass, method, receiver_args,
+                                                      *inferred)};
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         const TypeRef base_type =

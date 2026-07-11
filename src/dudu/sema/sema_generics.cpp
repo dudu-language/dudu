@@ -56,6 +56,30 @@ size_t generic_min_arity(const std::vector<std::string>& params) {
                                                                    : params.size();
 }
 
+size_t generic_decl_min_arity(const std::vector<std::string>& params,
+                              std::optional<size_t> minimum) {
+    return minimum.value_or(generic_min_arity(params));
+}
+
+bool generic_decl_arity_matches(const std::vector<std::string>& params,
+                                std::optional<size_t> minimum, size_t arg_count) {
+    if (arg_count < generic_decl_min_arity(params, minimum)) {
+        return false;
+    }
+    if (!params.empty() && generic_param_is_pack(params.back())) {
+        return true;
+    }
+    return arg_count <= params.size();
+}
+
+size_t class_generic_min_arity(const ClassDecl& klass) {
+    return generic_decl_min_arity(klass.generic_params, klass.generic_min_args);
+}
+
+bool class_generic_arity_matches(const ClassDecl& klass, size_t arg_count) {
+    return generic_decl_arity_matches(klass.generic_params, klass.generic_min_args, arg_count);
+}
+
 TypeRef substitute_generic_type_ref(const std::vector<std::string>& params,
                                     const std::vector<TypeRef>& args, const TypeRef& type) {
     return substitute_generic_type_ref(type, generic_type_bindings(params, args));

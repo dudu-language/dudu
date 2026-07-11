@@ -1,0 +1,6 @@
+from cpp.path import native_dependent_alias_metadata.hpp
+
+
+def main() -> i32:
+    value = depmeta.AliasCarrier[i32]()
+    return value.selected()

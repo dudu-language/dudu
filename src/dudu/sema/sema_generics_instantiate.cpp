@@ -3,6 +3,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_generics_detail.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
 #include <utility>
@@ -40,29 +41,34 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
 
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
                                     const std::string& instantiated_name) {
-    const GenericTypeBindings substitutions = generic_type_bindings(klass.generic_params, args);
-    klass.name = instantiated_name;
+    const ClassDecl generic_class = klass;
+    const auto instantiate = [&](const TypeRef& type) {
+        return substitute_receiver_template_type(type, generic_class, args);
+    };
     for (BaseClassDecl& base : klass.base_class_refs) {
-        base.type_ref = substitute_generic_type_ref(base.type_ref, substitutions);
+        base.type_ref = instantiate(base.type_ref);
+    }
+    for (TypeAliasDecl& alias : klass.type_aliases) {
+        alias.type_ref = instantiate(alias.type_ref);
     }
     for (FieldDecl& field : klass.fields) {
-        field.type_ref = substitute_generic_type_ref(field.type_ref, substitutions);
+        field.type_ref = instantiate(field.type_ref);
     }
     for (ConstDecl& field : klass.static_fields) {
-        field.type_ref = substitute_generic_type_ref(field.type_ref, substitutions);
+        field.type_ref = instantiate(field.type_ref);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type_ref = substitute_generic_type_ref(constant.type_ref, substitutions);
+        constant.type_ref = instantiate(constant.type_ref);
     }
     for (FunctionDecl& method : klass.methods) {
         if (function_has_return_type(method)) {
-            method.return_type_ref =
-                substitute_generic_type_ref(method.return_type_ref, substitutions);
+            method.return_type_ref = instantiate(method.return_type_ref);
         }
         for (ParamDecl& param : method.params) {
-            param.type_ref = substitute_generic_type_ref(param.type_ref, substitutions);
+            param.type_ref = instantiate(param.type_ref);
         }
     }
+    klass.name = instantiated_name;
     return klass;
 }
 

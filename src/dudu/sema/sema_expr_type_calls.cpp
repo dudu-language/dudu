@@ -3,9 +3,11 @@
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_body.hpp"
+#include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_generics.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/sema_ops.hpp"
 
@@ -405,19 +407,37 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             explicit_generic_function_signature_ast(scope, expr, callee_base, callee, location)) {
         return signature_return_type_ref(*signature);
     }
-    if (const ClassDecl* klass =
-            class_for_receiver_type(scope.symbols, named_type_ref(callee_base, expr.location));
+    const std::vector<TypeRef> source_type_args = template_type_refs(expr);
+    const TypeRef constructor_type =
+        template_constructor_type_ref(expr, callee_base, source_type_args);
+    const TypeRef resolved_constructor_type =
+        receiver_template_type_ref(scope.symbols, constructor_type);
+    if (const ClassDecl* klass = class_for_receiver_type(scope.symbols, resolved_constructor_type);
         klass != nullptr && !klass->generic_params.empty()) {
-        const std::vector<TypeRef> type_args = template_type_refs(expr);
-        if (location != nullptr &&
-            !generic_arity_matches(klass->generic_params, type_args.size())) {
+        const auto alias = scope.symbols.native_type_decls.find(callee_base);
+        const bool alias_template = alias != scope.symbols.native_type_decls.end() &&
+                                    !alias->second->generic_params.empty();
+        if (location != nullptr && alias_template &&
+            !generic_decl_arity_matches(alias->second->generic_params,
+                                        alias->second->generic_min_args, source_type_args.size())) {
+            sema_expr_fail(
+                *location,
+                "type " + callee_base + " expects " +
+                    std::to_string(generic_decl_min_arity(alias->second->generic_params,
+                                                          alias->second->generic_min_args)) +
+                    " type arguments, got " + std::to_string(source_type_args.size()));
+        }
+        const std::vector<TypeRef> class_type_args =
+            template_arg_refs_from_type(resolved_constructor_type);
+        if (location != nullptr && !alias_template &&
+            !class_generic_arity_matches(*klass, class_type_args.size())) {
             sema_expr_fail(*location, "type " + callee_base + " expects " +
-                                          std::to_string(generic_min_arity(klass->generic_params)) +
+                                          std::to_string(class_generic_min_arity(*klass)) +
                                           " type arguments, got " +
-                                          std::to_string(type_args.size()));
+                                          std::to_string(source_type_args.size()));
         }
         if (location != nullptr) {
-            for (const TypeRef& type_arg : type_args) {
+            for (const TypeRef& type_arg : source_type_args) {
                 if (!explicit_generic_arg_known(scope.symbols, type_arg)) {
                     const auto unknown = unknown_type_ref(scope.symbols, type_arg);
                     const SourceLocation type_location =
@@ -428,9 +448,7 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
                 }
             }
         }
-        const ClassDecl instantiated = instantiate_generic_class(*klass, type_args, callee);
-        const TypeRef constructor_type =
-            template_constructor_type_ref(expr, callee_base, type_args);
+        const ClassDecl instantiated = instantiate_generic_class(*klass, class_type_args, callee);
         reject_abstract_construction(scope.symbols, constructor_type, location);
         check_constructor_args_ast(scope, instantiated, expr.children, location);
         if (location != nullptr) {
@@ -439,8 +457,8 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
                 const size_t method_index = static_cast<size_t>(init - instantiated.methods.data());
                 if (method_index < klass->methods.size()) {
                     check_instantiated_generic_method_body(
-                        scope, *klass, klass->methods[method_index], constructor_type, type_args,
-                        {}, *location);
+                        scope, *klass, klass->methods[method_index], constructor_type,
+                        class_type_args, {}, *location);
                 }
             }
         }
@@ -459,8 +477,6 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             direct_template_member_call_type_ref(scope, expr, callee, location)) {
         return *method_type;
     }
-    const TypeRef constructor_type =
-        template_constructor_type_ref(expr, callee_base, template_type_refs(expr));
     if (known_template_constructor_type(scope, constructor_type)) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_type_ast(scope, arg, location);

@@ -114,7 +114,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
                 return;
             }
         }
-        if (scope.symbols.native_classes.contains(klass.name)) {
+        if (klass.native_declaration) {
             for (const Expr& arg : args) {
                 (void)infer_expr_type_ast(scope, arg, location);
             }

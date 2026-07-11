@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -295,6 +296,8 @@ struct NativeTypeDecl {
     NativeSymbolId identity{};
     SourceLocation location;
     std::string doc_comment{};
+    std::vector<std::string> generic_params{};
+    std::optional<size_t> generic_min_args{};
 };
 
 struct NativeValueDecl {
@@ -402,8 +405,11 @@ struct ClassDecl {
     std::string name;
     std::string cpp_name;
     NativeSymbolId identity{};
+    bool native_declaration = false;
     std::vector<std::string> generic_params;
+    std::optional<size_t> generic_min_args;
     std::vector<BaseClassDecl> base_class_refs;
+    std::vector<TypeAliasDecl> type_aliases;
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;
     std::vector<ConstDecl> constants;

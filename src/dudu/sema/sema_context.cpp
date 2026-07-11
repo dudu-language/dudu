@@ -19,10 +19,9 @@ namespace {
 
 bool is_builtin_type(const std::string& type) {
     static const std::set<std::string> builtins = {
-        "bool",  "char",  "i8",  "i16", "i32",  "i64", "u8",   "u16",   "u32",      "u64",
-        "isize",       "usize",      "f32",        "f64",       "void",
-        "str",         "cstr",       "slice",      "ellipsis",  "new_axis",
-        "scalar_index", "basic_index"};
+        "bool", "char",  "i8",       "i16",      "i32",          "i64",        "u8",   "u16",
+        "u32",  "u64",   "isize",    "usize",    "f32",          "f64",        "void", "str",
+        "cstr", "slice", "ellipsis", "new_axis", "scalar_index", "basic_index"};
     return builtins.contains(type);
 }
 
@@ -224,6 +223,15 @@ TypeRef resolve_alias_ref_impl(const Symbols& symbols, TypeRef type, std::set<st
             break;
         }
         if (type.kind == TypeKind::Template) {
+            const auto params = symbols.alias_generic_params.find(name);
+            if (params != symbols.alias_generic_params.end() && !params->second.empty()) {
+                std::map<std::string, TypeRef> substitutions;
+                for (size_t i = 0; i < params->second.size() && i < type.children.size(); ++i) {
+                    substitutions.emplace(params->second[i], type.children[i]);
+                }
+                type = substitute_type_ref(found->second, substitutions);
+                continue;
+            }
             type.name = type_ref_head_name(found->second);
             break;
         }
@@ -350,6 +358,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&
             !symbols.alias_type_refs.contains(type.name)) {
             symbols.alias_type_refs[type.name] = native_type_alias_type_ref(type);
+            symbols.alias_generic_params[type.name] = type.generic_params;
         }
     }
     for (const NativeValueDecl& value : module.native_values) {

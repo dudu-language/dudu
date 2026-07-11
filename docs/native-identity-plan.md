@@ -15,6 +15,9 @@ Problem cases:
 - inline namespaces and implementation namespaces can leak through Clang output.
 - overloaded template methods can share names but differ by canonical
   declaration and instantiated argument types.
+- class-template primary declarations, partial specializations, and internal
+  implementation classes can collapse to the same visible scanner path while
+  carrying different template arities.
 
 Raw spelling must not be the primary semantic key.
 
@@ -115,7 +118,8 @@ In progress.
 
 Still missing:
 
-- Clang USR collection.
+- Clang USR collection, including distinct identities for class-template
+  specializations that share a visible import name.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
 - Broader LSP reference indexing keyed directly by canonical native identity.

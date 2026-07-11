@@ -15,8 +15,17 @@ namespace dudu {
 namespace {
 
 struct TemplateContext {
+    enum class Kind {
+        Alias,
+        Class,
+        Function,
+    };
+
     int depth = 0;
+    Kind kind = Kind::Function;
     std::vector<std::string> params;
+    std::vector<bool> param_has_default;
+    int last_param_depth = -1;
 };
 
 enum class CommentTargetKind {
@@ -310,7 +319,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex enum_decl(R"(EnumDecl.*\b([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex template_type_param(
-        R"(TemplateTypeParmDecl.*\bindex [0-9]+ (?:\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
+        R"(TemplateTypeParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
+    static const std::regex template_value_param(
+        R"(NonTypeTemplateParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
     static const std::regex fn_decl(
         R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -351,12 +362,41 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!param_targets.empty() && param_targets.back().depth >= depth) {
         param_targets.pop_back();
     }
-    if (line.find("FunctionTemplateDecl") != std::string::npos) {
-        templates.push_back({.depth = depth, .params = {}});
+    if (line.find("TypeAliasTemplateDecl") != std::string::npos) {
+        templates.push_back({.depth = depth,
+                             .kind = TemplateContext::Kind::Alias,
+                             .params = {},
+                             .param_has_default = {},
+                             .last_param_depth = -1});
+    } else if (line.find("ClassTemplateDecl") != std::string::npos) {
+        templates.push_back({.depth = depth,
+                             .kind = TemplateContext::Kind::Class,
+                             .params = {},
+                             .param_has_default = {},
+                             .last_param_depth = -1});
+    } else if (line.find("FunctionTemplateDecl") != std::string::npos) {
+        templates.push_back({.depth = depth,
+                             .kind = TemplateContext::Kind::Function,
+                             .params = {},
+                             .param_has_default = {},
+                             .last_param_depth = -1});
     }
     if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos &&
         std::regex_search(line, match, template_type_param)) {
-        templates.back().params.push_back(match[1].str());
+        templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
+        templates.back().param_has_default.push_back(false);
+        templates.back().last_param_depth = depth;
+    }
+    if (!templates.empty() && line.find("NonTypeTemplateParmDecl") != std::string::npos &&
+        std::regex_search(line, match, template_value_param)) {
+        templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
+        templates.back().param_has_default.push_back(false);
+        templates.back().last_param_depth = depth;
+    }
+    if (!templates.empty() && !templates.back().param_has_default.empty() &&
+        line.find("TemplateArgument") != std::string::npos &&
+        depth == templates.back().last_param_depth + 1) {
+        templates.back().param_has_default.back() = true;
     }
     if (!functions.empty() && line.find("ParmVarDecl") != std::string::npos &&
         line.find(" cinit") != std::string::npos) {
@@ -390,16 +430,37 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string raw_name = match[2].str();
         const std::string name = join_scope(namespaces, raw_name);
         const std::string lowered_type =
-            qualify_scoped_type(scan, namespaces, dudu_type(match[3].str()));
+            qualify_scoped_type(scan, namespaces, classes, dudu_type(match[3].str()));
         const bool useful_alias = lowered_type != raw_name && lowered_type != name;
         if (!starts_with(raw_name, "__") || useful_alias) {
             const TypeRef type_ref =
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
-            scan.types.push_back({.name = name,
-                                  .native_spelling = useful_alias ? lowered_type : "",
-                                  .type_ref = type_ref,
-                                  .identity = native_identity(name, current_file),
-                                  .location = decl_location});
+            const std::string visible_name =
+                classes.empty() ? name : scan.classes[classes.back().second].name + "." + raw_name;
+            NativeTypeDecl native_type{.name = visible_name,
+                                       .native_spelling = useful_alias ? lowered_type : "",
+                                       .type_ref = type_ref,
+                                       .identity = native_identity(visible_name, current_file),
+                                       .location = decl_location};
+            if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
+                native_type.generic_params = templates.back().params;
+                native_type.generic_min_args = 0;
+                for (size_t i = 0; i < templates.back().params.size(); ++i) {
+                    const bool is_pack = templates.back().params[i].ends_with("...");
+                    if (!templates.back().param_has_default[i] && !is_pack) {
+                        ++*native_type.generic_min_args;
+                    }
+                }
+            }
+            scan.types.push_back(std::move(native_type));
+            if (!classes.empty() && useful_alias) {
+                scan.classes[classes.back().second].type_aliases.push_back(
+                    {.name = raw_name,
+                     .cpp_name = visible_name,
+                     .type_ref = type_ref,
+                     .origin_module = current_file,
+                     .location = decl_location});
+            }
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
@@ -424,6 +485,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
+                klass.native_declaration = true;
+                if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Class) {
+                    klass.generic_params = templates.back().params;
+                    klass.generic_min_args = 0;
+                    for (size_t i = 0; i < templates.back().params.size(); ++i) {
+                        const bool is_pack = templates.back().params[i].ends_with("...");
+                        if (!templates.back().param_has_default[i] && !is_pack) {
+                            ++*klass.generic_min_args;
+                        }
+                    }
+                }
                 klass.identity = native_identity(name, current_file);
                 klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
@@ -457,7 +529,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         NativeFunctionDecl fn;
         fn.name = name;
         fn.identity = native_identity(name, current_file);
-        if (!templates.empty()) {
+        if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             fn.template_params = templates.back().params;
         }
         fn.param_native_spellings =
@@ -488,17 +560,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         method.native_identity = native_identity(
             scan.classes[classes.back().second].identity.canonical_path + "." + method.name,
             current_file);
-        if (!templates.empty()) {
+        if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             method.generic_params = templates.back().params;
         }
         method.return_type_ref = parse_native_type_text(
-            qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str())),
+            qualify_scoped_type(scan, namespaces, classes, signature_return_type(match[2].str())),
             decl_location);
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
-            decl.type_ref =
-                parse_native_type_text(qualify_scoped_type(scan, namespaces, param), decl_location);
+            decl.type_ref = parse_native_type_text(
+                qualify_scoped_type(scan, namespaces, classes, param), decl_location);
             decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
@@ -516,7 +588,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     } else if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
                std::regex_search(line, match, ctor_decl)) {
         const std::vector<std::string> params =
-            qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
+            qualify_scoped_types(scan, namespaces, classes, signature_params(match[2].str()));
         FunctionDecl ctor;
         ctor.name = "init";
         ctor.native_identity = native_identity(
@@ -541,7 +613,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                    .secondary = scan.classes[class_index].methods.size() - 1});
     } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
                std::regex_search(line, match, field_decl)) {
-        const std::string type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str()));
+        const std::string type =
+            qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
         const size_t class_index = classes.back().second;
         scan.classes[class_index].fields.push_back(
             {.name = match[1].str(),
@@ -558,7 +631,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 line.find("private '") != std::string::npos) &&
                std::regex_search(line, match, base_decl)) {
         add_base_class(scan.classes[classes.back().second],
-                       qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
+                       qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str())),
                        decl_location);
     } else if (line.find("EnumConstantDecl") != std::string::npos &&
                std::regex_search(line, match, enum_value_decl)) {
