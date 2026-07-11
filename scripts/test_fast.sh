@@ -393,10 +393,9 @@ printf '%s\n' "$cmake_build_output" | grep -Eq '^output .*/backend_cmake$'
 cmake_noop_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
 printf '%s\n' "$cmake_noop_output" | grep -Eq 'Built target backend_cmake_dudu_generate'
-if printf '%s\n' "$cmake_noop_output" | grep -Fq 'Dudu emit modules'; then
-    echo "CMake no-op build unexpectedly re-ran Dudu emit modules" >&2
-    exit 1
-fi
+printf '%s\n' "$cmake_noop_output" | grep -Fq 'Dudu emit modules'
+printf '%s\n' "$cmake_noop_output" | grep -Fq 'dirty 0 modules'
+printf '%s\n' "$cmake_noop_output" | grep -Fq 'analyze 0 modules'
 cmake_cached_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
 printf '%s\n' "$cmake_cached_output" | grep -Eq '^configure .*/build/project_backend_cmake/cmake-backend/build$'

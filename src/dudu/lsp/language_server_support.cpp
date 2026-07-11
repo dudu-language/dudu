@@ -100,8 +100,8 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     options.include_native_headers_in_merged_module = false;
     options.check_semantics = check_semantics;
     options.semantic_options = {.check_bodies = true};
+    options.config = config_for_file(doc.path);
     try {
-        options.config = config_for_file(doc.path);
         const ProjectIndex& index = project_index_cache.get(options);
         if (!check_semantics) {
             last_good_project_indexes.insert_or_assign(last_good_key, index);

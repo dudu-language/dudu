@@ -307,6 +307,9 @@
 
 ### Fixed
 
+- Kept invalid project configuration errors outside LSP source-recovery
+  fallbacks, and aligned the fast no-op CMake assertion with manifest-backed
+  self-healing generation.
 - Switched generated-CMake `dudu test` builds to per-module test artifacts
   plus a small generated harness instead of one merged test translation unit.
 - Decoded common escaped characters in quoted `dudu.toml` strings, including
