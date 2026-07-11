@@ -2,8 +2,8 @@
 
 #include "dudu/native/native_header_scan_command.hpp"
 
+#include <charconv>
 #include <clang-c/Index.h>
-
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -30,8 +30,8 @@ std::string normalized_source_path(std::string path) {
 std::string identity_key(NativeCursorKind kind, std::string_view name,
                          const SourceLocation& location) {
     return std::to_string(static_cast<int>(kind)) + "\n" + normalized_source_path(location.file) +
-           "\n" + std::to_string(location.line) + "\n" + std::to_string(location.column) +
-           "\n" + std::string(name);
+           "\n" + std::to_string(location.line) + "\n" + std::to_string(location.column) + "\n" +
+           std::string(name);
 }
 
 bool class_cursor(CXCursorKind kind) {
@@ -111,21 +111,61 @@ void NativeCursorIdentityIndex::insert(NativeCursorKind kind, std::string name,
     identities_.insert_or_assign(identity_key(kind, name, location), std::move(usr));
 }
 
-std::optional<std::string>
-NativeCursorIdentityIndex::find(NativeCursorKind kind, std::string_view name,
-                                const SourceLocation& location) const {
+std::optional<std::string> NativeCursorIdentityIndex::find(NativeCursorKind kind,
+                                                           std::string_view name,
+                                                           const SourceLocation& location) const {
     const auto found = identities_.find(identity_key(kind, name, location));
-    return found == identities_.end() ? std::nullopt
-                                      : std::optional<std::string>{found->second};
+    return found == identities_.end() ? std::nullopt : std::optional<std::string>{found->second};
 }
 
 bool NativeCursorIdentityIndex::empty() const {
     return identities_.empty();
 }
 
-NativeCursorIdentityIndex
-scan_native_cursor_identities(const std::filesystem::path& source,
-                              const NativeHeaderOptions& options, bool include_source_dir) {
+std::string NativeCursorIdentityIndex::serialize() const {
+    std::string out;
+    for (const auto& [key, usr] : identities_) {
+        out +=
+            std::to_string(key.size()) + ":" + key + std::to_string(usr.size()) + ":" + usr + "\n";
+    }
+    return out;
+}
+
+NativeCursorIdentityIndex NativeCursorIdentityIndex::deserialize(std::string_view text) {
+    NativeCursorIdentityIndex out;
+    size_t cursor = 0;
+    auto read_field = [&](std::string& field) -> bool {
+        const size_t colon = text.find(':', cursor);
+        if (colon == std::string_view::npos) {
+            return false;
+        }
+        size_t size = 0;
+        const auto [end, error] = std::from_chars(text.data() + cursor, text.data() + colon, size);
+        if (error != std::errc{} || end != text.data() + colon || size > text.size() - colon - 1) {
+            return false;
+        }
+        cursor = colon + 1;
+        field.assign(text.substr(cursor, size));
+        cursor += size;
+        return true;
+    };
+    while (cursor < text.size()) {
+        std::string key;
+        std::string usr;
+        if (!read_field(key) || !read_field(usr)) {
+            return {};
+        }
+        out.identities_.insert_or_assign(std::move(key), std::move(usr));
+        if (cursor < text.size() && text[cursor] == '\n') {
+            ++cursor;
+        }
+    }
+    return out;
+}
+
+NativeCursorIdentityIndex scan_native_cursor_identities(const std::filesystem::path& source,
+                                                        const NativeHeaderOptions& options,
+                                                        bool include_source_dir) {
     std::vector<std::string> args = {"-std=" + options.config.cpp_std, "-x", "c++"};
     std::vector<std::string> scanner_args =
         native_header_scanner_arguments(options, include_source_dir);

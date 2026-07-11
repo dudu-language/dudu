@@ -59,6 +59,16 @@ struct ParamTarget {
     size_t next_param = 0;
 };
 
+NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, NativeCursorKind kind,
+                                std::string_view spelling, const SourceLocation& location,
+                                std::string canonical_path, const std::string& current_file) {
+    NativeSymbolId identity = native_identity(std::move(canonical_path), current_file);
+    if (const std::optional<std::string> usr = identities.find(kind, spelling, location)) {
+        identity.usr = *usr;
+    }
+    return identity;
+}
+
 TypeRef normalize_native_type_ref(TypeRef type);
 
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
@@ -136,10 +146,10 @@ std::string ast_concrete_source_file(const std::string& line) {
 SourceLocation ast_source_location(const std::string& line, const SourceLocation& context_location,
                                    const std::string& current_file) {
     static const std::regex expansion(R"((?:<|, )([^<>:]+):([0-9]+):([0-9]+)(?=[,>]))");
-    static const std::regex named_spelling(R"(>\s+line:([0-9]+):([0-9]+)\s+)");
-    static const std::regex spelling(R"( col:([0-9]+))");
-    std::smatch spelling_match;
-    std::smatch named_match;
+    static const std::regex named_line_spelling(R"(>\s+line:([0-9]+):([0-9]+)\s+)");
+    static const std::regex named_column_spelling(R"(>\s+col:([0-9]+)\s+)");
+    std::smatch named_line_match;
+    std::smatch named_column_match;
     std::optional<std::smatch> chosen;
     for (std::sregex_iterator it(line.begin(), line.end(), expansion), end; it != end; ++it) {
         const std::string file = (*it)[1].str();
@@ -166,14 +176,14 @@ SourceLocation ast_source_location(const std::string& line, const SourceLocation
     }
     out.line = std::stoi(match[2].str());
     out.column = std::stoi(match[3].str());
-    if (std::regex_search(line, spelling_match, spelling)) {
-        out.column = std::stoi(spelling_match[1].str());
-    }
-    if (relative_location && !current_file.empty() &&
-        std::regex_search(line, named_match, named_spelling)) {
-        out.file = SourceFileName(current_file);
-        out.line = std::stoi(named_match[1].str());
-        out.column = std::stoi(named_match[2].str());
+    if (std::regex_search(line, named_line_match, named_line_spelling)) {
+        if (!current_file.empty()) {
+            out.file = SourceFileName(current_file);
+        }
+        out.line = std::stoi(named_line_match[1].str());
+        out.column = std::stoi(named_line_match[2].str());
+    } else if (std::regex_search(line, named_column_match, named_column_spelling)) {
+        out.column = std::stoi(named_column_match[1].str());
     }
     return out;
 }
@@ -308,7 +318,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<TemplateContext>& templates,
                     std::vector<std::pair<int, size_t>>& functions,
                     std::vector<ParamTarget>& param_targets,
-                    std::vector<CommentTarget>& comment_targets, const SourceLocation& location,
+                    std::vector<CommentTarget>& comment_targets,
+                    const NativeCursorIdentityIndex& identities, const SourceLocation& location,
                     std::string& current_file) {
     const SourceLocation decl_location = ast_source_location(line, location, current_file);
     if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
@@ -448,9 +459,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         namespaces.push_back({depth, name});
-        scan.namespaces.push_back({.name = name,
-                                   .identity = native_identity(name, current_file),
-                                   .location = decl_location});
+        scan.namespaces.push_back(
+            {.name = name,
+             .identity = scanned_identity(identities, NativeCursorKind::Namespace, name,
+                                          decl_location, name, current_file),
+             .location = decl_location});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Namespace,
                                    .primary = scan.namespaces.size() - 1});
@@ -467,11 +480,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
             const std::string visible_name =
                 classes.empty() ? name : scan.classes[classes.back().second].name + "." + raw_name;
-            NativeTypeDecl native_type{.name = visible_name,
-                                       .native_spelling = useful_alias ? lowered_type : "",
-                                       .type_ref = type_ref,
-                                       .identity = native_identity(visible_name, current_file),
-                                       .location = decl_location};
+            NativeTypeDecl native_type{
+                .name = visible_name,
+                .native_spelling = useful_alias ? lowered_type : "",
+                .type_ref = type_ref,
+                .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
+                                             decl_location, visible_name, current_file),
+                .location = decl_location};
             if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
                 native_type.generic_params = templates.back().params;
                 native_type.generic_default_args = templates.back().param_defaults;
@@ -505,11 +520,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
-            scan.types.push_back({.name = name,
-                                  .native_spelling = "",
-                                  .type_ref = {},
-                                  .identity = native_identity(name, current_file),
-                                  .location = decl_location});
+            scan.types.push_back(
+                {.name = name,
+                 .native_spelling = "",
+                 .type_ref = {},
+                 .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                              decl_location, name, current_file),
+                 .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
@@ -528,7 +545,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                         }
                     }
                 }
-                klass.identity = native_identity(name, current_file);
+                klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                                  decl_location, name, current_file);
                 klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
                 classes.push_back({depth, scan.classes.size() - 1});
@@ -541,11 +559,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.types.push_back({.name = name,
-                                  .native_spelling = "",
-                                  .type_ref = {},
-                                  .identity = native_identity(name, current_file),
-                                  .location = decl_location});
+            scan.types.push_back(
+                {.name = name,
+                 .native_spelling = "",
+                 .type_ref = {},
+                 .identity = scanned_identity(identities, NativeCursorKind::Type, name,
+                                              decl_location, name, current_file),
+                 .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
@@ -560,7 +580,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string signature = match[2].str();
         NativeFunctionDecl fn;
         fn.name = name;
-        fn.identity = native_identity(name, current_file);
+        fn.identity = scanned_identity(identities, NativeCursorKind::Function, match[1].str(),
+                                       decl_location, name, current_file);
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             fn.template_params = templates.back().params;
         }
@@ -589,7 +610,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.native_identity = native_identity(
+        method.native_identity = scanned_identity(
+            identities, NativeCursorKind::Method, method.name, decl_location,
             scan.classes[classes.back().second].identity.canonical_path + "." + method.name,
             current_file);
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
@@ -623,7 +645,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             qualify_scoped_types(scan, namespaces, classes, signature_params(match[2].str()));
         FunctionDecl ctor;
         ctor.name = "init";
-        ctor.native_identity = native_identity(
+        ctor.native_identity = scanned_identity(
+            identities, NativeCursorKind::Constructor, match[1].str(), decl_location,
             scan.classes[classes.back().second].identity.canonical_path + ".init", current_file);
         for (const std::string& param : params) {
             ParamDecl decl;
@@ -672,12 +695,14 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             const std::string type = match.size() > 2
                                          ? dudu_type(match[2].str())
                                          : (enums.empty() ? "i32" : enums.back().second);
-            scan.values.push_back({.name = name,
-                                   .native_spelling = type,
-                                   .type_ref = parse_native_type_text(type, decl_location),
-                                   .enum_constant = true,
-                                   .identity = native_identity(name, current_file),
-                                   .location = decl_location});
+            scan.values.push_back(
+                {.name = name,
+                 .native_spelling = type,
+                 .type_ref = parse_native_type_text(type, decl_location),
+                 .enum_constant = true,
+                 .identity = scanned_identity(identities, NativeCursorKind::Value, name,
+                                              decl_location, name, current_file),
+                 .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Value,
                                        .primary = scan.values.size() - 1});
@@ -688,11 +713,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = match[1].str();
         if (!starts_with(name, "__") && name != "dudu_probe") {
             const std::string type = dudu_type(match[2].str());
-            scan.values.push_back({.name = name,
-                                   .native_spelling = type,
-                                   .type_ref = parse_native_type_text(type, decl_location),
-                                   .identity = native_identity(name, current_file),
-                                   .location = decl_location});
+            scan.values.push_back(
+                {.name = name,
+                 .native_spelling = type,
+                 .type_ref = parse_native_type_text(type, decl_location),
+                 .identity = scanned_identity(identities, NativeCursorKind::Value, name,
+                                              decl_location, name, current_file),
+                 .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Value,
                                        .primary = scan.values.size() - 1});
@@ -704,6 +731,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
 
 void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
                     const SourceLocation& location) {
+    parse_ast_dump(scan, dump, location, {});
+}
+
+void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump, const SourceLocation& location,
+                    const NativeCursorIdentityIndex& identities) {
     std::vector<std::pair<int, std::string>> namespaces;
     std::vector<std::pair<int, size_t>> classes;
     std::vector<std::pair<int, std::string>> enums;
@@ -716,7 +748,7 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
     std::string line;
     while (std::getline(in, line)) {
         parse_ast_line(scan, line, namespaces, classes, enums, templates, functions, param_targets,
-                       comment_targets, location, current_file);
+                       comment_targets, identities, location, current_file);
     }
 }
 

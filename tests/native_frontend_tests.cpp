@@ -29,22 +29,32 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
     }
     dudu::ProjectConfig config;
     config.project_dir = root;
-    const dudu::NativeCursorIdentityIndex identities = dudu::scan_native_cursor_identities(
-        probe, {.config = config, .source_dir = source_dir});
+    const dudu::NativeCursorIdentityIndex identities =
+        dudu::scan_native_cursor_identities(probe, {.config = config, .source_dir = source_dir});
     const std::filesystem::path header = source_dir / "native_headers/simple_cpp.hpp";
-    const auto widget = identities.find(
-        dudu::NativeCursorKind::Class, "Widget",
-        {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
-    const auto first_overload = identities.find(
-        dudu::NativeCursorKind::Function, "overloaded",
-        {.file = dudu::SourceFileName(header.string()), .line = 87, .column = 12});
-    const auto second_overload = identities.find(
-        dudu::NativeCursorKind::Function, "overloaded",
-        {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14});
+    const auto widget =
+        identities.find(dudu::NativeCursorKind::Class, "Widget",
+                        {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
+    const auto first_overload =
+        identities.find(dudu::NativeCursorKind::Function, "overloaded",
+                        {.file = dudu::SourceFileName(header.string()), .line = 87, .column = 12});
+    const auto second_overload =
+        identities.find(dudu::NativeCursorKind::Function, "overloaded",
+                        {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14});
     assert(widget.has_value() && !widget->empty());
     assert(first_overload.has_value() && !first_overload->empty());
     assert(second_overload.has_value() && !second_overload->empty());
     assert(*first_overload != *second_overload);
+
+    const dudu::NativeCursorIdentityIndex restored =
+        dudu::NativeCursorIdentityIndex::deserialize(identities.serialize());
+    assert(restored.find(dudu::NativeCursorKind::Class, "Widget",
+                         {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7}) ==
+           widget);
+    assert(
+        restored.find(dudu::NativeCursorKind::Function, "overloaded",
+                      {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14}) ==
+        second_overload);
 }
 
 void test_native_type_declaration_emission() {
@@ -69,6 +79,10 @@ void test_native_type_declaration_emission() {
 
 bool identity_key_ends_with(const std::optional<std::string>& key, const std::string& suffix) {
     return key.has_value() && key->ends_with(suffix);
+}
+
+bool has_usr_identity(const std::optional<std::string>& key) {
+    return key.has_value() && key->starts_with("usr:c:");
 }
 
 void test_native_header_type_scan(const std::filesystem::path& root) {
@@ -201,17 +215,13 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     bool saw_lsp_macro_identity = false;
     for (const dudu::Symbol& symbol : dudu::symbols_for_module(module)) {
         if (symbol.name == "DuduWidgetAlias") {
-            assert(identity_key_ends_with(symbol.native_identity_key,
-                                          "native_headers/simple_cpp.hpp::DuduWidgetAlias"));
+            assert(has_usr_identity(symbol.native_identity_key));
             saw_lsp_type_identity = true;
         } else if (symbol.name == "dudu_native.add") {
-            assert(identity_key_ends_with(symbol.native_identity_key,
-                                          "native_headers/simple_cpp.hpp::dudu_native.add"));
+            assert(has_usr_identity(symbol.native_identity_key));
             saw_lsp_function_identity = true;
         } else if (symbol.name == "dudu_native.Widget.scaled") {
-            assert(
-                identity_key_ends_with(symbol.native_identity_key,
-                                       "native_headers/simple_cpp.hpp::dudu_native.Widget.scaled"));
+            assert(has_usr_identity(symbol.native_identity_key));
             saw_lsp_method_identity = true;
         } else if (symbol.name == "DUDU_NATIVE_MAGIC") {
             assert(symbol.native_identity_key == "path:DUDU_NATIVE_MAGIC" ||
@@ -413,7 +423,7 @@ void test_native_identity_edge_cases(const std::filesystem::path& root) {
     assert(saw_inline);
 }
 
-void test_native_identity_name_collision_is_rejected(const std::filesystem::path& root) {
+void test_native_identity_uses_clang_redeclaration_identity(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-identity-name-collision";
     const std::filesystem::path left = source_dir / "left.hpp";
     const std::filesystem::path right = source_dir / "right.hpp";
@@ -428,20 +438,21 @@ void test_native_identity_name_collision_is_rejected(const std::filesystem::path
         out << "#pragma once\nstruct Thing { float y; };\n";
     }
 
-    bool failed = false;
-    try {
-        dudu::ModuleAst module = dudu::parse_source("import cpp \"./left.hpp\"\n"
-                                                    "import cpp \"./right.hpp\"\n",
-                                                    source_dir / "main.dd");
-        dudu::ProjectConfig config;
-        config.project_dir = source_dir;
-        config.build_dir = source_dir / "build";
-        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
-    } catch (const dudu::CompileError& error) {
-        failed = std::string(error.what()).find("native class name collision: Thing") !=
-                 std::string::npos;
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"./left.hpp\"\n"
+                                                "import cpp \"./right.hpp\"\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    size_t things = 0;
+    for (const dudu::ClassDecl& klass : module.native_classes) {
+        if (klass.name == "Thing") {
+            ++things;
+            assert(klass.identity.usr.starts_with("c:"));
+        }
     }
-    assert(failed);
+    assert(things == 1);
 }
 
 void test_native_scan_dedupe_allows_opaque_redeclarations() {
@@ -809,8 +820,7 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     const dudu::NativeTypeDecl& carrier = require_type(module, "depmeta.AliasCarrier");
     assert((carrier.generic_params == std::vector<std::string>{"Selected", "Left"}));
     assert(carrier.generic_min_args == 2);
-    const dudu::NativeTypeDecl& defaulted_alias =
-        require_type(module, "depmeta.DefaultedAlias");
+    const dudu::NativeTypeDecl& defaulted_alias = require_type(module, "depmeta.DefaultedAlias");
     assert((defaulted_alias.generic_params == std::vector<std::string>{"Payload", "Holder"}));
     assert(defaulted_alias.generic_min_args == 1);
     assert(defaulted_alias.generic_default_args.size() == 2);
@@ -991,7 +1001,7 @@ int main() {
         test_direct_cpp_import_preserves_namespace_type_aliases(root);
         test_native_operator_does_not_hijack_dudu_class_operator(root);
         test_native_identity_edge_cases(root);
-        test_native_identity_name_collision_is_rejected(root);
+        test_native_identity_uses_clang_redeclaration_identity(root);
         test_native_scan_dedupe_allows_opaque_redeclarations();
         test_native_scan_dedupe_rejects_alias_identity_collision();
         test_native_single_underscore_function_macros(root);

@@ -9,6 +9,7 @@
 #include "dudu/native/native_header_scan_command.hpp"
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"
+#include "dudu/native/native_header_usr.hpp"
 #include "dudu/project/project_driver.hpp"
 
 #include <algorithm>
@@ -66,9 +67,8 @@ bool public_direct_macro_name(const std::string& name) {
 }
 bool builtin_native_type_name(const std::string& name) {
     static const std::set<std::string> builtins = {
-        "bool",  "char",  "i8",    "i16",   "i32",   "i64",  "u8",
-        "u16",   "u32",   "u64",   "isize", "usize", "f32",  "f64",
-        "void",  "str",   "cstr",  "auto",  "None",
+        "bool",  "char",  "i8",  "i16", "i32",  "i64", "u8",   "u16",  "u32",  "u64",
+        "isize", "usize", "f32", "f64", "void", "str", "cstr", "auto", "None",
     };
     return builtins.contains(name);
 }
@@ -396,7 +396,7 @@ NativeHeaderScan filter_ast_scan_to_header(NativeHeaderScan scan, const ImportDe
     return scan;
 }
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
-                                 const std::string& flags) {
+                                 const std::string& flags, bool include_source_dir) {
     static std::map<std::string, NativeHeaderScan> cache;
     const std::string key = native_header_scan_key(import, options, flags);
     NativeHeaderRawCache raw_cache = load_native_header_raw_cache(options, key);
@@ -416,7 +416,8 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     }
     if (raw_cache.hit && load_native_header_raw_cache_payload(raw_cache)) {
         NativeHeaderScan scan;
-        parse_ast_dump(scan, raw_cache.ast_dump, import.location);
+        parse_ast_dump(scan, raw_cache.ast_dump, import.location,
+                       NativeCursorIdentityIndex::deserialize(raw_cache.identity_dump));
         parse_macro_dump(scan, raw_cache.macro_dump, import.location);
         attach_macro_definition_locations(scan, import, options);
         cache[key] = dedupe_scan(std::move(scan));
@@ -441,6 +442,8 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     native_header_write_text(cpp, native_header_scanner_source_for_header(import, false));
 
     NativeHeaderScan scan;
+    NativeCursorIdentityIndex identities =
+        scan_native_cursor_identities(cpp, options, include_source_dir);
     const std::string dependency_flags =
         " -MD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
     std::string ast_dump = native_header_run_capture(
@@ -448,6 +451,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     bool used_prelude_retry = false;
     if (ast_dump.empty()) {
         native_header_write_text(cpp, native_header_scanner_source_for_header(import, true));
+        identities = scan_native_cursor_identities(cpp, options, include_source_dir);
         ast_dump = native_header_run_capture(
             native_header_clang_base_command(options, cpp, true, flags) + dependency_flags, ast,
             err);
@@ -455,7 +459,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     }
     if (!ast_dump.empty()) {
         NativeHeaderScan ast_scan;
-        parse_ast_dump(ast_scan, ast_dump, import.location);
+        parse_ast_dump(ast_scan, ast_dump, import.location, identities);
         if (used_prelude_retry) {
             ast_scan = filter_ast_scan_to_header(std::move(ast_scan), import, options);
         }
@@ -481,7 +485,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     parse_macro_dump(scan, macro_dump, import.location);
     attach_macro_definition_locations(scan, import, options);
     if (!used_prelude_retry) {
-        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump,
+        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump, identities.serialize(),
                                       native_header_read_text(deps), cpp);
     }
     cleanup();
@@ -540,7 +544,8 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
         }
         const std::string flags =
             native_header_scanner_flags(options, import_needs_source_dir_include(import, options));
-        NativeHeaderScan scan = scan_one_header(import, options, flags);
+        const bool include_source_dir = import_needs_source_dir_include(import, options);
+        NativeHeaderScan scan = scan_one_header(import, options, flags, include_source_dir);
         if (direct_import(import)) {
             append_unique_native_types(out.types, scan.types);
             append_unique_native_classes(out.classes, scan.classes);
@@ -561,13 +566,11 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
                 prefixed_type_refs(prefixed_type_names(scan.types, import.alias, c_record_names),
                                    type_names, import.alias));
             append_unique_native_classes(
-                out.classes,
-                prefixed_type_refs(prefixed_names(scan.classes, import.alias), type_names,
-                                   import.alias));
+                out.classes, prefixed_type_refs(prefixed_names(scan.classes, import.alias),
+                                                type_names, import.alias));
             append_unique_native_values(
-                out.values,
-                prefixed_type_refs(prefixed_names(scan.values, import.alias), type_names,
-                                   import.alias));
+                out.values, prefixed_type_refs(prefixed_names(scan.values, import.alias),
+                                               type_names, import.alias));
             append_unique_native_functions(
                 out.functions,
                 prefixed_type_refs(
@@ -575,7 +578,7 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
                     type_names, import.alias));
             append_unique_native_macros(out.macros, prefixed_names(scan.macros, import.alias));
             append_unique_native_namespaces(out.namespaces,
-                                           prefixed_names(scan.namespaces, import.alias));
+                                            prefixed_names(scan.namespaces, import.alias));
         }
     }
     return out;
