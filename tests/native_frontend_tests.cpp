@@ -4,6 +4,7 @@
 #include "dudu/native/native_header_cache_deps.hpp"
 #include "dudu/native/native_header_parse.hpp"
 #include "dudu/native/native_header_types.hpp"
+#include "dudu/native/native_header_usr.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
@@ -19,6 +20,33 @@
 #include <string>
 
 namespace {
+void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    const std::filesystem::path probe = root / "build/native-usr-probe.cpp";
+    {
+        std::ofstream out(probe);
+        out << "#include \"native_headers/simple_cpp.hpp\"\n";
+    }
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    const dudu::NativeCursorIdentityIndex identities = dudu::scan_native_cursor_identities(
+        probe, {.config = config, .source_dir = source_dir});
+    const std::filesystem::path header = source_dir / "native_headers/simple_cpp.hpp";
+    const auto widget = identities.find(
+        dudu::NativeCursorKind::Class, "Widget",
+        {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
+    const auto first_overload = identities.find(
+        dudu::NativeCursorKind::Function, "overloaded",
+        {.file = dudu::SourceFileName(header.string()), .line = 87, .column = 12});
+    const auto second_overload = identities.find(
+        dudu::NativeCursorKind::Function, "overloaded",
+        {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14});
+    assert(widget.has_value() && !widget->empty());
+    assert(first_overload.has_value() && !first_overload->empty());
+    assert(second_overload.has_value() && !second_overload->empty());
+    assert(*first_overload != *second_overload);
+}
+
 void test_native_type_declaration_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("from c.path import SDL3/SDL.h as sdl\n"
@@ -955,6 +983,7 @@ void test_native_scan_ignores_anonymous_record_definitions() {
 int main() {
     try {
         const std::filesystem::path root = DUDU_REPO_ROOT;
+        test_libclang_collects_stable_native_usrs(root);
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_cxx_import_scans_c_globals_but_emits_plain_include(root);

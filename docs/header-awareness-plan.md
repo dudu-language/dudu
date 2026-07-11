@@ -103,6 +103,11 @@ Do not silently shadow native names.
 
 Dudu should require Clang tooling for automatic native header awareness.
 
+The compiler build requires the libclang C indexing API in addition to the
+`clang++` executable. On Debian/Ubuntu this is provided by `libclang-dev`; on
+macOS the supported local-development path is Homebrew `llvm`. `LLVM_ROOT` may
+point CMake at a nonstandard LLVM installation.
+
 The generated C++ compiler remains configurable. Users can still compile with
 GCC, Clang, MSVC, or another C++ compiler. Clang is required for the separate
 job of understanding imported C/C++ headers because Clang exposes a stable

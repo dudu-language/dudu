@@ -58,14 +58,14 @@ Install prerequisites.
 Ubuntu/Debian:
 
 ```sh
-sudo apt install git cmake clang g++ build-essential
+sudo apt install git cmake clang libclang-dev g++ build-essential
 ```
 
 macOS:
 
 ```sh
 xcode-select --install
-brew install cmake
+brew install cmake llvm
 ```
 
 Clone, build, and install:

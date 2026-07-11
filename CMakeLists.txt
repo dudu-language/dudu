@@ -4,6 +4,27 @@ project(dudu LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
+file(GLOB DUDU_LLVM_PREFIXES LIST_DIRECTORIES true
+    "/usr/lib/llvm-*"
+    "/opt/homebrew/opt/llvm"
+    "/usr/local/opt/llvm"
+)
+find_path(DUDU_LIBCLANG_INCLUDE_DIR clang-c/Index.h
+    HINTS $ENV{LLVM_ROOT} ${DUDU_LLVM_PREFIXES}
+    PATH_SUFFIXES include
+)
+find_library(DUDU_LIBCLANG_LIBRARY
+    NAMES clang libclang
+    HINTS $ENV{LLVM_ROOT} ${DUDU_LLVM_PREFIXES}
+    PATH_SUFFIXES lib
+)
+if(NOT DUDU_LIBCLANG_INCLUDE_DIR OR NOT DUDU_LIBCLANG_LIBRARY)
+    message(FATAL_ERROR
+        "Dudu native header awareness requires libclang development files. "
+        "Install libclang-dev/llvm (Linux) or Homebrew llvm (macOS), or set LLVM_ROOT."
+    )
+endif()
+
 option(DUDU_STRICT "Enable strict compiler warnings" ON)
 option(DUDU_WARN_AS_ERROR "Treat warnings as errors" OFF)
 option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
@@ -32,6 +53,8 @@ endforeach()
 
 add_library(dudu_frontend ${DUDU_FRONTEND_SOURCES})
 target_include_directories(dudu_frontend PUBLIC src)
+target_include_directories(dudu_frontend PRIVATE ${DUDU_LIBCLANG_INCLUDE_DIR})
+target_link_libraries(dudu_frontend PRIVATE ${DUDU_LIBCLANG_LIBRARY})
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
 
 add_executable(dudu src/tools/dudu.cpp)

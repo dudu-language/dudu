@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace dudu {
 
@@ -14,6 +15,8 @@ void native_header_write_text(const std::filesystem::path& path, const std::stri
 
 std::string native_header_scanner_flags(const NativeHeaderOptions& options,
                                         bool include_source_dir = true);
+std::vector<std::string> native_header_scanner_arguments(const NativeHeaderOptions& options,
+                                                         bool include_source_dir = true);
 std::filesystem::path native_header_temp_base(const std::filesystem::path& source_dir);
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags);

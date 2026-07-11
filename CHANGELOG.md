@@ -11,6 +11,9 @@
 - Added structured native template default arguments, including dependent type
   defaults and non-type literal defaults, with declaration-order substitution
   for omitted class and alias-template arguments.
+- Added a required libclang C indexing boundary for stable native declaration
+  USRs, with portable Linux/macOS dependency discovery and overloaded-symbol
+  identity coverage.
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and
   last-known-good LSP project indexes.

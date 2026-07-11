@@ -6,17 +6,15 @@
 #include "dudu/project/project_driver.hpp"
 
 #include <chrono>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 
 namespace dudu {
 namespace {
-
-void append_include_flag(std::string& flags, const std::filesystem::path& path) {
-    flags += " " + shell_quote_arg("-I" + path.lexically_normal().string());
-}
 
 std::string capture_pkg_config_cflags(const std::vector<std::string>& packages) {
     if (packages.empty()) {
@@ -43,6 +41,51 @@ std::string capture_pkg_config_cflags(const std::vector<std::string>& packages) 
         return {};
     }
     return output;
+}
+
+std::vector<std::string> split_command_words(std::string_view text) {
+    std::vector<std::string> out;
+    std::string current;
+    char quote = '\0';
+    bool escaped = false;
+    for (const char ch : text) {
+        if (escaped) {
+            current.push_back(ch);
+            escaped = false;
+            continue;
+        }
+        if (ch == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (quote != '\0') {
+            if (ch == quote) {
+                quote = '\0';
+            } else {
+                current.push_back(ch);
+            }
+            continue;
+        }
+        if (ch == '\'' || ch == '"') {
+            quote = ch;
+            continue;
+        }
+        if (std::isspace(static_cast<unsigned char>(ch)) != 0) {
+            if (!current.empty()) {
+                out.push_back(std::move(current));
+                current.clear();
+            }
+            continue;
+        }
+        current.push_back(ch);
+    }
+    if (escaped) {
+        current.push_back('\\');
+    }
+    if (!current.empty()) {
+        out.push_back(std::move(current));
+    }
+    return out;
 }
 
 std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& options) {
@@ -96,21 +139,32 @@ void native_header_write_text(const std::filesystem::path& path, const std::stri
 std::string native_header_scanner_flags(const NativeHeaderOptions& options,
                                         bool include_source_dir) {
     std::string flags;
+    for (const std::string& arg : native_header_scanner_arguments(options, include_source_dir)) {
+        flags += " " + shell_quote_arg(arg);
+    }
+    return flags;
+}
+
+std::vector<std::string> native_header_scanner_arguments(const NativeHeaderOptions& options,
+                                                         bool include_source_dir) {
+    std::vector<std::string> args;
     if (include_source_dir) {
-        append_include_flag(flags, options.source_dir);
+        args.push_back("-I" + options.source_dir.lexically_normal().string());
     }
     for (const std::string& include_dir : options.config.include_dirs) {
-        append_include_flag(flags, project_path(options.config, include_dir));
+        args.push_back("-I" + project_path(options.config, include_dir).lexically_normal().string());
     }
     for (const std::string& define : options.config.defines) {
-        flags += " " + shell_quote_arg("-D" + define);
+        args.push_back("-D" + define);
     }
     for (const std::string& flag : options.config.flags) {
-        flags += " " + shell_quote_arg(flag);
+        args.push_back(flag);
     }
-    const std::string pkg_flags =
-        trim_copy(capture_pkg_config_cflags(options.config.pkg_config_packages));
-    return pkg_flags.empty() ? flags : flags + " " + pkg_flags;
+    std::vector<std::string> pkg_args =
+        split_command_words(capture_pkg_config_cflags(options.config.pkg_config_packages));
+    args.insert(args.end(), std::make_move_iterator(pkg_args.begin()),
+                std::make_move_iterator(pkg_args.end()));
+    return args;
 }
 
 std::filesystem::path native_header_temp_base(const std::filesystem::path& source_dir) {

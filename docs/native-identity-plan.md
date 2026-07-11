@@ -79,6 +79,11 @@ field, value, enum, namespace, and macro should have:
 
 In progress.
 
+- The compiler now has a dedicated libclang C-API boundary that collects stable
+  cursor USRs by declaration kind, spelling, and exact source location. Focused
+  tests prove overloaded declarations receive distinct nonempty USRs. The next
+  step is attaching this index to text-AST declarations and preserving it in the
+  raw/parsed native caches.
 - `NativeSymbolId` exists and is carried by native type, value, function,
   macro, and namespace declarations.
 - Header scanning populates `identity.canonical_path` for scanned native
