@@ -17,8 +17,8 @@ std::map<std::string, TypeRef>
 receiver_template_ref_substitutions(const ClassDecl& klass,
                                     const std::vector<TypeRef>& receiver_args) {
     std::map<std::string, TypeRef> substitutions;
-    const std::vector<TypeRef> concrete_args = generic_args_with_defaults(
-        klass.generic_params, klass.generic_default_args, receiver_args);
+    const std::vector<TypeRef> concrete_args =
+        generic_args_with_defaults(klass.generic_params, klass.generic_default_args, receiver_args);
     for (size_t i = 0; i < klass.generic_params.size() && i < concrete_args.size(); ++i) {
         substitutions.insert_or_assign(generic_param_base_name(klass.generic_params[i]),
                                        concrete_args[i]);
@@ -51,15 +51,34 @@ std::optional<std::pair<std::string, std::string>> associated_type_path(std::str
                      std::string(head.substr(separator + width))};
 }
 
-TypeRef resolve_associated_type_ref(TypeRef type, const Symbols& symbols,
-                                    const std::map<std::string, TypeRef>& substitutions,
-                                    size_t depth) {
-    type = substitute_type_ref(type, substitutions);
+TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
+                                         const std::map<std::string, TypeRef>& substitutions,
+                                         size_t depth) {
+    type = resolve_alias_ref(symbols, substitute_type_ref(type, substitutions));
     if (depth > 16) {
         return type;
     }
     for (TypeRef& child : type.children) {
-        child = resolve_associated_type_ref(std::move(child), symbols, substitutions, depth + 1);
+        child =
+            resolve_associated_type_ref_impl(std::move(child), symbols, substitutions, depth + 1);
+    }
+    if (type.kind == TypeKind::Associated && type.children.size() == 1) {
+        TypeRef owner = receiver_template_type_ref(symbols, type.children.front());
+        const ClassDecl* owner_class = class_for_receiver_type(symbols, owner);
+        if (owner_class == nullptr) {
+            return type;
+        }
+        for (const TypeAliasDecl& alias : owner_class->type_aliases) {
+            if (alias.name != type.name) {
+                continue;
+            }
+            const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
+            TypeRef resolved =
+                substitute_receiver_template_type(alias.type_ref, *owner_class, owner_args);
+            return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
+                                                    depth + 1);
+        }
+        return type;
     }
     const auto path = associated_type_path(type_ref_head_name(type));
     if (!path) {
@@ -81,7 +100,8 @@ TypeRef resolve_associated_type_ref(TypeRef type, const Symbols& symbols,
         const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
         TypeRef resolved =
             substitute_receiver_template_type(alias.type_ref, *owner_class, owner_args);
-        return resolve_associated_type_ref(std::move(resolved), symbols, substitutions, depth + 1);
+        return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
+                                                depth + 1);
     }
     return type;
 }
@@ -93,6 +113,10 @@ std::vector<TypeRef> template_arg_refs_from_type(const TypeRef& type) {
         return template_arg_refs_from_type(type.children.front());
     }
     return type.kind == TypeKind::Template ? type.children : std::vector<TypeRef>{};
+}
+
+TypeRef resolve_associated_type_ref(const Symbols& symbols, TypeRef type) {
+    return resolve_associated_type_ref_impl(std::move(type), symbols, {}, 0);
 }
 
 TypeRef substitute_receiver_template_type(const TypeRef& type, const ClassDecl& klass,
@@ -113,7 +137,7 @@ TypeRef substitute_receiver_template_type(const TypeRef& type, const Symbols& sy
     if (substitutions.empty()) {
         return type;
     }
-    return resolve_associated_type_ref(type, symbols, substitutions, 0);
+    return resolve_associated_type_ref_impl(type, symbols, substitutions, 0);
 }
 
 } // namespace dudu

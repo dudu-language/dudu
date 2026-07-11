@@ -291,12 +291,13 @@ void test_builtin_method_signature_uses_type_ast() {
     assert(dudu::signature_param_type_ref(signature, 0).kind == dudu::TypeKind::Pointer);
     assert(dudu::signature_return_type_ref(signature).name == "void");
 
-    signature = {};
-    assert(dudu::builtin_cpp_method_signature(
+    assert(!dudu::builtin_cpp_method_signature(
         symbols, dudu::parse_type_text("std::vector<std::string>"), "push_back", signature));
-    assert(dudu::signature_param_count(signature) == 1);
-    assert(dudu::type_ref_text(dudu::signature_param_type_ref(signature, 0)) == "std::string");
-    assert(dudu::signature_return_type_ref(signature).name == "void");
+
+    signature = {};
+    assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("atomic[u64]"), "load",
+                                              signature));
+    assert(dudu::type_ref_text(dudu::signature_return_type_ref(signature)) == "u64");
 
     signature = {};
     assert(dudu::builtin_cpp_method_signature(
@@ -310,13 +311,21 @@ void test_native_header_types_split_cpp_templates() {
     assert(dudu::dudu_type("const vec<L, T, Q> &") == "&const[vec[L, T, Q]]");
     assert(dudu::dudu_type("_Args &&...") == "&_Args...");
     assert(dudu::dudu_type("typename std::remove_reference<_Tp>::type &&") ==
-           "&std.remove_reference[_Tp]");
+           "&std.remove_reference[_Tp].type");
     assert(dudu::dudu_type("tuple<typename __decay_and_strip<_Elements>::__type...>") ==
-           "tuple[__decay_and_strip[_Elements]...]");
+           "tuple[__decay_and_strip[_Elements].__type...]");
     assert(dudu::dudu_type("typename iterator_traits<_IIter>::difference_type") ==
-           "difference_type");
+           "iterator_traits[_IIter].difference_type");
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
+
+    const dudu::TypeRef associated = dudu::parse_type_text("meta.Result[T].value_type");
+    assert(associated.kind == dudu::TypeKind::Associated);
+    assert(associated.name == "value_type");
+    assert(associated.children.size() == 1);
+    assert(associated.children.front().kind == dudu::TypeKind::Template);
+    assert(dudu::type_ref_text(associated) == "meta.Result[T].value_type");
+    assert(dudu::lower_cpp_type(associated) == "typename meta::Result<T>::value_type");
 }
 
 void test_native_template_binding_resolves_alias_type_refs() {
@@ -335,9 +344,16 @@ void test_native_template_binding_resolves_alias_type_refs() {
         bindings));
     assert(bindings.at("T").kind == dudu::TypeKind::Named);
     assert(bindings.at("T").name == "struct sqlite3");
+
+    symbols.alias_type_refs["_RAIter"] = dudu::parse_type_text("WrongImportedAlias");
+    bindings.clear();
+    assert(dudu::bind_native_template_type_ast(symbols, dudu::parse_type_text("_RAIter"),
+                                               dudu::parse_type_text("Iterator[i32]"), bindings));
+    assert(dudu::type_ref_text(bindings.at("_RAIter")) == "Iterator[i32]");
 }
 
 void test_bound_native_template_pack_substitution_uses_type_refs() {
+    dudu::Symbols symbols;
     dudu::FunctionSignature signature;
     signature.template_params = {"T"};
     signature.variadic = true;
@@ -350,7 +366,7 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
     packs["T"] = {dudu::parse_type_text("i32"), dudu::parse_type_text("f32")};
 
     const dudu::FunctionSignature substituted =
-        dudu::substitute_bound_template_signature(signature, {}, packs);
+        dudu::substitute_bound_template_signature(symbols, signature, {}, packs);
     assert(dudu::signature_param_count(substituted) == 2);
     assert(dudu::signature_param_type_ref(substituted, 0).kind == dudu::TypeKind::Named);
     assert(dudu::signature_param_type_ref(substituted, 0).name == "i32");
@@ -359,6 +375,7 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
 }
 
 void test_bound_native_template_substitution_is_per_field() {
+    dudu::Symbols symbols;
     dudu::FunctionSignature signature;
     signature.template_params = {"T", "U"};
     signature.variadic = true;
@@ -376,7 +393,7 @@ void test_bound_native_template_substitution_is_per_field() {
     packs["T"] = {dudu::parse_type_text("i32"), dudu::parse_type_text("f32")};
 
     const dudu::FunctionSignature substituted =
-        dudu::substitute_bound_template_signature(signature, bindings, packs);
+        dudu::substitute_bound_template_signature(symbols, signature, bindings, packs);
     assert(dudu::signature_param_count(substituted) == 3);
     assert(dudu::signature_param_type_ref(substituted, 0).name == "i32");
     assert(dudu::signature_param_type_ref(substituted, 1).name == "f32");
@@ -410,13 +427,14 @@ void test_native_variadic_bare_pack_uses_type_ref_shape() {
 }
 
 void test_explicit_native_template_value_args_use_type_refs() {
+    dudu::Symbols symbols;
     dudu::FunctionSignature signature;
     signature.template_params = {"__i", "T"};
     dudu::set_signature_param_types(signature, {dudu::parse_type_text("tuple[T]")});
     dudu::set_signature_return_type(signature, dudu::parse_type_text("T"));
 
     const dudu::FunctionSignature substituted = dudu::substitute_explicit_template_signature(
-        signature, {dudu::parse_type_text("1"), dudu::parse_type_text("i32")});
+        symbols, signature, {dudu::parse_type_text("1"), dudu::parse_type_text("i32")});
     assert(dudu::signature_param_count(substituted) == 1);
     assert(dudu::substitute_type_ref_text(dudu::signature_param_type_ref(substituted, 0), {}) ==
            "tuple[i32]");
@@ -428,7 +446,7 @@ void test_explicit_native_template_value_args_use_type_refs() {
     dudu::set_signature_param_types(malformed_signature, {malformed_placeholder});
     dudu::set_signature_return_type(malformed_signature, dudu::parse_type_text("void"));
     const dudu::FunctionSignature malformed_substituted =
-        dudu::substitute_explicit_template_signature(malformed_signature,
+        dudu::substitute_explicit_template_signature(symbols, malformed_signature,
                                                      {dudu::parse_type_text("f32")});
     assert(dudu::signature_param_type_ref(malformed_substituted, 0).kind ==
            dudu::TypeKind::Unknown);
@@ -436,6 +454,7 @@ void test_explicit_native_template_value_args_use_type_refs() {
 }
 
 void test_explicit_native_template_keeps_unbound_pack_params() {
+    dudu::Symbols symbols;
     dudu::FunctionSignature signature;
     signature.template_params = {"T", "Args"};
     signature.variadic = true;
@@ -444,8 +463,8 @@ void test_explicit_native_template_keeps_unbound_pack_params() {
     dudu::set_signature_param_types(signature, {pack_param});
     dudu::set_signature_return_type(signature, dudu::parse_type_text("Box[T]"));
 
-    const dudu::FunctionSignature substituted =
-        dudu::substitute_explicit_template_signature(signature, {dudu::parse_type_text("Node")});
+    const dudu::FunctionSignature substituted = dudu::substitute_explicit_template_signature(
+        symbols, signature, {dudu::parse_type_text("Node")});
     assert(dudu::signature_param_count(substituted) == 1);
     assert(dudu::signature_param_type_ref(substituted, 0).kind == dudu::TypeKind::PackExpansion);
     assert(dudu::native_template_pack_placeholder(dudu::signature_param_type_ref(substituted, 0)) ==

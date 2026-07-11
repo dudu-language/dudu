@@ -1,7 +1,7 @@
 #include "dudu/native/native_signature_templates.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
 
@@ -15,6 +15,7 @@ bool binding_equivalent(const TypeRef& left, const TypeRef& right) {
     const TypeRef normalized_left = normalize_cpp_type_artifacts_ref(left);
     const TypeRef normalized_right = normalize_cpp_type_artifacts_ref(right);
     return type_ref_equivalent(normalized_left, normalized_right) ||
+           type_ref_text(normalized_left) == type_ref_text(normalized_right) ||
            structural_type_assignment_allowed(normalized_left, normalized_right);
 }
 
@@ -168,9 +169,7 @@ std::optional<std::string> native_template_pack_placeholder(const TypeRef& type)
     if (type.kind == TypeKind::Named) {
         return native_template_pack_placeholder_spelling(type.name);
     }
-    if (type.kind == TypeKind::Template &&
-        (type.name == "__decay_and_strip" || type.name == "std.remove_reference" ||
-         type.name == "std::remove_reference") &&
+    if ((type.kind == TypeKind::Template || type.kind == TypeKind::Associated) &&
         type.children.size() == 1) {
         return native_template_pack_placeholder(type.children.front());
     }
@@ -195,6 +194,11 @@ bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
                                    const TypeRef& got, NativeTemplateBindings& bindings) {
+    NativeTemplateBindings direct_bindings = bindings;
+    if (bind_template_type_ref(expected, got, direct_bindings)) {
+        bindings = std::move(direct_bindings);
+        return true;
+    }
     TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
     TypeRef resolved_got = resolve_alias_ref(symbols, got);
     return bind_template_type_ref(resolved_expected, resolved_got, bindings);

@@ -60,6 +60,7 @@ enum class TypeKind {
     Qualified,
     Value,
     Template,
+    Associated,
     Pointer,
     Reference,
     Const,

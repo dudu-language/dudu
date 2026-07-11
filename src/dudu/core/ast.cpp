@@ -400,6 +400,8 @@ std::string_view type_kind_name(TypeKind kind) {
         return "value";
     case TypeKind::Template:
         return "template";
+    case TypeKind::Associated:
+        return "associated";
     case TypeKind::Pointer:
         return "pointer";
     case TypeKind::Reference:

@@ -62,6 +62,12 @@ std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
                    "]";
     }
     const size_t open = type.find('[');
+    const size_t associated_dot = type.rfind('.');
+    if (associated_dot != std::string::npos && associated_dot > 0 &&
+        type[associated_dot - 1] == ']') {
+        return qualify_scoped_type_impl(scan, namespaces, classes, type.substr(0, associated_dot)) +
+               type.substr(associated_dot);
+    }
     if (open != std::string::npos && ends_with(type, "]")) {
         std::string out =
             qualify_scoped_type_impl(scan, namespaces, classes, type.substr(0, open)) + "[";

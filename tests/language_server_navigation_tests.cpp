@@ -932,8 +932,8 @@ void test_lsp_native_references_filter_by_identity() {
         std::filesystem::temp_directory_path() / "dudu_lsp_native_reference_identity_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
-    write_file(dir / "left.h", "int shared_name(void);\n");
-    write_file(dir / "right.h", "int shared_name(void);\n");
+    write_file(dir / "left.h", "static inline int shared_name(void) { return 1; }\n");
+    write_file(dir / "right.h", "static inline int shared_name(void) { return 2; }\n");
     write_file(dir / "main.dd", "import c \"./left.h\" as n\n"
                                 "\n"
                                 "def main() -> i32:\n"

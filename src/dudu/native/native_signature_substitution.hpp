@@ -16,10 +16,12 @@ using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
 bool native_index_placeholder(const std::string& name);
 bool numeric_template_arg(std::string_view arg);
 
-FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
+FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
+                                                         FunctionSignature signature,
                                                          const std::vector<TypeRef>& args);
 
-FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
+FunctionSignature substitute_bound_template_signature(const Symbols& symbols,
+                                                      FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings);
 

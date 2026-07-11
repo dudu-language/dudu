@@ -501,6 +501,15 @@ optional values.
 
 This should lower to C++ `using`.
 
+Nested and associated type references keep Python-style member spelling:
+
+```python
+item: Container[T].value_type
+```
+
+The owner is a structured type expression, not flattened text. This matters for
+generic substitution and C++ interop.
+
 ## Multiple Return Values
 
 Python-style tuple return and destructuring are allowed.

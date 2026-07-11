@@ -90,35 +90,6 @@ size_t matching_angle(std::string_view text, size_t open) {
     return std::string::npos;
 }
 
-bool cpp_type_trait_template(std::string_view name) {
-    return name == "__decay_and_strip" || name == "std::remove_reference" ||
-           name == "std.remove_reference";
-}
-
-std::string collapse_type_trait_associated_type(std::string type) {
-    constexpr std::string_view typename_prefix = "typename ";
-    if (starts_with(type, typename_prefix)) {
-        type = trim_copy(type.substr(typename_prefix.size()));
-    }
-    const size_t open = type.find('<');
-    if (open == std::string::npos) {
-        return type;
-    }
-    const size_t close = matching_angle(type, open);
-    if (close == std::string::npos) {
-        return type;
-    }
-    const std::string suffix = trim_copy(type.substr(close + 1));
-    if (suffix != "::type" && suffix != "::__type" && suffix != ".type" && suffix != ".__type") {
-        return type;
-    }
-    const std::string name = trim_copy(type.substr(0, open));
-    if (!cpp_type_trait_template(name)) {
-        return type;
-    }
-    return trim_copy(type.substr(0, close + 1));
-}
-
 std::string collapse_template_associated_type(std::string type) {
     constexpr std::string_view typename_prefix = "typename ";
     if (starts_with(type, typename_prefix)) {
@@ -145,7 +116,7 @@ std::string collapse_template_associated_type(std::string type) {
                               std::string::npos) {
         return type;
     }
-    return suffix;
+    return dudu_type(trim_copy(type.substr(0, close + 1))) + "." + suffix;
 }
 
 std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
@@ -277,7 +248,6 @@ std::string dudu_type(std::string type) {
             break;
         }
     }
-    type = collapse_type_trait_associated_type(std::move(type));
     type = collapse_template_associated_type(std::move(type));
     bool is_const = false;
     while (starts_with(type, "const ") || ends_with(type, " const")) {

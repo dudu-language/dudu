@@ -566,7 +566,8 @@ types through those aliases; the compiler no longer guesses that names such as
 `_Tp`, `value_type`, or `mapped_type` correspond to fixed template argument
 positions. Omitted arguments are materialized in declaration order, so a later
 default may depend on earlier explicit or defaulted arguments. Native scan cache
-version 19 preserves the same metadata and canonical Clang USRs on warm
+version 21 preserves the same metadata, structured associated types, and
+canonical Clang USRs on warm
 scans. The `native_dependent_alias_metadata` scanner and execution fixtures
 cover arbitrary parameter names, non-type literal defaults, dependent type
 defaults, scalar and nested template aliases, reordered and defaulted
@@ -582,6 +583,15 @@ classes currently collapse to one visible Dudu name even when Clang reports
 specializations with different template arities. This must be solved with
 canonical declaration identity, not import-name heuristics or positional
 template guesses.
+
+Dependent native types such as `Owner[T].Item` now use a real `Associated`
+`TypeRef` node through parsing, substitution, cache serialization, diagnostics,
+and C++ emission. Imported `std.vector`, `std.map`, `std.optional`, and related
+container methods use scanned class metadata instead of the language-owned
+`list`/`dict`/`Option` method table. Library-neutral execution coverage proves
+associated-result substitution without naming an STL facility. Partial class
+template specialization selection remains the blocker for removing the last
+SFINAE normalization cases.
 
 ## 5. Polish The Test System
 

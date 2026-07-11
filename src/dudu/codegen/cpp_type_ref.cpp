@@ -114,6 +114,11 @@ std::string lower_cpp_type(const TypeRef& type) {
         return type_ref_head_name(type);
     case TypeKind::Template:
         return lower_template_type(type);
+    case TypeKind::Associated:
+        if (type.children.size() != 1) {
+            malformed_type_ref(type);
+        }
+        return "typename " + lower_cpp_type(type.children.front()) + "::" + std::string(type.name);
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -187,6 +192,12 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return type_ref_head_name(type);
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases);
+    case TypeKind::Associated:
+        if (type.children.size() != 1) {
+            malformed_type_ref(type);
+        }
+        return "typename " + lower_cpp_type(type.children.front(), namespace_aliases) +
+               "::" + std::string(type.name);
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -265,6 +276,12 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return type_ref_head_name(type);
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases, options);
+    case TypeKind::Associated:
+        if (type.children.size() != 1) {
+            malformed_type_ref(type);
+        }
+        return "typename " + lower_cpp_type(type.children.front(), namespace_aliases, options) +
+               "::" + std::string(type.name);
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);

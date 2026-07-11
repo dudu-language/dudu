@@ -398,6 +398,17 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         templ.range = range_between(begin, cursor_);
         type = std::move(templ);
     }
+    while (match_scope_separator()) {
+        if (!at(TokenKind::Identifier)) {
+            return make_node(TypeKind::Unknown, begin, cursor_);
+        }
+        TypeRef associated = make_node(TypeKind::Associated, begin, cursor_ + 1);
+        associated.name = std::string(current().text);
+        ++cursor_;
+        associated.children.push_back(std::move(type));
+        associated.range = range_between(begin, cursor_);
+        type = std::move(associated);
+    }
     return type;
 }
 

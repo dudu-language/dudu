@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 
 #include <algorithm>
@@ -118,70 +119,16 @@ std::string replace_all(std::string text, const std::string& needle, const std::
     return text;
 }
 
-std::string replace_native_pack_spelling_binding(std::string type, const std::string& name,
-                                                 const std::vector<TypeRef>& args) {
-    const std::string joined = join_native_type_ref_spellings(args);
-    type =
-        replace_all(std::move(type), "typename __decay_and_strip<" + name + ">::__type...", joined);
-    type =
-        replace_all(std::move(type), "typename __decay_and_strip<" + name + ">.__type...", joined);
-    type = replace_all(std::move(type), name + "...", joined);
-    return type;
-}
-
-std::optional<size_t> matching_angle(const std::string& text, size_t open) {
-    int depth = 0;
-    for (size_t i = open; i < text.size(); ++i) {
-        if (text[i] == '<') {
-            ++depth;
-        } else if (text[i] == '>') {
-            --depth;
-            if (depth == 0) {
-                return i;
-            }
-        }
-    }
-    return std::nullopt;
-}
-
-std::string collapse_decay_and_strip(std::string type) {
-    constexpr std::string_view marker = "typename __decay_and_strip<";
-    size_t pos = type.find(marker);
-    while (pos != std::string::npos) {
-        const size_t inner_start = pos + marker.size();
-        const std::optional<size_t> close = matching_angle(type, inner_start - 1);
-        if (!close) {
-            break;
-        }
-        const std::string dotted_suffix = ".__type";
-        const std::string scoped_suffix = "::__type";
-        const size_t suffix_start = *close + 1;
-        size_t suffix_size = 0;
-        if (type.compare(suffix_start, dotted_suffix.size(), dotted_suffix) == 0) {
-            suffix_size = dotted_suffix.size();
-        } else if (type.compare(suffix_start, scoped_suffix.size(), scoped_suffix) == 0) {
-            suffix_size = scoped_suffix.size();
-        } else {
-            pos = type.find(marker, suffix_start);
-            continue;
-        }
-        const std::string inner = type.substr(inner_start, *close - inner_start);
-        type.replace(pos, suffix_start + suffix_size - pos, inner);
-        pos = type.find(marker, pos + inner.size());
-    }
-    return type;
-}
-
 std::string replace_native_template_spelling_bindings(std::string type,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
     for (const auto& [name, args] : pack_bindings) {
-        type = replace_native_pack_spelling_binding(std::move(type), name, args);
+        type = replace_all(std::move(type), name + "...", join_native_type_ref_spellings(args));
     }
     for (const auto& [name, arg] : bindings) {
         type = replace_type_identifier(std::move(type), name, substitute_type_ref_text(arg, {}));
     }
-    return collapse_decay_and_strip(std::move(type));
+    return type;
 }
 
 TypeRef substitute_native_spelling_type_ref(const TypeRef& type,
@@ -297,7 +244,8 @@ bool numeric_template_arg(std::string_view arg) {
     return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
 }
 
-FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
+FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
+                                                         FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
     const std::vector<std::string> names = signature.template_params.empty()
                                                ? native_signature_placeholders(signature)
@@ -309,18 +257,22 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         const TypeRef param_type =
             require_signature_type_ref(signature_param_type_ref(signature, i), "parameter");
-        param_types.push_back(
-            normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, ref_bindings)));
+        param_types.push_back(resolve_associated_type_ref(
+            symbols,
+            normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, ref_bindings))));
     }
     set_signature_param_types(signature, std::move(param_types));
     const TypeRef return_type =
         require_signature_type_ref(signature_return_type_ref(signature), "return");
-    set_signature_return_type(signature, normalize_cpp_type_artifacts_ref(
-                                             substitute_type_ref(return_type, ref_bindings)));
+    set_signature_return_type(
+        signature,
+        resolve_associated_type_ref(symbols, normalize_cpp_type_artifacts_ref(
+                                                 substitute_type_ref(return_type, ref_bindings))));
     return signature;
 }
 
-FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
+FunctionSignature substitute_bound_template_signature(const Symbols& symbols,
+                                                      FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
     const std::map<std::string, TypeRef> refs = structured_type_ref_bindings(bindings);
@@ -339,8 +291,8 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
             continue;
         }
         if (structured_substitution_allowed(param_type, bindings)) {
-            params.push_back(
-                normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, refs)));
+            params.push_back(resolve_associated_type_ref(
+                symbols, normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, refs))));
             continue;
         }
         params.push_back(substitute_native_spelling_type_ref(param_type, bindings, pack_bindings));
@@ -353,15 +305,18 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         expand_nested_pack_expansions(return_type, pack_bindings, expanded_return_pack);
     if (expanded_return_pack) {
         if (structured_substitution_allowed(expanded_return, bindings)) {
-            expanded_return =
-                normalize_cpp_type_artifacts_ref(substitute_type_ref(expanded_return, refs));
+            expanded_return = resolve_associated_type_ref(
+                symbols,
+                normalize_cpp_type_artifacts_ref(substitute_type_ref(expanded_return, refs)));
         }
         set_signature_return_type(signature, std::move(expanded_return));
         return signature;
     }
     if (structured_substitution_allowed(return_type, bindings)) {
         set_signature_return_type(
-            signature, normalize_cpp_type_artifacts_ref(substitute_type_ref(return_type, refs)));
+            signature,
+            resolve_associated_type_ref(
+                symbols, normalize_cpp_type_artifacts_ref(substitute_type_ref(return_type, refs))));
         return signature;
     }
     set_signature_return_type(

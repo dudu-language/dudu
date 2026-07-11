@@ -1,8 +1,8 @@
 #include "dudu/sema/type_compat_structural.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/parser/ast_parse_utils.hpp"
 
 namespace dudu {
 namespace {
@@ -25,6 +25,7 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
+    case TypeKind::Associated:
         if (strip_c_tag_prefix(type_ref_head_name(expected)) !=
             strip_c_tag_prefix(type_ref_head_name(got))) {
             return false;

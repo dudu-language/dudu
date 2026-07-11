@@ -1,0 +1,6 @@
+from cpp.path import native_headers/simple_cpp.hpp
+
+
+def main() -> i32:
+    value: i32 = dudu_native.associated_identity(42)
+    return value

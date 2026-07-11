@@ -85,9 +85,8 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
             continue;
         }
         if (const auto inner = unary_type_child_ref(
-                type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const,
-                       TypeKind::Volatile, TypeKind::Storage, TypeKind::Shared,
-                       TypeKind::Device})) {
+                type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const, TypeKind::Volatile,
+                       TypeKind::Storage, TypeKind::Shared, TypeKind::Device})) {
             type = *inner;
             type = resolve_alias_ref(symbols, std::move(type));
             type = normalize_cpp_type_artifacts_ref(type);
@@ -101,11 +100,7 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
 bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
     TypeRef templated_ref = receiver_template_type_ref(symbols, receiver_type);
-    const std::string templated_head = type_ref_head_name(templated_ref);
-    const bool is_string =
-        type_head_is(templated_ref, {"str", "string", "string_view", "std.string",
-                                     "std.string_view", "std::string", "std::string_view"}) ||
-        templated_head.find("basic_string") != std::string::npos;
+    const bool is_string = type_head_is(templated_ref, {"str", "string", "string_view"});
     if (is_string) {
         if (method_name == "size" || method_name == "length") {
             set_return_type(signature, "usize");
@@ -120,7 +115,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg_named(templated_ref, {"list", "std.vector", "std::vector"})) {
+    if (single_template_type_arg_named(templated_ref, {"list"})) {
         const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "push_back" || method_name == "append") {
             set_param_types(signature, {item});
@@ -153,9 +148,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg_named(
-            templated_ref,
-            {"set", "std.set", "std::set", "std.unordered_set", "std::unordered_set"})) {
+    if (single_template_type_arg_named(templated_ref, {"set"})) {
         const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
             set_param_types(signature, {value_type});
@@ -181,8 +174,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (template_head_is(templated_ref, {"dict", "std.map", "std::map", "std.unordered_map",
-                                         "std::unordered_map"})) {
+    if (template_head_is(templated_ref, {"dict"})) {
         const TypeRef key_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
             set_param_types(signature, {key_type});
@@ -203,8 +195,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg_named(templated_ref,
-                                       {"Option", "std.optional", "std::optional"})) {
+    if (single_template_type_arg_named(templated_ref, {"Option"})) {
         const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "has_value") {
             set_return_type(signature, "bool");
@@ -215,8 +206,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (unary_type_child_ref(templated_ref, TypeKind::Atomic) ||
-        single_template_type_arg_named(templated_ref, {"std.atomic", "std::atomic"})) {
+    if (unary_type_child_ref(templated_ref, TypeKind::Atomic)) {
         const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "load") {
             set_return_type(signature, value_type);

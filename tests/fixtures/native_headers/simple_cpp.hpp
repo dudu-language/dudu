@@ -99,6 +99,15 @@ inline int overloaded_pair(int first, float second) {
 inline int overloaded_pair(float first, int second) {
     return static_cast<int>(first) + second;
 }
+
+template <typename T> class AssociatedResult {
+  public:
+    using type = T;
+};
+
+template <typename T> inline typename AssociatedResult<T>::type associated_identity(T value) {
+    return value;
+}
 } // namespace dudu_native
 
 using DuduWidgetAlias = dudu_native::Widget;

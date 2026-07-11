@@ -1,13 +1,13 @@
 #include "dudu/native/native_signature_match.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
-#include "dudu/core/source.hpp"
 #include "dudu/sema/type_compat.hpp"
 
 #include <algorithm>
@@ -363,7 +363,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
         }
         pack_bindings[pack_name] = std::move(types);
     }
-    return substitute_bound_template_signature(signature, bindings, pack_bindings);
+    return substitute_bound_template_signature(scope.symbols, signature, bindings, pack_bindings);
 }
 
 bool explicit_native_template_allowed(const FunctionScope& scope, const std::string& lookup,
@@ -393,7 +393,7 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
     std::vector<FunctionSignature> candidates = found->second;
     if (!explicit_template_args.empty()) {
         for (FunctionSignature& signature : candidates) {
-            signature = substitute_explicit_template_signature(std::move(signature),
+            signature = substitute_explicit_template_signature(scope.symbols, std::move(signature),
                                                                explicit_template_args);
         }
     }

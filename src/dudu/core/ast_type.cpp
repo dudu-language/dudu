@@ -130,6 +130,7 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
+    case TypeKind::Associated:
         return trim_copy(type.name);
     case TypeKind::Value:
         return trim_copy(type.value);
@@ -225,6 +226,14 @@ std::string substitute_type_ref_text(const TypeRef& type,
         }
         return trim_copy(type.name) + "[" +
                join_substituted_types(type.children, 0, substitutions) + "]";
+    case TypeKind::Associated:
+        if (type.children.size() != 1) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: associated is missing its owner type");
+        }
+        return substitute_type_ref_text(type.children.front(), substitutions) + "." +
+               trim_copy(type.name);
     case TypeKind::FixedArray:
         if (type.children.empty()) {
             throw CompileError(
@@ -344,6 +353,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
+    case TypeKind::Associated:
         if (type_ref_head_name(left) != type_ref_head_name(right)) {
             return false;
         }

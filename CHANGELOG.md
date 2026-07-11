@@ -16,6 +16,9 @@
   identity coverage.
 - Attached canonical Clang USRs to scanned native declarations and preserved
   them across raw and parsed scanner caches.
+- Added structured associated types such as `Owner[T].Item`, including native
+  alias resolution, substitution, cache preservation, and C++ lowering.
+
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and
   last-known-good LSP project indexes.
@@ -224,6 +227,10 @@
 
 ### Changed
 
+- Imported C++ container methods now use scanned class metadata instead of
+  STL-name branches in Dudu's built-in container method table.
+- Native function template parameters now shadow same-named symbols discovered
+  elsewhere in imported headers during overload binding.
 - Removed `[build] backend = "direct"` as a supported Dudu project backend;
   project builds use generated/user-owned CMake, while `duc build <file.dd>`
   remains the low-level compiler-driver build path.

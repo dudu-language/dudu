@@ -58,6 +58,7 @@ bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
     }
     switch (type.kind) {
     case TypeKind::Template:
+    case TypeKind::Associated:
     case TypeKind::Qualified:
     case TypeKind::FixedArray:
     case TypeKind::Shaped:
@@ -294,12 +295,10 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     args.push_back(stmt.value_expr);
     const std::vector<TypeRef> arg_types =
         infer_index_arg_type_refs(args, local_type_refs, function_returns, symbols);
-    const auto signature =
-        dudu_operator_signature_for_args(*symbols, target.write_operator, receiver_type, args,
-                                         arg_types);
-    const auto method =
-        dudu_operator_method_name_for_args(*symbols, target.write_operator, receiver_type, args,
-                                           arg_types);
+    const auto signature = dudu_operator_signature_for_args(*symbols, target.write_operator,
+                                                            receiver_type, args, arg_types);
+    const auto method = dudu_operator_method_name_for_args(*symbols, target.write_operator,
+                                                           receiver_type, args, arg_types);
     std::optional<std::string> selected_method = method;
     if (!selected_method) {
         std::vector<TypeRef> arg_types =
@@ -380,17 +379,17 @@ lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::st
     }
     TypeRef selected_value_type = compound_type;
     arg_types.push_back(compound_type);
-    auto signature = dudu_operator_signature_for_arg_types(
-        *symbols, index_target.write_operator, receiver_type, arg_types);
-    auto method = dudu_operator_method_name_for_arg_types(
-        *symbols, index_target.write_operator, receiver_type, arg_types);
+    auto signature = dudu_operator_signature_for_arg_types(*symbols, index_target.write_operator,
+                                                           receiver_type, arg_types);
+    auto method = dudu_operator_method_name_for_arg_types(*symbols, index_target.write_operator,
+                                                          receiver_type, arg_types);
     if (!method && has_type_ref(indexed_type)) {
         arg_types.back() = indexed_type;
         selected_value_type = indexed_type;
-        signature = dudu_operator_signature_for_arg_types(
-            *symbols, index_target.write_operator, receiver_type, arg_types);
-        method = dudu_operator_method_name_for_arg_types(
-            *symbols, index_target.write_operator, receiver_type, arg_types);
+        signature = dudu_operator_signature_for_arg_types(*symbols, index_target.write_operator,
+                                                          receiver_type, arg_types);
+        method = dudu_operator_method_name_for_arg_types(*symbols, index_target.write_operator,
+                                                         receiver_type, arg_types);
     }
     if (!method) {
         return std::nullopt;

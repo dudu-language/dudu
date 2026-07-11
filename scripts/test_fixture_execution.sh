@@ -37,6 +37,7 @@ compile_and_expect value_match_string 42
 compile_and_expect value_match_assign 60
 compile_and_expect native_dependent_template_return 42
 compile_and_expect native_dependent_alias_metadata 42
+compile_and_expect native_associated_type 42
 compile_and_expect generic_non_type_param 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44

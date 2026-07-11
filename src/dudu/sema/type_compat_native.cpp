@@ -1,7 +1,7 @@
 #include "dudu/sema/type_compat_native.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
 
 #include <optional>
@@ -96,9 +96,7 @@ bool nonarray_template_name(const std::string& name) {
 }
 
 bool type_traits_template_name(const std::string& name) {
-    return name == "__decay_and_strip" || name == "std.remove_reference" ||
-           name == "std::remove_reference" || name == "__enable_if_is_duration" ||
-           name.ends_with(".__enable_if_is_duration") ||
+    return name == "__enable_if_is_duration" || name.ends_with(".__enable_if_is_duration") ||
            name.ends_with("::__enable_if_is_duration");
 }
 

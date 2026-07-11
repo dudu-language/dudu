@@ -30,6 +30,7 @@ Core forms:
 - function pointer types: `fn(A, B) -> R`
 - result types: `Result[T, E]`
 - optional values: `Option[T]`
+- associated/nested types: `Owner[T].Item`
 
 Dudu-native code uses the fixed-width scalar names above. `int`, `float`, and
 `double` are C/C++ interop spellings, not Dudu source aliases.

@@ -124,8 +124,10 @@ In progress.
 
 Still missing:
 
-- Clang USR collection, including distinct identities for class-template
-  specializations that share a visible import name.
+- Distinct metadata and semantic selection for class-template primary
+  declarations, partial specializations, and concrete specializations that
+  share a visible import name. Clang USRs are available; scanner and sema maps
+  must stop collapsing those declarations by binding name.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
 - Broader LSP reference indexing keyed directly by canonical native identity.

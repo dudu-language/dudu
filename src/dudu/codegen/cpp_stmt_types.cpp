@@ -45,6 +45,7 @@ std::string receiver_base_type(const TypeRef& type) {
     case TypeKind::PackExpansion:
         return type.children.empty() ? std::string{} : receiver_base_type(type.children.front());
     case TypeKind::Template:
+    case TypeKind::Associated:
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Function:
