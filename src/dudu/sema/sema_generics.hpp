@@ -18,6 +18,9 @@ bool generic_arity_matches(const std::vector<std::string>& params, size_t arg_co
 size_t generic_min_arity(const std::vector<std::string>& params);
 bool generic_decl_arity_matches(const std::vector<std::string>& params,
                                 std::optional<size_t> minimum, size_t arg_count);
+std::vector<TypeRef> generic_args_with_defaults(const std::vector<std::string>& params,
+                                                const std::vector<TypeRef>& defaults,
+                                                const std::vector<TypeRef>& args);
 size_t generic_decl_min_arity(const std::vector<std::string>& params,
                               std::optional<size_t> minimum);
 bool class_generic_arity_matches(const ClassDecl& klass, size_t arg_count);

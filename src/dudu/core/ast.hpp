@@ -298,6 +298,7 @@ struct NativeTypeDecl {
     std::string doc_comment{};
     std::vector<std::string> generic_params{};
     std::optional<size_t> generic_min_args{};
+    std::vector<TypeRef> generic_default_args{};
 };
 
 struct NativeValueDecl {
@@ -408,6 +409,7 @@ struct ClassDecl {
     bool native_declaration = false;
     std::vector<std::string> generic_params;
     std::optional<size_t> generic_min_args;
+    std::vector<TypeRef> generic_default_args;
     std::vector<BaseClassDecl> base_class_refs;
     std::vector<TypeAliasDecl> type_aliases;
     std::vector<Decorator> decorators;

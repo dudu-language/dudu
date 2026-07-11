@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v16";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v18";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -194,7 +194,7 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
         }
         const std::string& tag = parsed->first;
         const std::vector<std::string>& fields = parsed->second;
-        if (tag == "NT" && fields.size() == 11) {
+        if (tag == "NT" && fields.size() == 12) {
             const SourceLocation decl_location = cached_location(fields, 6, location);
             NativeTypeDecl type{.name = fields[0],
                                 .native_spelling = fields[1],
@@ -206,6 +206,7 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
             if (!fields[10].empty()) {
                 type.generic_min_args = static_cast<size_t>(std::stoull(fields[10]));
             }
+            type.generic_default_args = cached_type_refs(fields[11], decl_location);
             scan.types.push_back(std::move(type));
         } else if (tag == "NV" && fields.size() == 10) {
             const SourceLocation decl_location = cached_location(fields, 7, location);
@@ -244,8 +245,8 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                        .identity = symbol_id(fields, 1, 2),
                                        .location = cached_location(fields, 4, location),
                                        .doc_comment = fields[3]});
-        } else if (tag == "CLS" && fields.size() == 11) {
-            const SourceLocation decl_location = cached_location(fields, 8, location);
+        } else if (tag == "CLS" && fields.size() == 12) {
+            const SourceLocation decl_location = cached_location(fields, 9, location);
             ClassDecl klass;
             klass.name = fields[0];
             klass.cpp_name = fields[1];
@@ -255,8 +256,9 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
             if (!fields[5].empty()) {
                 klass.generic_min_args = static_cast<size_t>(std::stoull(fields[5]));
             }
-            klass.origin_module = fields[6];
-            klass.doc_comment = fields[7];
+            klass.generic_default_args = cached_type_refs(fields[6], decl_location);
+            klass.origin_module = fields[7];
+            klass.doc_comment = fields[8];
             klass.location = decl_location;
             scan.classes.push_back(std::move(klass));
             current_class = &scan.classes.back();
@@ -306,6 +308,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
         append_location_fields(fields, item.location);
         fields.push_back(native_cache_join_strings(item.generic_params));
         fields.push_back(item.generic_min_args ? std::to_string(*item.generic_min_args) : "");
+        fields.push_back(native_cache_join_strings(cached_type_texts(item.generic_default_args)));
         write_record(out, "NT", fields);
     }
     for (const NativeValueDecl& item : scan.values) {
@@ -357,6 +360,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
             klass.identity.canonical_path,
             native_cache_join_strings(klass.generic_params),
             klass.generic_min_args ? std::to_string(*klass.generic_min_args) : "",
+            native_cache_join_strings(cached_type_texts(klass.generic_default_args)),
             klass.origin_module,
             klass.doc_comment};
         append_location_fields(fields, klass.location);

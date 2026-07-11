@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
 #include <map>
@@ -16,8 +17,11 @@ std::map<std::string, TypeRef>
 receiver_template_ref_substitutions(const ClassDecl& klass,
                                     const std::vector<TypeRef>& receiver_args) {
     std::map<std::string, TypeRef> substitutions;
-    for (size_t i = 0; i < klass.generic_params.size() && i < receiver_args.size(); ++i) {
-        substitutions.insert_or_assign(klass.generic_params[i], receiver_args[i]);
+    const std::vector<TypeRef> concrete_args = generic_args_with_defaults(
+        klass.generic_params, klass.generic_default_args, receiver_args);
+    for (size_t i = 0; i < klass.generic_params.size() && i < concrete_args.size(); ++i) {
+        substitutions.insert_or_assign(generic_param_base_name(klass.generic_params[i]),
+                                       concrete_args[i]);
     }
     for (size_t pass = 0; pass <= klass.type_aliases.size(); ++pass) {
         for (const TypeAliasDecl& alias : klass.type_aliases) {

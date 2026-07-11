@@ -46,4 +46,7 @@ struct DefaultedEnvelope {
 template <typename Selected, typename Left>
 using AliasCarrier = Envelope<Left, Selected, 4>;
 
+template <typename Payload, typename Holder = Wrapper<Payload>>
+using DefaultedAlias = Holder;
+
 } // namespace depmeta

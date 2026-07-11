@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
 
 #include <algorithm>
@@ -225,9 +226,16 @@ TypeRef resolve_alias_ref_impl(const Symbols& symbols, TypeRef type, std::set<st
         if (type.kind == TypeKind::Template) {
             const auto params = symbols.alias_generic_params.find(name);
             if (params != symbols.alias_generic_params.end() && !params->second.empty()) {
+                const auto defaults = symbols.alias_generic_defaults.find(name);
+                const std::vector<TypeRef> concrete_args = generic_args_with_defaults(
+                    params->second,
+                    defaults == symbols.alias_generic_defaults.end() ? std::vector<TypeRef>{}
+                                                                     : defaults->second,
+                    type.children);
                 std::map<std::string, TypeRef> substitutions;
-                for (size_t i = 0; i < params->second.size() && i < type.children.size(); ++i) {
-                    substitutions.emplace(params->second[i], type.children[i]);
+                for (size_t i = 0; i < params->second.size() && i < concrete_args.size(); ++i) {
+                    substitutions.emplace(generic_param_base_name(params->second[i]),
+                                          concrete_args[i]);
                 }
                 type = substitute_type_ref(found->second, substitutions);
                 continue;
@@ -359,6 +367,7 @@ Symbols collect_symbols(const ModuleAst& module) {
             !symbols.alias_type_refs.contains(type.name)) {
             symbols.alias_type_refs[type.name] = native_type_alias_type_ref(type);
             symbols.alias_generic_params[type.name] = type.generic_params;
+            symbols.alias_generic_defaults[type.name] = type.generic_default_args;
         }
     }
     for (const NativeValueDecl& value : module.native_values) {

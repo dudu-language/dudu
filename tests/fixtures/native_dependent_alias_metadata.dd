@@ -14,4 +14,6 @@ def main() -> i32:
     carrier: depmeta.AliasCarrier[i32, f32] = depmeta.AliasCarrier[i32, f32]()
     carrier.right = 5
     carrier_value: i32 = carrier.selected()
-    return left + right + selected + wrapped.get() + defaulted.get() + carrier_value - 84
+    alias_value: depmeta.DefaultedAlias[i32] = depmeta.DefaultedAlias[i32]()
+    alias_value.value = 6
+    return left + right + selected + wrapped.get() + defaulted.get() + carrier_value + alias_value.get() - 90

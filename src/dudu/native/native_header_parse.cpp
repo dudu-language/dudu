@@ -25,6 +25,7 @@ struct TemplateContext {
     Kind kind = Kind::Function;
     std::vector<std::string> params;
     std::vector<bool> param_has_default;
+    std::vector<TypeRef> param_defaults;
     int last_param_depth = -1;
 };
 
@@ -322,6 +323,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"(TemplateTypeParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex template_value_param(
         R"(NonTypeTemplateParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
+    static const std::regex template_type_default(R"(TemplateArgument type '([^']+)')");
+    static const std::regex template_value_default(R"(TemplateArgument integral (.+)$)");
+    static const std::regex template_integer_default(R"(IntegerLiteral.* ([+-]?[0-9]+)$)");
+    static const std::regex template_bool_default(R"(CXXBoolLiteralExpr.* (true|false)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
     static const std::regex fn_decl(
         R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -367,36 +372,61 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                              .kind = TemplateContext::Kind::Alias,
                              .params = {},
                              .param_has_default = {},
+                             .param_defaults = {},
                              .last_param_depth = -1});
     } else if (line.find("ClassTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Class,
                              .params = {},
                              .param_has_default = {},
+                             .param_defaults = {},
                              .last_param_depth = -1});
     } else if (line.find("FunctionTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Function,
                              .params = {},
                              .param_has_default = {},
+                             .param_defaults = {},
                              .last_param_depth = -1});
     }
     if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos &&
         std::regex_search(line, match, template_type_param)) {
         templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
         templates.back().param_has_default.push_back(false);
+        templates.back().param_defaults.emplace_back();
         templates.back().last_param_depth = depth;
     }
     if (!templates.empty() && line.find("NonTypeTemplateParmDecl") != std::string::npos &&
         std::regex_search(line, match, template_value_param)) {
         templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
         templates.back().param_has_default.push_back(false);
+        templates.back().param_defaults.emplace_back();
         templates.back().last_param_depth = depth;
     }
     if (!templates.empty() && !templates.back().param_has_default.empty() &&
         line.find("TemplateArgument") != std::string::npos &&
         depth == templates.back().last_param_depth + 1) {
         templates.back().param_has_default.back() = true;
+        std::string default_text;
+        if (std::regex_search(line, match, template_type_default)) {
+            default_text = dudu_type(match[1].str());
+        } else if (std::regex_search(line, match, template_value_default)) {
+            default_text = trim_copy(match[1].str());
+        }
+        if (!default_text.empty()) {
+            default_text = qualify_scoped_type(scan, namespaces, classes, default_text);
+            templates.back().param_defaults.back() =
+                parse_native_type_text(default_text, decl_location);
+        }
+    }
+    if (!templates.empty() && !templates.back().param_has_default.empty() &&
+        templates.back().param_has_default.back() &&
+        !has_type_ref(templates.back().param_defaults.back()) &&
+        depth > templates.back().last_param_depth + 1 &&
+        (std::regex_search(line, match, template_integer_default) ||
+         std::regex_search(line, match, template_bool_default))) {
+        templates.back().param_defaults.back() =
+            parse_native_type_text(match[1].str(), decl_location);
     }
     if (!functions.empty() && line.find("ParmVarDecl") != std::string::npos &&
         line.find(" cinit") != std::string::npos) {
@@ -444,6 +474,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                        .location = decl_location};
             if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
                 native_type.generic_params = templates.back().params;
+                native_type.generic_default_args = templates.back().param_defaults;
                 native_type.generic_min_args = 0;
                 for (size_t i = 0; i < templates.back().params.size(); ++i) {
                     const bool is_pack = templates.back().params[i].ends_with("...");
@@ -488,6 +519,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 klass.native_declaration = true;
                 if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Class) {
                     klass.generic_params = templates.back().params;
+                    klass.generic_default_args = templates.back().param_defaults;
                     klass.generic_min_args = 0;
                     for (size_t i = 0; i < templates.back().params.size(); ++i) {
                         const bool is_pack = templates.back().params[i].ends_with("...");

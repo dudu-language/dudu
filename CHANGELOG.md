@@ -8,6 +8,9 @@
   template arity, nested type aliases, lexical associated-type resolution,
   dependent field/method substitution, and native scan-cache preservation
   without STL-name heuristics.
+- Added structured native template default arguments, including dependent type
+  defaults and non-type literal defaults, with declaration-order substitution
+  for omitted class and alias-template arguments.
 - Added recovering lexer/parser/module indexing for invalid editor buffers,
   declaration-level source ranges, per-body semantic diagnostic isolation, and
   last-known-good LSP project indexes.

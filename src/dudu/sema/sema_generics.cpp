@@ -72,6 +72,25 @@ bool generic_decl_arity_matches(const std::vector<std::string>& params,
     return arg_count <= params.size();
 }
 
+std::vector<TypeRef> generic_args_with_defaults(const std::vector<std::string>& params,
+                                                const std::vector<TypeRef>& defaults,
+                                                const std::vector<TypeRef>& args) {
+    std::vector<TypeRef> out = args;
+    std::map<std::string, TypeRef> substitutions;
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i < out.size()) {
+            substitutions.insert_or_assign(generic_param_base_name(params[i]), out[i]);
+            continue;
+        }
+        if (i >= defaults.size() || !has_type_ref(defaults[i])) {
+            break;
+        }
+        out.push_back(substitute_type_ref(defaults[i], substitutions));
+        substitutions.insert_or_assign(generic_param_base_name(params[i]), out.back());
+    }
+    return out;
+}
+
 size_t class_generic_min_arity(const ClassDecl& klass) {
     return generic_decl_min_arity(klass.generic_params, klass.generic_min_args);
 }

@@ -775,9 +775,19 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     const dudu::ClassDecl& defaulted = require_class(module, "depmeta.DefaultedEnvelope");
     assert(defaulted.generic_params.size() == 2);
     assert(defaulted.generic_min_args == 1);
+    assert(defaulted.generic_default_args.size() == 2);
+    assert(!dudu::has_type_ref(defaulted.generic_default_args[0]));
+    assert(dudu::type_ref_text(defaulted.generic_default_args[1]) == "4");
     const dudu::NativeTypeDecl& carrier = require_type(module, "depmeta.AliasCarrier");
     assert((carrier.generic_params == std::vector<std::string>{"Selected", "Left"}));
     assert(carrier.generic_min_args == 2);
+    const dudu::NativeTypeDecl& defaulted_alias =
+        require_type(module, "depmeta.DefaultedAlias");
+    assert((defaulted_alias.generic_params == std::vector<std::string>{"Payload", "Holder"}));
+    assert(defaulted_alias.generic_min_args == 1);
+    assert(defaulted_alias.generic_default_args.size() == 2);
+    assert(dudu::type_ref_text(defaulted_alias.generic_default_args[1]) ==
+           "depmeta.Wrapper[Payload]");
 
     dudu::ModuleAst cached =
         dudu::parse_source("from cpp.path import native_dependent_alias_metadata.hpp\n",
@@ -788,8 +798,16 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     assert(cached_envelope.type_aliases.size() == envelope.type_aliases.size());
     const dudu::ClassDecl& cached_defaulted = require_class(cached, "depmeta.DefaultedEnvelope");
     assert(cached_defaulted.generic_min_args == defaulted.generic_min_args);
+    assert(cached_defaulted.generic_default_args.size() == defaulted.generic_default_args.size());
+    assert(dudu::type_ref_text(cached_defaulted.generic_default_args[1]) == "4");
     const dudu::NativeTypeDecl& cached_carrier = require_type(cached, "depmeta.AliasCarrier");
     assert(cached_carrier.generic_params == carrier.generic_params);
+    const dudu::NativeTypeDecl& cached_defaulted_alias =
+        require_type(cached, "depmeta.DefaultedAlias");
+    assert(cached_defaulted_alias.generic_default_args.size() ==
+           defaulted_alias.generic_default_args.size());
+    assert(dudu::type_ref_text(cached_defaulted_alias.generic_default_args[1]) ==
+           "depmeta.Wrapper[Payload]");
 }
 
 void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
