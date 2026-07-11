@@ -9,6 +9,7 @@
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/type_compat.hpp"
+#include "dudu/sema/type_compat_native.hpp"
 
 #include <algorithm>
 #include <map>
@@ -366,6 +367,23 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
     return substitute_bound_template_signature(scope.symbols, signature, bindings, pack_bindings);
 }
 
+int native_match_conversion_score(const FunctionScope& scope, const FunctionSignature& signature,
+                                  const std::vector<TypeRef>& arg_type_refs) {
+    int score = 0;
+    const size_t count = std::min(signature_param_count(signature), arg_type_refs.size());
+    for (size_t i = 0; i < count; ++i) {
+        const TypeRef expected =
+            resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, i));
+        const TypeRef got = resolve_alias_ref(scope.symbols, arg_type_refs[i]);
+        if (type_ref_equivalent(normalize_cpp_type_artifacts_ref(expected),
+                                normalize_cpp_type_artifacts_ref(got))) {
+            continue;
+        }
+        score += native_numeric_promotion(expected, got) ? 1 : 2;
+    }
+    return score;
+}
+
 bool explicit_native_template_allowed(const FunctionScope& scope, const std::string& lookup,
                                       bool explicit_template_call) {
     if (!explicit_template_call) {
@@ -381,10 +399,10 @@ bool explicit_native_template_allowed(const FunctionScope& scope, const std::str
 
 } // namespace
 
-std::optional<FunctionSignature>
-match_native_signature(const FunctionScope& scope, const std::string& callee,
-                       const std::vector<TypeRef>& explicit_template_args,
-                       const std::vector<Expr>& args, const SourceLocation* location) {
+std::optional<NativeSignatureMatch>
+match_native_signature_declaration(const FunctionScope& scope, const std::string& callee,
+                                   const std::vector<TypeRef>& explicit_template_args,
+                                   const std::vector<Expr>& args, const SourceLocation* location) {
     const std::string& lookup = callee;
     const auto found = scope.symbols.native_function_signatures.find(lookup);
     if (found == scope.symbols.native_function_signatures.end()) {
@@ -402,25 +420,42 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
     for (const Expr& arg : args) {
         arg_type_refs.push_back(infer_expr_type_ast(scope, arg, location));
     }
-    for (const FunctionSignature& signature : candidates) {
+    std::optional<FunctionSignature> selected;
+    size_t selected_index = 0;
+    int selected_score = 0;
+    for (size_t candidate_index = 0; candidate_index < candidates.size(); ++candidate_index) {
+        const FunctionSignature& signature = candidates[candidate_index];
         if (const std::optional<FunctionSignature> matched =
                 match_signature_ast(scope, signature, args, arg_type_refs)) {
-            FunctionSignature resolved = *matched;
-            if (!explicit_template_args.empty()) {
-                if (const auto indexed =
-                        indexed_tuple_return_type(signature_return_type_ref(resolved),
-                                                  explicit_template_args, arg_type_refs)) {
-                    set_signature_return_type(resolved, *indexed);
-                } else if (signature.has_native_template_return_spelling) {
-                    const auto explicit_return = explicit_type_return_ref(
-                        signature_return_type_ref(resolved), explicit_template_args);
-                    if (explicit_return) {
-                        set_signature_return_type(resolved, *explicit_return);
-                    }
+            const int score = native_match_conversion_score(scope, *matched, arg_type_refs);
+            if (!selected || score < selected_score) {
+                selected = *matched;
+                selected_index = candidate_index;
+                selected_score = score;
+            }
+        }
+    }
+    if (selected) {
+        if (!explicit_template_args.empty()) {
+            const FunctionSignature& original = candidates[selected_index];
+            if (const auto indexed = indexed_tuple_return_type(
+                    signature_return_type_ref(*selected), explicit_template_args, arg_type_refs)) {
+                set_signature_return_type(*selected, *indexed);
+            } else if (original.has_native_template_return_spelling) {
+                const auto explicit_return = explicit_type_return_ref(
+                    signature_return_type_ref(*selected), explicit_template_args);
+                if (explicit_return) {
+                    set_signature_return_type(*selected, *explicit_return);
                 }
             }
-            return resolved;
         }
+        const auto declarations = scope.symbols.native_function_decls.find(lookup);
+        const NativeFunctionDecl* declaration =
+            declarations != scope.symbols.native_function_decls.end() &&
+                    selected_index < declarations->second.size()
+                ? declarations->second[selected_index]
+                : nullptr;
+        return NativeSignatureMatch{.signature = std::move(*selected), .declaration = declaration};
     }
     bool has_variadic_candidate = false;
     for (const FunctionSignature& signature : candidates) {
@@ -431,13 +466,22 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
         FunctionSignature signature;
         set_signature_return_type(
             signature, named_type_ref("auto", location == nullptr ? SourceLocation{} : *location));
-        return signature;
+        return NativeSignatureMatch{.signature = std::move(signature), .declaration = nullptr};
     }
     if (location != nullptr) {
         fail(*location,
              native_overload_message_ast(scope, callee, args, arg_type_refs, candidates));
     }
     return std::nullopt;
+}
+
+std::optional<FunctionSignature>
+match_native_signature(const FunctionScope& scope, const std::string& callee,
+                       const std::vector<TypeRef>& explicit_template_args,
+                       const std::vector<Expr>& args, const SourceLocation* location) {
+    const std::optional<NativeSignatureMatch> matched =
+        match_native_signature_declaration(scope, callee, explicit_template_args, args, location);
+    return matched ? std::optional<FunctionSignature>{matched->signature} : std::nullopt;
 }
 
 } // namespace dudu

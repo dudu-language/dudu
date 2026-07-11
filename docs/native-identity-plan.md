@@ -139,12 +139,15 @@ In progress.
   visible-query sets. Workspace references follow one declaration across
   differently aliased imports while excluding a same-spelled declaration from
   another header.
+- Native free-function overload matching returns the selected declaration with
+  its instantiated signature. Reference collection retains structured source
+  ranges and re-runs that matcher per call occurrence, so exact numeric
+  overloads remain isolated across a workspace.
 
 Still missing:
 
 - Identity-aware symbol maps as the primary sema key.
-- Overload-call-aware LSP identity selection when several native declarations
-  share one source query.
+- Receiver-aware LSP identity selection for overloaded native class methods.
 
 ## Definition Of Done
 

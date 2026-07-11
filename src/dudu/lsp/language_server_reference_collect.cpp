@@ -44,7 +44,13 @@ struct ReferenceCollector {
         const int line = location.line - 1;
         const int start = location.column - 1;
         const int width = range_size > 0 ? range_size : static_cast<int>(name.size());
-        out.push_back({uri_for_location(location, doc), range_json(line, start, start + width)});
+        SourceRange source_range;
+        source_range.start = location;
+        source_range.end = location;
+        source_range.end.column += width;
+        out.push_back({.uri = uri_for_location(location, doc),
+                       .range = range_json(line, start, start + width),
+                       .source_range = std::move(source_range)});
     }
 
     void add(const std::string& name, const SourceLocation& location) {

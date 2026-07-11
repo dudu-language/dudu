@@ -25,6 +25,7 @@ struct AstSelection {
     std::optional<std::string> symbol_path;
     std::optional<ExprPath> expr_path;
     std::optional<Expr> operator_expr;
+    std::optional<Expr> call_expr;
     bool call_callee = false;
 };
 
@@ -40,6 +41,7 @@ std::string file_uri(const std::filesystem::path& path);
 SourceLocation expr_name_location(const Expr& expr);
 
 AstSelection ast_selection_at(const ModuleAst& module, const Json* params);
+AstSelection ast_selection_at(const ModuleAst& module, LspPosition position);
 bool symbol_matches(const std::string& symbol, const std::string& query);
 bool identifier_char(char c);
 bool valid_identifier(const std::string& value);

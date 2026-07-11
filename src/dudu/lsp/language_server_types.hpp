@@ -52,6 +52,7 @@ struct Symbol {
 struct ReferenceLocation {
     std::string uri;
     std::string range;
+    SourceRange source_range;
 };
 
 struct TextEdit {

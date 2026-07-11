@@ -34,8 +34,7 @@ bool contains_index_operator(const Expr& expr, const LspPosition& position) {
     }
     const Expr& receiver = expr.children[0];
     const Expr& index = expr.children[1];
-    if (receiver.range.end.line != position.line + 1 ||
-        index.location.line != position.line + 1) {
+    if (receiver.range.end.line != position.line + 1 || index.location.line != position.line + 1) {
         return false;
     }
     const int target_column = position.character + 1;
@@ -68,6 +67,9 @@ void collect_call_callee_selection(const Expr& expr, const LspPosition& position
         }
         const ExprPath selected_path = expr_path_prefix(*path, index);
         selection.call_callee = index + 1 == path->segments.size();
+        if (selection.call_callee) {
+            selection.call_expr = expr;
+        }
         selection.symbol = segment.text;
         selection.symbol_path = render_expr_path(selected_path);
         selection.expr_path = selected_path;
@@ -334,8 +336,12 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
 } // namespace
 
 AstSelection ast_selection_at(const ModuleAst& module, const Json* params) {
+    return ast_selection_at(module, lsp_position(params));
+}
+
+AstSelection ast_selection_at(const ModuleAst& module, LspPosition position) {
     AstSelection selection;
-    collect_selection_from_module(module, lsp_position(params), selection);
+    collect_selection_from_module(module, position, selection);
     return selection;
 }
 

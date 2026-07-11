@@ -968,6 +968,56 @@ void test_lsp_native_references_filter_by_identity() {
     assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
 }
 
+void test_lsp_native_overload_references_use_selected_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_overload_reference_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "overloads.hpp", "inline int choose(int value) { return value; }\n"
+                                      "inline int choose(double value) { return int(value); }\n");
+    write_file(dir / "main.dd", "from cpp.path import ./overloads.hpp as n\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return n.choose(1)\n");
+    write_file(dir / "same.dd", "from cpp.path import ./overloads.hpp as n\n"
+                                "\n"
+                                "def same() -> i32:\n"
+                                "    return n.choose(2)\n");
+    write_file(dir / "other.dd", "from cpp.path import ./overloads.hpp as n\n"
+                                 "\n"
+                                 "def other() -> i32:\n"
+                                 "    return n.choose(2.0)\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ModuleAst& unit = index.visible_unit_for_path(main_doc.path);
+    std::set<std::string> overload_identities;
+    for (const dudu::NativeFunctionDecl& fn : unit.native_functions) {
+        if (fn.name == "n.choose" && !fn.identity.usr.empty()) {
+            overload_identities.insert(fn.identity.usr);
+        }
+    }
+    assert(overload_identities.size() == 2);
+    const std::map<std::string, dudu::Document> workspace{
+        {main_doc.uri, main_doc},
+        {dudu::file_uri(dir / "same.dd"),
+         {.uri = dudu::file_uri(dir / "same.dd"),
+          .path = dir / "same.dd",
+          .text = read_file(dir / "same.dd")}},
+        {dudu::file_uri(dir / "other.dd"),
+         {.uri = dudu::file_uri(dir / "other.dd"),
+          .path = dir / "other.dd",
+          .text = read_file(dir / "other.dd")}},
+    };
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
+}
+
 void test_lsp_references_track_member_path_root_segments() {
     const dudu::Document doc{.uri = "file:///member_root.dd",
                              .path = "member_root.dd",
@@ -1155,6 +1205,7 @@ int main() {
         test_lsp_module_references_include_target_declaration();
         test_lsp_selective_import_references_include_target_declaration();
         test_lsp_native_references_filter_by_identity();
+        test_lsp_native_overload_references_use_selected_identity();
         test_lsp_references_track_member_path_root_segments();
         test_lsp_native_namespace_reference_query_uses_selected_segment();
         test_lsp_static_class_member_definition_hover_and_references();

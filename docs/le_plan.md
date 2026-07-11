@@ -604,7 +604,10 @@ Workspace native-reference indexing is identity-primary: each module records
 the visible query spellings for every canonical native identity. References
 therefore cross different import aliases for the same declaration and reject
 same-spelled declarations with different identities. Selecting one declaration
-from a native overload set still requires call-aware identity resolution.
+from a native free-function overload set reuses compiler overload matching per
+call occurrence and filters references by the selected USR. Exact argument
+types outrank numeric conversions. Receiver-aware declaration identity for
+overloaded native class methods remains separate work.
 
 ## 5. Polish The Test System
 

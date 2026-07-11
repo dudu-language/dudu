@@ -11,7 +11,12 @@
 #include "dudu/lsp/language_server_reference_query.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/native/native_header_identity.hpp"
+#include "dudu/native/native_signature_match.hpp"
 #include "dudu/project/project_index.hpp"
+#include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_generics.hpp"
+#include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -162,6 +167,60 @@ std::optional<std::string> native_identity_for_query(const std::vector<Symbol>& 
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::string> native_identity_for_selection(const AstSelection& selection,
+                                                         const ModuleAst* module,
+                                                         const std::vector<Symbol>& symbols,
+                                                         const std::string& query,
+                                                         const SourceLocation& cursor_location) {
+    if (module != nullptr && selection.call_callee && selection.call_expr.has_value()) {
+        try {
+            Symbols sema_symbols = collect_symbols(*module);
+            FunctionScope scope(sema_symbols);
+            scope.local_type_refs = local_type_refs_before_location(*module, cursor_location);
+            const Expr& call = *selection.call_expr;
+            const std::vector<TypeRef> explicit_args = call.kind == ExprKind::TemplateCall
+                                                           ? template_type_refs(call)
+                                                           : std::vector<TypeRef>{};
+            if (const std::optional<NativeSignatureMatch> matched =
+                    match_native_signature_declaration(scope, query, explicit_args, call.children,
+                                                       nullptr);
+                matched && matched->declaration != nullptr) {
+                if (std::filesystem::path(matched->declaration->location.file).extension() ==
+                    ".dd") {
+                    return std::nullopt;
+                }
+                const std::string identity =
+                    native_symbol_identity_key(matched->declaration->identity);
+                if (!identity.empty()) {
+                    return identity;
+                }
+            }
+        } catch (const std::exception&) {
+        }
+        return std::nullopt;
+    }
+    return native_identity_for_query(symbols, query);
+}
+
+bool reference_has_native_identity(const ModuleAst& module, const ReferenceLocation& location,
+                                   std::string_view expected_identity) {
+    if (location.source_range.start.line <= 0 || location.source_range.start.column <= 0 ||
+        location.source_range.end.column <= location.source_range.start.column) {
+        return false;
+    }
+    const LspPosition position{
+        .line = location.source_range.start.line - 1,
+        .character = location.source_range.end.column - 2,
+    };
+    const AstSelection selection = ast_selection_at(module, position);
+    const std::vector<Symbol> symbols = symbols_for_module(module, true);
+    const std::string query =
+        selection.symbol_path.value_or(selection.symbol.value_or(std::string{}));
+    const std::optional<std::string> identity = native_identity_for_selection(
+        selection, &module, symbols, query, location.source_range.start);
+    return identity.has_value() && *identity == expected_identity;
 }
 
 std::string dotted_tail(const std::string& query) {
@@ -346,8 +405,14 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
     const std::optional<ImportReferenceTarget> selective_target =
         scope == ReferenceScope::Workspace ? selective_import_target(doc, query) : std::nullopt;
     const std::optional<std::string> native_identity =
-        include_native ? native_identity_for_query(current_symbols_with_native, query)
+        include_native ? native_identity_for_selection(
+                             selection, current_unit, current_symbols_with_native, query,
+                             SourceLocation{.file = SourceFileName(doc.path.string()),
+                                            .line = lsp_position(params).line + 1,
+                                            .column = lsp_position(params).character + 1})
                        : std::nullopt;
+    const bool filter_native_call_occurrences =
+        native_identity.has_value() && selection.call_callee && selection.call_expr.has_value();
     std::vector<ReferenceLocation> out;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
@@ -397,6 +462,7 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
             if (native_candidate_index == nullptr) {
                 continue;
             }
+            candidate_unit = &native_candidate_index->visible_unit_for_path(candidate.path);
             const std::set<std::string> identity_queries =
                 native_candidate_index->native_queries_for_identity(candidate.path,
                                                                     *native_identity);
@@ -417,6 +483,12 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
             for (const std::string& identity_query : candidate_queries) {
                 std::vector<ReferenceLocation> found =
                     references_in(*candidate_unit, candidate, identity_query);
+                if (filter_native_call_occurrences) {
+                    std::erase_if(found, [&](const ReferenceLocation& location) {
+                        return !reference_has_native_identity(*candidate_unit, location,
+                                                              *native_identity);
+                    });
+                }
                 locations.insert(locations.end(), found.begin(), found.end());
             }
         }
