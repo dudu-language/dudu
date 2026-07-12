@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: dudu-macos-preflight
+  group: dudu-macos-portability-preflight
   cancel-in-progress: true
 
 jobs:
