@@ -25,12 +25,12 @@ jobs:
         run: brew install cmake llvm pkg-config ripgrep
       - name: Configure portability tests
         run: |
-          cmake -S . -B build/macos-preflight \
+          cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DDUDU_BUILD_TESTS=ON \
             -DDUDU_STRICT=ON \
             -DDUDU_WARN_AS_ERROR=ON
       - name: Build portability tests
-        run: cmake --build build/macos-preflight --parallel 4
+        run: cmake --build build --parallel 4
       - name: Run release-script portability preflight
         run: ./scripts/test_examples_and_install.sh
