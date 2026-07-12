@@ -372,6 +372,12 @@
 
 ### Fixed
 
+- Deferred nested generic-body checks while forwarded type arguments are still
+  abstract, then checked the forwarded calls when the outer instantiation is
+  concrete.
+- Made imported C++ `size_type` and `difference_type` values consistently
+  numeric for arithmetic and bidirectionally compatible at native call
+  boundaries.
 - Preserved C++ enum ownership in native scans: scoped enumerators remain under
   their enum type, unscoped enumerators remain in their enclosing namespace or
   class, and different scoped enums may reuse the same enumerator spelling.

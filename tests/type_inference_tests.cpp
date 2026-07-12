@@ -149,6 +149,12 @@ void test_index_type_inference_uses_type_ast() {
     assert(dudu::comparison_rhs_allowed(symbols, ">", dudu::parse_type_text("&u8", location),
                                         dudu::parse_expr_text("0", location),
                                         dudu::parse_type_text("i32", location)));
+    assert(dudu::binary_rhs_allowed(
+        symbols, "-", dudu::parse_type_text("std.basic_string.size_type", location),
+        dudu::parse_expr_text("offset", location), dudu::parse_type_text("usize", location)));
+    assert(dudu::binary_rhs_allowed(
+        symbols, "+", dudu::parse_type_text("std.vector.difference_type", location),
+        dudu::parse_expr_text("1", location), dudu::parse_type_text("i32", location)));
 
     const dudu::TypeRef matrix_type = dudu::parse_type_text("array[list[i32]][3, 4]");
     const dudu::TypeRef row_type = dudu::indexed_type_ref_from_type(

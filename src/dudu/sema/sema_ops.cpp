@@ -33,8 +33,7 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
 }
 
 bool is_numeric_type(const TypeRef& type) {
-    return type_ref_is_integer(type) || type_ref_is_name(type, "f32") ||
-           type_ref_is_name(type, "f64");
+    return native_numeric_operator_operand(type);
 }
 
 bool unknown_or_auto(const TypeRef& type) {

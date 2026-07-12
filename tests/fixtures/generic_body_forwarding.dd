@@ -1,0 +1,19 @@
+def full[T](value: T) -> T:
+    return value
+
+
+def zeros[T](value: T) -> T:
+    return full[T](value)
+
+
+class Box[T]:
+    value: T
+
+    def reset(self):
+        self.value = zeros[T](T(42))
+
+
+def main() -> i32:
+    box = Box[i32](0)
+    box.reset()
+    return box.value

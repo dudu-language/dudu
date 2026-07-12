@@ -1484,6 +1484,9 @@ push. They are not release packaging work.
    sema rather than surfacing only as C++ compiler output. Imported generic
    function and method bodies are checked in their declaration-module scope,
    and diagnostics identify the concrete call-site instantiation.
+   Generic bodies may forward an unresolved outer type parameter into another
+   generic call. Nested body checking defers until the outer instantiation
+   supplies a concrete type, then checks the complete forwarded call chain.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, generic

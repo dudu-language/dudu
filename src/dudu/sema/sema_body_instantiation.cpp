@@ -183,6 +183,9 @@ void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
                                               const std::vector<TypeRef>& type_args,
                                               const std::string& label,
                                               const SourceLocation& site) {
+    if (has_unresolved_generic(type_args, caller_scope.symbols)) {
+        return;
+    }
     if (const ModuleAst* unit = declaration_unit(caller_scope.symbols, fn.origin_module)) {
         if (const FunctionDecl* declared = declaration_function(*unit, fn);
             declared != nullptr && !scope_owns_function(caller_scope, declared)) {

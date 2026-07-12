@@ -408,6 +408,12 @@ Required generic diagnostics:
 - operation unsupported for instantiated type: done for free-function generic
   calls
 
+Nested generic calls can forward an outer type parameter, such as
+`zeros[T](...)` calling `full[T](...)`. Body validation defers while that `T`
+is abstract and resumes when the outer class or function is instantiated with a
+concrete type, so forwarding remains valid without skipping concrete body
+checks.
+
 Example:
 
 ```text

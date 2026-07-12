@@ -200,11 +200,16 @@ bool native_associated_type_assignment_allowed(const TypeRef& expected, const Ty
         "iterator", "const_iterator", "reference", "const_reference", "value_type",
         "pointer",  "const_pointer",  "size_type", "difference_type"};
     const std::string expected_name = native_type_tail_name(normalized_expected);
-    if (!associated.contains(expected_name)) {
+    const std::string got_name = native_type_tail_name(normalized_got);
+    if (!associated.contains(expected_name) && !associated.contains(got_name)) {
         return false;
     }
     if ((expected_name == "size_type" || expected_name == "difference_type") &&
         is_native_numeric_type(normalized_got)) {
+        return true;
+    }
+    if ((got_name == "size_type" || got_name == "difference_type") &&
+        is_native_numeric_type(normalized_expected)) {
         return true;
     }
     if (native_type_head_ends_with_name(normalized_got, expected_name)) {
@@ -212,6 +217,15 @@ bool native_associated_type_assignment_allowed(const TypeRef& expected, const Ty
     }
     return expected_name == "const_iterator" &&
            native_type_head_ends_with_name(normalized_got, "iterator");
+}
+
+bool native_numeric_operator_operand(const TypeRef& type) {
+    const TypeRef normalized = normalize_cpp_type_artifacts_ref(type);
+    if (is_native_numeric_type(normalized)) {
+        return true;
+    }
+    const std::string name = native_type_tail_name(normalized);
+    return name == "size_type" || name == "difference_type";
 }
 
 bool native_associated_operator_operand_is_dependent(const TypeRef& type) {

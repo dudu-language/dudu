@@ -113,6 +113,9 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("std::string")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("std.vector.size_type"),
                                          dudu::parse_type_text("usize")));
+    assert(dudu::type_assignment_allowed(
+        dudu::parse_type_text("usize"),
+        dudu::parse_type_text("std.basic_string._Alloc_traits.size_type")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("std.vector.const_iterator"),
                                          dudu::parse_type_text("std.vector.iterator")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("std.vector.iterator"),
