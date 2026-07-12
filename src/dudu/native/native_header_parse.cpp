@@ -66,6 +66,17 @@ struct EnumContext {
     std::string value_scope;
 };
 
+bool dudu_primitive_name(std::string_view name) {
+    for (std::string_view primitive :
+         {"bool", "char", "f32", "f64", "i8", "i16", "i32", "i64", "isize",
+          "u8", "u16", "u32", "u64", "usize", "void"}) {
+        if (name == primitive) {
+            return true;
+        }
+    }
+    return false;
+}
+
 NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, NativeCursorKind kind,
                                 std::string_view spelling, const SourceLocation& location,
                                 std::string canonical_path, const std::string& current_file) {
@@ -560,9 +571,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, typedef_decl)) {
         const std::string raw_name = match[2].str();
         const std::string name = join_scope(namespaces, raw_name);
+        const std::string underlying_type = trim_copy(match[3].str());
         const std::string lowered_type =
-            qualify_scoped_type(scan, namespaces, classes, dudu_type(match[3].str()));
-        const bool useful_alias = lowered_type != raw_name && lowered_type != name;
+            qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
+        const bool useful_alias =
+            (lowered_type != raw_name && lowered_type != name) ||
+            (lowered_type == raw_name && dudu_primitive_name(raw_name) &&
+             underlying_type != raw_name);
         if (!starts_with(raw_name, "__") || useful_alias) {
             const TypeRef type_ref =
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};

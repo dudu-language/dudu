@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <set>
 
 namespace dudu {
 namespace {
@@ -16,6 +17,14 @@ bool scan_has_type(const NativeHeaderScan& scan, const std::string& name) {
         if (klass.name == name)
             return true;
     return false;
+}
+
+bool dudu_builtin_type(const std::string& name) {
+    static const std::set<std::string> names = {
+        "auto", "bool", "char", "cstr", "f32", "f64", "i8", "i16", "i32",
+        "i64",  "isize", "str", "u8",   "u16", "u32", "u64", "usize", "void",
+    };
+    return names.contains(name);
 }
 
 std::optional<std::string>
@@ -104,6 +113,9 @@ std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
         }
         out.push_back(']');
         return out;
+    }
+    if (dudu_builtin_type(type)) {
+        return type;
     }
     if (const auto scoped = class_scoped_type_name(scan, classes, type)) {
         return *scoped;

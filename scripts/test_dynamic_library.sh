@@ -9,6 +9,7 @@ host_c="$repo_root/build/dudu_plugin_host.c"
 host="$repo_root/build/dudu_plugin_host"
 
 rm -f "$lib" "$header" "$host_c" "$host"
+rm -rf "$project/build"
 
 (
     cd "$project"

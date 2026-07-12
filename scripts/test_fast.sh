@@ -8,6 +8,7 @@ toolchain_version="$(tr -d '\r\n' <"$repo_root/VERSION")"
 "$repo_root/scripts/sync_version.py"
 "$repo_root/scripts/check_ast_migration_guards.sh"
 bash -n "$repo_root/scripts/install-local.sh"
+bash -n "$repo_root/scripts/release-check.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 ctest --test-dir "$repo_root/build" --output-on-failure
 
@@ -35,6 +36,7 @@ expect_fail bad_native_function_pointer_value --check "argument 1 for native.dud
 compile_and_expect cpp_escape_expr 42
 compile_path_and_expect native_alias_with_module tests/fixtures/native_alias_with_module/main.dd 42
 compile_and_expect cpp_nested_native 42
+compile_and_expect native_template_specificity 42
 compile_and_expect cpp_non_type_template_arg 3
 compile_and_expect dudu_operator_overload 42
 compile_and_expect dudu_operator_overload_rhs 42

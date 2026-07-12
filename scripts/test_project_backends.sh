@@ -4,6 +4,12 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
 
+# Project fixtures own disposable build trees. Removing them keeps the suite
+# relocatable and prevents CMake caches from another checkout path leaking in.
+for project_build in "$repo_root"/tests/fixtures/project_*/build; do
+    rm -rf "$project_build"
+done
+
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"
@@ -460,4 +466,3 @@ if (
     exit 1
 fi
 grep -q "cannot run target kind: library" "$repo_root/build/project_library_run.err"
-

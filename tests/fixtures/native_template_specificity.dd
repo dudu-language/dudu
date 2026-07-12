@@ -1,0 +1,9 @@
+from cpp.path import native_headers/template_specificity.hpp
+
+
+def main() -> i32:
+    alias_value: dudu_specificity.f32 = 42.0
+    left = dudu_specificity.make_box(20)
+    right = dudu_specificity.make_box(22)
+    value: i32 = dudu_specificity.select(left, right)
+    return value + i32(alias_value) - 42

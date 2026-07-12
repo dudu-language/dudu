@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-dudu_bin="$repo_root/build/dudu"
+dudu_bin="${DUDU_BIN:-$repo_root/build/dudu}"
 work_root="$repo_root/build/dependency_smoke"
 
 if [[ ! -x "$dudu_bin" ]]; then

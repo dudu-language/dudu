@@ -5,6 +5,14 @@
 - Removed the unreleased quoted `import c/cxx/cpp "..."` compatibility syntax;
   native headers now use only canonical `from c/cxx/cpp[.path] import ...`
   forms.
+- Added `scripts/release-check.sh` as the clean-tree local release-candidate
+  gate, including isolated Release install and installed-toolchain smoke tests.
+- Fixed native C++ overload ranking so a structurally constrained function
+  template wins over an equally convertible bare placeholder overload.
+- Preserved native aliases whose source spelling lowers to the same Dudu
+  primitive name, such as a namespaced C++ `f32` alias of `float`.
+- Bumped the native scan-cache schema so upgraded compilers cannot reuse
+  metadata produced by older native type-lowering rules.
 
 ### Changed
 

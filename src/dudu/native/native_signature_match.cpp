@@ -372,14 +372,46 @@ int native_match_conversion_score(const FunctionScope& scope, const FunctionSign
     int score = 0;
     const size_t count = std::min(signature_param_count(signature), arg_type_refs.size());
     for (size_t i = 0; i < count; ++i) {
-        const TypeRef expected =
+        TypeRef expected =
             resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, i));
-        const TypeRef got = resolve_alias_ref(scope.symbols, arg_type_refs[i]);
+        TypeRef got = resolve_alias_ref(scope.symbols, arg_type_refs[i]);
+        while ((expected.kind == TypeKind::Reference || expected.kind == TypeKind::Const ||
+                expected.kind == TypeKind::Volatile) &&
+               expected.children.size() == 1) {
+            expected = expected.children.front();
+        }
+        while ((got.kind == TypeKind::Reference || got.kind == TypeKind::Const ||
+                got.kind == TypeKind::Volatile) &&
+               got.children.size() == 1) {
+            got = got.children.front();
+        }
         if (type_ref_equivalent(normalize_cpp_type_artifacts_ref(expected),
                                 normalize_cpp_type_artifacts_ref(got))) {
             continue;
         }
         score += native_numeric_promotion(expected, got) ? 1 : 2;
+    }
+    return score;
+}
+
+bool direct_native_template_placeholder(const TypeRef& type) {
+    const TypeRef* current = &type;
+    while ((current->kind == TypeKind::Const || current->kind == TypeKind::Reference ||
+            current->kind == TypeKind::Pointer) &&
+           current->children.size() == 1) {
+        current = &current->children.front();
+    }
+    return (current->kind == TypeKind::Named || current->kind == TypeKind::Qualified ||
+            current->kind == TypeKind::Value) &&
+           native_template_placeholder(type_ref_head_name(*current));
+}
+
+int native_template_generality_score(const FunctionSignature& signature) {
+    int score = 0;
+    for (size_t i = 0; i < signature_param_count(signature); ++i) {
+        if (direct_native_template_placeholder(signature_param_type_ref(signature, i))) {
+            ++score;
+        }
     }
     return score;
 }
@@ -428,10 +460,11 @@ match_native_signature_declaration(const FunctionScope& scope, const std::string
         if (const std::optional<FunctionSignature> matched =
                 match_signature_ast(scope, signature, args, arg_type_refs)) {
             const int score = native_match_conversion_score(scope, *matched, arg_type_refs);
-            if (!selected || score < selected_score) {
+            const int ranked_score = score * 100 + native_template_generality_score(signature);
+            if (!selected || ranked_score < selected_score) {
                 selected = *matched;
                 selected_index = candidate_index;
-                selected_score = score;
+                selected_score = ranked_score;
             }
         }
     }
