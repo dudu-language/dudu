@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
+host_arch="${DUDU_TEST_ARCH:-$(uname -m)}"
 
 "$repo_root/scripts/build.sh" >/dev/null
 
@@ -133,7 +134,6 @@ required_object_examples=(
     layout_hardware.dd
     macro_bomb.dd
     modules_visibility.dd
-    native_escape.dd
     numerics_kmeans.dd
     shader_compute.dd
     systems_mmap.dd
@@ -147,6 +147,15 @@ done
 for example in "${required_object_examples[@]}"; do
     object_example "$example"
 done
+
+case "$host_arch" in
+    x86_64|amd64)
+        object_example native_escape.dd
+        ;;
+    *)
+        echo "skip native_escape.dd object: x86-specific SIMD example on $host_arch"
+        ;;
+esac
 
 build_example_project_with_pkg audio_synth.dd "" raylib
 build_example_project_with_pkg raylib_game.dd "" raylib

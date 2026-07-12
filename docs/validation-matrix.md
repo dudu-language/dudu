@@ -80,6 +80,10 @@ packages are reported as skips, not failures. The examples should prefer
 canonical native imports such as `from cpp import thread`,
 `from c import SDL3/SDL.h`, and `from cpp.path import vendor/foo.hpp as foo`;
 old `import cpp "..."` / fake `as std` forms should not reappear.
+Architecture-specific examples remain syntax-checked on every platform but are
+compiled only on compatible targets. In particular, `native_escape.dd` uses
+x86 SSE intrinsics and the x86 `pause` instruction, so its object check is an
+explicit skip on ARM64 rather than an invalid portability requirement.
 
 Run local dogfood checks with:
 
