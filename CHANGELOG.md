@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Split required Apple Silicon portability coverage from optional third-party
+  SDK probes, keeping the macOS release result independent of incidental
+  Homebrew packages while the Linux lane retains the broad native matrix.
 - Dudu aggregate value construction now emits portable brace initialization,
   including generic aggregates, while classes with explicit `init` methods
   retain constructor calls. This matches heap construction and fixes Apple

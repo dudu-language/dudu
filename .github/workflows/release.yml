@@ -84,6 +84,7 @@ jobs:
   macos-apple-silicon:
     runs-on: macos-14
     env:
+      DUDU_SKIP_OPTIONAL_NATIVE: 1
       RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
       LLVM_ROOT: /opt/homebrew/opt/llvm
     steps:

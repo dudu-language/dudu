@@ -149,19 +149,23 @@ done
 
 compile_x86_example_object native_escape.dd
 
-build_example_project_with_pkg audio_synth.dd "" raylib
-build_example_project_with_pkg raylib_game.dd "" raylib
-build_example_project_with_pkg sdl3_window.dd "" sdl3
-build_example_project_with_pkg glfw_opengl_triangle.dd "" glfw3
-build_example_project_with_pkg opencl_kernel_host.dd "-DCL_TARGET_OPENCL_VERSION=300" OpenCL
-build_example_project_with_pkg vulkan_triangle.dd "" vulkan
-build_example_project_with_pkg ffmpeg_probe_decode.dd "" libavcodec
-build_example_project_with_pkg image_filter.dd "" opencv4
-
-if pkg-config --exists sdl3 imgui; then
-    check_example_project_with_pkg sdl3_imgui.dd sdl3 imgui
+if [[ "${DUDU_SKIP_OPTIONAL_NATIVE:-0}" == "1" ]]; then
+    echo "skip optional native example builds: DUDU_SKIP_OPTIONAL_NATIVE=1"
 else
-    echo "skip sdl3_imgui.dd: pkg-config packages not found: sdl3 and imgui"
+    build_example_project_with_pkg audio_synth.dd "" raylib
+    build_example_project_with_pkg raylib_game.dd "" raylib
+    build_example_project_with_pkg sdl3_window.dd "" sdl3
+    build_example_project_with_pkg glfw_opengl_triangle.dd "" glfw3
+    build_example_project_with_pkg opencl_kernel_host.dd "-DCL_TARGET_OPENCL_VERSION=300" OpenCL
+    build_example_project_with_pkg vulkan_triangle.dd "" vulkan
+    build_example_project_with_pkg ffmpeg_probe_decode.dd "" libavcodec
+    build_example_project_with_pkg image_filter.dd "" opencv4
+
+    if pkg-config --exists sdl3 imgui; then
+        check_example_project_with_pkg sdl3_imgui.dd sdl3 imgui
+    else
+        echo "skip sdl3_imgui.dd: pkg-config packages not found: sdl3 and imgui"
+    fi
 fi
 
 echo "examples ok"

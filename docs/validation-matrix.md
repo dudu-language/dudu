@@ -85,6 +85,13 @@ compiled only on compatible targets. In particular, `native_escape.dd` uses
 x86 SSE intrinsics and the x86 `pause` instruction, so its object check is an
 explicit skip on ARM64 rather than an invalid portability requirement.
 
+Release lanes may set `DUDU_SKIP_OPTIONAL_NATIVE=1` when optional third-party
+SDK coverage belongs to another host. The Apple Silicon lane uses this mode so
+its result depends on Xcode, ARM64, libc++, and Dudu's declared prerequisites,
+not on incidental Homebrew formulae in the hosted runner image. Required Dudu
+examples remain checked and compiled there; the Linux lane retains the broad
+pkg-config and native-library matrix.
+
 Run local dogfood checks with:
 
 ```sh
