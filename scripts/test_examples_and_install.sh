@@ -104,9 +104,26 @@ installed_version="$(tr -d '\r\n' <"$install_prefix/share/doc/dudu/VERSION")"
 
 generated_header="$repo_root/build/cpp_library.hpp"
 echo "installed codegen assertions"
-"$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
-grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' "$generated_header"
-grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' "$generated_header"
+if ! "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" \
+    --emit-header "$generated_header"; then
+    echo "failed to emit cpp_library.hpp" >&2
+    exit 1
+fi
+if ! grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' \
+    "$generated_header"; then
+    echo "generated header is missing executable TARGET_KIND" >&2
+    grep 'TARGET_' "$generated_header" >&2 || true
+    exit 1
+fi
+if ! grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' \
+    "$generated_header"; then
+    echo "generated header is missing hosted TARGET_MODE" >&2
+    grep 'TARGET_' "$generated_header" >&2 || true
+    exit 1
+fi
 printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/build/header_smoke.cpp"
-"${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
-    -o "$repo_root/build/header_smoke.o"
+if ! "${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c \
+    "$repo_root/build/header_smoke.cpp" -o "$repo_root/build/header_smoke.o"; then
+    echo "generated header failed C++20 compilation" >&2
+    exit 1
+fi
