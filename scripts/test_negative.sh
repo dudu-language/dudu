@@ -115,6 +115,7 @@ expect_fail bad_result_ok_type --emit-cpp "return type mismatch: expected Result
 expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Err\\[bool\\]"
 expect_fail bad_ok_arity --emit-cpp "Ok expects 1 argument, got 0"; expect_fail bad_err_arity --emit-cpp "Err expects 1 argument, got 2"
 expect_fail bad_new_assignment --emit-cpp "cannot assign \\*Node to \\*i32 without an explicit cast"; expect_fail bad_malloc_arity --emit-cpp "malloc expects 1 count argument, got 0"; expect_fail bad_alloc_type --emit-cpp "unknown allocation type: MissingType"; expect_fail bad_alloc_nested_type --emit-cpp "unknown allocation type: MissingType"
+expect_fail bad_move_arity --emit-cpp "move expects 1 arguments, got 2"
 expect_fail bad_sizeof_nested_type --emit-cpp "unknown sizeof type: MissingType"; expect_fail bad_offsetof_nested_type --emit-cpp "unknown offsetof type: MissingType"
 expect_fail bad_offsetof_field_expr --emit-cpp "offsetof field argument must be a field name"
 expect_fail bad_pointer_cast_nested_type --emit-cpp "unknown pointer cast type: MissingType"

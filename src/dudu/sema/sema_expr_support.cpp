@@ -81,8 +81,8 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
 }
 
 bool is_builtin_call(const std::string& callee) {
-    static const std::set<std::string> builtins = {"delete", "free",  "len",  "max",
-                                                   "min",    "print", "range"};
+    static const std::set<std::string> builtins = {"delete", "free", "len",   "max",
+                                                   "min",    "move", "print", "range"};
     return builtins.contains(callee);
 }
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee) {

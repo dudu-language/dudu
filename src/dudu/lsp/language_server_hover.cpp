@@ -428,7 +428,7 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     if (has_selection) {
         if (const std::optional<std::string> builtin =
-                builtin_function_hover_json(selection, query)) {
+                builtin_function_hover_json(selection, query, current, doc, params)) {
             return *builtin;
         }
     }

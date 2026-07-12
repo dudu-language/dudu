@@ -10,7 +10,9 @@
 namespace dudu {
 
 std::optional<std::string> builtin_function_hover_json(const AstSelection& selection,
-                                                       const std::string& query);
+                                                       const std::string& query,
+                                                       const ModuleAst& current,
+                                                       const Document& doc, const Json* params);
 std::optional<std::string> builtin_member_hover_json(const ExprPath& path, const Json* params,
                                                      const ModuleAst& current);
 

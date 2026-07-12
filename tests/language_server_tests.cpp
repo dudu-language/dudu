@@ -584,6 +584,38 @@ void test_lsp_hover_describes_tensor_indexing_builtin_types() {
     assert(new_axis_hover.find("produced by `None` inside `[]`") != std::string::npos);
 }
 
+void test_lsp_move_builtin_hover_inlay_and_shadowing() {
+    const dudu::Document builtin_doc{.uri = "file:///move_builtin_hover.dd",
+                                     .path = "move_builtin_hover.dd",
+                                     .text = "def main() -> i32:\n"
+                                             "    value = 42\n"
+                                             "    moved = move(value)\n"
+                                             "    return moved\n"};
+    dudu::Json builtin_params =
+        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":14}}").parse();
+    const std::string builtin_hover = dudu::hover_json(builtin_doc, "", &builtin_params);
+    assert(builtin_hover.find("move[T](value: T) -&gt; T") != std::string::npos ||
+           builtin_hover.find("move[T](value: T) -> T") != std::string::npos);
+    assert(builtin_hover.find("moved-from state") != std::string::npos);
+    const std::string hints = dudu::inlay_hints_json(builtin_doc, nullptr);
+    assert(hints.find("\"label\":\"value:\"") != std::string::npos);
+
+    const dudu::Document shadow_doc{.uri = "file:///move_shadow_hover.dd",
+                                    .path = "move_shadow_hover.dd",
+                                    .text = "# User move docs.\n"
+                                            "def move(value: i32) -> i32:\n"
+                                            "    return value + 1\n"
+                                            "\n"
+                                            "\n"
+                                            "def main() -> i32:\n"
+                                            "    return move(41)\n"};
+    dudu::Json shadow_params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":13}}").parse();
+    const std::string shadow_hover = dudu::hover_json(shadow_doc, "", &shadow_params);
+    assert(shadow_hover.find("User move docs.") != std::string::npos);
+    assert(shadow_hover.find("moved-from state") == std::string::npos);
+}
+
 void test_lsp_signature_help_uses_visible_imported_functions() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_signature_test";
@@ -1076,6 +1108,7 @@ int main() {
         test_lsp_inlay_hints_use_inferred_array_literal_shapes();
         test_lsp_inlay_hints_type_value_generic_extents_as_usize();
         test_lsp_hover_describes_tensor_indexing_builtin_types();
+        test_lsp_move_builtin_hover_inlay_and_shadowing();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_signature_help_resolves_native_callable_values();

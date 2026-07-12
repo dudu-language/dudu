@@ -185,6 +185,8 @@ Dudu currently discovers and registers:
 - C++ namespace-qualified functions
 - simple native overload sets by arity and assignability
 - C++ class fields, methods, and non-default constructor signatures
+- C++ static data members with class ownership preserved through parsed caches
+- namespace values whose wrapped alias types retain their defining scope
 - imported C++ base classes for inherited method lookup
 - derived-to-base pointer/reference assignment for imported C++ classes
 - C++ free-function operator overload signatures for binary operators in

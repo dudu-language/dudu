@@ -43,6 +43,19 @@ bool is_builtin_cast_call(std::string_view name) {
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 
+bool has_declared_call_target(std::string_view name, const CppLocalContext& locals,
+                              const Symbols* symbols) {
+    if (locals.contains(name)) {
+        return true;
+    }
+    if (symbols == nullptr) {
+        return false;
+    }
+    const std::string key(name);
+    return symbols->function_signatures.contains(key) ||
+           symbols->function_overload_signatures.contains(key);
+}
+
 bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
     const std::string name = type_ref_head_name(type);
     for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
@@ -540,6 +553,13 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
                           options) +
                ").size()";
+    }
+    if (callee_name == "move" && expr.children.size() == 1 &&
+        !has_declared_call_target(callee_name, locals, symbols)) {
+        return "std::move(" +
+               lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                          options) +
+               ")";
     }
     if (callee_name == "str" && expr.children.size() == 1) {
         if (expr.children.front().kind == ExprKind::StringLiteral) {

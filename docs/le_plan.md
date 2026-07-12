@@ -468,8 +468,14 @@ overloads, Dudu-native operator methods, imported C++ base-method lookup,
 `static[T]` fields, and `@operator(...)` are implemented. Bare `self` now means
 `self: &Self`; explicit `self: &const[Self]` lowers to C++ `const` member
 functions, and `&Self`/`&const[Self]` return types make in-place versus
-copy-returning methods explicit. Broader overload-set polish remains part of
-header-awareness hardening.
+copy-returning methods explicit. The typed `move(value)` builtin lowers to
+`std::move(value)` without requiring a C++ import, while Dudu declarations and
+callable locals named `move` retain ordinary lexical shadowing. Broader
+overload-set polish remains part of header-awareness hardening.
+
+Native header scanning preserves C++ static data members under their owning
+class instead of flattening them into module values. Namespace values also
+retain qualified alias types through cold and warm scan-cache paths.
 
 This is more important than user-defined macros because it directly affects
 normal systems and game code.

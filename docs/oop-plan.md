@@ -458,6 +458,12 @@ Dudu follows C++ value semantics:
 next = move(current)
 ```
 
+`move(value)` is a typed Dudu builtin that lowers directly to
+`std::move(value)`. It does not require importing `<utility>` into the Dudu
+namespace, and its result keeps the source value's Dudu type for assignment and
+return checking. The moved-from source remains valid but is otherwise in an
+unspecified state, matching C++ move semantics.
+
 The compiler should give Dudu-source diagnostics for copy/move failures where
 possible.
 

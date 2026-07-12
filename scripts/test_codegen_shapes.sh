@@ -91,6 +91,10 @@ grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_move_unique_ptr.dd" \
     -o "$repo_root/build/cpp_move_unique_ptr.cpp"
 grep -Fq "std::move(first)" "$repo_root/build/cpp_move_unique_ptr.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/move_shadow.dd" \
+    -o "$repo_root/build/move_shadow.cpp"
+grep -Fq "return move(41);" "$repo_root/build/move_shadow.cpp"
+! grep -Fq "std::move(41)" "$repo_root/build/move_shadow.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/static_fields.dd" \
     -o "$repo_root/build/static_fields.cpp"
 grep -Fq "inline static int32_t count = 0;" "$repo_root/build/static_fields.cpp"

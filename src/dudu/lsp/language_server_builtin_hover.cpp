@@ -7,6 +7,7 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -43,6 +44,10 @@ std::optional<BuiltinFunctionDoc> builtin_function_doc(const std::string& name) 
         {"max", {"max[T](left: T, right: T) -> T", "Returns the larger of two comparable values."}},
         {"min",
          {"min[T](left: T, right: T) -> T", "Returns the smaller of two comparable values."}},
+        {"move",
+         {"move[T](value: T) -> T",
+          "Explicitly transfers a value into its destination using C++ move semantics. The "
+          "source remains valid but may be in a moved-from state."}},
         {"print", {"print(value...) -> void", "Writes values to stdout followed by a newline."}},
         {"range",
          {"range(stop: i32) -> range\nrange(start: i32, stop: i32, step: i32 = 1) -> range",
@@ -61,13 +66,22 @@ std::optional<BuiltinFunctionDoc> builtin_function_doc(const std::string& name) 
 
 bool is_builtin_function_selection(const AstSelection& selection, const std::string& query,
                                    const std::string& name) {
-    if (selection.call_callee && selection.symbol == name) {
+    if (!selection.call_callee) {
+        return query == name;
+    }
+    if (selection.symbol_path) {
+        return *selection.symbol_path == name;
+    }
+    return selection.symbol == name || query == name;
+}
+
+bool builtin_function_is_shadowed(const std::string& name, const ModuleAst& current,
+                                  const Document& doc, const Json* params) {
+    if (has_type_ref(local_type_ref_before_cursor(current, doc, name, params))) {
         return true;
     }
-    if (selection.call_callee && selection.symbol_path == name) {
-        return true;
-    }
-    return query == name;
+    return std::ranges::any_of(current.functions,
+                               [&](const FunctionDecl& fn) { return fn.name == name; });
 }
 
 bool template_head_is(const TypeRef& type, std::initializer_list<std::string_view> names) {
@@ -191,12 +205,17 @@ std::string method_description(const std::string& kind, const std::string& metho
 } // namespace
 
 std::optional<std::string> builtin_function_hover_json(const AstSelection& selection,
-                                                       const std::string& query) {
-    static const std::vector<std::string> names = {"delete", "free",  "len",  "max",
-                                                   "min",    "print", "range"};
+                                                       const std::string& query,
+                                                       const ModuleAst& current,
+                                                       const Document& doc, const Json* params) {
+    static const std::vector<std::string> names = {"delete", "free", "len",   "max",
+                                                   "min",    "move", "print", "range"};
     for (const std::string& name : names) {
         if (!is_builtin_function_selection(selection, query, name)) {
             continue;
+        }
+        if (builtin_function_is_shadowed(name, current, doc, params)) {
+            return std::nullopt;
         }
         const std::optional<BuiltinFunctionDoc> doc = builtin_function_doc(name);
         if (!doc) {

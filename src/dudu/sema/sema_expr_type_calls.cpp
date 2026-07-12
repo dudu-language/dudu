@@ -171,6 +171,13 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
         }
         return first;
     }
+    if (callee == "move") {
+        call_arity_between(expr, location, callee, 1, 1);
+        if (expr.children.empty()) {
+            return TypeRef{};
+        }
+        return infer_expr_type_ast(scope, expr.children.front(), location);
+    }
     if (callee == "print") {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_type_ast(scope, arg, location);
@@ -230,9 +237,12 @@ std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const
         return signature_return_type_ref(*signature);
     }
 
-    if (location != nullptr && class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
-        sema_expr_fail(*location,
-                       type_ref_text(receiver_type) + " is not callable; define @operator(\"()\")");
+    if (location != nullptr) {
+        std::string message = type_ref_text(receiver_type) + " is not callable";
+        if (class_for_receiver_type(scope.symbols, receiver_type) != nullptr) {
+            message += "; define @operator(\"()\")";
+        }
+        sema_expr_fail(*location, message);
     }
     return std::nullopt;
 }
@@ -329,6 +339,12 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
             check_call_args_ast(scope, callee, overloads->second.front(), expr.children, location);
         }
         return std::nullopt;
+    }
+    if (local_type_ref_ptr(scope, callee) != nullptr) {
+        return callable_value_type_ref(scope, expr, callee, location);
+    }
+    if (callee == "move") {
+        return direct_builtin_call_type_ref(scope, expr, callee, location);
     }
     if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
         if (location != nullptr) {

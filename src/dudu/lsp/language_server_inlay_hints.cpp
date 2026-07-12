@@ -329,6 +329,12 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
             found != scope.symbols.function_decls.end()) {
             return function_param_hints(*found->second, false);
         }
+        if (scope.local_type_refs.contains(callee)) {
+            return {};
+        }
+        if (callee == "move" && expr.children.size() == 1) {
+            return {.names = {"value"}, .types = {infer_type(scope, expr.children.front())}};
+        }
         if (ParamHints native =
                 first_native_function_param_hints(scope.symbols, callee, expr.children.size());
             !native.names.empty()) {

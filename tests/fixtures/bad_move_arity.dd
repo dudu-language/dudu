@@ -1,0 +1,2 @@
+def main() -> i32:
+    return move(20, 22)

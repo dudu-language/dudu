@@ -9,6 +9,10 @@
 
 ### Added
 
+- Added the typed `move(value)` builtin for explicit C++ move semantics without
+  importing or spelling `std.move` in Dudu source.
+- Imported C++ static data members now remain owned by their classes through
+  scanning and cache reloads, and namespace values retain qualified alias types.
 - Added authoritative libclang size/alignment metadata for imported C/C++
   classes, aliases, and enums, preserved through raw and parsed native scan
   caches and surfaced in hover and inlay-hint tooltips without layout guessing.

@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v28";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v29";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -307,6 +307,16 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                              .value_expr = {},
                                              .location = decl_location,
                                              .doc_comment = fields[2]});
+        } else if (tag == "SFLD" && fields.size() == 6 && current_class != nullptr) {
+            const SourceLocation decl_location = cached_location(fields, 3, location);
+            current_class->static_fields.push_back(
+                {.name = fields[0],
+                 .cpp_name = {},
+                 .type_ref = cached_type_ref(fields[1], decl_location),
+                 .value_expr = {},
+                 .origin_module = {},
+                 .location = decl_location,
+                 .doc_comment = fields[2]});
         } else if (tag == "MET" && current_class != nullptr) {
             const std::optional<FunctionDecl> fn = read_function_record(fields, location);
             if (!fn) {
@@ -411,6 +421,12 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
                                                      field.doc_comment};
             append_location_fields(field_fields, field.location);
             write_record(out, "FLD", field_fields);
+        }
+        for (const ConstDecl& field : klass.static_fields) {
+            std::vector<std::string> field_fields = {field.name, cached_type_text(field.type_ref),
+                                                     field.doc_comment};
+            append_location_fields(field_fields, field.location);
+            write_record(out, "SFLD", field_fields);
         }
         for (const FunctionDecl& method : klass.methods) {
             write_function_record(out, "MET", method);

@@ -145,6 +145,15 @@ void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source) 
             target.fields.push_back(field);
         }
     }
+    std::set<std::string> static_fields;
+    for (const ConstDecl& field : target.static_fields) {
+        static_fields.insert(field.name);
+    }
+    for (const ConstDecl& field : source.static_fields) {
+        if (static_fields.insert(field.name).second) {
+            target.static_fields.push_back(field);
+        }
+    }
     for (const FunctionDecl& method : source.methods) {
         if (!contains_equivalent_method(target.methods, method)) {
             target.methods.push_back(method);

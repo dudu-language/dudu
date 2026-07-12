@@ -320,6 +320,58 @@ void test_native_layout_survives_parsed_scan_cache(const std::filesystem::path& 
     require_alias_layout(warm);
 }
 
+void test_native_static_class_fields_keep_owner_and_cache(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "examples";
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build/native-static-field-cache";
+    std::filesystem::remove_all(config.build_dir);
+
+    const std::string source = "from cpp.path import cuda_runtime.h as cuda\n"
+                               "\n"
+                               "def index_sum() -> i32:\n"
+                               "    return cuda.blockIdx.x + cuda.blockDim.x + cuda.threadIdx.x\n";
+    const auto scan = [&](std::string_view file_name) {
+        dudu::ModuleAst module = dudu::parse_source(source, source_dir / file_name);
+        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+        return module;
+    };
+    const auto require_static_x = [](const dudu::ModuleAst& module, std::string_view class_name) {
+        for (const dudu::ClassDecl& klass : module.native_classes) {
+            if (klass.name != class_name) {
+                continue;
+            }
+            assert(std::ranges::any_of(klass.static_fields, [](const dudu::ConstDecl& field) {
+                return field.name == "x" && dudu::type_ref_text(field.type_ref) == "i32";
+            }));
+            return;
+        }
+        assert(false && "CUDA index class was not scanned");
+    };
+
+    dudu::ModuleAst cold = scan("native_static_fields_cold.dd");
+    assert(std::ranges::none_of(cold.native_values, [](const dudu::NativeValueDecl& value) {
+        return value.name == "x" || value.name.ends_with(".x");
+    }));
+    assert(std::ranges::any_of(cold.native_values, [](const dudu::NativeValueDecl& value) {
+        return value.name == "cuda.cudaSuccess" &&
+               dudu::type_ref_text(value.type_ref) == "const[cuda.cudaError_t]";
+    }));
+    for (std::string_view class_name : {"cuda.blockIdx", "cuda.blockDim", "cuda.threadIdx"}) {
+        require_static_x(cold, class_name);
+    }
+    dudu::analyze_module(cold, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(cold);
+    assert(cpp.find("blockIdx::x") != std::string::npos);
+    assert(cpp.find("blockDim::x") != std::string::npos);
+    assert(cpp.find("threadIdx::x") != std::string::npos);
+
+    const dudu::ModuleAst warm = scan("native_static_fields_warm.dd");
+    for (std::string_view class_name : {"cuda.blockIdx", "cuda.blockDim", "cuda.threadIdx"}) {
+        require_static_x(warm, class_name);
+    }
+}
+
 void test_native_header_alias_preserves_identity(const std::filesystem::path& root) {
     dudu::ModuleAst module =
         dudu::parse_source("import cpp \"native_headers/simple_cpp.hpp\" as native\n"
@@ -1136,25 +1188,22 @@ void test_native_scan_ignores_anonymous_record_definitions() {
 
 void test_native_scan_preserves_scoped_enum_owners() {
     dudu::NativeHeaderScan scan;
-    dudu::parse_ast_dump(
-        scan,
-        "`-NamespaceDecl 0x1 <test.hpp:1:1, line:8:1> line:1:11 ns\n"
-        "  |-EnumDecl 0x2 <line:2:1, col:27> col:12 class First 'int'\n"
-        "  | |-EnumConstantDecl 0x3 <col:20> col:20 Same 'ns::First'\n"
-        "  | `-EnumConstantDecl 0x4 <col:26> col:26 FirstOnly 'ns::First'\n"
-        "  |-EnumDecl 0x5 <line:3:1, col:28> col:12 class Second 'int'\n"
-        "  | |-EnumConstantDecl 0x6 <col:21> col:21 Same 'ns::Second'\n"
-        "  | `-EnumConstantDecl 0x7 <col:27> col:27 SecondOnly 'ns::Second'\n"
-        "  `-EnumDecl 0x8 <line:4:1, col:24> col:8 Plain\n"
-        "    `-EnumConstantDecl 0x9 <col:16> col:16 PlainValue 'ns::Plain'\n",
-        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    dudu::parse_ast_dump(scan,
+                         "`-NamespaceDecl 0x1 <test.hpp:1:1, line:8:1> line:1:11 ns\n"
+                         "  |-EnumDecl 0x2 <line:2:1, col:27> col:12 class First 'int'\n"
+                         "  | |-EnumConstantDecl 0x3 <col:20> col:20 Same 'ns::First'\n"
+                         "  | `-EnumConstantDecl 0x4 <col:26> col:26 FirstOnly 'ns::First'\n"
+                         "  |-EnumDecl 0x5 <line:3:1, col:28> col:12 class Second 'int'\n"
+                         "  | |-EnumConstantDecl 0x6 <col:21> col:21 Same 'ns::Second'\n"
+                         "  | `-EnumConstantDecl 0x7 <col:27> col:27 SecondOnly 'ns::Second'\n"
+                         "  `-EnumDecl 0x8 <line:4:1, col:24> col:8 Plain\n"
+                         "    `-EnumConstantDecl 0x9 <col:16> col:16 PlainValue 'ns::Plain'\n",
+                         {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
     scan = dudu::dedupe_scan(std::move(scan));
 
     const auto has_type = [&](const std::string& name) {
-        return std::ranges::any_of(scan.types,
-                                   [&](const dudu::NativeTypeDecl& type) {
-                                       return type.name == name;
-                                   });
+        return std::ranges::any_of(
+            scan.types, [&](const dudu::NativeTypeDecl& type) { return type.name == name; });
     };
     const auto value_type = [&](const std::string& name) -> std::string {
         for (const dudu::NativeValueDecl& value : scan.values) {
@@ -1185,6 +1234,7 @@ int main() {
         test_native_header_type_scan(root);
         test_cxx_import_scans_c_globals_but_emits_plain_include(root);
         test_native_layout_survives_parsed_scan_cache(root);
+        test_native_static_class_fields_keep_owner_and_cache(root);
         test_native_header_alias_preserves_identity(root);
         test_direct_cpp_import_preserves_namespace_type_aliases(root);
         test_native_operator_does_not_hijack_dudu_class_operator(root);

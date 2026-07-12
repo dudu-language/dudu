@@ -847,6 +847,11 @@ a: *i32
 b: i32
 ```
 
+Explicit ownership transfer uses the typed `move(value)` builtin. It lowers to
+`std::move(value)` without requiring a C++ header import and preserves the
+value's Dudu type for assignment and return checking. As in C++, the source
+remains valid after the move but may be in a moved-from state.
+
 ## Function Pointer Types
 
 Raw function pointers use `fn`.

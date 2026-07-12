@@ -35,6 +35,7 @@ enum class CommentTargetKind {
     Function,
     Class,
     Field,
+    StaticField,
     Method,
     Namespace,
 };
@@ -336,6 +337,13 @@ void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const 
                             text);
         }
         break;
+    case CommentTargetKind::StaticField:
+        if (target.primary < scan.classes.size() &&
+            target.secondary < scan.classes[target.primary].static_fields.size()) {
+            append_doc_text(
+                scan.classes[target.primary].static_fields[target.secondary].doc_comment, text);
+        }
+        break;
     case CommentTargetKind::Method:
         if (target.primary < scan.classes.size() &&
             target.secondary < scan.classes[target.primary].methods.size()) {
@@ -353,8 +361,7 @@ void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const 
 
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
-                    std::vector<std::pair<int, size_t>>& classes,
-                    std::vector<EnumContext>& enums,
+                    std::vector<std::pair<int, size_t>>& classes, std::vector<EnumContext>& enums,
                     std::vector<TemplateContext>& templates,
                     std::vector<std::pair<int, size_t>>& functions,
                     std::vector<ParamTarget>& param_targets,
@@ -689,9 +696,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     value_scope.pop_back();
                 }
             }
-            enums.push_back({.depth = depth,
-                             .type_name = name,
-                             .value_scope = std::move(value_scope)});
+            enums.push_back(
+                {.depth = depth, .type_name = name, .value_scope = std::move(value_scope)});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
                std::regex_search(line, match, fn_decl)) {
@@ -831,12 +837,34 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                        .kind = CommentTargetKind::Value,
                                        .primary = scan.values.size() - 1});
         }
+    } else if (!classes.empty() && line.find("VarDecl") != std::string::npos &&
+               line.find("ParmVarDecl") == std::string::npos &&
+               std::regex_search(line, match, var_decl)) {
+        const std::string name = match[1].str();
+        if (!starts_with(name, "__")) {
+            const size_t class_index = classes.back().second;
+            const std::string type =
+                qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
+            scan.classes[class_index].static_fields.push_back(
+                {.name = name,
+                 .cpp_name = {},
+                 .type_ref = parse_native_type_text(type, decl_location),
+                 .value_expr = {},
+                 .origin_module = {},
+                 .location = decl_location});
+            comment_targets.push_back(
+                {.depth = depth,
+                 .kind = CommentTargetKind::StaticField,
+                 .primary = class_index,
+                 .secondary = scan.classes[class_index].static_fields.size() - 1});
+        }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
                std::regex_search(line, match, var_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__") && name != "dudu_probe") {
-            const std::string type = dudu_type(match[2].str());
+            const std::string type =
+                qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
             scan.values.push_back(
                 {.name = name,
                  .native_spelling = type,
