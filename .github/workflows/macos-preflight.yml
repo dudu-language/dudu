@@ -29,13 +29,7 @@ jobs:
             -DDUDU_STRICT=ON \
             -DDUDU_WARN_AS_ERROR=ON
       - name: Build portability tests
-        run: |
-          cmake --build build/macos-preflight --parallel --target \
-            dudu_language_server_tests \
-            dudu_language_server_navigation_tests \
-            dudu_native_frontend_tests \
-            dudu_native_type_compat_tests \
-            dudu_emit_frontend_tests
+        run: cmake --build build/macos-preflight --parallel 4
       - name: Run portability tests
         run: |
           ctest --test-dir build/macos-preflight --output-on-failure \
