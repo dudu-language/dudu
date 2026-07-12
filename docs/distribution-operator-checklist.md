@@ -16,7 +16,7 @@ and GitHub Actions secrets.
 | GitHub | Organization `dudu-language` owns `dudu`; `wegfawefgawefg` is an active Owner | None for repository releases |
 | Release signing | No dedicated signing key exists | Optional for the first alpha; create one before signed releases |
 | Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Upload the release VSIX manually |
-| Open VSX | Signed in; Publisher Agreement is not yet accepted | Accept the agreement, create namespace `dudu`, and create a token |
+| Open VSX | Publisher Agreement signed; namespace `dudu` claimed; `OVSX_PAT` stored in GitHub Actions | None |
 | AUR | Dedicated local SSH key exists; upstream registration is temporarily disabled | Register and add the public key when Arch reopens registration |
 | Homebrew | Public tap repository `dudu-language/homebrew-dudu` exists | None |
 | `.deb` download | GitHub access is sufficient | No account setup |
@@ -55,21 +55,19 @@ infrastructure.
 
 ## 2. Open VSX
 
-The Open VSX account is signed in. Accept the Eclipse Foundation Open VSX
-Publisher Agreement from the Profile page, claim the `dudu` namespace, and
-create a publishing token. If the namespace is unavailable, stop before
-selecting an alternative so package identity remains consistent across
-registries.
+The Open VSX account is linked to the Eclipse Foundation account, the Publisher
+Agreement is signed, namespace `dudu` is claimed, and its publishing token is
+stored as the `OVSX_PAT` repository secret.
 
-Store the token interactively:
+Confirm the secret exists without attempting to retrieve its value:
 
 ```sh
 cd /home/vega/Coding/LangDev/Dudu/dudu
-gh secret set OVSX_PAT
-gh secret list
+gh secret list --repo dudu-language/dudu
 ```
 
-Do not place the token in `.env`, `package.json`, shell startup files, or the
+Rotate the token from Open VSX and replace the GitHub secret if it is ever
+exposed. Do not place it in `.env`, `package.json`, shell startup files, or the
 repository.
 
 ## 3. AUR
