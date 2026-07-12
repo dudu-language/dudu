@@ -2556,9 +2556,12 @@ push. They are not release packaging work.
    current partial graph cannot be built. A JSON-RPC invalid-edit fixture now
    exercises the full edit/fail/fix lifecycle without restarting the server,
    including native token classification, and the existing raymarch-dd and
-   dudu-webserver latency probe remains green. Remaining editor work is finer
-   incremental recovery and cold-index performance, not global loss of
-   intelligence on invalid source.
+   dudu-webserver latency probe remains green. Python-shaped multiline
+   docstrings now have canonical formatter support: indentation is normalized
+   through the parser's docstring rules, internal blank lines are preserved,
+   and runtime triple-string values remain byte-preserving. Remaining editor
+   work is finer incremental recovery and cold-index performance, not global
+   loss of intelligence on invalid source.
 
    Inlay hints are part of the same editor-quality target. The immediate hint
    set is inferred local binding types, inferred loop binding types, the

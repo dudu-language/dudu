@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added canonical formatter support for Python-shaped multiline docstrings,
+  including indentation normalization, internal blank-line preservation, and
+  byte-preserving handling of runtime and unterminated triple-string literals.
 - Added scanner-derived C++ class and alias-template parameters, defaulted
   template arity, nested type aliases, lexical associated-type resolution,
   dependent field/method substitution, and native scan-cache preservation

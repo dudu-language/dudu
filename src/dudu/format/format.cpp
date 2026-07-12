@@ -1,5 +1,6 @@
 #include "dudu/format/format.hpp"
 
+#include "dudu/format/format_docstrings.hpp"
 #include "dudu/format/format_imports.hpp"
 #include "dudu/parser/parser.hpp"
 
@@ -58,21 +59,33 @@ std::string join_lines(const std::vector<std::string>& lines) {
 } // namespace
 
 std::string format_source(std::string_view source) {
-    std::istringstream in{std::string(source)};
+    std::vector<FormatLine> prepared_lines = prepare_format_lines(source);
     std::vector<std::string> lines;
-    std::string line;
-    while (std::getline(in, line)) {
-        rtrim(line);
-        normalize_leading_indent(line);
-        lines.push_back(std::move(line));
+    lines.reserve(prepared_lines.size());
+    for (FormatLine& prepared : prepared_lines) {
+        if (prepared.trim_end) {
+            rtrim(prepared.text);
+        }
+        if (prepared.normalize_indent) {
+            normalize_leading_indent(prepared.text);
+        }
+        lines.push_back(prepared.text);
     }
     sort_leading_imports(lines, join_lines(lines));
 
     std::ostringstream out;
     int blank_count = 0;
-    for (const std::string& formatted_line : lines) {
-        line = formatted_line;
+    for (size_t index = 0; index < lines.size(); ++index) {
+        const std::string& line = lines[index];
         if (line.empty()) {
+            if (prepared_lines[index].preserve_blank) {
+                for (int i = 0; i < std::min(blank_count, 2); ++i) {
+                    out << '\n';
+                }
+                blank_count = 0;
+                out << '\n';
+                continue;
+            }
             ++blank_count;
             continue;
         }

@@ -462,7 +462,11 @@ Current support is partial but real: contiguous `#` comments immediately above
 Dudu declarations attach to parsed declaration AST nodes, and first-body
 triple-single-quoted docstrings attach to modules, functions, methods, classes,
 and enums. Docstring statements are removed from the executable statement list,
-so they are documentation rather than runtime string expressions. Hover shows
+so they are documentation rather than runtime string expressions. The
+formatter canonicalizes docstring indentation through the same normalization
+used by the parser, preserves intentional internal blank lines, and is
+idempotent. Triple strings used as runtime values remain byte-preserving, even
+while the surrounding code is formatted. Hover shows
 attached docs for same-file declarations, imported Dudu module symbols, and
 typed member fields such as `player.hp`, including module docs when hovering a
 module import alias.
@@ -496,13 +500,11 @@ Remaining work:
 1. Decide whether one-line declarations such as fields, constants, and aliases
    need a larger-doc form beyond leading `#` comments.
 2. Add direct native C/C++ documentation fixtures once scanner support exists.
-3. Extend formatting rules and formatter behavior for docstrings, including
-   indentation trimming and blank-line preservation.
-4. Extend parser diagnostics for malformed docstrings if new malformed cases
+3. Extend parser diagnostics for malformed docstrings if new malformed cases
    appear beyond unterminated triple strings and misplaced docstrings.
-5. Add larger-doc LSP fixtures for fields/constants/aliases if a larger-doc
+4. Add larger-doc LSP fixtures for fields/constants/aliases if a larger-doc
    syntax is added.
-6. Extend native C/C++ documentation fixtures beyond native functions and
+5. Extend native C/C++ documentation fixtures beyond native functions and
    namespaces when the scanner exposes useful docs for more declaration kinds.
 
 ### Milestone 3: Completion And Signature Help
