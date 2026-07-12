@@ -290,11 +290,17 @@ struct NativeSymbolId {
     std::string canonical_path;
 };
 
+struct TypeLayout {
+    size_t size = 0;
+    size_t alignment = 1;
+};
+
 struct NativeTypeDecl {
     std::string name;
     std::string native_spelling;
     TypeRef type_ref;
     NativeSymbolId identity{};
+    std::optional<TypeLayout> layout{};
     SourceLocation location;
     std::string doc_comment{};
     std::vector<std::string> generic_params{};
@@ -407,6 +413,7 @@ struct ClassDecl {
     std::string name;
     std::string cpp_name;
     NativeSymbolId identity{};
+    std::optional<TypeLayout> layout{};
     bool native_declaration = false;
     std::vector<std::string> generic_params;
     std::optional<size_t> generic_min_args;

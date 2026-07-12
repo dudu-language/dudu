@@ -2755,8 +2755,10 @@ push. They are not release packaging work.
    definition/hover/reference paths when macro definitions land.
    Class hover now shows a compact definition preview and, for Dudu-defined
    classes with computable primitive/pointer/fixed-array instance fields, a
-   conservative size/alignment line. Native C/C++ class layout is deliberately
-   omitted until the native scanner/cache carries real Clang layout facts.
+   conservative size/alignment line. Native C/C++ classes, aliases, and enums
+   now carry authoritative libclang size/alignment facts through raw identity
+   serialization and parsed scan caches into hover and inlay tooltips. Unknown,
+   incomplete, and dependent native layouts are omitted rather than guessed.
    Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported

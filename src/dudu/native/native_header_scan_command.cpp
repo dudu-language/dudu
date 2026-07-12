@@ -183,7 +183,7 @@ std::filesystem::path native_header_temp_base(const std::filesystem::path& sourc
 
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags) {
-    return "v7|" +
+    return "v8|" +
            std::string(import.native_include_style == NativeIncludeStyle::System ? "system|"
                                                                                  : "path|") +
            native_header_unquoted(import.module_path) + "|" +

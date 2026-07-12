@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v27";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v28";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -59,6 +59,20 @@ SourceLocation cached_location(const std::vector<std::string>& fields, size_t in
     return {.file = SourceFileName(fields[index]),
             .line = std::stoi(fields[index + 1]),
             .column = std::stoi(fields[index + 2])};
+}
+
+std::optional<TypeLayout> cached_layout(const std::vector<std::string>& fields, size_t index) {
+    if (fields.size() < index + 2 || fields[index].empty() || fields[index + 1].empty()) {
+        return std::nullopt;
+    }
+    return TypeLayout{.size = static_cast<size_t>(std::stoull(fields[index])),
+                      .alignment = static_cast<size_t>(std::stoull(fields[index + 1]))};
+}
+
+void append_layout_fields(std::vector<std::string>& fields,
+                          const std::optional<TypeLayout>& layout) {
+    fields.push_back(layout ? std::to_string(layout->size) : "");
+    fields.push_back(layout ? std::to_string(layout->alignment) : "");
 }
 
 ParamDecl cached_param(std::string name, const std::string& type, const SourceLocation& location) {
@@ -201,12 +215,13 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
         }
         const std::string& tag = parsed->first;
         const std::vector<std::string>& fields = parsed->second;
-        if (tag == "NT" && fields.size() == 12) {
+        if (tag == "NT" && fields.size() == 14) {
             const SourceLocation decl_location = cached_location(fields, 6, location);
             NativeTypeDecl type{.name = fields[0],
                                 .native_spelling = fields[1],
                                 .type_ref = cached_type_ref(fields[2], decl_location),
                                 .identity = symbol_id(fields, 3, 4),
+                                .layout = cached_layout(fields, 12),
                                 .location = decl_location,
                                 .doc_comment = fields[5]};
             type.generic_params = native_cache_split_strings(fields[9]);
@@ -252,12 +267,13 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                        .identity = symbol_id(fields, 1, 2),
                                        .location = cached_location(fields, 4, location),
                                        .doc_comment = fields[3]});
-        } else if (tag == "CLS" && fields.size() == 14) {
+        } else if (tag == "CLS" && fields.size() == 16) {
             const SourceLocation decl_location = cached_location(fields, 11, location);
             ClassDecl klass;
             klass.name = fields[0];
             klass.cpp_name = fields[1];
             klass.identity = symbol_id(fields, 2, 3);
+            klass.layout = cached_layout(fields, 14);
             klass.native_declaration = true;
             klass.generic_params = native_cache_split_strings(fields[4]);
             if (!fields[5].empty()) {
@@ -318,6 +334,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
         fields.push_back(native_cache_join_strings(item.generic_params));
         fields.push_back(item.generic_min_args ? std::to_string(*item.generic_min_args) : "");
         fields.push_back(native_cache_join_strings(cached_type_texts(item.generic_default_args)));
+        append_layout_fields(fields, item.layout);
         write_record(out, "NT", fields);
     }
     for (const NativeValueDecl& item : scan.values) {
@@ -375,6 +392,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
             klass.origin_module,
             klass.doc_comment};
         append_location_fields(fields, klass.location);
+        append_layout_fields(fields, klass.layout);
         write_record(out, "CLS", fields);
         for (const BaseClassDecl& base : klass.base_class_refs) {
             std::vector<std::string> base_fields = {cached_type_text(base.type_ref)};

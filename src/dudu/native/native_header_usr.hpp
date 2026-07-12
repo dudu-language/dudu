@@ -23,15 +23,19 @@ enum class NativeCursorKind {
 
 class NativeCursorIdentityIndex {
   public:
-    void insert(NativeCursorKind kind, std::string name, SourceLocation location, std::string usr);
+    void insert(NativeCursorKind kind, std::string name, SourceLocation location, std::string usr,
+                std::optional<TypeLayout> layout = std::nullopt);
     std::optional<std::string> find(NativeCursorKind kind, std::string_view name,
                                     const SourceLocation& location) const;
+    std::optional<TypeLayout> find_layout(NativeCursorKind kind, std::string_view name,
+                                          const SourceLocation& location) const;
     bool empty() const;
     std::string serialize() const;
     static NativeCursorIdentityIndex deserialize(std::string_view text);
 
   private:
     std::map<std::string, std::string> identities_;
+    std::map<std::string, TypeLayout> layouts_;
 };
 
 NativeCursorIdentityIndex scan_native_cursor_identities(const std::filesystem::path& source,

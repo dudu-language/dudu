@@ -213,6 +213,10 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
         const std::string target_display = native_type_alias_type_text(type);
         std::string markdown = fenced_code("cpp", "native type = " + target_display) +
                                "\n\nresolves to `" + "native class " + target_display + "`";
+        if (type.layout) {
+            markdown += "\n\nsize = " + std::to_string(type.layout->size) +
+                        " bytes, align = " + std::to_string(type.layout->alignment) + " bytes";
+        }
         const std::string identity = native_symbol_identity_key(type.identity);
         if (!identity.empty()) {
             if (const std::optional<std::filesystem::path> path = native_identity_path(identity)) {

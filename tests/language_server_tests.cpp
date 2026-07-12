@@ -656,12 +656,14 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
         dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
     const std::string hover = dudu::hover_json(doc, "", &hover_params);
     assert(hover.find("native class NativeWidget") != std::string::npos);
+    assert(hover.find("size = 4 bytes, align = 4 bytes") != std::string::npos);
     assert(hover.find("Native widget class docs.") != std::string::npos);
 
     dudu::Json alias_hover_params =
         dudu::JsonParser("{\"position\":{\"line\":5,\"character\":18}}").parse();
     const std::string alias_hover = dudu::hover_json(doc, "", &alias_hover_params);
     assert(alias_hover.find("native type = NativeWidget") != std::string::npos);
+    assert(alias_hover.find("size = 4 bytes, align = 4 bytes") != std::string::npos);
     assert(alias_hover.find("Native widget class docs.") != std::string::npos);
 }
 
@@ -721,6 +723,7 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
                                      "    widget.set_position(3, 4)\n"
+                                     "    inferred_widget = NativeWidget()\n"
                                      "    made = native_make()\n"
                                      "    return native_add(1, 2)\n"};
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
@@ -734,6 +737,8 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
            std::string::npos);
     assert(hints.find("\"value\":\"NativeOpaque\"") != std::string::npos);
     assert(hints.find("native type NativeOpaque") != std::string::npos);
+    assert(hints.find("native class NativeWidget") != std::string::npos);
+    assert(hints.find("size = 1 bytes, align = 1 bytes") != std::string::npos);
     assert(hints.find("\"label\":\"arg0:\"") == std::string::npos);
 }
 

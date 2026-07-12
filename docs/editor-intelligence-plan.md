@@ -261,9 +261,12 @@ For source in the current project or a Dudu library:
 - hover on class/type symbols should include a compact source-shaped definition
   preview so users can inspect fields without jumping. Dudu-defined classes
   should also show size/alignment when the compiler can compute the layout from
-  known primitive, pointer/reference, and fixed-array fields. Imported native
-  C/C++ type layout requires scanner/cache support for Clang layout facts; until
-  that exists, native type hover must not guess size or alignment.
+  known primitive, pointer/reference, fixed-array, alias, and class fields.
+  Imported native C/C++ type layout comes from libclang's authoritative type
+  size/alignment queries and is preserved through the raw and parsed scanner
+  caches. Native type hover and inlay hints omit layout when Clang cannot
+  provide it; they never reconstruct an ABI layout from incomplete header
+  fields.
 - hover should support Rust-Analyzer-style actions where the editor can expose
   them: go to declaration, go to type definition, and inspect generated C++
   for the hovered symbol or selected source range
@@ -298,8 +301,8 @@ hint includes a resolvable Dudu or native type name, the label part should carry
 that symbol location so editors can expose normal go-to-definition behavior from
 the hint itself. Tooltips should include the rendered type and, when honestly
 known, compact layout facts such as size and alignment. Dudu class type parts may
-show a short class preview; native C++ classes should not invent layout facts
-unless the scanner has a trustworthy source for them.
+show a short class preview. Native C/C++ classes, aliases, and enums expose
+layout only when the scanner has authoritative libclang facts.
 
 VS Code defaults should keep hints available but not visually permanent:
 

@@ -38,6 +38,9 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
     const auto widget =
         identities.find(dudu::NativeCursorKind::Class, "Widget",
                         {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
+    const auto widget_layout = identities.find_layout(
+        dudu::NativeCursorKind::Class, "Widget",
+        {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
     const auto first_overload =
         identities.find(dudu::NativeCursorKind::Function, "overloaded",
                         {.file = dudu::SourceFileName(header.string()), .line = 87, .column = 12});
@@ -45,6 +48,9 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
         identities.find(dudu::NativeCursorKind::Function, "overloaded",
                         {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14});
     assert(widget.has_value() && !widget->empty());
+    assert(widget_layout.has_value());
+    assert(widget_layout->size == 4);
+    assert(widget_layout->alignment == 4);
     assert(first_overload.has_value() && !first_overload->empty());
     assert(second_overload.has_value() && !second_overload->empty());
     assert(*first_overload != *second_overload);
@@ -54,6 +60,12 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
     assert(restored.find(dudu::NativeCursorKind::Class, "Widget",
                          {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7}) ==
            widget);
+    const auto restored_widget_layout = restored.find_layout(
+        dudu::NativeCursorKind::Class, "Widget",
+        {.file = dudu::SourceFileName(header.string()), .line = 4, .column = 7});
+    assert(restored_widget_layout.has_value());
+    assert(restored_widget_layout->size == widget_layout->size);
+    assert(restored_widget_layout->alignment == widget_layout->alignment);
     assert(
         restored.find(dudu::NativeCursorKind::Function, "overloaded",
                       {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14}) ==
@@ -262,6 +274,50 @@ void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesyst
     assert(cpp.find("extern \"C\" {\n#include \"native_headers/simple_c.h\"") == std::string::npos);
     assert(cpp.find("return dudu_native_add(20, 22);") != std::string::npos);
     assert(cpp.find("native::dudu_native_add") == std::string::npos);
+}
+
+void test_native_layout_survives_parsed_scan_cache(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build/native-layout-cache";
+    std::filesystem::remove_all(config.build_dir);
+
+    const auto scan = [&](std::string_view file_name) {
+        dudu::ModuleAst module = dudu::parse_source(
+            "from cpp.path import native_headers/simple_cpp.hpp\n", source_dir / file_name);
+        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+        return module;
+    };
+    const auto require_widget_layout = [](const dudu::ModuleAst& module) {
+        for (const dudu::ClassDecl& klass : module.native_classes) {
+            if (klass.name == "dudu_native.Widget") {
+                assert(klass.layout.has_value());
+                assert(klass.layout->size == 4);
+                assert(klass.layout->alignment == 4);
+                return;
+            }
+        }
+        assert(false && "dudu_native.Widget was not scanned");
+    };
+    const auto require_alias_layout = [](const dudu::ModuleAst& module) {
+        for (const dudu::NativeTypeDecl& type : module.native_types) {
+            if (type.name == "DuduWidgetAlias") {
+                assert(type.layout.has_value());
+                assert(type.layout->size == 4);
+                assert(type.layout->alignment == 4);
+                return;
+            }
+        }
+        assert(false && "DuduWidgetAlias was not scanned");
+    };
+
+    const dudu::ModuleAst cold = scan("native_layout_cold.dd");
+    require_widget_layout(cold);
+    require_alias_layout(cold);
+    const dudu::ModuleAst warm = scan("native_layout_warm.dd");
+    require_widget_layout(warm);
+    require_alias_layout(warm);
 }
 
 void test_native_header_alias_preserves_identity(const std::filesystem::path& root) {
@@ -1128,6 +1184,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_cxx_import_scans_c_globals_but_emits_plain_include(root);
+        test_native_layout_survives_parsed_scan_cache(root);
         test_native_header_alias_preserves_identity(root);
         test_direct_cpp_import_preserves_namespace_type_aliases(root);
         test_native_operator_does_not_hijack_dudu_class_operator(root);

@@ -492,6 +492,11 @@ Native callable values declared through C/C++ function-pointer typedefs
 participate in signature help using the same alias-aware structured function
 type used by compiler call checking. Scanner documentation attached to the
 native value is shown in both signature help and hover.
+Native class/type hover and inlay-hint type parts also expose size and alignment
+when libclang reports an authoritative layout. The metadata survives both raw
+cursor-identity serialization and the parsed declaration cache. Incomplete or
+dependent native declarations omit layout rather than guessing from the fields
+visible in a header dump.
 
 Semantic tokens are also ProjectIndex-aware for Dudu imports. Module aliases
 such as `math`, selective imported classes such as `Player`, imported functions

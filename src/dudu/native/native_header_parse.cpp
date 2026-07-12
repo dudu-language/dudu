@@ -75,6 +75,12 @@ NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, Nat
     return identity;
 }
 
+std::optional<TypeLayout> scanned_layout(const NativeCursorIdentityIndex& identities,
+                                         NativeCursorKind kind, std::string_view spelling,
+                                         const SourceLocation& location) {
+    return identities.find_layout(kind, spelling, location);
+}
+
 TypeRef normalize_native_type_ref(TypeRef type);
 
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
@@ -561,6 +567,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 .type_ref = type_ref,
                 .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
                                              decl_location, visible_name, current_file),
+                .layout =
+                    scanned_layout(identities, NativeCursorKind::Type, raw_name, decl_location),
                 .location = decl_location};
             if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
                 native_type.generic_params = templates.back().params;
@@ -596,6 +604,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         klass.name = name;
         klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
                                           decl_location, name, current_file);
+        klass.layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location);
         klass.native_declaration = true;
         klass.native_partial_specialization = match[2].matched;
         klass.location = decl_location;
@@ -618,6 +627,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                  .type_ref = {},
                  .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
                                               decl_location, name, current_file),
+                 .layout =
+                     scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location),
                  .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
@@ -639,6 +650,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 }
                 klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
                                                   decl_location, name, current_file);
+                klass.layout =
+                    scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location);
                 klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
                 classes.push_back({depth, scan.classes.size() - 1});
@@ -659,6 +672,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                  .type_ref = {},
                  .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
                                               decl_location, name, current_file),
+                 .layout =
+                     scanned_layout(identities, NativeCursorKind::Type, raw_name, decl_location),
                  .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,

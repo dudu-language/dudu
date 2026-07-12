@@ -9,6 +9,9 @@
 
 ### Added
 
+- Added authoritative libclang size/alignment metadata for imported C/C++
+  classes, aliases, and enums, preserved through raw and parsed native scan
+  caches and surfaced in hover and inlay-hint tooltips without layout guessing.
 - Added structured native function-pointer typedefs and callable native global
   values, including argument checking, nullable function-pointer comparisons,
   signature help, scanner docs, and direct libxml2 allocator calls.

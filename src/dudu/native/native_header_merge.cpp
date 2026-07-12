@@ -103,6 +103,9 @@ void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source) 
     if (target.identity.canonical_path.empty()) {
         target.identity.canonical_path = source.identity.canonical_path;
     }
+    if (!target.layout && source.layout) {
+        target.layout = source.layout;
+    }
     if (target.generic_params.empty()) {
         target.generic_params = source.generic_params;
     }

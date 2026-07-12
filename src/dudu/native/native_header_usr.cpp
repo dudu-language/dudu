@@ -77,6 +77,20 @@ std::optional<NativeCursorKind> native_cursor_kind(CXCursor cursor) {
     return std::nullopt;
 }
 
+std::optional<TypeLayout> cursor_type_layout(CXCursor cursor, NativeCursorKind kind) {
+    if (kind != NativeCursorKind::Type && kind != NativeCursorKind::Class) {
+        return std::nullopt;
+    }
+    const CXType type = clang_getCursorType(cursor);
+    const long long size = clang_Type_getSizeOf(type);
+    const long long alignment = clang_Type_getAlignOf(type);
+    if (size < 0 || alignment <= 0) {
+        return std::nullopt;
+    }
+    return TypeLayout{.size = static_cast<size_t>(size),
+                      .alignment = static_cast<size_t>(alignment)};
+}
+
 SourceLocation cursor_location(CXCursor cursor) {
     CXFile file = nullptr;
     unsigned line = 0;
@@ -98,7 +112,7 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
         const std::string usr = cx_string(clang_getCursorUSR(cursor));
         const SourceLocation location = cursor_location(cursor);
         if (!name.empty() && !usr.empty() && !location.file.empty()) {
-            index.insert(*kind, name, location, usr);
+            index.insert(*kind, name, location, usr, cursor_type_layout(cursor, *kind));
         }
     }
     return CXChildVisit_Recurse;
@@ -107,8 +121,20 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
 } // namespace
 
 void NativeCursorIdentityIndex::insert(NativeCursorKind kind, std::string name,
-                                       SourceLocation location, std::string usr) {
-    identities_.insert_or_assign(identity_key(kind, name, location), std::move(usr));
+                                       SourceLocation location, std::string usr,
+                                       std::optional<TypeLayout> layout) {
+    const std::string key = identity_key(kind, name, location);
+    identities_.insert_or_assign(key, std::move(usr));
+    if (layout) {
+        layouts_.insert_or_assign(key, *layout);
+    }
+}
+
+std::optional<TypeLayout>
+NativeCursorIdentityIndex::find_layout(NativeCursorKind kind, std::string_view name,
+                                       const SourceLocation& location) const {
+    const auto found = layouts_.find(identity_key(kind, name, location));
+    return found == layouts_.end() ? std::nullopt : std::optional<TypeLayout>{found->second};
 }
 
 std::optional<std::string> NativeCursorIdentityIndex::find(NativeCursorKind kind,
@@ -125,8 +151,14 @@ bool NativeCursorIdentityIndex::empty() const {
 std::string NativeCursorIdentityIndex::serialize() const {
     std::string out;
     for (const auto& [key, usr] : identities_) {
-        out +=
-            std::to_string(key.size()) + ":" + key + std::to_string(usr.size()) + ":" + usr + "\n";
+        const auto layout = layouts_.find(key);
+        const std::string size =
+            layout == layouts_.end() ? "" : std::to_string(layout->second.size);
+        const std::string alignment =
+            layout == layouts_.end() ? "" : std::to_string(layout->second.alignment);
+        out += std::to_string(key.size()) + ":" + key + std::to_string(usr.size()) + ":" + usr +
+               std::to_string(size.size()) + ":" + size + std::to_string(alignment.size()) + ":" +
+               alignment + "\n";
     }
     return out;
 }
@@ -152,10 +184,17 @@ NativeCursorIdentityIndex NativeCursorIdentityIndex::deserialize(std::string_vie
     while (cursor < text.size()) {
         std::string key;
         std::string usr;
-        if (!read_field(key) || !read_field(usr)) {
+        std::string size;
+        std::string alignment;
+        if (!read_field(key) || !read_field(usr) || !read_field(size) || !read_field(alignment)) {
             return {};
         }
-        out.identities_.insert_or_assign(std::move(key), std::move(usr));
+        out.identities_.insert_or_assign(key, std::move(usr));
+        if (!size.empty() && !alignment.empty()) {
+            out.layouts_.insert_or_assign(
+                key, TypeLayout{.size = static_cast<size_t>(std::stoull(size)),
+                                .alignment = static_cast<size_t>(std::stoull(alignment))});
+        }
         if (cursor < text.size() && text[cursor] == '\n') {
             ++cursor;
         }
