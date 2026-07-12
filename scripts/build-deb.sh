@@ -44,7 +44,7 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DDUDU_BUILD_TESTS=OFF \
     -DDUDU_INSTALL_OWNER=deb \
     -DDUDU_PACKAGE_DEB=ON
-cmake --build "$build_dir" --parallel
+cmake --build "$build_dir" --parallel "${DUDU_BUILD_JOBS:-4}"
 (
     cd "$build_dir"
     cpack -G DEB

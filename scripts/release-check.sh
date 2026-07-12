@@ -67,7 +67,7 @@ cmake -S "$repo_root" -B "$build_root/build" \
     -DDUDU_BUILD_TESTS=OFF \
     -DDUDU_STRICT=ON \
     -DDUDU_WARN_AS_ERROR=ON
-cmake --build "$build_root/build" --parallel
+cmake --build "$build_root/build" --parallel "${DUDU_BUILD_JOBS:-4}"
 cmake --install "$build_root/build"
 
 installed_bin="$build_root/prefix/bin"

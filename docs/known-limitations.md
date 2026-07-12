@@ -14,7 +14,7 @@ published constraints, not promises of silent compatibility.
 
 ## Hosts And Installation
 
-- Linux x86_64 is the only validated host for `0.1.0-alpha.3`.
+- Linux x86_64 is the only validated host for `0.1.0-alpha.4`.
 - macOS Apple Silicon is a release target but is not advertised as validated
   until the release gate passes on real Apple hardware.
 - Windows is not supported by the first alpha.

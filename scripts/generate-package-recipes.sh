@@ -74,7 +74,7 @@ class Dudu < Formula
            "-DDUDU_BUILD_TESTS=OFF",
            "-DDUDU_INSTALL_OWNER=homebrew",
            "-DLLVM_ROOT=#{Formula["llvm"].opt_prefix}"
-    system "cmake", "--build", "build", "--parallel"
+    system "cmake", "--build", "build", "--parallel", "4"
     system "cmake", "--install", "build"
   end
 
@@ -106,7 +106,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \\
         -DDUDU_BUILD_TESTS=OFF \\
         -DDUDU_INSTALL_OWNER=aur
-    cmake --build build --parallel
+    cmake --build build --parallel 4
 }
 
 check() {
