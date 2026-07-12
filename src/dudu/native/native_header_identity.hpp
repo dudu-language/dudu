@@ -76,6 +76,24 @@ template <typename T> std::string native_decl_identity_key(const T& decl) {
 
 inline bool native_type_redeclarations_compatible(const NativeTypeDecl& lhs,
                                                   const NativeTypeDecl& rhs) {
+    const auto matching_tag = [](const NativeTypeDecl& tagged, const NativeTypeDecl& alias) {
+        if (!alias.native_spelling.empty() || alias.type_ref.kind != TypeKind::Unknown) {
+            return false;
+        }
+        for (std::string_view prefix : {"struct ", "union "}) {
+            if (tagged.native_spelling.starts_with(prefix) &&
+                tagged.native_spelling.substr(prefix.size()) == tagged.name &&
+                (tagged.type_ref.kind == TypeKind::Unknown ||
+                 (tagged.type_ref.kind == TypeKind::Named &&
+                  tagged.type_ref.name == tagged.name))) {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (matching_tag(lhs, rhs) || matching_tag(rhs, lhs)) {
+        return true;
+    }
     return lhs.native_spelling.empty() && rhs.native_spelling.empty() &&
            lhs.type_ref.kind == TypeKind::Unknown && rhs.type_ref.kind == TypeKind::Unknown;
 }

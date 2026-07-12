@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Preserved C `union` tags through aliased native imports so union fields and
+  generated declarations retain their actual native record kind.
 - Expanded the Eigen compatibility probe from alias construction to inherited
   template method calls, arithmetic operators, and result methods.
 

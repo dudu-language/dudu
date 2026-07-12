@@ -628,10 +628,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
+            const bool is_union = match[2].str() == "union";
+            const std::string record_spelling = is_union ? "union " + raw_name : "";
             scan.types.push_back(
                 {.name = name,
-                 .native_spelling = "",
-                 .type_ref = {},
+                 .native_spelling = record_spelling,
+                 .type_ref = is_union ? named_type_ref(name, decl_location) : TypeRef{},
                  .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
                                               decl_location, name, current_file),
                  .layout =

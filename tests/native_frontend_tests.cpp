@@ -261,6 +261,7 @@ void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesyst
         dudu::parse_source("from cxx.path import native_headers/simple_c.h as native\n"
                            "\n"
                            "def main() -> i32:\n"
+                           "    event: native.DuduNativeEvent\n"
                            "    return native.dudu_native_add(20, 22)\n",
                            root / "tests/fixtures/native_cxx_import.dd");
     dudu::ProjectConfig config;
@@ -273,6 +274,7 @@ void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesyst
     assert(cpp.find("#include \"native_headers/simple_c.h\"") != std::string::npos);
     assert(cpp.find("extern \"C\" {\n#include \"native_headers/simple_c.h\"") == std::string::npos);
     assert(cpp.find("return dudu_native_add(20, 22);") != std::string::npos);
+    assert(cpp.find("union DuduNativeEvent event{};") != std::string::npos);
     assert(cpp.find("native::dudu_native_add") == std::string::npos);
 }
 
