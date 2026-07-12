@@ -54,6 +54,7 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
     assert(first_overload.has_value() && !first_overload->empty());
     assert(second_overload.has_value() && !second_overload->empty());
     assert(*first_overload != *second_overload);
+    assert(identities.find_semantic(dudu::NativeCursorKind::Class, "dudu_native.Widget") == widget);
 
     const dudu::NativeCursorIdentityIndex restored =
         dudu::NativeCursorIdentityIndex::deserialize(identities.serialize());
@@ -66,6 +67,7 @@ void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root
     assert(restored_widget_layout.has_value());
     assert(restored_widget_layout->size == widget_layout->size);
     assert(restored_widget_layout->alignment == widget_layout->alignment);
+    assert(restored.find_semantic(dudu::NativeCursorKind::Class, "dudu_native.Widget") == widget);
     assert(
         restored.find(dudu::NativeCursorKind::Function, "overloaded",
                       {.file = dudu::SourceFileName(header.string()), .line = 91, .column = 14}) ==

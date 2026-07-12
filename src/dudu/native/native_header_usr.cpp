@@ -34,6 +34,32 @@ std::string identity_key(NativeCursorKind kind, std::string_view name,
            std::string(name);
 }
 
+std::string semantic_identity_key(NativeCursorKind kind, std::string_view path) {
+    return "semantic\n" + std::to_string(static_cast<int>(kind)) + "\n" + std::string(path);
+}
+
+std::string cursor_semantic_path(CXCursor cursor) {
+    std::vector<std::string> parts;
+    for (CXCursor current = cursor; !clang_Cursor_isNull(current);
+         current = clang_getCursorSemanticParent(current)) {
+        if (clang_getCursorKind(current) == CXCursor_TranslationUnit) {
+            break;
+        }
+        const std::string name = cx_string(clang_getCursorSpelling(current));
+        if (!name.empty()) {
+            parts.push_back(name);
+        }
+    }
+    std::string out;
+    for (auto part = parts.rbegin(); part != parts.rend(); ++part) {
+        if (!out.empty()) {
+            out += '.';
+        }
+        out += *part;
+    }
+    return out;
+}
+
 bool class_cursor(CXCursorKind kind) {
     return kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl ||
            kind == CXCursor_ClassDecl || kind == CXCursor_ClassTemplate ||
@@ -112,7 +138,8 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
         const std::string usr = cx_string(clang_getCursorUSR(cursor));
         const SourceLocation location = cursor_location(cursor);
         if (!name.empty() && !usr.empty() && !location.file.empty()) {
-            index.insert(*kind, name, location, usr, cursor_type_layout(cursor, *kind));
+            index.insert(*kind, name, location, usr, cursor_type_layout(cursor, *kind),
+                         cursor_semantic_path(cursor));
         }
     }
     return CXChildVisit_Recurse;
@@ -122,11 +149,19 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
 
 void NativeCursorIdentityIndex::insert(NativeCursorKind kind, std::string name,
                                        SourceLocation location, std::string usr,
-                                       std::optional<TypeLayout> layout) {
+                                       std::optional<TypeLayout> layout,
+                                       std::string semantic_path) {
     const std::string key = identity_key(kind, name, location);
-    identities_.insert_or_assign(key, std::move(usr));
+    identities_.insert_or_assign(key, usr);
     if (layout) {
         layouts_.insert_or_assign(key, *layout);
+    }
+    if (!semantic_path.empty()) {
+        const std::string semantic_key = semantic_identity_key(kind, semantic_path);
+        identities_.insert_or_assign(semantic_key, std::move(usr));
+        if (layout) {
+            layouts_.insert_or_assign(semantic_key, *layout);
+        }
     }
 }
 
@@ -142,6 +177,20 @@ std::optional<std::string> NativeCursorIdentityIndex::find(NativeCursorKind kind
                                                            const SourceLocation& location) const {
     const auto found = identities_.find(identity_key(kind, name, location));
     return found == identities_.end() ? std::nullopt : std::optional<std::string>{found->second};
+}
+
+std::optional<std::string>
+NativeCursorIdentityIndex::find_semantic(NativeCursorKind kind,
+                                         std::string_view semantic_path) const {
+    const auto found = identities_.find(semantic_identity_key(kind, semantic_path));
+    return found == identities_.end() ? std::nullopt : std::optional<std::string>{found->second};
+}
+
+std::optional<TypeLayout>
+NativeCursorIdentityIndex::find_semantic_layout(NativeCursorKind kind,
+                                                std::string_view semantic_path) const {
+    const auto found = layouts_.find(semantic_identity_key(kind, semantic_path));
+    return found == layouts_.end() ? std::nullopt : std::optional<TypeLayout>{found->second};
 }
 
 bool NativeCursorIdentityIndex::empty() const {

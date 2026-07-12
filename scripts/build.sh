@@ -8,4 +8,4 @@ cmake -S "$repo_root" -B "$repo_root/build" \
     -DDUDU_BUILD_TESTS=ON \
     -DDUDU_STRICT=ON \
     -DDUDU_WARN_AS_ERROR=ON
-cmake --build "$repo_root/build"
+cmake --build "$repo_root/build" --parallel

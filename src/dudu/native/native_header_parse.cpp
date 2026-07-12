@@ -80,8 +80,13 @@ bool dudu_primitive_name(std::string_view name) {
 NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, NativeCursorKind kind,
                                 std::string_view spelling, const SourceLocation& location,
                                 std::string canonical_path, const std::string& current_file) {
-    NativeSymbolId identity = native_identity(std::move(canonical_path), current_file);
-    if (const std::optional<std::string> usr = identities.find(kind, spelling, location)) {
+    NativeSymbolId identity = native_identity(canonical_path, current_file);
+    std::optional<std::string> usr = identities.find(kind, spelling, location);
+    if (!usr && (kind == NativeCursorKind::Type || kind == NativeCursorKind::Class ||
+                 kind == NativeCursorKind::Namespace)) {
+        usr = identities.find_semantic(kind, canonical_path);
+    }
+    if (usr) {
         identity.usr = *usr;
     }
     return identity;
