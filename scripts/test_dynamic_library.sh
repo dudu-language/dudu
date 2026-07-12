@@ -3,14 +3,14 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project="$repo_root/tests/fixtures/project_plugin_dynamic_library"
-link_args=()
+link_flag=""
 case "$(uname -s)" in
 Darwin)
     lib="$repo_root/build/libdudu_plugin.dylib"
     ;;
 Linux)
     lib="$repo_root/build/libdudu_plugin.so"
-    link_args=(-ldl)
+    link_flag="-ldl"
     ;;
 *)
     echo "unsupported dynamic-library smoke host: $(uname -s)" >&2
@@ -81,7 +81,11 @@ int main(int argc, char** argv) {
 C
 
 echo "dynamic library smoke: compile and run host"
-cc -std=c11 -I"$repo_root/build" "$host_c" "${link_args[@]}" -o "$host"
+if [[ -n "$link_flag" ]]; then
+    cc -std=c11 -I"$repo_root/build" "$host_c" "$link_flag" -o "$host"
+else
+    cc -std=c11 -I"$repo_root/build" "$host_c" -o "$host"
+fi
 set +e
 "$host" "$lib"
 status=$?
