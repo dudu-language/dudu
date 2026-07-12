@@ -1,4 +1,4 @@
-import c "zlib.h" as zlib
+from c.path import zlib.h as zlib
 
 
 def main() -> i32:

@@ -1,4 +1,4 @@
-import c "freetype/freetype.h" as ft
+from c.path import freetype/freetype.h as ft
 
 
 def main() -> i32:

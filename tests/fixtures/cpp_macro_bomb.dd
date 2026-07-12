@@ -1,4 +1,4 @@
-import cpp "./cpp_macro_bomb.hpp" as macros
+from cpp.path import ./cpp_macro_bomb.hpp as macros
 
 
 def main() -> i32:

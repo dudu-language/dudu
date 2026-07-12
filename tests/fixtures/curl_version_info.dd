@@ -1,4 +1,4 @@
-import c "curl/curl.h" as curl
+from c.path import curl/curl.h as curl
 
 
 def main() -> i32:

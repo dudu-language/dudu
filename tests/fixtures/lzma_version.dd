@@ -1,4 +1,4 @@
-import c "lzma.h" as lzma
+from c.path import lzma.h as lzma
 
 
 def main() -> i32:

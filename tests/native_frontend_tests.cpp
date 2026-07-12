@@ -102,8 +102,8 @@ bool has_usr_identity(const std::optional<std::string>& key) {
 
 void test_native_header_type_scan(const std::filesystem::path& root) {
     dudu::ModuleAst module =
-        dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
-                           "import cpp \"native_headers/simple_cpp.hpp\"\n"
+        dudu::parse_source("from c.path import native_headers/simple_c.h\n"
+                           "from cpp.path import native_headers/simple_cpp.hpp\n"
                            "\n"
                            "def main() -> i32:\n"
                            "    event: DuduNativeEvent\n"
@@ -376,7 +376,7 @@ void test_native_static_class_fields_keep_owner_and_cache(const std::filesystem:
 
 void test_native_header_alias_preserves_identity(const std::filesystem::path& root) {
     dudu::ModuleAst module =
-        dudu::parse_source("import cpp \"native_headers/simple_cpp.hpp\" as native\n"
+        dudu::parse_source("from cpp.path import native_headers/simple_cpp.hpp as native\n"
                            "\n"
                            "def main() -> i32:\n"
                            "    return native.dudu_native.add(20, 22)\n",
@@ -423,7 +423,7 @@ void test_direct_cpp_import_preserves_namespace_type_aliases(const std::filesyst
                "}\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"./namespaced_alias.hpp\"\n"
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./namespaced_alias.hpp\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
                                                 "    value: dudu_ns.Count = 20\n"
@@ -465,7 +465,7 @@ void test_native_operator_does_not_hijack_dudu_class_operator(const std::filesys
                "return NativeIter<T>{value}; }\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"./native_operator.hpp\"\n"
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./native_operator.hpp\n"
                                                 "\n"
                                                 "class Vec:\n"
                                                 "    x: f32\n"
@@ -504,7 +504,7 @@ void test_native_identity_edge_cases(const std::filesystem::path& root) {
     }
 
     dudu::ModuleAst module =
-        dudu::parse_source("import cpp \"./native_identity_cases.hpp\"\n", source_dir / "main.dd");
+        dudu::parse_source("from cpp.path import ./native_identity_cases.hpp\n", source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
@@ -551,8 +551,8 @@ void test_native_identity_uses_clang_redeclaration_identity(const std::filesyste
         out << "#pragma once\nstruct Thing { float y; };\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"./left.hpp\"\n"
-                                                "import cpp \"./right.hpp\"\n",
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./left.hpp\n"
+                                                "from cpp.path import ./right.hpp\n",
                                                 source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
@@ -636,7 +636,7 @@ void test_native_single_underscore_function_macros(const std::filesystem::path& 
                "#define __dudu_private_call(a) (a)\n"
                "#define _DUDU_PRIVATE_VALUE 3\n";
     }
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"single_underscore_macro.hpp\"\n"
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import single_underscore_macro.hpp\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
                                                 "    return _dudu_macro_call(20, 22)\n",
@@ -652,7 +652,7 @@ void test_native_single_underscore_function_macros(const std::filesystem::path& 
 }
 
 void test_native_call_arity(const std::filesystem::path& root) {
-    dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+    dudu::ModuleAst module = dudu::parse_source("from c.path import native_headers/simple_c.h\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
                                                 "    return dudu_native_add()\n",
@@ -671,7 +671,7 @@ void test_native_call_arity(const std::filesystem::path& root) {
 void test_native_header_collision(const std::filesystem::path& root) {
     bool failed = false;
     try {
-        dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+        dudu::ModuleAst module = dudu::parse_source("from c.path import native_headers/simple_c.h\n"
                                                     "DUDU_NATIVE_MAGIC: i32 = 1\n",
                                                     root / "tests/fixtures/native_collision.dd");
         dudu::merge_native_header_types(
@@ -719,7 +719,7 @@ void test_native_header_cache_invalidates_local_header(const std::filesystem::pa
         std::ofstream out(header);
         out << "#pragma once\ninline bool cache_probe(bool value) { return value; }\n";
     }
-    dudu::ModuleAst first = dudu::parse_source("import cpp \"./cache_probe.hpp\"\n"
+    dudu::ModuleAst first = dudu::parse_source("from cpp.path import ./cache_probe.hpp\n"
                                                "\n"
                                                "def main() -> i32:\n"
                                                "    if cache_probe(True):\n"
@@ -736,7 +736,7 @@ void test_native_header_cache_invalidates_local_header(const std::filesystem::pa
     }
     bool failed = false;
     try {
-        dudu::ModuleAst second = dudu::parse_source("import cpp \"./cache_probe.hpp\"\n"
+        dudu::ModuleAst second = dudu::parse_source("from cpp.path import ./cache_probe.hpp\n"
                                                     "\n"
                                                     "def main() -> i32:\n"
                                                     "    if cache_probe(True):\n"
@@ -768,7 +768,7 @@ void test_native_header_cache_invalidates_included_header(const std::filesystem:
         std::ofstream out(detail);
         out << "#pragma once\ninline int included_answer(void) { return 42; }\n";
     }
-    dudu::ModuleAst first = dudu::parse_source("import cpp \"./wrapper.hpp\" as wrap\n"
+    dudu::ModuleAst first = dudu::parse_source("from cpp.path import ./wrapper.hpp as wrap\n"
                                                "\n"
                                                "def main() -> i32:\n"
                                                "    return wrap.included_answer()\n",
@@ -782,7 +782,7 @@ void test_native_header_cache_invalidates_included_header(const std::filesystem:
     }
     bool failed = false;
     try {
-        dudu::ModuleAst second = dudu::parse_source("import cpp \"./wrapper.hpp\" as wrap\n"
+        dudu::ModuleAst second = dudu::parse_source("from cpp.path import ./wrapper.hpp as wrap\n"
                                                     "\n"
                                                     "def main() -> i32:\n"
                                                     "    return wrap.included_answer()\n",
@@ -798,7 +798,7 @@ void test_native_header_cache_invalidates_included_header(const std::filesystem:
 void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
     bool failed = false;
     try {
-        dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+        dudu::ModuleAst module = dudu::parse_source("from c.path import native_headers/simple_c.h\n"
                                                     "\n"
                                                     "def main() -> i32:\n"
                                                     "    event: DuduNativeEvent\n"
@@ -833,7 +833,7 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
                "};\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"./method_template_overload.hpp\"\n"
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./method_template_overload.hpp\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
                                                 "    holder = Holder()\n"
@@ -1067,7 +1067,7 @@ void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
                "dst[0] = src[0]; }\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("import cpp \"./fixed_array_alias.hpp\" as native\n"
+    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./fixed_array_alias.hpp as native\n"
                                                 "\n"
                                                 "def main() -> i32:\n"
                                                 "    value: native.DuduFixedBytes\n"
@@ -1147,7 +1147,7 @@ void test_aliased_c_import_prefixes_visible_transitive_functions(
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::ModuleAst positive = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
+    dudu::ModuleAst positive = dudu::parse_source("from c.path import ./wrap_stdio.h as wrap\n"
                                                   "\n"
                                                   "def main() -> i32:\n"
                                                   "    return wrap.dudu_wrap_answer()\n",
@@ -1157,7 +1157,7 @@ void test_aliased_c_import_prefixes_visible_transitive_functions(
     const std::string cpp = dudu::emit_cpp_source(positive);
     assert(cpp.find("dudu_wrap_answer()") != std::string::npos);
 
-    dudu::ModuleAst transitive = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
+    dudu::ModuleAst transitive = dudu::parse_source("from c.path import ./wrap_stdio.h as wrap\n"
                                                     "\n"
                                                     "def main() -> i32:\n"
                                                     "    return wrap.remove(\"x\")\n",

@@ -1,4 +1,4 @@
-import c "expat.h" as expat
+from c.path import expat.h as expat
 
 
 def main() -> i32:

@@ -1,4 +1,4 @@
-import c "uuid/uuid.h" as uuid
+from c.path import uuid/uuid.h as uuid
 
 
 def main() -> i32:

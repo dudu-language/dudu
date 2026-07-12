@@ -1,4 +1,4 @@
-import cpp "native_dep.hpp" as native
+from cpp.path import native_dep.hpp as native
 
 
 def answer() -> i32:

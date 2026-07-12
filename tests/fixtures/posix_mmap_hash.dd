@@ -1,7 +1,7 @@
-import c "fcntl.h" as fcntl
-import c "sys/mman.h" as mmap
-import c "sys/stat.h" as stat
-import c "unistd.h" as unistd
+from c.path import fcntl.h as fcntl
+from c.path import sys/mman.h as mmap
+from c.path import sys/stat.h as stat
+from c.path import unistd.h as unistd
 
 
 enum FileError:

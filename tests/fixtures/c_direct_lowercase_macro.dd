@@ -1,4 +1,4 @@
-import c "assert.h"
+from c.path import assert.h
 
 def main() -> i32:
     value: i32 = 42

@@ -1,4 +1,4 @@
-import c "answer_native.h"
+from c.path import answer_native.h
 
 
 def answer() -> i32:

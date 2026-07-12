@@ -340,7 +340,7 @@ void test_inferred_auto_assignment_is_not_redeclared() {
 
 void test_inferred_native_pointer_member_emission_uses_type_ast(const std::filesystem::path& root) {
     const dudu::ModuleAst module =
-        dudu::parse_source("import c \"native_headers/pointer_return.h\" as ptr\n"
+        dudu::parse_source("from c.path import native_headers/pointer_return.h as ptr\n"
                            "\n"
                            "def read() -> i32:\n"
                            "    info = ptr.dudu_pointer_info_get()\n"

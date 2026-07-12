@@ -55,7 +55,7 @@ void test_lsp_definition_jumps_to_native_header_type() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import c \"native_point.h\"\n"
+                             .text = "from c.path import native_point.h\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    point: NativePoint\n"
@@ -136,7 +136,7 @@ void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"./native_methods.hpp\"\n"
+                             .text = "from cpp.path import ./native_methods.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    first: left.Thing\n"
@@ -163,7 +163,7 @@ void test_lsp_definition_jumps_to_native_member_field() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"./native_widget.hpp\"\n"
+                             .text = "from cpp.path import ./native_widget.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
@@ -197,7 +197,7 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"./native_methods.hpp\"\n"
+                             .text = "from cpp.path import ./native_methods.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    first: left.Thing\n"
@@ -221,7 +221,7 @@ void test_lsp_hover_infers_local_from_native_call() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import c \"./native_factory.h\" as native\n"
+                             .text = "from c.path import ./native_factory.h as native\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    thing = native.make_thing()\n"
@@ -255,7 +255,7 @@ void test_lsp_references_keep_unbound_member_query_dotted() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"./native_methods.hpp\"\n"
+                             .text = "from cpp.path import ./native_methods.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    first: left.Thing\n"
@@ -280,17 +280,17 @@ void test_lsp_native_field_references_filter_by_receiver_type() {
                                            "struct OtherWidget {\n"
                                            "    int value;\n"
                                            "};\n");
-    write_file(dir / "main.dd", "import cpp \"./native_widgets.hpp\"\n"
+    write_file(dir / "main.dd", "from cpp.path import ./native_widgets.hpp\n"
                                 "\n"
                                 "def main() -> i32:\n"
                                 "    widget: MatrixWidget\n"
                                 "    return widget.value\n");
-    write_file(dir / "same.dd", "import cpp \"./native_widgets.hpp\"\n"
+    write_file(dir / "same.dd", "from cpp.path import ./native_widgets.hpp\n"
                                 "\n"
                                 "def same() -> i32:\n"
                                 "    widget: MatrixWidget\n"
                                 "    return widget.value\n");
-    write_file(dir / "other.dd", "import cpp \"./native_widgets.hpp\"\n"
+    write_file(dir / "other.dd", "from cpp.path import ./native_widgets.hpp\n"
                                  "\n"
                                  "def other() -> i32:\n"
                                  "    widget: OtherWidget\n"
@@ -585,7 +585,7 @@ void test_lsp_references_scope_same_named_locals_by_function() {
 void test_lsp_references_track_qualified_type_refs() {
     const dudu::Document doc{.uri = "file:///qualified_type_refs.dd",
                              .path = "qualified_type_refs.dd",
-                             .text = "import cpp \"raylib.h\" as rl\n"
+                             .text = "from cpp.path import raylib.h as rl\n"
                                      "\n"
                                      "def length(value: rl.Vector2) -> f32:\n"
                                      "    other: rl.Vector2\n"
@@ -934,15 +934,15 @@ void test_lsp_native_references_filter_by_identity() {
     std::filesystem::create_directories(dir);
     write_file(dir / "left.h", "static inline int shared_name(void) { return 1; }\n");
     write_file(dir / "right.h", "static inline int shared_name(void) { return 2; }\n");
-    write_file(dir / "main.dd", "import c \"./left.h\" as n\n"
+    write_file(dir / "main.dd", "from c.path import ./left.h as n\n"
                                 "\n"
                                 "def main() -> i32:\n"
                                 "    return n.shared_name()\n");
-    write_file(dir / "same.dd", "import c \"./left.h\" as other_alias\n"
+    write_file(dir / "same.dd", "from c.path import ./left.h as other_alias\n"
                                 "\n"
                                 "def same() -> i32:\n"
                                 "    return other_alias.shared_name()\n");
-    write_file(dir / "other.dd", "import c \"./right.h\" as n\n"
+    write_file(dir / "other.dd", "from c.path import ./right.h as n\n"
                                  "\n"
                                  "def other() -> i32:\n"
                                  "    return n.shared_name()\n");
@@ -1139,7 +1139,7 @@ void test_lsp_native_namespace_reference_query_uses_selected_segment() {
                "        return left + right;\n"
                "    }\n"
                "}\n");
-    write_file(dir / "main.dd", "import cpp \"native_namespace.hpp\"\n"
+    write_file(dir / "main.dd", "from cpp.path import native_namespace.hpp\n"
                                 "\n"
                                 "def main() -> i32:\n"
                                 "    return matrix_space.namespaced_add(2, 3)\n");

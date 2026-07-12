@@ -1,4 +1,4 @@
-import cpp "native_template_function.hpp"
+from cpp.path import native_template_function.hpp
 
 
 def main() -> i32:

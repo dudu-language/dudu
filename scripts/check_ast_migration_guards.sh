@@ -93,6 +93,25 @@ if rg -n "expr\\.text" "$repo_root/src/dudu"; then
     exit 1
 fi
 
+if rg -n '^import (c|cxx|cpp) "' "$repo_root/examples" "$repo_root/tests" |
+    grep -v '/tests/fixtures/bad_legacy_native_import.dd:'; then
+    echo "legacy quoted native imports are forbidden; use from c/cxx/cpp import" >&2
+    exit 1
+fi
+
+library_special_cases=(
+    "ndad"
+    "ddtorch"
+    "mald"
+    "dudu[_-]?tensor"
+)
+for pattern in "${library_special_cases[@]}"; do
+    if rg -n -i "$pattern" "$repo_root/src/dudu"; then
+        echo "compiler source must not contain dogfood/library-specific knowledge: $pattern" >&2
+        exit 1
+    fi
+done
+
 if rg -n "type\\.text|left\\.text|right\\.text" "$repo_root/src/dudu"; then
     echo "TypeRef.text has been removed; use structured TypeRef fields and source ranges" >&2
     exit 1

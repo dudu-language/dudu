@@ -1,4 +1,4 @@
-import cpp "./dudu_missing_header_for_test.hpp" as missing
+from cpp.path import ./dudu_missing_header_for_test.hpp as missing
 
 
 def main() -> i32:

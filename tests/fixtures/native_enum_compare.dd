@@ -1,4 +1,4 @@
-import cpp "native_headers/native_enum_compare.hpp" as native
+from cpp.path import native_headers/native_enum_compare.hpp as native
 
 
 def main() -> i32:

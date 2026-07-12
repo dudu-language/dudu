@@ -1,4 +1,4 @@
-import c "jpeglib.h" as jpeg
+from c.path import jpeglib.h as jpeg
 
 
 def main() -> i32:

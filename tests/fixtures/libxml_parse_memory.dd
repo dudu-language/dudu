@@ -1,4 +1,4 @@
-import cxx "libxml/parser.h" as xml
+from cxx.path import libxml/parser.h as xml
 
 
 def main() -> i32:

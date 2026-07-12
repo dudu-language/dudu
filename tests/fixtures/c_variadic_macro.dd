@@ -1,4 +1,4 @@
-import c "./c_macro_wrap.h" as wrap
+from c.path import ./c_macro_wrap.h as wrap
 
 def main() -> i32:
     first: i32 = wrap.DUDU_WRAP_FIRST(20, 1, 2, 3)

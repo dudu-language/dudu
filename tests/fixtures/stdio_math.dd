@@ -1,5 +1,5 @@
-import c "math.h" as math
-import c "stdio.h" as c
+from c.path import math.h as math
+from c.path import stdio.h as c
 
 
 def main() -> i32:

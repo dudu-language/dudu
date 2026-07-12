@@ -17,7 +17,7 @@ namespace {
 
 void test_native_string_literal_to_string_view(const std::filesystem::path& root) {
     dudu::ModuleAst module =
-        dudu::parse_source("import cpp \"native_headers/string_view_accept.hpp\" as native\n"
+        dudu::parse_source("from cpp.path import native_headers/string_view_accept.hpp as native\n"
                            "\n"
                            "def main() -> i32:\n"
                            "    return native.dudu_native_string.size_of(\"dudu\")\n",
@@ -34,7 +34,7 @@ void test_native_string_literal_to_string_view(const std::filesystem::path& root
 
 void test_none_to_native_cstr(const std::filesystem::path& root) {
     dudu::ModuleAst module =
-        dudu::parse_source("import cpp \"native_headers/cstr_accept.hpp\" as native\n"
+        dudu::parse_source("from cpp.path import native_headers/cstr_accept.hpp as native\n"
                            "\n"
                            "def main() -> i32:\n"
                            "    return native.dudu_native_cstr.accepts_cstr(None)\n",

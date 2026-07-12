@@ -1,4 +1,4 @@
-import c "openssl/sha.h" as openssl
+from c.path import openssl/sha.h as openssl
 
 
 def main() -> i32:

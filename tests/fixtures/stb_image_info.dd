@@ -1,4 +1,4 @@
-import c "stb_image.h" as stb
+from c.path import stb_image.h as stb
 
 
 def main() -> i32:

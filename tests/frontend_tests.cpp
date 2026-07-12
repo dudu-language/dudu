@@ -201,7 +201,7 @@ void test_rejected_fancy_indexing_fixtures(const std::filesystem::path& root) {
 }
 
 void test_header_emission() {
-    const dudu::ModuleAst module = dudu::parse_source("import cpp \"raylib.h\" as rl\n"
+    const dudu::ModuleAst module = dudu::parse_source("from cpp.path import raylib.h as rl\n"
                                                       "\n"
                                                       "class Vec3:\n"
                                                       "    x: f32\n"

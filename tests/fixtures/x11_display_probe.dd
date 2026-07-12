@@ -1,4 +1,4 @@
-import c "X11/Xlib.h" as x11
+from c.path import X11/Xlib.h as x11
 
 
 def main() -> i32:

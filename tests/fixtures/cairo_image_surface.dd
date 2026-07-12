@@ -1,4 +1,4 @@
-import c "cairo.h" as cairo
+from c.path import cairo.h as cairo
 
 
 def main() -> i32:

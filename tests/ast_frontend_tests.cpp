@@ -162,7 +162,7 @@ dudu::Json completion_params(int line, int character) {
 }
 
 void test_native_semantic_tokens() {
-    const std::string source = "import c \"native.h\"\n"
+    const std::string source = "from c.path import native.h\n"
                                "\n"
                                "def main() -> i32:\n"
                                "    event: DuduNativeEvent\n"

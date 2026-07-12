@@ -663,7 +663,7 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"native_widget.hpp\"\n"
+                             .text = "from cpp.path import native_widget.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
@@ -713,7 +713,7 @@ void test_lsp_signature_help_resolves_native_callable_values() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"native_callback.hpp\" as native\n"
+                             .text = "from cpp.path import native_callback.hpp as native\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    return native.transform(41)\n"};
@@ -750,7 +750,7 @@ void test_lsp_inlay_hints_include_native_parameter_names() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import cpp \"native_widget.hpp\"\n"
+                             .text = "from cpp.path import native_widget.hpp\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    widget: NativeWidget\n"
@@ -1017,7 +1017,7 @@ void test_lsp_project_index_cache_records_native_warm_hits() {
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
-                             .text = "import c \"native.h\" as native\n"
+                             .text = "from c.path import native.h as native\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    thing: native.NativeThing\n"

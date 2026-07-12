@@ -1,4 +1,4 @@
-import c "lsp_project_header.h"
+from c.path import lsp_project_header.h
 
 def main() -> i32:
     return project_header_value()

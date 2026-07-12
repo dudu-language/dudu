@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Removed the unreleased quoted `import c/cxx/cpp "..."` compatibility syntax;
+  native headers now use only canonical `from c/cxx/cpp[.path] import ...`
+  forms.
+
 ### Changed
 
 - Centralized the toolchain version in the root `VERSION` file and propagated

@@ -1,4 +1,4 @@
-import cpp "./native_headers/simple_cpp.hpp"
+from cpp.path import ./native_headers/simple_cpp.hpp
 
 
 def main() -> i32:

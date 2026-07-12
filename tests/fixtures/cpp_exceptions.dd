@@ -1,4 +1,4 @@
-import cpp "stdexcept"
+from cpp.path import stdexcept
 
 def main() -> i32:
     try:

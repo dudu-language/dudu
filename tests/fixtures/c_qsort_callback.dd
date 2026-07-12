@@ -1,4 +1,4 @@
-import c "stdlib.h" as c
+from c.path import stdlib.h as c
 
 
 def compare_i32(left: *const[void], right: *const[void]) -> i32:

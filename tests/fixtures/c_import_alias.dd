@@ -1,4 +1,4 @@
-import c "string.h" as c
+from c.path import string.h as c
 
 
 def main() -> i32:

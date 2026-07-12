@@ -1,4 +1,4 @@
-import c "wayland-client-core.h" as wayland
+from c.path import wayland-client-core.h as wayland
 
 
 def main() -> i32:

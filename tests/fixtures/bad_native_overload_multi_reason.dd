@@ -1,4 +1,4 @@
-import cpp "native_headers/simple_cpp.hpp" as dudu_native
+from cpp.path import native_headers/simple_cpp.hpp as dudu_native
 
 def main() -> i32:
     return dudu_native.overloaded_pair(True, "bad")

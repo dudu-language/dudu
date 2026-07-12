@@ -1,4 +1,4 @@
-import c "png.h" as png
+from c.path import png.h as png
 
 
 def main() -> i32:

@@ -1,4 +1,4 @@
-import cpp "native_headers/simple_cpp.hpp" as native
+from cpp.path import native_headers/simple_cpp.hpp as native
 
 class Button(native.Widget):
     extra: i32

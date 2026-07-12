@@ -329,14 +329,13 @@ Decorator Parser::parse_decorator(const Token& at_token) {
 
 ImportDecl Parser::parse_import(const Token& start) {
     const size_t statement_begin = cursor_ - 1;
-    if (match_identifier("c")) {
-        return parse_foreign_import(start, ImportKind::ForeignC, statement_begin);
-    }
-    if (match_identifier("cxx")) {
-        return parse_foreign_import(start, ImportKind::ForeignCxx, statement_begin);
-    }
-    if (match_identifier("cpp")) {
-        return parse_foreign_import(start, ImportKind::ForeignCpp, statement_begin);
+    if (current().kind == TokenKind::Identifier &&
+        (current().text == "c" || current().text == "cxx" || current().text == "cpp")) {
+        const std::string language(current().text);
+        throw CompileError(current().location,
+                           "native imports use `from " + language +
+                               " import header` or `from " + language +
+                               ".path import header`");
     }
 
     ImportDecl import;
@@ -355,35 +354,6 @@ ImportDecl Parser::parse_import(const Token& start) {
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after import");
-    return import;
-}
-
-ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
-                                        size_t statement_begin) {
-    ImportDecl import;
-    import.kind = kind;
-    import.native_include_style = NativeIncludeStyle::Path;
-    import.location = start.location;
-    const Token& header = consume(TokenKind::String, "expected quoted foreign header");
-    import.module_path = header.text;
-    import.module_range.start = header.location;
-    import.module_range.end = header.location;
-    import.module_range.end.column += static_cast<int>(header.text.size());
-    if (header.text.size() >= 2) {
-        ++import.module_range.start.column;
-        --import.module_range.end.column;
-        import.module_path = import.module_path.substr(1, import.module_path.size() - 2);
-    }
-    if (match_identifier("as")) {
-        const Token& alias = consume_identifier("expected alias after as");
-        import.alias = alias.text;
-        import.alias_range.start = alias.location;
-        import.alias_range.end = alias.location;
-        import.alias_range.end.column += static_cast<int>(alias.text.size());
-    }
-    const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.range = source.range;
-    consume(TokenKind::Newline, "expected newline after foreign import");
     return import;
 }
 

@@ -1,4 +1,4 @@
-import c "pthread.h"
+from c.path import pthread.h
 
 
 class Counter:
