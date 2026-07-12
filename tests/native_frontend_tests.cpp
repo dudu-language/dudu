@@ -505,8 +505,8 @@ void test_native_identity_edge_cases(const std::filesystem::path& root) {
                "using LeftThing = left::Thing;\n";
     }
 
-    dudu::ModuleAst module =
-        dudu::parse_source("from cpp.path import ./native_identity_cases.hpp\n", source_dir / "main.dd");
+    dudu::ModuleAst module = dudu::parse_source(
+        "from cpp.path import ./native_identity_cases.hpp\n", source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
@@ -638,6 +638,31 @@ void test_native_scan_dedupe_allows_equivalent_alias_redeclarations() {
     scan = dudu::dedupe_scan(std::move(scan));
     assert(std::ranges::count_if(scan.types, [](const dudu::NativeTypeDecl& type) {
                return type.name == "NativeSize";
+           }) == 1);
+}
+
+void test_native_scan_dedupe_resolves_alias_chains() {
+    dudu::NativeHeaderScan scan;
+    dudu::NativeTypeDecl bridge;
+    bridge.name = "PlatformValue";
+    bridge.native_spelling = "BuiltinValue";
+    bridge.type_ref = dudu::parse_type_text("BuiltinValue", {});
+    scan.types.push_back(std::move(bridge));
+
+    for (const auto& [source, spelling] :
+         {std::pair{"first.hpp", "BuiltinValue"}, std::pair{"second.hpp", "PlatformValue"}}) {
+        dudu::NativeTypeDecl alias;
+        alias.name = "PublicValue";
+        alias.native_spelling = spelling;
+        alias.type_ref = dudu::parse_type_text(spelling, {});
+        alias.identity.canonical_path = std::string(source) + ".PublicValue";
+        alias.location = {.file = dudu::SourceFileName(source), .line = 1, .column = 8};
+        scan.types.push_back(std::move(alias));
+    }
+
+    scan = dudu::dedupe_scan(std::move(scan));
+    assert(std::ranges::count_if(scan.types, [](const dudu::NativeTypeDecl& type) {
+               return type.name == "PublicValue";
            }) == 1);
 }
 
@@ -854,15 +879,16 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
                "};\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./method_template_overload.hpp\n"
-                                                "\n"
-                                                "def main() -> i32:\n"
-                                                "    holder = Holder()\n"
-                                                "    text: str = holder.text()\n"
-                                                "    if len(text) == 2:\n"
-                                                "        return 42\n"
-                                                "    return 1\n",
-                                                source_dir / "main.dd");
+    dudu::ModuleAst module =
+        dudu::parse_source("from cpp.path import ./method_template_overload.hpp\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    holder = Holder()\n"
+                           "    text: str = holder.text()\n"
+                           "    if len(text) == 2:\n"
+                           "        return 42\n"
+                           "    return 1\n",
+                           source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
@@ -1088,16 +1114,17 @@ void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
                "dst[0] = src[0]; }\n";
     }
 
-    dudu::ModuleAst module = dudu::parse_source("from cpp.path import ./fixed_array_alias.hpp as native\n"
-                                                "\n"
-                                                "def main() -> i32:\n"
-                                                "    value: native.DuduFixedBytes\n"
-                                                "    copy: native.DuduFixedBytes\n"
-                                                "    native.copy_fixed(copy, value)\n"
-                                                "    if native.read_fixed(value) == 0:\n"
-                                                "        return 42\n"
-                                                "    return 1\n",
-                                                source_dir / "main.dd");
+    dudu::ModuleAst module =
+        dudu::parse_source("from cpp.path import ./fixed_array_alias.hpp as native\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    value: native.DuduFixedBytes\n"
+                           "    copy: native.DuduFixedBytes\n"
+                           "    native.copy_fixed(copy, value)\n"
+                           "    if native.read_fixed(value) == 0:\n"
+                           "        return 42\n"
+                           "    return 1\n",
+                           source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
@@ -1299,6 +1326,7 @@ int main() {
         test_native_scan_dedupe_allows_opaque_redeclarations();
         test_native_scan_dedupe_rejects_alias_identity_collision();
         test_native_scan_dedupe_allows_equivalent_alias_redeclarations();
+        test_native_scan_dedupe_resolves_alias_chains();
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);

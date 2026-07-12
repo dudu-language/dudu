@@ -15,7 +15,8 @@ namespace {
 
 template <typename T>
 void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen, T value,
-                            std::string_view kind) {
+                            std::string_view kind,
+                            const std::map<std::string, std::string>& aliases = {}) {
     const std::string identity = native_decl_identity_key(value);
     const auto existing = seen.find(value.name);
     if (existing == seen.end()) {
@@ -25,7 +26,8 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen,
     }
     bool collision = native_decl_identity_key(existing->second) != identity;
     if constexpr (std::is_same_v<T, NativeTypeDecl>) {
-        collision = collision && !native_type_redeclarations_compatible(existing->second, value);
+        collision =
+            collision && !native_type_redeclarations_compatible(existing->second, value, aliases);
     } else if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
         collision = false;
     }
@@ -54,8 +56,7 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, std::stri
     if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
         collision = false;
     }
-    if (collision &&
-        native_decl_collision_is_error(value.name, value.location)) {
+    if (collision && native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location,
                            "native " + std::string(kind) + " name collision: " + value.name);
     }
@@ -97,8 +98,14 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     std::map<std::string, std::string> macros;
     std::map<std::string, std::string> namespaces;
     std::map<std::string, std::string> classes;
+    std::map<std::string, std::string> aliases;
+    for (const NativeTypeDecl& item : scan.types) {
+        if (!item.native_spelling.empty()) {
+            aliases.insert_or_assign(item.name, item.native_spelling);
+        }
+    }
     for (auto item : scan.types) {
-        add_unique_native_decl(out.types, types, std::move(item), "type");
+        add_unique_native_decl(out.types, types, std::move(item), "type", aliases);
     }
     for (auto item : scan.values) {
         add_unique_native_decl(out.values, values, std::move(item), "value");

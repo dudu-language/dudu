@@ -3,6 +3,8 @@
 #include "dudu/core/ast.hpp"
 #include "dudu/core/ast_type.hpp"
 
+#include <map>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -103,6 +105,30 @@ inline bool native_type_redeclarations_compatible(const NativeTypeDecl& lhs,
     }
     return lhs.native_spelling.empty() && rhs.native_spelling.empty() &&
            lhs.type_ref.kind == TypeKind::Unknown && rhs.type_ref.kind == TypeKind::Unknown;
+}
+
+inline std::string resolve_native_alias_target(std::string target,
+                                               const std::map<std::string, std::string>& aliases) {
+    std::set<std::string> visited;
+    while (!target.empty() && visited.insert(target).second) {
+        const auto alias = aliases.find(target);
+        if (alias == aliases.end() || alias->second.empty()) {
+            break;
+        }
+        target = alias->second;
+    }
+    return target;
+}
+
+inline bool
+native_type_redeclarations_compatible(const NativeTypeDecl& lhs, const NativeTypeDecl& rhs,
+                                      const std::map<std::string, std::string>& aliases) {
+    if (native_type_redeclarations_compatible(lhs, rhs)) {
+        return true;
+    }
+    const std::string left = resolve_native_alias_target(lhs.native_spelling, aliases);
+    const std::string right = resolve_native_alias_target(rhs.native_spelling, aliases);
+    return !left.empty() && left == right;
 }
 
 } // namespace dudu

@@ -15,7 +15,8 @@ namespace {
 
 template <typename T>
 void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& source,
-                                std::string_view kind) {
+                                std::string_view kind,
+                                const std::map<std::string, std::string>& aliases = {}) {
     std::map<std::string, T> seen_by_name;
     for (const T& item : target) {
         seen_by_name[item.name] = item;
@@ -30,17 +31,17 @@ void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& so
         }
         bool collision = native_decl_identity_key(existing->second) != identity;
         if constexpr (std::is_same_v<T, NativeTypeDecl>) {
-            collision = collision && !native_type_redeclarations_compatible(existing->second, item);
+            collision = collision &&
+                        !native_type_redeclarations_compatible(existing->second, item, aliases);
         } else if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
             collision = false;
         }
         if (collision && native_decl_collision_is_error(item.name, item.location)) {
-            std::string message =
-                "native " + std::string(kind) + " name collision: " + item.name;
+            std::string message = "native " + std::string(kind) + " name collision: " + item.name;
             if constexpr (std::is_same_v<T, NativeTypeDecl>) {
                 message += " (existing " + native_decl_identity_key(existing->second) + " as '" +
-                           existing->second.native_spelling + "', incoming " + identity +
-                           " as '" + item.native_spelling + "')";
+                           existing->second.native_spelling + "', incoming " + identity + " as '" +
+                           item.native_spelling + "')";
             }
             throw CompileError(item.location, std::move(message));
         }
@@ -194,7 +195,18 @@ void append_unique_native_functions(std::vector<NativeFunctionDecl>& target,
 
 void append_unique_native_types(std::vector<NativeTypeDecl>& target,
                                 const std::vector<NativeTypeDecl>& source) {
-    append_unique_native_decls(target, source, "type");
+    std::map<std::string, std::string> aliases;
+    for (const NativeTypeDecl& item : target) {
+        if (!item.native_spelling.empty()) {
+            aliases.insert_or_assign(item.name, item.native_spelling);
+        }
+    }
+    for (const NativeTypeDecl& item : source) {
+        if (!item.native_spelling.empty()) {
+            aliases.insert_or_assign(item.name, item.native_spelling);
+        }
+    }
+    append_unique_native_decls(target, source, "type", aliases);
 }
 
 void append_unique_native_values(std::vector<NativeValueDecl>& target,
