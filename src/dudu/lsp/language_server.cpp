@@ -18,6 +18,7 @@
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbol_results.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/lsp/language_server_text_sync.hpp"
 #include "dudu/lsp/language_server_types.hpp"
 #include "dudu/lsp/language_server_workspace.hpp"
 #include "dudu/native/native_build.hpp"
@@ -242,6 +243,7 @@ class LanguageServer {
 
     static std::string initialize_result() {
         return "{\"capabilities\":{"
+               "\"positionEncoding\":\"utf-16\","
                "\"textDocumentSync\":2,"
                "\"documentFormattingProvider\":true,"
                "\"documentSymbolProvider\":true,"
@@ -312,7 +314,7 @@ class LanguageServer {
         Document& doc = documents_[uri];
         doc.uri = uri;
         doc.path = file_uri_to_path(uri);
-        doc.text = string_value(array->back().get("text"));
+        apply_lsp_content_changes(doc.text, *array);
         invalidate_workspace_cache();
         publish_diagnostics(uri);
     }

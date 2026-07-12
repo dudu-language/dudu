@@ -116,6 +116,9 @@ void lint_scope_function(const FunctionDecl& fn, const Document& doc,
         collect_name_uses_stmt(stmt, doc, uses);
     }
     for (const AstLocalDecl& local : locals) {
+        if (local.name.starts_with("_")) {
+            continue;
+        }
         bool used = false;
         for (const SourceLocation& use : uses[local.name]) {
             if (location_after(use, local.location)) {

@@ -124,12 +124,15 @@ semantic tokens against a malformed current buffer. A protocol-level JSON-RPC
 fixture now opens valid source, applies a malformed edit, verifies all of those
 requests plus native C/C++ semantic classification against the partial index,
 then fixes the edit and verifies diagnostics clear without restarting the
-server. Parser fixtures cover missing declaration syntax, bad indentation,
-incomplete imports, malformed nested enum payloads, and unfinished calls and
-indexes while retaining valid multiline continuation syntax. The normal
-raymarch-dd and dudu-webserver LSP dogfood latency probe remains green. Further
-work is incremental recovery granularity and cold-index performance rather than
-the previous all-or-nothing invalid-buffer behavior.
+server. The server also applies incremental `didChange` patches sequentially
+using LSP UTF-16 ranges; protocol coverage performs one-character break and
+repair edits and verifies diagnostics, semantic tokens, and inlay hints recover
+without reopening the document. Parser fixtures cover missing declaration
+syntax, bad indentation, incomplete imports, malformed nested enum payloads,
+and unfinished calls and indexes while retaining valid multiline continuation
+syntax. The normal raymarch-dd and dudu-webserver LSP dogfood latency probe
+remains green. Further work is incremental recovery granularity and cold-index
+performance rather than the previous all-or-nothing invalid-buffer behavior.
 
 Definition of done: editing a Dudu file into a temporarily non-compiling state
 must show useful squiggles, keep semantic highlighting for recoverable regions,
