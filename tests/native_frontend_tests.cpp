@@ -1263,6 +1263,21 @@ void test_native_scan_preserves_namespace_value_owners() {
     assert(has_value("second.value"));
 }
 
+void test_native_scan_merges_reopened_namespaces() {
+    dudu::NativeHeaderScan scan;
+    for (const std::string source : {"first.hpp", "second.hpp"}) {
+        dudu::NativeNamespaceDecl space;
+        space.name = "shared";
+        space.identity.usr = source + "::shared";
+        space.location = {.file = dudu::SourceFileName(source), .line = 1, .column = 11};
+        scan.namespaces.push_back(std::move(space));
+    }
+    scan = dudu::dedupe_scan(std::move(scan));
+    assert(std::ranges::count_if(scan.namespaces, [](const dudu::NativeNamespaceDecl& space) {
+               return space.name == "shared";
+           }) == 1);
+}
+
 } // namespace
 
 int main() {
@@ -1299,6 +1314,7 @@ int main() {
         test_native_scan_ignores_anonymous_record_definitions();
         test_native_scan_preserves_scoped_enum_owners();
         test_native_scan_preserves_namespace_value_owners();
+        test_native_scan_merges_reopened_namespaces();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -31,10 +31,18 @@ void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& so
         bool collision = native_decl_identity_key(existing->second) != identity;
         if constexpr (std::is_same_v<T, NativeTypeDecl>) {
             collision = collision && !native_type_redeclarations_compatible(existing->second, item);
+        } else if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
+            collision = false;
         }
         if (collision && native_decl_collision_is_error(item.name, item.location)) {
-            throw CompileError(item.location,
-                               "native " + std::string(kind) + " name collision: " + item.name);
+            std::string message =
+                "native " + std::string(kind) + " name collision: " + item.name;
+            if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+                message += " (existing " + native_decl_identity_key(existing->second) + " as '" +
+                           existing->second.native_spelling + "', incoming " + identity +
+                           " as '" + item.native_spelling + "')";
+            }
+            throw CompileError(item.location, std::move(message));
         }
     }
 }

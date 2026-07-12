@@ -26,10 +26,17 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen,
     bool collision = native_decl_identity_key(existing->second) != identity;
     if constexpr (std::is_same_v<T, NativeTypeDecl>) {
         collision = collision && !native_type_redeclarations_compatible(existing->second, value);
+    } else if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
+        collision = false;
     }
     if (collision && native_decl_collision_is_error(value.name, value.location)) {
-        throw CompileError(value.location,
-                           "native " + std::string(kind) + " name collision: " + value.name);
+        std::string message = "native " + std::string(kind) + " name collision: " + value.name;
+        if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+            message += " (existing " + native_decl_identity_key(existing->second) + " as '" +
+                       existing->second.native_spelling + "', incoming " + identity + " as '" +
+                       value.native_spelling + "')";
+        }
+        throw CompileError(value.location, std::move(message));
     }
 }
 
@@ -43,7 +50,11 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, std::stri
         out.push_back(std::move(value));
         return;
     }
-    if (existing->second != identity &&
+    bool collision = existing->second != identity;
+    if constexpr (std::is_same_v<T, NativeNamespaceDecl>) {
+        collision = false;
+    }
+    if (collision &&
         native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location,
                            "native " + std::string(kind) + " name collision: " + value.name);
