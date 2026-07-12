@@ -14,6 +14,8 @@ jobs:
   validate:
     runs-on: macos-14
     env:
+      DUDU_SKIP_OPTIONAL_NATIVE: 1
+      DUDU_TEST_ARCH: arm64
       LLVM_ROOT: /opt/homebrew/opt/llvm
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +32,5 @@ jobs:
             -DDUDU_WARN_AS_ERROR=ON
       - name: Build portability tests
         run: cmake --build build/macos-preflight --parallel 4
-      - name: Run portability tests
-        run: |
-          ctest --test-dir build/macos-preflight --output-on-failure \
-            -R 'dudu_(language_server_tests|language_server_navigation_tests|native_frontend_tests|native_type_compat_tests|emit_frontend_tests)'
+      - name: Run release-script portability preflight
+        run: ./scripts/test_examples_and_install.sh

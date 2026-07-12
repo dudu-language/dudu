@@ -139,6 +139,11 @@ The authoritative release entry point is now:
 ./scripts/release-check.sh
 ```
 
+The manual Apple Silicon preflight runs the release-script assertions from
+`master` before another immutable candidate tag is created. Release test
+scripts must report the command and line that failed; bare assertion exits are
+not actionable on a hosted platform.
+
 In addition to compiler, LSP, native, dogfood, and clean-install checks, it
 builds and clean-installs the production VSIX, validates Homebrew/AUR recipes,
 builds and extracts the `.deb`, verifies package-manager self-update refusal,

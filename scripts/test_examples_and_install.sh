@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+trap 'status=$?; printf "%s:%s: command failed (%s): %s\n" "${BASH_SOURCE[0]}" "$LINENO" "$status" "$BASH_COMMAND" >&2; exit "$status"' ERR
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
 
@@ -46,6 +48,7 @@ done
 
 compile_x86_example_object native_escape.dd
 
+echo "editor package assertions"
 test -f "$repo_root/editors/vscode/extension.js"
 test -f "$repo_root/editors/vscode/package-lock.json"
 test -f "$repo_root/editors/vscode/syntaxes/dudu.tmLanguage.json"
@@ -77,6 +80,7 @@ grep -q '"dudu.inlayHints.argumentTypes"' "$repo_root/editors/vscode/package.jso
 grep -q 'initializationOptions' "$repo_root/editors/vscode/extension.js"
 node --check "$repo_root/editors/vscode/extension.js"
 bash -n "$repo_root/scripts/install-local.sh"
+echo "install tree assertions"
 install_prefix="$repo_root/build/install-smoke-prefix"
 rm -rf "$install_prefix"
 cmake --install "$repo_root/build" --prefix "$install_prefix" >/dev/null
@@ -99,6 +103,7 @@ installed_version="$(tr -d '\r\n' <"$install_prefix/share/doc/dudu/VERSION")"
 "$install_prefix/bin/duc" --version | grep -Fqx "duc $installed_version"
 
 generated_header="$repo_root/build/cpp_library.hpp"
+echo "installed codegen assertions"
 "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
 grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' "$generated_header"
 grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' "$generated_header"
