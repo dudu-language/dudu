@@ -9,6 +9,30 @@ toolchain_version="$(tr -d '\r\n' <"$repo_root/VERSION")"
 "$repo_root/build/duc" --version | grep -Fqx "duc $toolchain_version"
 "$repo_root/build/dudu" --version | grep -Fqx "dudu $toolchain_version"
 "$repo_root/build/dudu" bench --version | grep -Fqx "dudu $toolchain_version"
+manager_smoke="$repo_root/build/toolchain_manager_smoke"
+rm -rf "$manager_smoke"
+mkdir -p "$manager_smoke"
+cat >"$manager_smoke/manager" <<'SH'
+#!/bin/sh
+printf '%s\n' "$@" >"$DUDU_MANAGER_ARGS"
+SH
+chmod +x "$manager_smoke/manager"
+DUDU_MANAGER_ARGS="$manager_smoke/args" \
+    DUDU_TOOLCHAIN_MANAGER="$manager_smoke/manager" \
+    "$repo_root/build/dudu" update --check --version "$toolchain_version" --source
+cat >"$manager_smoke/expected" <<EOF
+--update
+--check
+--version
+$toolchain_version
+--source
+EOF
+cmp "$manager_smoke/expected" "$manager_smoke/args"
+DUDU_MANAGER_ARGS="$manager_smoke/uninstall-args" \
+    DUDU_TOOLCHAIN_MANAGER="$manager_smoke/manager" \
+    "$repo_root/build/dudu" uninstall --yes
+printf '%s\n' --uninstall --yes >"$manager_smoke/uninstall-expected"
+cmp "$manager_smoke/uninstall-expected" "$manager_smoke/uninstall-args"
 "$repo_root/build/duc" "$repo_root/tests/fixtures/simple_program.dd" --check
 "$repo_root/build/duc" check "$repo_root/tests/fixtures/simple_program.dd"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/simple_program.dd" \

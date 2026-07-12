@@ -16,6 +16,7 @@
 #include "dudu/project/project_index_cache.hpp"
 #include "dudu/sema/sema.hpp"
 #include "dudu/testing/test_driver.hpp"
+#include "dudu/support/toolchain_manager.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -448,6 +449,12 @@ int run_cli(int argc, char** argv) {
     }
     if (options.deps_fetch) {
         return run_deps_fetch_command(options);
+    }
+    if (options.toolchain_update) {
+        return run_toolchain_manager(executable_path(argv[0]), "update", options.command_args);
+    }
+    if (options.uninstall) {
+        return run_toolchain_manager(executable_path(argv[0]), "uninstall", options.command_args);
     }
     if (options.test) {
         return run_project_tests({.input = options.input,

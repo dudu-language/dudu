@@ -36,6 +36,8 @@ struct CliOptions {
     bool run = false;
     bool test = false;
     bool timings = false;
+    bool toolchain_update = false;
+    bool uninstall = false;
     bool verbose = false;
 };
 

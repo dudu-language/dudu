@@ -78,10 +78,20 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     } else if (argc > 1 && std::string(argv[1]) == "test") {
         options.test = true;
         first_arg = 2;
+    } else if (project_driver && argc > 1 && std::string(argv[1]) == "update") {
+        options.toolchain_update = true;
+        first_arg = 2;
+    } else if (project_driver && argc > 1 && std::string(argv[1]) == "uninstall") {
+        options.uninstall = true;
+        first_arg = 2;
     }
 
     for (int i = first_arg; i < argc; ++i) {
         const std::string arg = argv[i];
+        if (options.toolchain_update || options.uninstall) {
+            options.command_args.push_back(arg);
+            continue;
+        }
         if (options.bench) {
             if (!project_driver) {
                 options.command_args.push_back(arg);
@@ -225,7 +235,8 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     if (options.input.empty() && !project_format_default && !options.bench && !options.build &&
         !options.check && !options.clean && !options.clean_cache && !options.cmake &&
         !options.deps_fetch && !options.emit_cpp && !options.emit_modules &&
-        !options.init_project && !options.new_project && !options.run && !options.test) {
+        !options.init_project && !options.new_project && !options.run && !options.test &&
+        !options.toolchain_update && !options.uninstall) {
         fail("missing input file");
     }
     return options;
@@ -233,7 +244,8 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
 
 CliOptions resolve_project_input(CliOptions options) {
     if (options.bench || options.clean || options.clean_cache || options.init_project ||
-        options.new_project || options.test || options.deps_fetch) {
+        options.new_project || options.test || options.deps_fetch || options.toolchain_update ||
+        options.uninstall) {
         return options;
     }
     if (options.project_driver && options.format && options.input.empty()) {

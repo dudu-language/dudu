@@ -19,6 +19,8 @@ void print_cli_usage(bool project_driver) {
                      "       dudu check [input.dd|dir] [--quiet] [--timings]\n"
                      "       dudu clean [path] [--quiet]\n"
                      "       dudu clean-cache [path] [--quiet]\n"
+                     "       dudu update [--check] [--version version] [--source] [--rollback]\n"
+                     "       dudu uninstall [--yes]\n"
                      "       dudu deps fetch [path] [--quiet] [--verbose]\n"
                      "       dudu fmt [input.dd|dir] [--check]\n"
                      "       dudu test [input.dd|target|filter] [--filter text] [--no-capture] "

@@ -9,6 +9,8 @@ toolchain_version="$(tr -d '\r\n' <"$repo_root/VERSION")"
 "$repo_root/scripts/check_ast_migration_guards.sh"
 bash -n "$repo_root/scripts/install-local.sh"
 bash -n "$repo_root/scripts/release-check.sh"
+sh -n "$repo_root/install.sh"
+bash -n "$repo_root/scripts/build-release-artifacts.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 ctest --test-dir "$repo_root/build" --output-on-failure
 

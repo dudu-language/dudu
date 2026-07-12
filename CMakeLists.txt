@@ -40,6 +40,17 @@ endif()
 option(DUDU_STRICT "Enable strict compiler warnings" ON)
 option(DUDU_WARN_AS_ERROR "Treat warnings as errors" OFF)
 option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
+set(DUDU_INSTALL_OWNER "source" CACHE STRING
+    "Installation owner: source, local, installer, homebrew, aur, or deb")
+set_property(CACHE DUDU_INSTALL_OWNER PROPERTY STRINGS source local installer homebrew aur deb)
+if(NOT DUDU_INSTALL_OWNER MATCHES "^(source|local|installer|homebrew|aur|deb)$")
+    message(FATAL_ERROR "invalid DUDU_INSTALL_OWNER: ${DUDU_INSTALL_OWNER}")
+endif()
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/install-owner.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/install-owner"
+    @ONLY
+)
 
 set(DUDU_SUBSYSTEM_DIRS
     core
@@ -86,6 +97,15 @@ target_compile_features(dudu-lsp PRIVATE cxx_std_20)
 
 install(TARGETS dudu duc dudu-lsp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(PROGRAMS install.sh
+    DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/dudu
+    RENAME dudu-toolchain-manager
+)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/install-owner"
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu
 )
 
 install(DIRECTORY editors/

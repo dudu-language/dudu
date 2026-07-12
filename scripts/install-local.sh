@@ -76,6 +76,7 @@ cmake -S "$repo_root" -B "$build_dir" \
     "${generator[@]}" \
     -DCMAKE_BUILD_TYPE="$build_type" \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
+    -DDUDU_INSTALL_OWNER=local \
     -DDUDU_BUILD_TESTS=OFF \
     -DDUDU_STRICT=ON
 
