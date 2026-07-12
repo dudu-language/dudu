@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Native header analysis now retains internal class-template metadata required
+  to resolve associated return types exposed by public APIs, including
+  libc++'s `std::make_unique`, without exposing those implementation records as
+  ordinary imported types.
+- Explicit native template calls no longer reinterpret concrete uppercase Dudu
+  types as unresolved native placeholders after structured substitution.
 - Generated CMake now reports the actual `$<TARGET_FILE:...>` artifact to the
   project driver instead of Dudu guessing Linux `.so` paths, making shared
   library output copying portable to macOS `.dylib` and multi-config layouts.

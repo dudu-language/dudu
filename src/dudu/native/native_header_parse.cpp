@@ -674,21 +674,27 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         const std::string name = class_name(scan, namespaces, classes, raw_name);
-        if (!starts_with(raw_name, "__")) {
+        const bool public_record = !starts_with(raw_name, "__");
+        const bool internal_template_definition =
+            !public_record && line.find(" definition") != std::string::npos &&
+            !templates.empty() && templates.back().kind == TemplateContext::Kind::Class;
+        if (public_record || internal_template_definition) {
             const bool is_union = match[2].str() == "union";
             const std::string record_spelling = is_union ? "union " + raw_name : "";
-            scan.types.push_back(
-                {.name = name,
-                 .native_spelling = record_spelling,
-                 .type_ref = is_union ? named_type_ref(name, decl_location) : TypeRef{},
-                 .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                              decl_location, name, current_file),
-                 .layout =
-                     scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location),
-                 .location = decl_location});
-            comment_targets.push_back({.depth = depth,
-                                       .kind = CommentTargetKind::Type,
-                                       .primary = scan.types.size() - 1});
+            if (public_record) {
+                scan.types.push_back(
+                    {.name = name,
+                     .native_spelling = record_spelling,
+                     .type_ref = is_union ? named_type_ref(name, decl_location) : TypeRef{},
+                     .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                                  decl_location, name, current_file),
+                     .layout = scanned_layout(identities, NativeCursorKind::Class, raw_name,
+                                              decl_location),
+                     .location = decl_location});
+                comment_targets.push_back({.depth = depth,
+                                           .kind = CommentTargetKind::Type,
+                                           .primary = scan.types.size() - 1});
+            }
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;

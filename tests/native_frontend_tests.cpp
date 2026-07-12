@@ -7,9 +7,11 @@
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_header_usr.hpp"
 #include "dudu/native/native_headers.hpp"
+#include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat.hpp"
 
@@ -1008,6 +1010,58 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
            "depmeta.Wrapper[Payload]");
 }
 
+void test_internal_native_template_aliases_resolve_public_returns(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    dudu::ModuleAst module = dudu::parse_source(
+        "from cpp.path import native_internal_alias_factory.hpp\n"
+        "\n"
+        "class Node:\n"
+        "    value: i32\n"
+        "\n"
+        "def probe():\n"
+        "    holder: internal_alias.Holder[Node] = "
+        "internal_alias.make_holder[Node]()\n",
+        source_dir / "native_internal_alias_factory_scan.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    const auto internal = std::ranges::find_if(
+        module.native_classes, [](const dudu::ClassDecl& klass) {
+            return klass.name == "internal_alias.__factory_result";
+        });
+    assert(internal != module.native_classes.end());
+    assert(std::ranges::any_of(internal->type_aliases, [](const dudu::TypeAliasDecl& alias) {
+        return alias.name == "type" &&
+               dudu::type_ref_text(alias.type_ref) == "internal_alias.Holder[T]";
+    }));
+    assert(std::ranges::none_of(module.native_types, [](const dudu::NativeTypeDecl& type) {
+        return type.name == "internal_alias.__factory_result";
+    }));
+
+    const dudu::Symbols symbols = dudu::collect_symbols(module);
+    const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
+        symbols, dudu::parse_type_text("internal_alias.__factory_result[Node].type"));
+    if (dudu::type_ref_text(resolved) != "internal_alias.Holder[Node]") {
+        throw std::runtime_error("internal associated alias resolved as " +
+                                 dudu::type_ref_text(resolved));
+    }
+    const auto signatures = symbols.native_function_signatures.find("internal_alias.make_holder");
+    assert(signatures != symbols.native_function_signatures.end());
+    assert(signatures->second.size() == 1);
+    const dudu::FunctionSignature signature = dudu::substitute_explicit_template_signature(
+        symbols, signatures->second.front(), {dudu::parse_type_text("Node")});
+    const std::string return_type =
+        dudu::type_ref_text(dudu::signature_return_type_ref(signature));
+    if (return_type != "internal_alias.Holder[Node]") {
+        throw std::runtime_error("internal factory return resolved as " + return_type);
+    }
+
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_native_class_partial_specialization_metadata(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "tests/fixtures";
     dudu::ProjectConfig config;
@@ -1369,6 +1423,7 @@ int main() {
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_class_templates_preserve_declared_metadata(root);
+        test_internal_native_template_aliases_resolve_public_returns(root);
         test_native_class_partial_specialization_metadata(root);
         test_native_class_redeclarations_merge_specialization_metadata();
         test_native_fixed_array_typedef_alias(root);

@@ -214,6 +214,35 @@ bool has_native_placeholder_ref(const TypeRef& type) {
     return false;
 }
 
+bool contains_declared_template_param(const TypeRef& type,
+                                      const std::vector<std::string>& params) {
+    const auto is_param = [&](std::string_view candidate) {
+        return std::ranges::any_of(params, [&](std::string param) {
+            if (param.ends_with("...")) {
+                param.resize(param.size() - 3);
+            }
+            return candidate == param;
+        });
+    };
+    if (is_param(type_ref_head_name(type)) || (!type.value.empty() && is_param(type.value))) {
+        return true;
+    }
+    return std::ranges::any_of(type.children, [&](const TypeRef& child) {
+        return contains_declared_template_param(child, params);
+    });
+}
+
+bool needs_native_return_fallback(const FunctionSignature& signature,
+                                  const TypeRef& return_type) {
+    if (!signature.has_native_template_return_spelling) {
+        return false;
+    }
+    if (!signature.template_params.empty()) {
+        return contains_declared_template_param(return_type, signature.template_params);
+    }
+    return has_native_placeholder_ref(return_type);
+}
+
 void collect_native_return_placeholders(const TypeRef& type, std::vector<std::string>& out,
                                         std::set<std::string>& seen) {
     const std::string head = type_ref_head_name(type);
@@ -474,7 +503,8 @@ match_native_signature_declaration(const FunctionScope& scope, const std::string
             if (const auto indexed = indexed_tuple_return_type(
                     signature_return_type_ref(*selected), explicit_template_args, arg_type_refs)) {
                 set_signature_return_type(*selected, *indexed);
-            } else if (original.has_native_template_return_spelling) {
+            } else if (needs_native_return_fallback(original,
+                                                    signature_return_type_ref(*selected))) {
                 const auto explicit_return = explicit_type_return_ref(
                     signature_return_type_ref(*selected), explicit_template_args);
                 if (explicit_return) {
