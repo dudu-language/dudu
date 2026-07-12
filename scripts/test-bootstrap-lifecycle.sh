@@ -40,7 +40,7 @@ EOF
 }
 
 rm -rf "$work"
-mkdir -p "$work/releases/v$version_one" "$work/releases/v$version_two" "$work/tmp"
+mkdir -p "$work/releases/v$version_one" "$work/releases/v$version_two" "$work/tmp" "$work/home"
 "$repo_root/scripts/build-release-artifacts.sh" \
     --output "$work/release-one" --ref HEAD --allow-untagged >/dev/null
 cp "$work/release-one"/* "$work/releases/v$version_one/"
@@ -82,11 +82,12 @@ done
 port="$(cat "$work/port")"
 release_url="http://127.0.0.1:$port"
 
-env DUDU_RELEASE_BASE_URL="$release_url" DUDU_INSECURE_TEST_URL=1 \
+env HOME="$work/home" DUDU_RELEASE_BASE_URL="$release_url" DUDU_INSECURE_TEST_URL=1 \
     TMPDIR="$work/tmp" "$repo_root/install.sh" \
-    --version "$version_one" --prefix "$work/prefix" --source --no-modify-path >/dev/null
+    --version "$version_one" --prefix "$work/prefix" --source >/dev/null
 "$work/prefix/bin/dudu" --version | grep -Fqx "dudu $version_one"
 grep -Fq '"owner": "installer"' "$work/prefix/share/dudu/installs.json"
+grep -Fq '# Dudu toolchain' "$work/home/.profile"
 
 env DUDU_RELEASE_BASE_URL="$release_url" DUDU_INSECURE_TEST_URL=1 \
     DUDU_LATEST_VERSION="$version_two" \
@@ -101,8 +102,9 @@ env DUDU_RELEASE_BASE_URL="$release_url" DUDU_INSECURE_TEST_URL=1 \
 "$work/prefix/bin/dudu" --version | grep -Fqx "dudu $version_one"
 [[ "$(readlink "$work/prefix/share/dudu/previous")" == "toolchains/$version_two" ]]
 
-"$work/prefix/bin/dudu" uninstall --yes >/dev/null
+env HOME="$work/home" "$work/prefix/bin/dudu" uninstall --yes >/dev/null
 [[ ! -e "$work/prefix/share/dudu" ]]
+! grep -Fq '# Dudu toolchain' "$work/home/.profile"
 for tool in dudu duc dudu-lsp; do
     [[ ! -e "$work/prefix/bin/$tool" ]]
 done

@@ -113,3 +113,15 @@ git diff --check
 Release candidates should also be tested from a fresh clone with
 `./scripts/install-local.sh` on Linux. macOS should use the same install script
 once the local machine has Xcode command line tools and CMake installed.
+
+The authoritative release entry point is now:
+
+```sh
+./scripts/release-check.sh
+```
+
+In addition to compiler, LSP, native, dogfood, and clean-install checks, it
+builds and clean-installs the production VSIX, validates Homebrew/AUR recipes,
+builds and extracts the `.deb`, verifies package-manager self-update refusal,
+and runs a two-version bootstrap install/update/rollback/uninstall lifecycle.
+These distribution checks intentionally stay out of the normal fast loop.

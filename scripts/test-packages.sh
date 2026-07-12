@@ -20,6 +20,12 @@ grep -Fq "releases/download/v$version/dudu-$version.tar.gz" \
 grep -Fq "$(awk -F= '$1 == "source_sha256" { print $2 }' "$manifest")" \
     "$work/recipes/aur/PKGBUILD"
 bash -n "$work/recipes/aur/PKGBUILD"
+printf 'fixture asset\n' >"$work/fixture.bin"
+"$repo_root/scripts/add-release-asset.sh" --manifest "$manifest" \
+    --key fixture --asset "$work/fixture.bin"
+grep -Fqx 'fixture=fixture.bin' "$manifest"
+grep -Eq '^fixture_sha256=[0-9a-f]{64}$' "$manifest"
+[[ -f "$work/fixture.bin.sha256" ]]
 
 "$repo_root/scripts/build-deb.sh" \
     --build-dir "$work/deb-build" --output "$work/deb" >/dev/null

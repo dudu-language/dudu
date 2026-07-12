@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- Added immutable tagged source archives and SHA-256 release manifests, a
+  portable source bootstrap installer, versioned installer ownership, atomic
+  update/rollback, guarded uninstall, and package-manager self-update refusal.
+- Added production-bundled VSIX packaging with dual-license metadata, a clean
+  isolated VS Code installation test, and credential-gated Marketplace/Open
+  VSX publication automation.
+- Added tag/manual-only GitHub prerelease automation with Linux artifact
+  validation and an Apple Silicon `macos-14` release gate.
+- Added AUR and Homebrew recipes plus downloadable `.deb` packaging generated
+  from the same immutable source manifest and CMake install rules.
+
 - Removed the unreleased quoted `import c/cxx/cpp "..."` compatibility syntax;
   native headers now use only canonical `from c/cxx/cpp[.path] import ...`
   forms.

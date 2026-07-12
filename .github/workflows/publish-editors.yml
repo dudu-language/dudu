@@ -1,0 +1,58 @@
+name: Publish Dudu editor extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published Dudu prerelease tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - name: Download and verify published VSIX
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(cat VERSION)"
+          test "$RELEASE_TAG" = "v$version"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "dudu-$version.vsix" \
+            --pattern "dudu-$version-manifest.txt" \
+            --dir dist
+          expected="$(awk -F= '$1 == "vsix_sha256" { print $2 }' \
+            "dist/dudu-$version-manifest.txt")"
+          actual="$(sha256sum "dist/dudu-$version.vsix" | awk '{print $1}')"
+          test -n "$expected"
+          test "$actual" = "$expected"
+      - name: Install publishing clients
+        run: npm ci --prefix editors/vscode
+      - name: Publish Marketplace prerelease
+        run: |
+          test -n "$VSCE_PAT"
+          version="$(cat VERSION)"
+          npx --prefix editors/vscode vsce publish --pre-release \
+            --packagePath "dist/dudu-$version.vsix" --pat "$VSCE_PAT"
+      - name: Publish Open VSX prerelease
+        run: |
+          test -n "$OVSX_PAT"
+          version="$(cat VERSION)"
+          npx --yes ovsx publish "dist/dudu-$version.vsix" \
+            --pre-release --pat "$OVSX_PAT"

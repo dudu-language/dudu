@@ -191,11 +191,11 @@ binary toolchain and retain `--source` for unsupported systems and developers.
 
 ## Installed Toolchain Layout
 
-Installer-owned toolchains should use versioned directories and an atomic
-active pointer, conceptually:
+Installer-owned toolchains use versioned directories and an atomic active
+pointer under the selected prefix. With the default `~/.local` prefix:
 
 ```text
-~/.dudu/
+~/.local/share/dudu/
     installs.json
     current -> toolchains/0.1.0-alpha.2
     previous -> toolchains/0.1.0-alpha.1
@@ -209,9 +209,9 @@ active pointer, conceptually:
             lib/
             share/
 ~/.local/bin/
-    dudu -> ~/.dudu/current/bin/dudu
-    duc -> ~/.dudu/current/bin/duc
-    dudu-lsp -> ~/.dudu/current/bin/dudu-lsp
+    dudu -> ../share/dudu/current/bin/dudu
+    duc -> ../share/dudu/current/bin/duc
+    dudu-lsp -> ../share/dudu/current/bin/dudu-lsp
 ```
 
 The exact layout may change, but these properties may not:
@@ -410,17 +410,21 @@ packaged as an alpha. It does not mean the alpha has been published.
 
 Complete this after the pre-distribution product gate passes:
 
-- [ ] Produce an immutable source archive and SHA-256 checksum from the tag.
-- [ ] Implement the source-building bootstrap installer against tagged
+- [x] Produce an immutable source archive and SHA-256 checksum from the tag.
+- [x] Implement the source-building bootstrap installer against tagged
       releases only.
-- [ ] Record install ownership and exact version.
-- [ ] Implement installer-owned `dudu update --check`, `dudu update`, and
+- [x] Record install ownership and exact version.
+- [x] Implement installer-owned `dudu update --check`, `dudu update`, and
       rollback without overwriting package-manager installations.
-- [ ] Package and clean-install a pre-release VSIX.
-- [ ] Create a tag/manual-only release workflow; do not add ordinary
+- [x] Package and clean-install a pre-release VSIX.
+- [x] Create a tag/manual-only release workflow; do not add ordinary
       push-to-master deployment or release jobs.
 - [ ] Validate macOS Apple Silicon before advertising it as supported; Intel
       macOS may remain best-effort until tested.
+
+The Apple Silicon job, package builders, editor publication workflow, and
+two-version lifecycle fixture are implemented. The final unchecked item needs
+evidence from the real tagged `macos-14` hosted run, not a Linux simulation.
 
 ## Not Alpha Blockers
 

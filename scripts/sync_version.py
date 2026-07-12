@@ -30,14 +30,17 @@ def main() -> int:
     if not SEMVER.fullmatch(toolchain_version):
         raise SystemExit(f"invalid Dudu VERSION: {toolchain_version!r}")
 
-    marketplace_version = toolchain_version.split("-", 1)[0]
     package_path = repo / "editors/vscode/package.json"
     lock_path = repo / "editors/vscode/package-lock.json"
     package = load_json(package_path)
     lock = load_json(lock_path)
+    marketplace_version = package.get("version")
+    if not isinstance(marketplace_version, str) or not re.fullmatch(
+        r"[0-9]+\.[0-9]+\.[0-9]+", marketplace_version
+    ):
+        raise SystemExit(f"invalid VS Code extension version: {marketplace_version!r}")
 
     if args.write:
-        package["version"] = marketplace_version
         package.setdefault("duduToolchain", {})["minimumVersion"] = toolchain_version
         lock["version"] = marketplace_version
         lock.setdefault("packages", {}).setdefault("", {})["version"] = marketplace_version
@@ -45,10 +48,6 @@ def main() -> int:
         write_json(lock_path, lock)
 
     errors = []
-    if package.get("version") != marketplace_version:
-        errors.append(
-            f"{package_path}: expected version {marketplace_version}, got {package.get('version')}"
-        )
     minimum_toolchain = package.get("duduToolchain", {}).get("minimumVersion")
     if minimum_toolchain != toolchain_version:
         errors.append(

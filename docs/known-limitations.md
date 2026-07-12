@@ -18,10 +18,13 @@ published constraints, not promises of silent compatibility.
 - macOS Apple Silicon is a release target but is not advertised as validated
   until the release gate passes on real Apple hardware.
 - Windows is not supported by the first alpha.
-- The checkout installer builds locally and requires CMake, a C++20 compiler,
-  and libclang development files. Public tagged bootstrap installation,
-  self-update, rollback, and package-manager recipes belong to the alpha
-  distribution gate and are not shipped yet.
+- Both checkout and tagged bootstrap installation build locally and require
+  CMake, a C++20 compiler, and libclang development files. The bootstrap,
+  atomic update/rollback/uninstall, package recipes, and `.deb` builder are
+  implemented and locally validated but are unavailable to users until the
+  first immutable tag and GitHub prerelease are published.
+- Binary toolchains are not shipped by the first alpha. Host compiler, SDK,
+  libc, and libclang compatibility therefore remain local build concerns.
 
 ## Native Interop
 

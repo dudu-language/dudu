@@ -69,6 +69,32 @@ xcode-select --install
 brew install cmake llvm
 ```
 
+After `0.1.0-alpha.1` is published, the primary installer builds the immutable
+tagged source archive locally, verifies its SHA-256 checksum, and installs an
+atomic user-local toolchain:
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSf \
+  https://github.com/wegfawefgawefg/dudu/releases/download/v0.1.0-alpha.1/dudu-0.1.0-alpha.1-install.sh \
+  | sh -s -- --version 0.1.0-alpha.1
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Installer-owned toolchains update and roll back without replacing the active
+compiler until the new build passes its smoke check:
+
+```sh
+dudu update --check
+dudu update
+dudu update --rollback
+dudu uninstall
+```
+
+Homebrew, AUR, and `.deb` installations reject `dudu update` and direct users
+back to the package manager that owns their files.
+
+### Install From A Checkout
+
 Clone, build, and install:
 
 ```sh
@@ -93,15 +119,14 @@ The default install prefix is `~/.local`. Use another prefix with:
 ./scripts/install-local.sh --prefix /path/to/prefix
 ```
 
-Update a checkout installation with:
+Update this checkout-owned installation with:
 
 ```sh
 git pull --ff-only
 ./scripts/install-local.sh
 ```
 
-Until the tagged bootstrap installer records file ownership, uninstall the
-default checkout installation explicitly:
+Uninstall the default checkout-owned installation explicitly:
 
 ```sh
 rm -f "$HOME/.local/bin/dudu" "$HOME/.local/bin/duc" "$HOME/.local/bin/dudu-lsp"
@@ -227,10 +252,16 @@ Editor files live in:
 - `editors/vim`
 - `editors/nvim`
 
-The VS Code folder is a local extension with `.dd` highlighting, LSP-backed
+The VS Code folder contains the production extension with `.dd` highlighting, LSP-backed
 diagnostics/navigation/hover/inlay hints, and command palette actions for
-formatting, checking, building, and running Dudu files. Until the prerelease
-extension is published, launch it from a checkout:
+formatting, checking, building, and running Dudu files. Build and clean-install
+the prerelease VSIX with:
+
+```sh
+./scripts/test-vscode-package.sh
+```
+
+Until the prerelease extension is published, launch it from a checkout:
 
 ```sh
 cd editors/vscode
@@ -270,7 +301,10 @@ dudu-lsp
 - [ ] Finish LSP hover, go-to-definition, references, diagnostics, and formatter
       support on top of the real AST.
 - [ ] Add a broad compatibility suite for real libraries and larger examples.
-- [ ] Add release binaries and package-manager distribution.
+- [x] Add tagged source artifacts, the source bootstrap installer, atomic
+      update/rollback/uninstall, a production VSIX, AUR/Homebrew recipes, and a
+      downloadable `.deb` build.
+- [ ] Validate the tag workflow on Apple Silicon and publish the first alpha.
 
 The pre-alpha release gate and distribution sequence are documented in
 [`docs/distribution-plan.md`](docs/distribution-plan.md). The exact local gate
