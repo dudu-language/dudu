@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Made the generated shared-library smoke test portable across Linux `.so`
+  and macOS `.dylib` hosts instead of requiring Linux's separate `libdl`.
 - Split required Apple Silicon portability coverage from optional third-party
   SDK probes, keeping the macOS release result independent of incidental
   Homebrew packages while the Linux lane retains the broad native matrix.
