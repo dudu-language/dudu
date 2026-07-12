@@ -81,8 +81,11 @@ done
 [[ -s "$work/port" ]]
 port="$(cat "$work/port")"
 release_url="http://127.0.0.1:$port"
+clean_path="$(printf '%s' "$PATH" | awk -v RS=: -v ORS=: \
+    -v remove="$work/prefix/bin" '$0 != remove { print }' | sed 's/:$//')"
 
-env HOME="$work/home" DUDU_RELEASE_BASE_URL="$release_url" DUDU_INSECURE_TEST_URL=1 \
+env HOME="$work/home" PATH="$clean_path" DUDU_RELEASE_BASE_URL="$release_url" \
+    DUDU_INSECURE_TEST_URL=1 \
     TMPDIR="$work/tmp" "$repo_root/install.sh" \
     --version "$version_one" --prefix "$work/prefix" --source >/dev/null
 "$work/prefix/bin/dudu" --version | grep -Fqx "dudu $version_one"
