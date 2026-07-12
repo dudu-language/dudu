@@ -42,7 +42,7 @@ std::string mtime_stamp(std::optional<std::filesystem::file_time_type> mtime) {
     if (!mtime.has_value()) {
         return {};
     }
-    return std::to_string(mtime->time_since_epoch().count());
+    return file_time_stamp(*mtime);
 }
 
 bool has_dudu_module_imports(const ModuleAst& module) {

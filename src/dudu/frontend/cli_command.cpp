@@ -19,7 +19,6 @@
 #include "dudu/support/toolchain_manager.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -276,10 +275,8 @@ std::string file_state_stamp(const std::filesystem::path& path) {
     if (error) {
         return {};
     }
-    const auto write_time_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(write_time.time_since_epoch()).count();
     std::ostringstream out;
-    out << resolved.string() << '\t' << size << '\t' << write_time_ns;
+    out << resolved.string() << '\t' << size << '\t' << file_time_stamp(write_time);
     return out.str();
 }
 

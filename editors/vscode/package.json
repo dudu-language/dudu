@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "dudu",
   "duduToolchain": {
-    "minimumVersion": "0.1.0-alpha.2"
+    "minimumVersion": "0.1.0-alpha.3"
   },
   "license": "MIT OR Apache-2.0",
   "icon": "resources/icon.png",

@@ -1,0 +1,25 @@
+name: Apple Silicon release preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dudu-macos-preflight
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: macos-14
+    env:
+      LLVM_ROOT: /opt/homebrew/opt/llvm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Apple Silicon
+        run: test "$(uname -m)" = arm64
+      - name: Install native prerequisites
+        run: brew install cmake llvm pkg-config ripgrep
+      - name: Run release gate
+        run: ./scripts/release-check.sh

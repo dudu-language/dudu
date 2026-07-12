@@ -105,7 +105,7 @@ std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& op
         return {};
     }
     return "|" + path.string() + "|" + std::to_string(size) + "|" +
-           std::to_string(mtime.time_since_epoch().count());
+           file_time_stamp(mtime);
 }
 
 std::string include_line(const ImportDecl& import) {
@@ -168,7 +168,9 @@ std::vector<std::string> native_header_scanner_arguments(const NativeHeaderOptio
 }
 
 std::filesystem::path native_header_temp_base(const std::filesystem::path& source_dir) {
-    const auto ticks = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto ticks = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                          std::chrono::steady_clock::now().time_since_epoch())
+                                          .count());
     std::error_code error;
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path(error) / "dudu-native-headers";

@@ -1,5 +1,7 @@
 #include "dudu/native/native_header_cache_deps.hpp"
 
+#include "dudu/core/file_io.hpp"
+
 #include <filesystem>
 #include <optional>
 #include <sstream>
@@ -23,7 +25,7 @@ std::optional<std::string> file_stamp(const std::filesystem::path& path) {
         return std::nullopt;
     }
     return path.lexically_normal().string() + "\t" + std::to_string(size) + "\t" +
-           std::to_string(mtime.time_since_epoch().count());
+           file_time_stamp(mtime);
 }
 
 std::string unescape_make_path(std::string path) {

@@ -1,5 +1,6 @@
 #include "dudu/core/file_io.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -38,6 +39,12 @@ std::string read_required_text_file(const std::filesystem::path& path) {
         return std::move(*text);
     }
     throw std::runtime_error("could not open " + path.string());
+}
+
+std::string file_time_stamp(std::filesystem::file_time_type time) {
+    const auto nanoseconds =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch()).count();
+    return std::to_string(nanoseconds);
 }
 
 } // namespace dudu
