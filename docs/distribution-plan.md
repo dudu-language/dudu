@@ -3,6 +3,8 @@
 This document is the authoritative plan for licensing, versioning, installing,
 updating, and distributing Dudu. It separates the minimum product work required
 before distribution from the machinery required to publish the first alpha.
+Human account, identity, payment, and secret setup is tracked in
+[Distribution Operator Checklist](distribution-operator-checklist.md).
 The broader language roadmap lives in
 [Le Plan](le_plan.md), and release validation lives in
 [Validation Matrix](validation-matrix.md).
