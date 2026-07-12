@@ -147,8 +147,8 @@ std::optional<std::string> range_json_from_lsp_range(const Json* range) {
 std::optional<CodeActionEdit>
 missing_import_action(const Document& doc, const std::string& name, const ModuleAst& module,
                       const std::map<std::string, Document>& workspace) {
-    std::optional<Document> match_doc;
     std::optional<Symbol> match_symbol;
+    std::optional<std::filesystem::path> match_path;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
         if (same_path(candidate.path, doc.path)) {
@@ -165,18 +165,28 @@ missing_import_action(const Document& doc, const std::string& name, const Module
             if (symbol.name != name || !importable_symbol_kind(symbol.kind)) {
                 continue;
             }
+            const std::filesystem::path declaration_path = symbol.location.file.empty()
+                                                               ? candidate.path
+                                                               : std::filesystem::path(
+                                                                     symbol.location.file.str());
             if (match_symbol) {
+                if (same_path(*match_path, declaration_path) &&
+                    match_symbol->location.line == symbol.location.line &&
+                    match_symbol->location.column == symbol.location.column &&
+                    match_symbol->kind == symbol.kind) {
+                    continue;
+                }
                 return std::nullopt;
             }
-            match_doc = candidate;
             match_symbol = symbol;
+            match_path = declaration_path;
         }
     }
-    if (!match_doc || !match_symbol) {
+    if (!match_symbol || !match_path) {
         return std::nullopt;
     }
     const std::optional<std::string> module_path =
-        module_path_for_import(doc.path.parent_path(), match_doc->path);
+        module_path_for_import(doc.path.parent_path(), *match_path);
     if (!module_path || import_already_present(module, *module_path, name)) {
         return std::nullopt;
     }

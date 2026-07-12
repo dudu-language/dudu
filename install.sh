@@ -173,10 +173,10 @@ package_update_message() {
 atomic_link() {
     target=$1
     link=$2
-    temporary="$link.tmp.$$"
-    rm -f "$temporary"
-    ln -s "$target" "$temporary"
-    mv -f "$temporary" "$link"
+    link_temp="$link.tmp.$$"
+    rm -f "$link_temp"
+    ln -s "$target" "$link_temp"
+    mv -f "$link_temp" "$link"
 }
 
 write_metadata() {
@@ -256,13 +256,13 @@ ensure_path() {
 remove_path_entry() {
     profile=$(shell_profile)
     [ -f "$profile" ] || return
-    temporary="$profile.dudu-remove.$$"
+    profile_temp="$profile.dudu-remove.$$"
     awk '
         $0 == "# Dudu toolchain" { skip = 1; next }
         skip == 1 && $0 ~ /^export PATH=/ { skip = 0; next }
         { skip = 0; print }
-    ' "$profile" >"$temporary"
-    mv -f "$temporary" "$profile"
+    ' "$profile" >"$profile_temp"
+    mv -f "$profile_temp" "$profile"
 }
 
 installed_version() {
@@ -361,17 +361,17 @@ fi
 release_base=${DUDU_RELEASE_BASE_URL:-"https://github.com/$repository/releases/download"}
 release_dir="$release_base/v$version"
 manifest_name="dudu-$version-manifest.txt"
-temporary=$(mktemp -d "${TMPDIR:-/tmp}/dudu-install.XXXXXX")
-trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/dudu-install.XXXXXX")
+trap 'rm -rf "$work_dir"' EXIT HUP INT TERM
 
 say "fetch Dudu $version manifest"
-fetch "$release_dir/$manifest_name" "$temporary/$manifest_name"
-manifest_version=$(manifest_value version "$temporary/$manifest_name") || die "invalid release manifest version"
-manifest_schema=$(manifest_value schema "$temporary/$manifest_name") || die "invalid release manifest schema"
-manifest_tag=$(manifest_value tag "$temporary/$manifest_name") || die "invalid release manifest tag"
-manifest_commit=$(manifest_value commit "$temporary/$manifest_name") || die "invalid release manifest commit"
-archive=$(manifest_value source_archive "$temporary/$manifest_name") || die "invalid release manifest archive"
-expected_sha=$(manifest_value source_sha256 "$temporary/$manifest_name") || die "invalid release manifest checksum"
+fetch "$release_dir/$manifest_name" "$work_dir/$manifest_name"
+manifest_version=$(manifest_value version "$work_dir/$manifest_name") || die "invalid release manifest version"
+manifest_schema=$(manifest_value schema "$work_dir/$manifest_name") || die "invalid release manifest schema"
+manifest_tag=$(manifest_value tag "$work_dir/$manifest_name") || die "invalid release manifest tag"
+manifest_commit=$(manifest_value commit "$work_dir/$manifest_name") || die "invalid release manifest commit"
+archive=$(manifest_value source_archive "$work_dir/$manifest_name") || die "invalid release manifest archive"
+expected_sha=$(manifest_value source_sha256 "$work_dir/$manifest_name") || die "invalid release manifest checksum"
 [ "$manifest_schema" = "1" ] || die "unsupported release manifest schema: $manifest_schema"
 [ "$manifest_version" = "$version" ] || die "manifest version '$manifest_version' does not match '$version'"
 [ "$manifest_tag" = "v$version" ] || die "manifest tag '$manifest_tag' does not match 'v$version'"
@@ -386,13 +386,13 @@ esac
 [ "${#expected_sha}" -eq 64 ] || die "manifest SHA-256 checksum has the wrong length"
 
 say "fetch $archive"
-fetch "$release_dir/$archive" "$temporary/$archive"
-actual_sha=$(sha256_file "$temporary/$archive")
+fetch "$release_dir/$archive" "$work_dir/$archive"
+actual_sha=$(sha256_file "$work_dir/$archive")
 [ "$actual_sha" = "$expected_sha" ] || die "source archive checksum mismatch"
 
-mkdir -p "$temporary/source"
-tar -xzf "$temporary/$archive" -C "$temporary/source"
-source_dir="$temporary/source/dudu-$version"
+mkdir -p "$work_dir/source"
+tar -xzf "$work_dir/$archive" -C "$work_dir/source"
+source_dir="$work_dir/source/dudu-$version"
 [ -f "$source_dir/CMakeLists.txt" ] || die "source archive layout is invalid"
 [ "$(tr -d '\r\n' <"$source_dir/VERSION")" = "$version" ] || die "source archive VERSION mismatch"
 
@@ -403,15 +403,15 @@ mkdir -p "$toolchains"
 if [ ! -x "$final_prefix/bin/dudu" ]; then
     rm -rf "$stage_prefix"
     say "configure Dudu $version"
-    cmake -S "$source_dir" -B "$temporary/build" \
+    cmake -S "$source_dir" -B "$work_dir/build" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$stage_prefix" \
         -DDUDU_BUILD_TESTS=OFF \
         -DDUDU_STRICT=ON \
         -DDUDU_INSTALL_OWNER=installer
     say "build Dudu $version"
-    cmake --build "$temporary/build" --parallel
-    cmake --install "$temporary/build"
+    cmake --build "$work_dir/build" --parallel
+    cmake --install "$work_dir/build"
     [ -x "$stage_prefix/bin/dudu" ] || die "installed dudu executable is missing"
     "$stage_prefix/bin/dudu" --version | grep -Fqx "dudu $version" ||
         die "installed dudu version smoke check failed"
