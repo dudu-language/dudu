@@ -75,7 +75,7 @@ atomic user-local toolchain:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf \
-  https://github.com/wegfawefgawefg/dudu/releases/download/v0.1.0-alpha.1/dudu-0.1.0-alpha.1-install.sh \
+  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.1/dudu-0.1.0-alpha.1-install.sh \
   | sh -s -- --version 0.1.0-alpha.1
 export PATH="$HOME/.local/bin:$PATH"
 ```
@@ -98,7 +98,7 @@ back to the package manager that owns their files.
 Clone, build, and install:
 
 ```sh
-git clone https://github.com/wegfawefgawefg/dudu.git
+git clone https://github.com/dudu-language/dudu.git
 cd dudu
 ./scripts/install-local.sh
 export PATH="$HOME/.local/bin:$PATH"

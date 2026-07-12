@@ -11,12 +11,12 @@
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wegfawefgawefg/dudu.git"
+    "url": "https://github.com/dudu-language/dudu.git"
   },
   "bugs": {
-    "url": "https://github.com/wegfawefgawefg/dudu/issues"
+    "url": "https://github.com/dudu-language/dudu/issues"
   },
-  "homepage": "https://github.com/wegfawefgawefg/dudu#readme",
+  "homepage": "https://github.com/dudu-language/dudu#readme",
   "keywords": [
     "dudu",
     "language",

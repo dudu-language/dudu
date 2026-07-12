@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-repository="wegfawefgawefg/dudu"
+repository="dudu-language/dudu"
 operation="install"
 requested_version=""
 prefix="${DUDU_INSTALL_PREFIX:-$HOME/.local}"

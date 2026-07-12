@@ -13,12 +13,12 @@ and GitHub Actions secrets.
 
 | Service | Current state | Operator action |
 | --- | --- | --- |
-| GitHub | `gh` is authenticated as `wegfawefgawefg` | None for repository releases |
+| GitHub | Organization `dudu-language` owns `dudu`; `wegfawefgawefg` is an active Owner | None for repository releases |
 | Release signing | No dedicated signing key exists | Optional for the first alpha; create one before signed releases |
 | Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Create and store the publishing credential |
-| Open VSX | No namespace or token configured | Create namespace and token |
-| AUR | No account or dedicated SSH key configured | Create account and add a dedicated public key |
-| Homebrew | GitHub access is sufficient | No account setup; authorize creation of a tap repository when ready |
+| Open VSX | Signed in; Publisher Agreement is not yet accepted | Accept the agreement, create namespace `dudu`, and create a token |
+| AUR | Dedicated local SSH key exists; upstream registration is temporarily disabled | Register and add the public key when Arch reopens registration |
+| Homebrew | Public tap repository `dudu-language/homebrew-dudu` exists | None |
 | `.deb` download | GitHub access is sufficient | No account setup |
 | Website domain | `dudulang.org` is owned; `dudulang.com` is occupied by an unrelated site | None |
 | Cloudflare | `dudulang.org` is active and unpaused on Cloudflare | Configure GitHub Pages DNS when the site is ready |
@@ -63,9 +63,11 @@ publisher account must retain a recoverable human owner.
 
 ## 2. Open VSX
 
-Create or sign into an Open VSX account, claim the `dudu` namespace, and create
-a publishing token. If the namespace is unavailable, stop before selecting an
-alternative so package identity remains consistent across registries.
+The Open VSX account is signed in. Accept the Eclipse Foundation Open VSX
+Publisher Agreement from the Profile page, claim the `dudu` namespace, and
+create a publishing token. If the namespace is unavailable, stop before
+selecting an alternative so package identity remains consistent across
+registries.
 
 Store the token interactively:
 
@@ -80,11 +82,11 @@ repository.
 
 ## 3. AUR
 
-Create an AUR account and use a dedicated SSH key rather than the desktop
-GitHub key:
+New AUR account registration is temporarily disabled upstream. A dedicated
+SSH key already exists at `~/.ssh/aur`; do not replace it or use the desktop
+GitHub key. When registration reopens, display its public half with:
 
 ```sh
-ssh-keygen -t ed25519 -f ~/.ssh/aur -C "dudu AUR publishing"
 cat ~/.ssh/aur.pub
 ```
 
@@ -152,8 +154,8 @@ Before publication, the operator must confirm that these public identities are
 acceptable:
 
 ```text
-Repository: wegfawefgawefg/dudu
-Homebrew tap: wegfawefgawefg/homebrew-dudu
+Repository: dudu-language/dudu
+Homebrew tap: dudu-language/homebrew-dudu
 Extension publisher: dudu
 Open VSX namespace: dudu
 AUR package: dudu

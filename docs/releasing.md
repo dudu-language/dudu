@@ -88,7 +88,7 @@ credentials cannot block the compiler/toolchain release.
 
 The generated package channels are:
 
-- `dist/recipes/homebrew/dudu.rb` for `wegfawefgawefg/homebrew-dudu`
+- `dist/recipes/homebrew/dudu.rb` for `dudu-language/homebrew-dudu`
 - `dist/recipes/aur/PKGBUILD` and `.SRCINFO` for AUR package `dudu`
 - `dist/dudu_VERSION_ARCH.deb` for direct download
 

@@ -51,14 +51,14 @@ archive="$(manifest_value source_archive)"
 sha256="$(manifest_value source_sha256)"
 [[ -n "$version" && "$tag" == "v$version" && "$archive" == "dudu-$version.tar.gz" ]]
 [[ "$sha256" =~ ^[0-9a-f]{64}$ ]]
-url="https://github.com/wegfawefgawefg/dudu/releases/download/$tag/$archive"
+url="https://github.com/dudu-language/dudu/releases/download/$tag/$archive"
 aur_version="${version//-/_}"
 
 mkdir -p "$output_dir/homebrew" "$output_dir/aur"
 cat >"$output_dir/homebrew/dudu.rb" <<EOF
 class Dudu < Formula
   desc "Python-shaped systems language with direct C and C++ interop"
-  homepage "https://github.com/wegfawefgawefg/dudu"
+  homepage "https://github.com/dudu-language/dudu"
   url "$url"
   version "$version"
   sha256 "$sha256"
@@ -87,13 +87,13 @@ end
 EOF
 
 cat >"$output_dir/aur/PKGBUILD" <<EOF
-# Maintainer: Dudu Language <https://github.com/wegfawefgawefg/dudu/issues>
+# Maintainer: Dudu Language <https://github.com/dudu-language/dudu/issues>
 pkgname=dudu
 pkgver=$aur_version
 pkgrel=1
 pkgdesc='Python-shaped systems language with direct C and C++ interop'
 arch=('x86_64' 'aarch64')
-url='https://github.com/wegfawefgawefg/dudu'
+url='https://github.com/dudu-language/dudu'
 license=('MIT' 'Apache-2.0')
 depends=('clang' 'gcc-libs' 'glibc')
 makedepends=('cmake')
@@ -123,7 +123,7 @@ pkgbase = dudu
 	pkgdesc = Python-shaped systems language with direct C and C++ interop
 	pkgver = $aur_version
 	pkgrel = 1
-	url = https://github.com/wegfawefgawefg/dudu
+	url = https://github.com/dudu-language/dudu
 	arch = x86_64
 	arch = aarch64
 	license = MIT

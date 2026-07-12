@@ -1,6 +1,6 @@
 # Dudu for VS Code
 
-Language support for [Dudu](https://github.com/wegfawefgawefg/dudu), the
+Language support for [Dudu](https://github.com/dudu-language/dudu), the
 Python-shaped systems language with direct C and C++ interop.
 
 The extension provides:
