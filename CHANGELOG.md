@@ -7,7 +7,8 @@
 - Applied LSP incremental document edits by their ordered UTF-16 ranges instead
   of mistaking each patch for a complete file, preserving diagnostics, semantic
   tokens, and inlay hints through invalid edits and repairs.
-- Excluded leading-underscore bindings from unused-local diagnostics.
+- Made exact `_` a non-readable discard binding and excluded only that spelling
+  from unused-local diagnostics; `_name` remains an ordinary local binding.
 - Preserved C `union` tags through aliased native imports so union fields and
   generated declarations retain their actual native record kind.
 - Expanded the Eigen compatibility probe from alias construction to inherited

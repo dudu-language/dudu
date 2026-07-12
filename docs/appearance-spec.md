@@ -67,6 +67,23 @@ binding is a constant and cannot be reassigned. Snake_case module-scope typed
 bindings are allowed for exported values and singleton-style module objects.
 Non-constant bindings must not use all-caps names.
 
+The exact local name `_` is a discard binding. Its initializer or iterable is
+still evaluated, but `_` does not introduce a readable local and any attempt to
+read it is a compile error. It may be repeated in loops, assignments, and tuple
+destructuring:
+
+```python
+_ = poll_once()
+_, value, _ = read_record()
+for _ in range(3):
+    retry()
+```
+
+Names such as `_result` are ordinary bindings. They follow the same unused-local
+diagnostics as `result`; the leading underscore does not suppress warnings for
+locals. At module and class scope, a leading underscore instead marks an
+internal/private declaration for generated interfaces and editor tooling.
+
 ## Imports
 
 Dudu modules use Python-shaped imports and keep names qualified by default:

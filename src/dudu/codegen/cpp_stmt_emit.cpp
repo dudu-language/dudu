@@ -14,6 +14,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/control_flow.hpp"
+#include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
@@ -156,13 +157,21 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::VarDecl) {
         const std::string& name = stmt.name;
+        const bool discard = is_discard_binding(name);
+        const std::string emitted_name = discard ? locals.bind_discard() : name;
         const TypeRef& declared_type = stmt_type_ref(stmt);
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(declared_type, stmt.value_expr);
         const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
-        locals.bind(name);
-        local_type_refs[name] = type.ref;
-        out << indent(depth) << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << name;
+        if (!discard) {
+            locals.bind(name);
+            local_type_refs[name] = type.ref;
+        }
+        out << indent(depth);
+        if (discard) {
+            out << "[[maybe_unused]] ";
+        }
+        out << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << emitted_name;
         if (has_expr(stmt.value_expr)) {
             if (is_template_type(type.ref, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
@@ -214,7 +223,22 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
             !names.empty()) {
-            out << indent(depth) << "auto [" << join_names(names) << "] = "
+            std::vector<std::string> emitted_names;
+            emitted_names.reserve(names.size());
+            bool has_discard = false;
+            for (const std::string& name : names) {
+                if (is_discard_binding(name)) {
+                    emitted_names.push_back(locals.bind_discard());
+                    has_discard = true;
+                } else {
+                    emitted_names.push_back(name);
+                }
+            }
+            out << indent(depth);
+            if (has_discard) {
+                out << "[[maybe_unused]] ";
+            }
+            out << "auto [" << join_names(emitted_names) << "] = "
                 << lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols,
                                       options)
                 << ";\n";
@@ -222,6 +246,23 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
         if (stmt_target_expr(stmt).kind == ExprKind::Name && !stmt_target_expr(stmt).name.empty()) {
             const std::string& lhs = stmt_target_expr(stmt).name;
+            if (is_discard_binding(lhs)) {
+                const TypeRef inferred_ref = infer_emitted_local_type_ref(
+                    stmt.value_expr, local_type_refs, function_returns, symbols);
+                const std::string value =
+                    has_type_ref(inferred_ref)
+                        ? lower_expr_as_type_ref(inferred_ref, stmt.value_expr, aliases, locals,
+                                                 local_type_refs, function_returns, symbols,
+                                                 options)
+                        : lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs,
+                                             symbols, options);
+                out << indent(depth) << "[[maybe_unused]] "
+                    << (has_type_ref(inferred_ref)
+                            ? lower_declared_stmt_type(inferred_ref, aliases, options)
+                            : "auto")
+                    << ' ' << locals.bind_discard() << " = " << value << ";\n";
+                return;
+            }
             if (local_type_refs.contains(lhs)) {
                 const TypeRef lhs_type =
                     emitted_local_type_ref(local_type_refs, lhs, stmt_target_expr(stmt).location);
@@ -258,9 +299,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << indent(depth) << *swizzle << ";\n";
                 return;
             }
-            if (const auto call = lower_index_assignment_hook(stmt, aliases, locals,
-                                                              local_type_refs, function_returns,
-                                                              symbols, options)) {
+            if (const auto call = lower_index_assignment_hook(
+                    stmt, aliases, locals, local_type_refs, function_returns, symbols, options)) {
                 out << indent(depth) << *call << ";\n";
                 return;
             }
@@ -359,8 +399,10 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (stmt.name.empty() || !has_stmt_type_ref(stmt)) {
             out << "catch (...)";
         } else {
+            const std::string binding =
+                is_discard_binding(stmt.name) ? locals.bind_discard() : stmt.name;
             out << "catch (const " << lower_cpp_type(stmt_type_ref(stmt), aliases, options) << "& "
-                << stmt.name << ")";
+                << binding << ")";
         }
         out << " {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
@@ -379,22 +421,28 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::For && has_stmt_iterable_expr(stmt)) {
-        std::string binding = stmt.name;
+        const bool discard = is_discard_binding(stmt.name);
+        const std::string binding = discard ? locals.bind_discard() : stmt.name;
         const std::string range = lower_emitted_expr(stmt_iterable_expr(stmt), aliases, locals,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
-        locals.bind(stmt.name);
+        if (!discard) {
+            locals.bind(stmt.name);
+        }
         if (has_stmt_type_ref(stmt)) {
             binding_type = lower_cpp_type(stmt_type_ref(stmt), aliases, options);
-            local_type_refs[stmt.name] = stmt_type_ref(stmt);
+            if (!discard) {
+                local_type_refs[stmt.name] = stmt_type_ref(stmt);
+            }
         }
         if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
             if (!has_stmt_type_ref(stmt)) {
-                const TypeRef inferred =
-                    inferred_range_binding_type(stmt_iterable_expr(stmt), local_type_refs,
-                                                function_returns, symbols);
+                const TypeRef inferred = inferred_range_binding_type(
+                    stmt_iterable_expr(stmt), local_type_refs, function_returns, symbols);
                 binding_type = lower_cpp_type(inferred, aliases, options);
-                local_type_refs[stmt.name] = inferred;
+                if (!discard) {
+                    local_type_refs[stmt.name] = inferred;
+                }
             }
             const std::vector<Expr>& args = stmt_iterable_expr(stmt).children;
             const std::string start = args.size() == 1
@@ -410,15 +458,23 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                          ? lower_emitted_expr(args.at(2), aliases, locals,
                                                               local_type_refs, symbols, options)
                                          : "1";
-            out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
-                << "; " << binding << " < " << end << "; " << binding << " += " << step << ") {\n";
+            out << indent(depth) << "for (";
+            if (discard) {
+                out << "[[maybe_unused]] ";
+            }
+            out << binding_type << ' ' << binding << " = " << start << "; " << binding << " < "
+                << end << "; " << binding << " += " << step << ") {\n";
             emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs,
                        return_type_ref, function_returns, symbols, options);
             out << indent(depth) << "}\n";
             return;
         }
         const std::string loop_type = has_stmt_type_ref(stmt) ? binding_type : "auto&&";
-        out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range << ") {\n";
+        out << indent(depth) << "for (";
+        if (discard) {
+            out << "[[maybe_unused]] ";
+        }
+        out << loop_type << ' ' << binding << " : " << range << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";

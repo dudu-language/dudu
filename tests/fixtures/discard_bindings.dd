@@ -1,0 +1,11 @@
+def triple() -> tuple[i32, i32, i32]:
+    return 1, 40, 3
+
+
+def main() -> i32:
+    _: i32 = 7
+    _ = 9
+    _, middle, _ = triple()
+    for _ in range(2):
+        middle += 1
+    return middle

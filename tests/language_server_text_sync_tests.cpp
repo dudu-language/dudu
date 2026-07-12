@@ -1,5 +1,7 @@
+#include "dudu/lsp/language_server_diagnostics.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_text_sync.hpp"
+#include "dudu/lsp/language_server_types.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -52,6 +54,24 @@ void test_invalid_range_does_not_partially_update_document() {
     assert(text == "abc\n");
 }
 
+void test_only_exact_underscore_suppresses_unused_warning() {
+    const dudu::Document doc{.uri = "file:///tmp/discard_lint.dd",
+                             .path = "/tmp/discard_lint.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    _ = 1\n"
+                                     "    _cow = 2\n"
+                                     "    return 0\n"};
+    const std::vector<dudu::Diagnostic> diagnostics = dudu::diagnostics_for_document(doc);
+    int unused_count = 0;
+    for (const dudu::Diagnostic& diagnostic : diagnostics) {
+        if (diagnostic.code == "dudu.lint.unused") {
+            ++unused_count;
+            assert(diagnostic.message == "unused local: _cow");
+        }
+    }
+    assert(unused_count == 1);
+}
+
 } // namespace
 
 int main() {
@@ -59,6 +79,7 @@ int main() {
     test_incremental_changes_are_sequential();
     test_positions_use_utf16_code_units();
     test_invalid_range_does_not_partially_update_document();
+    test_only_exact_underscore_suppresses_unused_warning();
     std::cout << "language server text sync tests passed\n";
     return 0;
 }

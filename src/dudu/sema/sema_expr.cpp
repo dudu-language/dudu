@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/naming.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -131,6 +132,13 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::SetLiteral:
         return named_type_ref("set", type_location);
     case ExprKind::Name:
+        if (is_discard_binding(expr.name)) {
+            if (location != nullptr) {
+                throw CompileError(*location, "discard binding '_' cannot be read",
+                                   "dudu.sema.discard_read", expr.name);
+            }
+            return {};
+        }
         if (expr.name == "class") {
             if (!scope.current_class.empty()) {
                 return named_type_ref(scope.current_class, type_location);

@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
@@ -29,6 +30,10 @@ const SourceLocation& diagnostic_location(const SourceLocation& context, const T
 }
 
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref) {
+    if (is_discard_binding(name)) {
+        scope.local_type_refs.erase(name);
+        return;
+    }
     if (has_type_ref(type_ref)) {
         scope.local_type_refs[name] = type_ref;
     } else {

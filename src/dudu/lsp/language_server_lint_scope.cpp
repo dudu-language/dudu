@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_lint_scope.hpp"
 
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/naming.hpp"
 #include "dudu/lsp/language_server_lint_common.hpp"
 
 #include <map>
@@ -116,7 +117,7 @@ void lint_scope_function(const FunctionDecl& fn, const Document& doc,
         collect_name_uses_stmt(stmt, doc, uses);
     }
     for (const AstLocalDecl& local : locals) {
-        if (local.name.starts_with("_")) {
+        if (is_discard_binding(local.name)) {
             continue;
         }
         bool used = false;

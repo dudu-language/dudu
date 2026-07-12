@@ -66,6 +66,10 @@ bool is_dudu_all_caps(const std::string& name) {
     return true;
 }
 
+bool is_discard_binding(const std::string& name) {
+    return name == "_";
+}
+
 bool is_constructor_method(const FunctionDecl& method) {
     return method.name == "init";
 }

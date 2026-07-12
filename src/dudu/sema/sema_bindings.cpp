@@ -25,6 +25,9 @@ void check_destructure_bindings(const SourceLocation& location,
     std::set<std::string> seen;
     for (const std::string& name : names) {
         check_local_binding_name(location, name);
+        if (is_discard_binding(name)) {
+            continue;
+        }
         if (!seen.insert(name).second) {
             fail(location, "duplicate destructuring binding: " + name);
         }

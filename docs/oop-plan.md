@@ -303,7 +303,7 @@ Use Python naming convention:
 
 - `name` is public/importable.
 - `_name` is private/internal.
-- `_` alone is an ignored binding.
+- `_` alone is a local discard binding, not a private name. It cannot be read.
 
 No `public` or `private` keyword for normal Dudu-native code.
 PascalCase type names are ordinary C++ API types. Explicit type export controls
