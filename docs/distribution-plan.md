@@ -300,6 +300,13 @@ The Dudu editor client is distributed independently from the native toolchain:
 - Open VSX pre-release
 - `.vsix` attached to GitHub releases
 
+The first-alpha Visual Studio Marketplace upload is manual and uses the exact
+VSIX verified against the GitHub release manifest. Do not create a billed Azure
+subscription solely to obtain a global PAT; Microsoft retires those tokens on
+December 1, 2026. Open VSX publication remains automated with its dedicated
+registry token. Entra-based Marketplace automation can be added when release
+frequency justifies the Azure infrastructure.
+
 The extension must not bundle `dudu`, `duc`, libclang, or `dudu-lsp`. It should
 locate `dudu-lsp` from the active Dudu toolchain and show a useful installation
 or version-mismatch message when it cannot.

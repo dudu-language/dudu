@@ -81,9 +81,11 @@ The manual workflow has a `publish` switch. Leave it off when validating an
 existing tag without modifying GitHub Releases.
 
 Editor registries are deliberately separate. After the GitHub prerelease
-exists, `.github/workflows/publish-editors.yml` downloads its VSIX, verifies it
-against the release manifest, and publishes the same bytes to Marketplace and
-Open VSX. It requires `VSCE_PAT` and `OVSX_PAT` repository secrets. Missing
+exists, upload its checksum-verified VSIX manually through the Visual Studio
+Marketplace publisher portal. This avoids creating a billed Azure subscription
+for a short-lived global PAT workflow. `.github/workflows/publish-editors.yml`
+downloads the same VSIX, verifies it against the release manifest, and
+publishes it to Open VSX using the `OVSX_PAT` repository secret. Missing editor
 credentials cannot block the compiler/toolchain release.
 
 The generated package channels are:

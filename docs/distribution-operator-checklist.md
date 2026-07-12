@@ -15,7 +15,7 @@ and GitHub Actions secrets.
 | --- | --- | --- |
 | GitHub | Organization `dudu-language` owns `dudu`; `wegfawefgawefg` is an active Owner | None for repository releases |
 | Release signing | No dedicated signing key exists | Optional for the first alpha; create one before signed releases |
-| Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Create and store the publishing credential |
+| Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Upload the release VSIX manually |
 | Open VSX | Signed in; Publisher Agreement is not yet accepted | Accept the agreement, create namespace `dudu`, and create a token |
 | AUR | Dedicated local SSH key exists; upstream registration is temporarily disabled | Register and add the public key when Arch reopens registration |
 | Homebrew | Public tap repository `dudu-language/homebrew-dudu` exists | None |
@@ -36,30 +36,22 @@ ID: dudu
 Description: The Python-shaped systems language with direct C and C++ interop.
 ```
 
-The publisher identity now matches the extension manifest and release
-automation. Domain verification can be completed after `dudulang.org` serves
-the project website and any required ownership record has been added.
+The publisher identity matches the extension manifest. Domain verification can
+be completed after `dudulang.org` serves the project website and any required
+ownership record has been added.
 
-Provide automation access without sharing the credential in chat:
+Publish the first alpha manually rather than creating an Azure subscription for
+a global Personal Access Token that Microsoft retires on December 1, 2026:
 
-1. Create the publishing credential required by the current Marketplace
-   process.
-2. Store it through an interactive prompt:
+1. Download `dudu-VERSION.vsix` and `dudu-VERSION-manifest.txt` from the tagged
+   GitHub prerelease.
+2. Verify the VSIX SHA-256 value against `vsix_sha256` in the manifest.
+3. Open the `dudu` Marketplace publisher page and choose **New extension**.
+4. Upload that exact verified VSIX and publish it as a pre-release.
 
-   ```sh
-   cd /home/vega/Coding/LangDev/Dudu/dudu
-   gh secret set VSCE_PAT
-   ```
-
-3. Confirm only that the secret exists:
-
-   ```sh
-   gh secret list
-   ```
-
-Marketplace credentials should have only the extension-publishing permissions
-required for the `dudu` publisher and should have an expiration date. The
-publisher account must retain a recoverable human owner.
+The publisher account must retain a recoverable human owner. Revisit Microsoft
+Entra-based automation only when repeated releases justify the Azure
+infrastructure.
 
 ## 2. Open VSX
 
@@ -171,7 +163,7 @@ When the account work is complete, report only these non-secret facts:
 
 - Marketplace publisher created: yes/no and exact ID
 - Open VSX namespace created: yes/no and exact namespace
-- `VSCE_PAT` and `OVSX_PAT` visible in `gh secret list`: yes/no
+- `OVSX_PAT` visible in `gh secret list`: yes/no
 - AUR account and public key configured: yes/no
 - release signing enabled: yes/no
 - `dudulang.org` DNS ready for the website: yes/no
