@@ -3,8 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 "$repo_root/scripts/build.sh"
-ctest --test-dir "$repo_root/build" --output-on-failure \
-    --parallel "${DUDU_TEST_JOBS:-4}"
+ctest --test-dir "$repo_root/build" --output-on-failure
 
 "$repo_root/scripts/test_examples_and_install.sh"
 "$repo_root/scripts/test_cli_and_project_smoke.sh"
