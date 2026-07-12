@@ -13,7 +13,8 @@
   types, avoiding unsupported parenthesized aggregate initialization on Apple
   Clang without changing constructor overload semantics.
 - Release example validation now treats the x86 SIMD native-escape example as
-  architecture-specific instead of compiling `<immintrin.h>` on Apple ARM64.
+  architecture-specific across every release test entry point instead of
+  compiling `<immintrin.h>` on Apple ARM64.
 - Made compiler artifact timestamps portable across libstdc++ and Apple
   libc++, declared ripgrep as a release-gate dependency, and made installer
   lifecycle version fixtures derive from the version under test.

@@ -11,6 +11,19 @@ compile_example_object() {
     "${CXX:-c++}" -std=c++20 -c "$cpp" -o "$object"
 }
 
+compile_x86_example_object() {
+    local example="$1"
+    local host_arch="${DUDU_TEST_ARCH:-$(uname -m)}"
+    case "$host_arch" in
+        x86_64|amd64)
+            compile_example_object "$example"
+            ;;
+        *)
+            echo "skip $example object: x86-specific example on $host_arch"
+            ;;
+    esac
+}
+
 compile_and_expect() {
     local name="$1"
     local expected="$2"

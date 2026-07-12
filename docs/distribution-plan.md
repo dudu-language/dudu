@@ -368,7 +368,7 @@ in `le_plan.md` or every speculative language feature.
 - [x] Centralize the Dudu toolchain version.
 - [x] Make `dudu`, `duc`, `dudu-lsp`, extension metadata, release metadata, and
       generated schema metadata agree on that version.
-- [ ] Define `0.1.0-alpha.7` and update `CHANGELOG.md` from `[Unreleased]` during
+- [ ] Define `0.1.0-alpha.8` and update `CHANGELOG.md` from `[Unreleased]` during
       the release cut.
 
 ### Compiler And Project Driver
@@ -456,7 +456,7 @@ The following should not delay the first public alpha by themselves:
    documentation gate.
 2. Implement and test source installation, ownership, update, rollback, and
    uninstall locally.
-3. Cut `0.1.0-alpha.7` from a clean commit and locally run the exact release
+3. Cut `0.1.0-alpha.8` from a clean commit and locally run the exact release
    gate.
 4. Push the immutable tag.
 5. Produce the source archive, checksum, VSIX, and release notes.

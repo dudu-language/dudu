@@ -34,7 +34,6 @@ object_examples=(
     function_pointers.dd
     layout_hardware.dd
     modules_visibility.dd
-    native_escape.dd
     numerics_kmeans.dd
     shader_compute.dd
     systems_mmap.dd
@@ -44,6 +43,8 @@ object_examples=(
 for example in "${object_examples[@]}"; do
     compile_example_object "$example"
 done
+
+compile_x86_example_object native_escape.dd
 
 test -f "$repo_root/editors/vscode/extension.js"
 test -f "$repo_root/editors/vscode/package-lock.json"
