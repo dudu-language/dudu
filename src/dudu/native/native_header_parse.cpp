@@ -878,15 +878,16 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
                std::regex_search(line, match, var_decl)) {
-        const std::string name = match[1].str();
-        if (!starts_with(name, "__") && name != "dudu_probe") {
+        const std::string raw_name = match[1].str();
+        if (!starts_with(raw_name, "__") && raw_name != "dudu_probe") {
+            const std::string name = join_scope(namespaces, raw_name);
             const std::string type =
                 qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
             scan.values.push_back(
                 {.name = name,
                  .native_spelling = type,
                  .type_ref = parse_native_type_text(type, decl_location),
-                 .identity = scanned_identity(identities, NativeCursorKind::Value, name,
+                 .identity = scanned_identity(identities, NativeCursorKind::Value, raw_name,
                                               decl_location, name, current_file),
                  .location = decl_location});
             comment_targets.push_back({.depth = depth,

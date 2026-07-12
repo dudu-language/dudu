@@ -620,6 +620,25 @@ void test_native_scan_dedupe_rejects_alias_identity_collision() {
     assert(failed);
 }
 
+void test_native_scan_dedupe_allows_equivalent_alias_redeclarations() {
+    dudu::NativeHeaderScan scan;
+    for (const std::string source : {"first.hpp", "second.hpp"}) {
+        dudu::NativeTypeDecl alias;
+        alias.name = "NativeSize";
+        alias.native_spelling = "u64";
+        alias.type_ref = dudu::parse_type_text(
+            "u64", {.file = dudu::SourceFileName(source), .line = 1, .column = 8});
+        alias.identity.canonical_path = source + ".NativeSize";
+        alias.location = {.file = dudu::SourceFileName(source), .line = 1, .column = 8};
+        scan.types.push_back(std::move(alias));
+    }
+
+    scan = dudu::dedupe_scan(std::move(scan));
+    assert(std::ranges::count_if(scan.types, [](const dudu::NativeTypeDecl& type) {
+               return type.name == "NativeSize";
+           }) == 1);
+}
+
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
     const std::filesystem::path header_dir = root / "build" / "native-macro-include";
@@ -1226,6 +1245,24 @@ void test_native_scan_preserves_scoped_enum_owners() {
     assert(value_type("ns.PlainValue") == "ns.Plain");
 }
 
+void test_native_scan_preserves_namespace_value_owners() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(scan,
+                         "|-NamespaceDecl 0x1 <test.hpp:1:1, line:3:1> line:1:11 first\n"
+                         "| `-VarDecl 0x2 <line:2:1, col:18> col:12 value 'const int'\n"
+                         "`-NamespaceDecl 0x3 <line:4:1, line:6:1> line:4:11 second\n"
+                         "  `-VarDecl 0x4 <line:5:1, col:18> col:12 value 'const int'\n",
+                         {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto has_value = [&](const std::string& name) {
+        return std::ranges::any_of(
+            scan.values, [&](const dudu::NativeValueDecl& value) { return value.name == name; });
+    };
+    assert(has_value("first.value"));
+    assert(has_value("second.value"));
+}
+
 } // namespace
 
 int main() {
@@ -1244,6 +1281,7 @@ int main() {
         test_native_identity_uses_clang_redeclaration_identity(root);
         test_native_scan_dedupe_allows_opaque_redeclarations();
         test_native_scan_dedupe_rejects_alias_identity_collision();
+        test_native_scan_dedupe_allows_equivalent_alias_redeclarations();
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);
@@ -1260,6 +1298,7 @@ int main() {
         test_aliased_c_import_prefixes_visible_transitive_functions(root);
         test_native_scan_ignores_anonymous_record_definitions();
         test_native_scan_preserves_scoped_enum_owners();
+        test_native_scan_preserves_namespace_value_owners();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

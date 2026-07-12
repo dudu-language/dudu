@@ -94,6 +94,13 @@ inline bool native_type_redeclarations_compatible(const NativeTypeDecl& lhs,
     if (matching_tag(lhs, rhs) || matching_tag(rhs, lhs)) {
         return true;
     }
+    if (!lhs.native_spelling.empty() && lhs.native_spelling == rhs.native_spelling) {
+        return true;
+    }
+    if (has_type_ref(lhs.type_ref) && has_type_ref(rhs.type_ref) &&
+        type_ref_equivalent(lhs.type_ref, rhs.type_ref)) {
+        return true;
+    }
     return lhs.native_spelling.empty() && rhs.native_spelling.empty() &&
            lhs.type_ref.kind == TypeKind::Unknown && rhs.type_ref.kind == TypeKind::Unknown;
 }

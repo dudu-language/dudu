@@ -9,6 +9,18 @@
 #include <sstream>
 
 namespace dudu {
+namespace {
+
+std::filesystem::path canonical_navigation_path(std::filesystem::path path) {
+    if (path.is_relative()) {
+        path = std::filesystem::absolute(path);
+    }
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
+}
+
+} // namespace
 
 std::string range_json(const SourceLocation& location) {
     const int line = std::max(0, location.line - 1);
@@ -45,22 +57,14 @@ std::string location_json(const std::string& uri, const std::string& range) {
 }
 
 std::string uri_for_location(const SourceLocation& location, const Document& doc) {
-    if (location.file.empty() || std::filesystem::path(location.file.str()) == doc.path) {
+    if (location.file.empty() || same_path(location.file.str(), doc.path)) {
         return doc.uri;
     }
-    std::filesystem::path path = location.file.str();
-    if (path.is_relative()) {
-        path = std::filesystem::absolute(path);
-    }
-    return "file://" + path.lexically_normal().string();
+    return file_uri(location.file.str());
 }
 
 std::string file_uri(const std::filesystem::path& path) {
-    std::filesystem::path absolute = path;
-    if (absolute.is_relative()) {
-        absolute = std::filesystem::absolute(absolute);
-    }
-    return "file://" + absolute.lexically_normal().string();
+    return "file://" + canonical_navigation_path(path).string();
 }
 
 SourceLocation expr_name_location(const Expr& expr) {
