@@ -15,7 +15,7 @@ and GitHub Actions secrets.
 | --- | --- | --- |
 | GitHub | `gh` is authenticated as `wegfawefgawefg` | None for repository releases |
 | Release signing | No dedicated signing key exists | Optional for the first alpha; create one before signed releases |
-| Visual Studio Marketplace | Publisher creation page reached | Create publisher `dudu` |
+| Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Create and store the publishing credential |
 | Open VSX | No namespace or token configured | Create namespace and token |
 | AUR | No account or dedicated SSH key configured | Create account and add a dedicated public key |
 | Homebrew | GitHub access is sufficient | No account setup; authorize creation of a tap repository when ready |
@@ -28,7 +28,7 @@ purchase or publication.
 
 ## 1. Visual Studio Marketplace
 
-Create the publisher using:
+The publisher was created using:
 
 ```text
 Name: Dudu Language
@@ -36,12 +36,11 @@ ID: dudu
 Description: The Python-shaped systems language with direct C and C++ interop.
 ```
 
-Leave the verified domain empty until Dudu owns a domain. If `dudu` is not
-available, stop before choosing another ID because the extension manifest and
-release automation must use the exact publisher ID.
+The publisher identity now matches the extension manifest and release
+automation. Domain verification can be completed after `dudulang.org` serves
+the project website and any required ownership record has been added.
 
-After creation, provide automation access without sharing the credential in
-chat:
+Provide automation access without sharing the credential in chat:
 
 1. Create the publishing credential required by the current Marketplace
    process.
