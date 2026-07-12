@@ -120,6 +120,7 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     const std::string cmake = dudu::emit_cmake_project(config, project / "src" / "main.dd");
     assert(cmake.find((project / "dudu.toml").string()) != std::string::npos);
     assert(cmake.find("DEPENDS ${DUDU_EXECUTABLE}") != std::string::npos);
+    assert(cmake.find("CONTENT \"$<TARGET_FILE:manifest_dep_probe>\"") != std::string::npos);
 }
 
 void test_cmake_project_config(const std::filesystem::path& root) {

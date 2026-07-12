@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Generated CMake now reports the actual `$<TARGET_FILE:...>` artifact to the
+  project driver instead of Dudu guessing Linux `.so` paths, making shared
+  library output copying portable to macOS `.dylib` and multi-config layouts.
 - Made the generated shared-library smoke test portable across Linux `.so`
   and macOS `.dylib` hosts instead of requiring Linux's separate `libdl`.
 - Split required Apple Silicon portability coverage from optional third-party

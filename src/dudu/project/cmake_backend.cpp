@@ -88,16 +88,17 @@ std::string command_failure_message(const std::string& label, const std::string&
     return message;
 }
 
-std::filesystem::path generated_target_artifact(const ProjectConfig& config,
-                                                const std::filesystem::path& build_dir,
-                                                const std::string& target) {
-    if (config.target_kind == "library") {
-        return build_dir / ("lib" + target + ".a");
+std::filesystem::path generated_target_artifact(const std::filesystem::path& build_dir) {
+    const std::filesystem::path manifest = build_dir / "dudu-target-artifact.txt";
+    const std::string artifact_text = read_text_file(manifest);
+    if (artifact_text.empty()) {
+        fail("generated CMake did not report its target artifact: " + manifest.string());
     }
-    if (config.target_kind == "shared_library") {
-        return build_dir / ("lib" + target + ".so");
+    const std::filesystem::path artifact(artifact_text);
+    if (!std::filesystem::is_regular_file(artifact)) {
+        fail("generated CMake target artifact does not exist: " + artifact.string());
     }
-    return build_dir / target;
+    return artifact;
 }
 
 std::filesystem::path copy_output_artifact(const std::filesystem::path& source,
@@ -269,7 +270,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (build_status != 0) {
         fail(command_failure_message("CMake build", build_command, build_log));
     }
-    return generated_target_artifact(options.config, build_dir, options.target);
+    return generated_target_artifact(build_dir);
 }
 
 std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& options) {

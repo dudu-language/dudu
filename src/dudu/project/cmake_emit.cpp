@@ -215,6 +215,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n\n";
     emit_pkg_config(out, config);
     emit_cmake_target(out, config, project_dir, target);
+    out << "file(GENERATE OUTPUT \"${CMAKE_CURRENT_BINARY_DIR}/dudu-target-artifact.txt\"\n"
+        << "    CONTENT \"$<TARGET_FILE:" << target << ">\")\n";
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
