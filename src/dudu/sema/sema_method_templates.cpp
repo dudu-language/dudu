@@ -109,7 +109,12 @@ const ClassDecl* specialized_class_for_owner(const Symbols& symbols, const TypeR
     if (found == symbols.native_class_specializations.end()) {
         return nullptr;
     }
-    const std::vector<TypeRef> actual_args = template_arg_refs_from_type(owner);
+    std::vector<TypeRef> actual_args = template_arg_refs_from_type(owner);
+    if (const ClassDecl* primary = class_for_receiver_type(symbols, owner);
+        primary != nullptr && !primary->generic_params.empty()) {
+        actual_args = generic_args_with_defaults(primary->generic_params,
+                                                 primary->generic_default_args, actual_args);
+    }
     const ClassDecl* selected = nullptr;
     int selected_score = -1;
     bool ambiguous = false;
@@ -183,6 +188,11 @@ TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
             TypeRef resolved;
             if (!specialization_bindings.empty()) {
                 resolved = substitute_type_ref(alias.type_ref, specialization_bindings);
+                std::map<std::string, TypeRef> nested_substitutions = substitutions;
+                nested_substitutions.insert(specialization_bindings.begin(),
+                                            specialization_bindings.end());
+                return resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                        nested_substitutions, depth + 1);
             } else {
                 const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
                 resolved =

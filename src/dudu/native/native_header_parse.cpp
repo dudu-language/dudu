@@ -165,7 +165,7 @@ std::string native_type_placeholder(std::string_view index) {
 }
 
 std::string preserve_native_type_placeholders(std::string text) {
-    static const std::regex placeholder(R"(type-parameter-0-([0-9]+))");
+    static const std::regex placeholder(R"(type-parameter-[0-9]+-([0-9]+))");
     std::string out;
     std::smatch match;
     while (std::regex_search(text, match, placeholder)) {
@@ -428,7 +428,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"(NonTypeTemplateParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex template_type_default(R"(TemplateArgument type '([^']+)')");
     static const std::regex template_value_default(R"(TemplateArgument integral (.+)$)");
-    static const std::regex template_param_index(R"(\bindex ([0-9]+) )");
+    static const std::regex template_param_index(R"(\bindex ([0-9]+)(?: |$))");
     static const std::regex template_integer_default(R"(IntegerLiteral.* ([+-]?[0-9]+)$)");
     static const std::regex template_bool_default(R"(CXXBoolLiteralExpr.* (true|false)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
@@ -495,19 +495,33 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                              .param_defaults = {},
                              .last_param_depth = -1});
     }
-    if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos &&
-        std::regex_search(line, match, template_type_param)) {
-        templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
-        templates.back().param_has_default.push_back(false);
-        templates.back().param_defaults.emplace_back();
-        templates.back().last_param_depth = depth;
+    if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos) {
+        std::string name;
+        if (std::regex_search(line, match, template_type_param)) {
+            name = match[2].str() + (match[1].matched ? "..." : "");
+        } else if (std::regex_search(line, match, template_param_index)) {
+            name = native_type_placeholder(match[1].str());
+        }
+        if (!name.empty()) {
+            templates.back().params.push_back(std::move(name));
+            templates.back().param_has_default.push_back(false);
+            templates.back().param_defaults.emplace_back();
+            templates.back().last_param_depth = depth;
+        }
     }
-    if (!templates.empty() && line.find("NonTypeTemplateParmDecl") != std::string::npos &&
-        std::regex_search(line, match, template_value_param)) {
-        templates.back().params.push_back(match[2].str() + (match[1].matched ? "..." : ""));
-        templates.back().param_has_default.push_back(false);
-        templates.back().param_defaults.emplace_back();
-        templates.back().last_param_depth = depth;
+    if (!templates.empty() && line.find("NonTypeTemplateParmDecl") != std::string::npos) {
+        std::string name;
+        if (std::regex_search(line, match, template_value_param)) {
+            name = match[2].str() + (match[1].matched ? "..." : "");
+        } else if (std::regex_search(line, match, template_param_index)) {
+            name = native_type_placeholder(match[1].str());
+        }
+        if (!name.empty()) {
+            templates.back().params.push_back(std::move(name));
+            templates.back().param_has_default.push_back(false);
+            templates.back().param_defaults.emplace_back();
+            templates.back().last_param_depth = depth;
+        }
     }
     if (!classes.empty() && depth == classes.back().first + 1 &&
         line.find("TemplateArgument") != std::string::npos) {

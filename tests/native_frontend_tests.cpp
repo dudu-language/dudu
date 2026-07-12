@@ -13,7 +13,9 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
+#include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/type_compat.hpp"
+#include "dudu/sema/type_compat_native.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -1040,6 +1042,15 @@ void test_internal_native_template_aliases_resolve_public_returns(
     assert(std::ranges::none_of(module.native_types, [](const dudu::NativeTypeDecl& type) {
         return type.name == "internal_alias.__factory_result";
     }));
+    const auto defaulted = std::ranges::find_if(
+        module.native_classes, [](const dudu::ClassDecl& klass) {
+            return klass.name == "internal_alias.__defaulted_result";
+        });
+    assert(defaulted != module.native_classes.end());
+    assert(defaulted->generic_params.size() == 3);
+    assert(defaulted->generic_min_args == 2);
+    assert(defaulted->generic_default_args.size() == 3);
+    assert(dudu::type_ref_text(defaulted->generic_default_args[2]) == "void");
 
     const dudu::Symbols symbols = dudu::collect_symbols(module);
     const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
@@ -1060,6 +1071,35 @@ void test_internal_native_template_aliases_resolve_public_returns(
     }
 
     dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_equivalent_dependent_native_spellings_compare() {
+    const dudu::TypeRef parsed =
+        dudu::parse_type_text("std.allocator_traits._Size[_Alloc, i64].type");
+    dudu::TypeRef alternate = parsed;
+    alternate.kind = dudu::TypeKind::Qualified;
+    alternate.name = dudu::type_ref_text(parsed);
+    alternate.children.clear();
+    assert(!dudu::type_ref_equivalent(parsed, alternate));
+    assert(dudu::comparison_rhs_allowed({}, "<", parsed, {}, alternate));
+}
+
+void test_standard_string_size_type_resolves_numeric(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "tests/fixtures";
+    dudu::ModuleAst module = dudu::parse_source(
+        "from cpp import string\n", source_dir / "native_string_size_type_scan.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = root;
+    config.build_dir = root / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    const dudu::Symbols symbols = dudu::collect_symbols(module);
+    const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
+        symbols,
+        dudu::parse_type_text("std.allocator_traits._Size[_Alloc, i64].type"));
+    if (!dudu::native_numeric_operator_operand(resolved)) {
+        throw std::runtime_error("std string size type resolved as " +
+                                 dudu::type_ref_text(resolved));
+    }
 }
 
 void test_native_class_partial_specialization_metadata(const std::filesystem::path& root) {
@@ -1424,6 +1464,8 @@ int main() {
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_class_templates_preserve_declared_metadata(root);
         test_internal_native_template_aliases_resolve_public_returns(root);
+        test_equivalent_dependent_native_spellings_compare();
+        test_standard_string_size_type_resolves_numeric(root);
         test_native_class_partial_specialization_metadata(root);
         test_native_class_redeclarations_merge_specialization_metadata();
         test_native_fixed_array_typedef_alias(root);

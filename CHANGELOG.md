@@ -12,6 +12,14 @@
   types as unresolved native placeholders after structured substitution.
 - Release package validation now keeps portable recipe checks active on macOS
   while requiring Debian artifact inspection only on hosts with `dpkg-deb`.
+- Native operators now treat identical canonical C++ dependent-type spellings
+  as the same foreign type even when Clang reports different unresolved AST
+  shapes for the two expressions.
+- Native class-template scanning now preserves unnamed defaulted parameters,
+  allowing partial-specialization matching to resolve dependent standard
+  library aliases without losing omitted default arguments.
+- Native placeholder preservation now handles templates nested at any Clang
+  depth instead of recognizing only depth-zero `type-parameter-0-N` spellings.
 - Generated CMake now reports the actual `$<TARGET_FILE:...>` artifact to the
   project driver instead of Dudu guessing Linux `.so` paths, making shared
   library output copying portable to macOS `.dylib` and multi-config layouts.

@@ -42,8 +42,9 @@ bool unknown_or_auto(const TypeRef& type) {
 }
 
 bool same_foreign_cpp_type(const TypeRef& left, const TypeRef& right) {
-    const std::string head = type_ref_head_name(left);
-    return !head.empty() && head.find('.') != std::string::npos && type_ref_equivalent(left, right);
+    const std::string spelling = type_ref_text(left);
+    return !spelling.empty() && spelling.find('.') != std::string::npos &&
+           (type_ref_equivalent(left, right) || spelling == type_ref_text(right));
 }
 
 bool same_generic_param_type(const Symbols& symbols, const TypeRef& left, const TypeRef& right) {

@@ -12,6 +12,11 @@ struct __factory_result {
     using type = Holder<T>;
 };
 
+template <typename T, typename Fallback, typename = void>
+struct __defaulted_result {
+    using type = Fallback;
+};
+
 template <typename T>
 typename __factory_result<T>::type make_holder();
 
