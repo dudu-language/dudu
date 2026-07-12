@@ -36,13 +36,14 @@ def main() -> i32:
 
 ## Status
 
-Dudu is usable as an early compiler. It can parse and check the core typed
+Dudu is usable as a pre-alpha compiler. It can parse and check the core typed
 subset, format source, compile multi-file projects, import native C/C++
 headers, emit readable C++20, and drive CMake-backed builds through `dudu`.
 
-It is not a stable language release yet. The current work is focused on making
-the compiler architecture, module system, native interop, diagnostics, and
-tooling solid enough for real projects.
+It is not a stable language release. The current source identifies itself as
+`0.1.0-alpha.1`; until that tag is published, installation is from a checkout.
+Language and generated ABI compatibility may change between alpha versions.
+See [Known Limitations](docs/known-limitations.md) before adopting it.
 
 Current language coverage includes Dudu-native generics, payload enums with
 exhaustive `match`, fixed arrays with matrix/tensor-style indexing and slices,
@@ -58,7 +59,7 @@ Install prerequisites.
 Ubuntu/Debian:
 
 ```sh
-sudo apt install git cmake clang libclang-dev g++ build-essential
+sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config
 ```
 
 macOS:
@@ -91,6 +92,24 @@ The default install prefix is `~/.local`. Use another prefix with:
 ```sh
 ./scripts/install-local.sh --prefix /path/to/prefix
 ```
+
+Update a checkout installation with:
+
+```sh
+git pull --ff-only
+./scripts/install-local.sh
+```
+
+Until the tagged bootstrap installer records file ownership, uninstall the
+default checkout installation explicitly:
+
+```sh
+rm -f "$HOME/.local/bin/dudu" "$HOME/.local/bin/duc" "$HOME/.local/bin/dudu-lsp"
+rm -rf "$HOME/.local/share/dudu" "$HOME/.local/share/doc/dudu"
+```
+
+For a custom prefix, replace `$HOME/.local` with that prefix. Do not use this
+manual removal for a future package-manager-owned installation.
 
 ## First Project
 
@@ -208,8 +227,16 @@ Editor files live in:
 - `editors/vim`
 - `editors/nvim`
 
-The VS Code folder is a local extension with `.dd` highlighting and command
-palette actions for formatting, checking, building, and running Dudu files.
+The VS Code folder is a local extension with `.dd` highlighting, LSP-backed
+diagnostics/navigation/hover/inlay hints, and command palette actions for
+formatting, checking, building, and running Dudu files. Until the prerelease
+extension is published, launch it from a checkout:
+
+```sh
+cd editors/vscode
+npm ci
+code --extensionDevelopmentPath="$PWD"
+```
 
 The language server starts with:
 
@@ -244,6 +271,14 @@ dudu-lsp
       support on top of the real AST.
 - [ ] Add a broad compatibility suite for real libraries and larger examples.
 - [ ] Add release binaries and package-manager distribution.
+
+The pre-alpha release gate and distribution sequence are documented in
+[`docs/distribution-plan.md`](docs/distribution-plan.md). The exact local gate
+is:
+
+```sh
+./scripts/release-check.sh
+```
 
 The full implementation plan lives in [`docs/le_plan.md`](docs/le_plan.md).
 Developer command details live in [`docs/developer-guide.md`](docs/developer-guide.md).

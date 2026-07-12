@@ -112,6 +112,11 @@ for pattern in "${library_special_cases[@]}"; do
     fi
 done
 
+if rg -n '/(home|Users)/[^ ]+' "$repo_root/examples"; then
+    echo "public examples must not contain private absolute paths" >&2
+    exit 1
+fi
+
 if rg -n "type\\.text|left\\.text|right\\.text" "$repo_root/src/dudu"; then
     echo "TypeRef.text has been removed; use structured TypeRef fields and source ranges" >&2
     exit 1

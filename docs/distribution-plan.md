@@ -355,9 +355,9 @@ in `le_plan.md` or every speculative language feature.
 
 ### Legal And Identity
 
-- [ ] Add MIT OR Apache-2.0 licensing files and notices.
-- [ ] Centralize the Dudu toolchain version.
-- [ ] Make `dudu`, `duc`, `dudu-lsp`, extension metadata, release metadata, and
+- [x] Add MIT OR Apache-2.0 licensing files and notices.
+- [x] Centralize the Dudu toolchain version.
+- [x] Make `dudu`, `duc`, `dudu-lsp`, extension metadata, release metadata, and
       generated schema metadata agree on that version.
 - [ ] Define `0.1.0-alpha.1` and update `CHANGELOG.md` from `[Unreleased]` during
       the release cut.
@@ -370,9 +370,9 @@ in `le_plan.md` or every speculative language feature.
 - [x] Resolve path/Git Dudu dependencies through a stable lockfile.
 - [x] Preserve diagnostics, semantic highlighting, hover, and inlay hints
       through invalid editor edits and repair.
-- [ ] Close any reproducible P0/P1 compiler or LSP failure found in the three
+- [x] Close any reproducible P0/P1 compiler or LSP failure found in the three
       maintained dogfood projects.
-- [ ] Run a final source audit for unreleased compatibility paths or
+- [x] Run a final source audit for unreleased compatibility paths or
       library-name special cases introduced after the existing cleanup guards.
 
 Module-level Dudu analysis invalidation, complete C++ template compatibility,
@@ -381,25 +381,25 @@ dogfood program proves one is a release blocker.
 
 ### Validation
 
-- [ ] Add `scripts/release-check.sh` as the authoritative local release gate.
-- [ ] Pass fast, full, negative, dependency, LSP, example, and dogfood checks
+- [x] Add `scripts/release-check.sh` as the authoritative local release gate.
+- [x] Pass fast, full, negative, dependency, LSP, example, and dogfood checks
       from a clean tree.
-- [ ] Verify clean release-mode build and install into a temporary prefix.
-- [ ] Build and run a fresh generated hello project using only installed files.
-- [ ] Verify one native C import and one C++ standard-library import through
+- [x] Verify clean release-mode build and install into a temporary prefix.
+- [x] Build and run a fresh generated hello project using only installed files.
+- [x] Verify one native C import and one C++ standard-library import through
       the installed toolchain.
-- [ ] Validate Linux x86_64 as the first required host.
+- [x] Validate Linux x86_64 as the first required host.
 
 ### User Experience And Documentation
 
-- [ ] Make README status, prerequisites, install, update, uninstall, first
+- [x] Make README status, prerequisites, install, update, uninstall, first
       project, editor setup, and known limitations accurate for the tag.
-- [ ] Ensure compiler errors identify Dudu source rather than generated C++ for
+- [x] Ensure compiler errors identify Dudu source rather than generated C++ for
       ordinary language mistakes covered by the public examples.
-- [ ] Ensure missing compiler, CMake, libclang, native header, and pkg-config
+- [x] Ensure missing compiler, CMake, libclang, native header, and pkg-config
       dependencies have distinct actionable diagnostics.
-- [ ] Ensure the public examples do not depend on private absolute paths.
-- [ ] Publish known limitations instead of implying stable-language coverage.
+- [x] Ensure the public examples do not depend on private absolute paths.
+- [x] Publish known limitations instead of implying stable-language coverage.
 
 Passing these sections means the language and local toolchain are ready to be
 packaged as an alpha. It does not mean the alpha has been published.

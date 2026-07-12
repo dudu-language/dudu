@@ -62,6 +62,16 @@ detect_jobs() {
 
 jobs="$(detect_jobs)"
 
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Dudu installation requires '$1' on PATH" >&2
+        exit 1
+    fi
+}
+
+require_command cmake
+require_command "${CXX:-c++}"
+
 cmake -S "$repo_root" -B "$build_dir" \
     "${generator[@]}" \
     -DCMAKE_BUILD_TYPE="$build_type" \

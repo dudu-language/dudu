@@ -13,6 +13,8 @@
   primitive name, such as a namespaced C++ `f32` alias of `float`.
 - Bumped the native scan-cache schema so upgraded compilers cannot reuse
   metadata produced by older native type-lowering rules.
+- Added explicit pre-alpha limitations and release procedure documentation,
+  including checkout update/uninstall and local editor setup.
 
 ### Changed
 
