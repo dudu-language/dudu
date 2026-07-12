@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work="$repo_root/build/bootstrap-lifecycle"
 version_one="$(tr -d '\r\n' <"$repo_root/VERSION")"
-version_two="${DUDU_TEST_UPDATE_VERSION:-0.1.0-alpha.2}"
+version_two="${DUDU_TEST_UPDATE_VERSION:-$version_one.test-update}"
 commit="$(git -C "$repo_root" rev-parse HEAD)"
 server_pid=""
 

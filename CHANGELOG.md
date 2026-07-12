@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Made compiler artifact timestamps portable across libstdc++ and Apple
+  libc++, declared ripgrep as a release-gate dependency, and made installer
+  lifecycle version fixtures derive from the version under test.
 - Added the static `dudulang.org` project site, including install, docs,
   examples, interop, and roadmap pages, plus manual Cloudflare Pages
   deployment and a single authoritative installation-channel guide.

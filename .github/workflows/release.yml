@@ -36,7 +36,7 @@ jobs:
       - name: Install native prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang cmake libclang-dev pkg-config python3 unzip
+          sudo apt-get install -y build-essential clang cmake libclang-dev pkg-config python3 ripgrep unzip
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -97,7 +97,7 @@ jobs:
           test "$RELEASE_TAG" = "v$(cat VERSION)"
           git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
       - name: Install native prerequisites
-        run: brew install cmake llvm pkg-config
+        run: brew install cmake llvm pkg-config ripgrep
       - name: Validate source toolchain and lifecycle
         run: |
           ./scripts/release-check.sh

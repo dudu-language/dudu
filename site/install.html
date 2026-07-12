@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Install Dudu and run your first native project."><title>Install | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
-<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a aria-current="page" href="/install.html">Install</a><a href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.1</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
+<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a aria-current="page" href="/install.html">Install</a><a href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.2</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
 <main><section class="page-hero"><div class="container"><h1>Install Dudu</h1><p>The current pre-alpha builds from source. The tagged installer verifies an immutable release before installing the compiler, project driver, language server, and editor support.</p></div></section>
 <article class="prose">
-  <div class="notice"><strong>The first public tag is not published yet.</strong> Until <code>v0.1.0-alpha.1</code> exists, use the checkout installation below.</div>
+  <div class="notice"><strong>The first public tag is not published yet.</strong> Until <code>v0.1.0-alpha.2</code> exists, use the checkout installation below.</div>
   <h2>Prerequisites</h2>
   <h3>Ubuntu and Debian</h3><div class="code-window"><pre><code>sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config</code></pre></div>
   <h3>macOS Apple Silicon</h3><div class="code-window"><pre><code>xcode-select --install
@@ -15,7 +15,7 @@ export PATH="$HOME/.local/bin:$PATH"
 dudu --version</code></pre></div>
   <p>This installs <code>dudu</code>, <code>duc</code>, and <code>dudu-lsp</code> into <code>~/.local</code>. Pass <code>--prefix</code> to install elsewhere.</p>
   <h2>Tagged installer</h2><p>After the first tag is published, the release installer builds the immutable source release locally and records installation ownership.</p><div class="code-window"><pre><code>curl --proto '=https' --tlsv1.2 -sSf \
-  https://dudulang.org/install.sh | sh -s -- --version 0.1.0-alpha.1</code></pre></div>
+  https://dudulang.org/install.sh | sh -s -- --version 0.1.0-alpha.2</code></pre></div>
   <h2>First project</h2><div class="code-window"><pre><code>dudu init hello
 cd hello
 dudu run</code></pre></div>
