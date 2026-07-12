@@ -24,7 +24,7 @@ jobs:
       - name: Configure portability tests
         run: |
           cmake -S . -B build/macos-preflight \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=Debug \
             -DDUDU_BUILD_TESTS=ON \
             -DDUDU_STRICT=ON \
             -DDUDU_WARN_AS_ERROR=ON
