@@ -24,16 +24,34 @@ host="$repo_root/build/dudu_plugin_host"
 rm -f "$lib" "$header" "$host_c" "$host"
 rm -rf "$project/build"
 
+echo "dynamic library smoke: build $lib"
 (
     cd "$project"
-    "$repo_root/build/duc" build -o "$lib" --verbose \
-        2>"$repo_root/build/project_plugin_dynamic_library_verbose.err"
-    "$repo_root/build/duc" main.dd --emit-c-header "$header"
+    build_log="$repo_root/build/project_plugin_dynamic_library_verbose.err"
+    if ! "$repo_root/build/duc" build -o "$lib" --verbose 2>"$build_log"; then
+        echo "dynamic library build failed" >&2
+        cat "$build_log" >&2
+        exit 1
+    fi
+    if ! "$repo_root/build/duc" main.dd --emit-c-header "$header"; then
+        echo "dynamic library C header emission failed" >&2
+        exit 1
+    fi
 )
-test -f "$lib"
-grep -q "add_library(dudu_plugin SHARED" \
-    "$project/build/cmake-backend/source/CMakeLists.txt"
-grep -q "int32_t plugin_answer(void);" "$header"
+if [[ ! -f "$lib" ]]; then
+    echo "dynamic library output is missing: $lib" >&2
+    find "$repo_root/build" "$project/build" -maxdepth 3 -type f -print >&2
+    exit 1
+fi
+if ! grep -q "add_library(dudu_plugin SHARED" \
+    "$project/build/cmake-backend/source/CMakeLists.txt"; then
+    echo "generated CMake is missing the shared-library target" >&2
+    exit 1
+fi
+if ! grep -q "int32_t plugin_answer(void);" "$header"; then
+    echo "generated C header is missing plugin_answer" >&2
+    exit 1
+fi
 
 cat >"$host_c" <<'C'
 #include "dudu_plugin.h"
@@ -62,6 +80,7 @@ int main(int argc, char** argv) {
 }
 C
 
+echo "dynamic library smoke: compile and run host"
 cc -std=c11 -I"$repo_root/build" "$host_c" "${link_args[@]}" -o "$host"
 set +e
 "$host" "$lib"
