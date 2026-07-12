@@ -22,6 +22,14 @@ migration guards, project driver smoke, formatting, C API smoke, dynamic library
 smoke, `dudu new`, `dudu build`, `dudu run`, `dudu clean`, path dependencies,
 Git dependencies, and lockfile stability.
 
+## Local libc++ Portability
+
+Run `./scripts/test-libcxx.sh` after changing filesystem, threading, native
+scanner, or other standard-library-facing compiler code. It builds Dudu and the
+full CTest suite with Clang plus libc++ in an isolated directory. This catches
+Apple-adjacent C++ portability failures locally, but does not replace the final
+Apple Silicon check for Xcode SDK headers, arm64 execution, or Homebrew.
+
 ## Editor Checks
 
 Run these when changing LSP, semantic model, inlay hints, hover, references, or
