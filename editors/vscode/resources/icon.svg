@@ -1,8 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <rect width="128" height="128" fill="#241711"/>
   <rect x="8" y="8" width="112" height="112" fill="#523426"/>
-  <path fill="#f2dfca" fill-rule="evenodd" d="
-    M34 45h9V27h14v70H34c-14 0-23-10-23-25s9-27 23-27zm0 14c-6 0-9 5-9 13s3 11 9 11h9V59h-9z
-    M91 45h9V27h14v70H91c-14 0-23-10-23-25s9-27 23-27zm0 14c-6 0-9 5-9 13s3 11 9 11h9V59h-9z
-  "/>
+  <g fill="#f2dfca">
+    <rect x="46" y="28" width="12" height="72"/>
+    <rect x="18" y="48" width="40" height="52" rx="20"/>
+    <rect x="98" y="28" width="12" height="72"/>
+    <rect x="70" y="48" width="40" height="52" rx="20"/>
+  </g>
+  <g fill="#523426">
+    <rect x="30" y="60" width="16" height="28" rx="8"/>
+    <rect x="82" y="60" width="16" height="28" rx="8"/>
+  </g>
 </svg>
