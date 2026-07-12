@@ -410,7 +410,7 @@ void test_receiver_reference_emission() {
     assert(cpp.find("auto& self = *this;") != std::string::npos);
 }
 
-void test_heap_allocation_distinguishes_aggregates_and_constructors() {
+void test_class_construction_distinguishes_aggregates_and_constructors() {
     const dudu::ModuleAst module =
         dudu::parse_source("class Enemy:\n"
                            "    hp: i32\n"
@@ -422,13 +422,22 @@ void test_heap_allocation_distinguishes_aggregates_and_constructors() {
                            "    def init(self, value: i32):\n"
                            "        self.value = value\n"
                            "\n"
+                           "class Box[T]:\n"
+                           "    value: T\n"
+                           "\n"
                            "def allocate():\n"
+                           "    value = Enemy(100, 2.0)\n"
+                           "    generic = Box[i32](7)\n"
+                           "    tracker_value = Tracker(42)\n"
                            "    enemy: *Enemy = new[Enemy](100, 2.0)\n"
                            "    tracker: *Tracker = new[Tracker](42)\n"
                            "    values: *list[i32] = new[list[i32]](8)\n",
                            "heap_allocation_emission.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("Enemy{100, 2.0}") != std::string::npos);
+    assert(cpp.find("Box<int32_t>{7}") != std::string::npos);
+    assert(cpp.find("Tracker(42)") != std::string::npos);
     assert(cpp.find("new Enemy{100, 2.0}") != std::string::npos);
     assert(cpp.find("new Tracker(42)") != std::string::npos);
     assert(cpp.find("new std::vector<int32_t>(8)") != std::string::npos);
@@ -485,7 +494,7 @@ int main() {
         test_inferred_native_pointer_member_emission_uses_type_ast(root);
         test_expected_generic_method_emission_uses_type_ast_receiver();
         test_receiver_reference_emission();
-        test_heap_allocation_distinguishes_aggregates_and_constructors();
+        test_class_construction_distinguishes_aggregates_and_constructors();
         test_class_emit_order_uses_type_ast_fields();
         test_operator_continuation_is_part_of_return_expression();
     } catch (const std::exception& error) {

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Dudu aggregate value construction now emits portable brace initialization,
+  including generic aggregates, while classes with explicit `init` methods
+  retain constructor calls. This matches heap construction and fixes Apple
+  Clang builds without changing native C++ constructor dispatch.
 - Imported C++ functions introduced through namespace `using` declarations now
   retain their visible overloads, fixing libc++ APIs such as `std.sqrt`,
   `std.sin`, and `std.cos` on macOS.

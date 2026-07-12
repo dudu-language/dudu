@@ -1,6 +1,6 @@
 # Installing Dudu
 
-Dudu is pre-alpha. The repository identifies as `0.1.0-alpha.8`, but public
+Dudu is pre-alpha. The repository identifies as `0.1.0-alpha.9`, but public
 package channels remain unavailable until that immutable tag passes the release
 gate and is published.
 

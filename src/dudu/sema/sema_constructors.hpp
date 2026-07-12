@@ -13,6 +13,7 @@ struct ConstructorParam {
     TypeRef type_ref;
 };
 
+bool class_uses_aggregate_initialization(const ClassDecl& klass);
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass);
 const FunctionDecl* matching_constructor_method_ast(const FunctionScope& scope,
                                                     const ClassDecl& klass,

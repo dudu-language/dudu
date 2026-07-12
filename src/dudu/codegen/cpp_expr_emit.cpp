@@ -13,6 +13,7 @@
 #include "dudu/core/source.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -83,7 +84,7 @@ bool uses_aggregate_new(const std::vector<TypeRef>& type_args, const Symbols* sy
     if (found == symbols->classes.end() || found->second->native_declaration) {
         return false;
     }
-    return std::ranges::none_of(found->second->methods, is_constructor_method);
+    return class_uses_aggregate_initialization(*found->second);
 }
 
 } // namespace
@@ -452,6 +453,14 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             const std::string type =
                 lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
+        }
+        if (symbols != nullptr) {
+            const TypeRef constructed_type = template_type_ref_from_expr(expr, callee);
+            if (const ClassDecl* klass = class_for_receiver_type(*symbols, constructed_type);
+                klass != nullptr && class_uses_aggregate_initialization(*klass)) {
+                return lower_cpp_type(constructed_type, aliases, options) + "{" +
+                       lowered_call_args + "}";
+            }
         }
         if (lowered_template_args.empty()) {
             return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) +

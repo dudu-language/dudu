@@ -32,6 +32,13 @@ bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorPar
 
 } // namespace
 
+bool class_uses_aggregate_initialization(const ClassDecl& klass) {
+    return !klass.native_declaration &&
+           std::ranges::none_of(klass.methods, [](const FunctionDecl& method) {
+               return method.name == "init";
+           });
+}
+
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
     for (const FunctionDecl& method : klass.methods) {
         if (method.name != "init") {

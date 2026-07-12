@@ -9,6 +9,7 @@
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_enum.hpp"
+#include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods.hpp"
@@ -590,6 +591,17 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
                                   options) +
                ")";
+    }
+    if (symbols != nullptr) {
+        const TypeRef constructed_type = named_type_ref(callee_name, expr.location);
+        if (const ClassDecl* klass = class_for_receiver_type(*symbols, constructed_type);
+            klass != nullptr && class_uses_aggregate_initialization(*klass)) {
+            return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) +
+                   "{" +
+                   join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ",
+                                      symbols, options) +
+                   "}";
+        }
     }
     std::string callee =
         lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options);
