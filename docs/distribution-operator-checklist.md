@@ -20,8 +20,8 @@ and GitHub Actions secrets.
 | AUR | No account or dedicated SSH key configured | Create account and add a dedicated public key |
 | Homebrew | GitHub access is sufficient | No account setup; authorize creation of a tap repository when ready |
 | `.deb` download | GitHub access is sufficient | No account setup |
-| Website domain | `dudulang.com` is occupied by an unrelated site | Purchase `dudulang.org` if it is still available |
-| Cloudflare | Existing account currently exposes only `outagehub.ca` | Add the purchased domain or delegate its DNS to Cloudflare |
+| Website domain | `dudulang.org` is owned; `dudulang.com` is occupied by an unrelated site | None |
+| Cloudflare | `dudulang.org` is active and unpaused on Cloudflare | Configure GitHub Pages DNS when the site is ready |
 
 Availability and account state can change. Recheck them immediately before
 purchase or publication.
@@ -130,21 +130,18 @@ a hosted CI secret.
 
 ## 5. Domain And DNS
 
-`dudulang.com` is already occupied by an unrelated website. The planned public
-identity is `dudulang.org`.
+`dudulang.com` is occupied by an unrelated website. Dudu owns
+`dudulang.org`, which is the canonical public identity.
 
-The operator must:
+The remaining operator work is:
 
-1. Recheck `dudulang.org` availability at a registrar.
-2. Purchase it using recoverable contact and payment details.
-3. Enable registrar account MFA and save recovery codes.
-4. Add the domain to Cloudflare or delegate DNS to another chosen provider.
-5. Confirm when DNS ownership is ready; automation can then configure GitHub
+1. Ensure registrar account MFA and recovery information remain current.
+2. Confirm when the website is ready; automation can then configure GitHub
    Pages records and the repository `CNAME`.
 
-The existing local Cloudflare account currently exposes only `outagehub.ca`,
-so it cannot configure Dudu DNS until the new domain has been added. Domain
-purchase and billing must remain a human action.
+The local scoped Cloudflare credential can read the active `dudulang.org`
+zone. Domain purchase, billing, account recovery, and credential rotation
+remain human responsibilities.
 
 ## 6. GitHub Release Channels
 
@@ -176,7 +173,7 @@ When the account work is complete, report only these non-secret facts:
 - `VSCE_PAT` and `OVSX_PAT` visible in `gh secret list`: yes/no
 - AUR account and public key configured: yes/no
 - release signing enabled: yes/no
-- `dudulang.org` purchased and added to DNS provider: yes/no
+- `dudulang.org` DNS ready for the website: yes/no
 - public identity names above approved: yes/no
 
 That is sufficient to finish wiring and publishing without exposing any
