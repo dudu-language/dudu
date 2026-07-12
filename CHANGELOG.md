@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Expanded the Eigen compatibility probe from alias construction to inherited
+  template method calls, arithmetic operators, and result methods.
+
 ### Added
 
 - Added structured native function-pointer typedefs and callable native global

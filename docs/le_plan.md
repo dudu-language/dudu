@@ -1617,6 +1617,9 @@ push. They are not release packaging work.
    values are callable through their aliases with Dudu argument diagnostics,
    nullable comparison behavior, hover documentation, and signature help. The
    libxml2 probe exercises this path through `xmlFree` without a wrapper.
+   Eigen alias-target inheritance is covered by an executable `Vector3f`
+   fixture using inherited `dot`, `operator+`, and `sum`; these paths require no
+   Eigen-specific compiler handling.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
