@@ -1,0 +1,128 @@
+name: Dudu release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing immutable Dudu tag to validate
+        required: true
+        type: string
+      publish:
+        description: Publish the GitHub prerelease after validation
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dudu-release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  linux-artifacts:
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - name: Install native prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang cmake libclang-dev pkg-config python3 unzip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - name: Verify immutable tag
+        run: |
+          test "$RELEASE_TAG" = "v$(cat VERSION)"
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{commit}")"
+      - name: Run release gate
+        run: ./scripts/release-check.sh
+      - name: Build release artifacts
+        run: |
+          version="$(cat VERSION)"
+          ./scripts/build-release-artifacts.sh --output dist --ref "$RELEASE_TAG"
+          ./scripts/package-vscode.sh --output "dist/dudu-$version.vsix"
+          ./scripts/build-deb.sh --output dist
+          ./scripts/generate-package-recipes.sh \
+            --manifest "dist/dudu-$version-manifest.txt" \
+            --output dist/recipes
+          tar -czf "dist/dudu-$version-package-recipes.tar.gz" -C dist recipes
+          cp install.sh "dist/dudu-$version-install.sh"
+          deb="$(find dist -maxdepth 1 -name 'dudu_*.deb' -print -quit)"
+          ./scripts/add-release-asset.sh --manifest "dist/dudu-$version-manifest.txt" \
+            --key vsix --asset "dist/dudu-$version.vsix"
+          ./scripts/add-release-asset.sh --manifest "dist/dudu-$version-manifest.txt" \
+            --key deb_amd64 --asset "$deb"
+          ./scripts/add-release-asset.sh --manifest "dist/dudu-$version-manifest.txt" \
+            --key package_recipes --asset "dist/dudu-$version-package-recipes.tar.gz"
+          ./scripts/add-release-asset.sh --manifest "dist/dudu-$version-manifest.txt" \
+            --key installer --asset "dist/dudu-$version-install.sh"
+      - name: Validate package artifacts
+        run: |
+          ./scripts/test-vscode-package.sh
+          ./scripts/test-packages.sh
+          ./scripts/test-bootstrap-lifecycle.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dudu-${{ env.RELEASE_TAG }}-linux-artifacts
+          path: |
+            dist/*
+            !dist/recipes
+          if-no-files-found: error
+  macos-apple-silicon:
+    runs-on: macos-14
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      LLVM_ROOT: /opt/homebrew/opt/llvm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - name: Verify Apple Silicon and immutable tag
+        run: |
+          test "$(uname -m)" = arm64
+          test "$RELEASE_TAG" = "v$(cat VERSION)"
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+      - name: Install native prerequisites
+        run: brew install cmake llvm pkg-config
+      - name: Validate source toolchain and lifecycle
+        run: |
+          ./scripts/release-check.sh
+          ./scripts/test-bootstrap-lifecycle.sh
+
+  publish:
+    if: github.event_name == 'push' || inputs.publish
+    needs:
+      - linux-artifacts
+      - macos-apple-silicon
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dudu-${{ env.RELEASE_TAG }}-linux-artifacts
+          path: dist
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -d '' assets < <(find dist -maxdepth 1 -type f -print0 | sort -z)
+          test "${#assets[@]}" -gt 0
+          gh release create "$RELEASE_TAG" "${assets[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --prerelease --generate-notes \
+            --title "Dudu ${RELEASE_TAG#v}"

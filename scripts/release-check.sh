@@ -111,4 +111,9 @@ DD
 echo "==> installed dependency diagnostics"
 DUDU_BIN="$installed_bin/dudu" "$repo_root/scripts/test_dependencies.sh"
 
+echo "==> distribution artifacts"
+"$repo_root/scripts/test-vscode-package.sh"
+"$repo_root/scripts/test-packages.sh"
+"$repo_root/scripts/test-bootstrap-lifecycle.sh"
+
 echo "release check passed: Dudu $version"

@@ -176,7 +176,14 @@ atomic_link() {
     link_temp="$link.tmp.$$"
     rm -f "$link_temp"
     ln -s "$target" "$link_temp"
-    mv -f "$link_temp" "$link"
+    if mv -Tf "$link_temp" "$link" 2>/dev/null; then
+        return
+    fi
+    if mv -fh "$link_temp" "$link" 2>/dev/null; then
+        return
+    fi
+    rm -f "$link_temp"
+    die "this platform cannot atomically replace the toolchain link: $link"
 }
 
 write_metadata() {
