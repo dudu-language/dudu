@@ -9,6 +9,7 @@
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_context.hpp"
@@ -71,6 +72,18 @@ filter_member_template_type_args(const Expr& expr, std::vector<TypeRef> type_arg
         }
     }
     return type_args;
+}
+
+bool uses_aggregate_new(const std::vector<TypeRef>& type_args, const Symbols* symbols) {
+    if (symbols == nullptr || type_args.size() != 1) {
+        return false;
+    }
+    const TypeRef allocated_type = resolve_alias_ref(*symbols, type_args.front());
+    const auto found = symbols->classes.find(type_ref_head_name(allocated_type));
+    if (found == symbols->classes.end() || found->second->native_declaration) {
+        return false;
+    }
+    return std::ranges::none_of(found->second->methods, is_constructor_method);
 }
 
 } // namespace
@@ -403,7 +416,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         const std::string lowered_call_args = join_lowered_exprs(
             expr.children, aliases, locals, local_type_refs, ", ", symbols, options);
         if (callee == "new") {
-            return "new " + lowered_template_args + "(" + lowered_call_args + ")";
+            const bool aggregate = uses_aggregate_new(template_type_args, symbols);
+            return "new " + lowered_template_args + (aggregate ? "{" : "(") + lowered_call_args +
+                   (aggregate ? "}" : ")");
         }
         if (callee == "malloc") {
             const std::string type = lowered_template_args;

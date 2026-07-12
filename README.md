@@ -44,7 +44,7 @@ subset, format source, compile multi-file projects, import native C/C++
 headers, emit readable C++20, and drive CMake-backed builds through `dudu`.
 
 It is not a stable language release. The current source identifies itself as
-`0.1.0-alpha.5`; until that tag is published, installation is from a checkout.
+`0.1.0-alpha.6`; until that tag is published, installation is from a checkout.
 Language and generated ABI compatibility may change between alpha versions.
 See [Known Limitations](docs/known-limitations.md) before adopting it.
 
@@ -75,14 +75,14 @@ xcode-select --install
 brew install cmake llvm
 ```
 
-After `0.1.0-alpha.5` is published, the primary installer builds the immutable
+After `0.1.0-alpha.6` is published, the primary installer builds the immutable
 tagged source archive locally, verifies its SHA-256 checksum, and installs an
 atomic user-local toolchain:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf \
-  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.5/dudu-0.1.0-alpha.5-install.sh \
-  | sh -s -- --version 0.1.0-alpha.5
+  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.6/dudu-0.1.0-alpha.6-install.sh \
+  | sh -s -- --version 0.1.0-alpha.6
 export PATH="$HOME/.local/bin:$PATH"
 ```
 

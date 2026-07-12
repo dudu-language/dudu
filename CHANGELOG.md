@@ -8,6 +8,10 @@
 - Added a local Clang plus libc++ portability lane that also exercises native
   header scanning, and made external dogfood validation skip cleanly when the
   separately checked-out dogfood repositories are absent.
+- Heap allocation now emits brace initialization for Dudu aggregates while
+  preserving parenthesized construction for declared constructors and native
+  types, avoiding unsupported parenthesized aggregate initialization on Apple
+  Clang without changing constructor overload semantics.
 - Made compiler artifact timestamps portable across libstdc++ and Apple
   libc++, declared ripgrep as a release-gate dependency, and made installer
   lifecycle version fixtures derive from the version under test.
