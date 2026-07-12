@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11] - 2026-07-12
+
 - Native header analysis now retains internal class-template metadata required
   to resolve associated return types exposed by public APIs, including
   libc++'s `std::make_unique`, without exposing those implementation records as

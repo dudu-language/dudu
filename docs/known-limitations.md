@@ -15,13 +15,12 @@ published constraints, not promises of silent compatibility.
 ## Hosts And Installation
 
 - Linux x86_64 and macOS Apple Silicon are the validated release hosts for
-  `0.1.0-alpha.10`.
+  `0.1.0-alpha.11`.
 - Windows is not supported by the first alpha.
 - Both checkout and tagged bootstrap installation build locally and require
   CMake, a C++20 compiler, and libclang development files. The bootstrap,
-  atomic update/rollback/uninstall, package recipes, and `.deb` builder are
-  implemented and locally validated but are unavailable to users until the
-  first immutable tag and GitHub prerelease are published.
+  atomic update/rollback/uninstall, package recipes, and `.deb` builder ship
+  from the immutable GitHub prerelease.
 - Binary toolchains are not shipped by the first alpha. Host compiler, SDK,
   libc, and libclang compatibility therefore remain local build concerns.
 

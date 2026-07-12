@@ -1,8 +1,7 @@
 # Installing Dudu
 
-Dudu is pre-alpha. The repository identifies as `0.1.0-alpha.10`, but public
-package channels remain unavailable until that immutable tag passes the release
-gate and is published.
+Dudu is pre-alpha. The current release is `0.1.0-alpha.11`; language and
+generated ABI compatibility may change between alpha versions.
 
 ## Current Installation
 
@@ -42,8 +41,7 @@ dudu run
 ## Tagged Release Channels
 
 The following channels are generated from the same immutable source tag and
-release manifest. They are implemented and locally validated, but become
-public only after the first tag is published.
+release manifest. AUR publication remains pending upstream account access.
 
 | Channel | User command or artifact | Ownership |
 | --- | --- | --- |
