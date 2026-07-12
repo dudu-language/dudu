@@ -2,7 +2,12 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-dogfood_root="${DUDU_DOGFOOD_ROOT:-$(cd "$repo_root/../dogfooding" && pwd)}"
+dogfood_path="${DUDU_DOGFOOD_ROOT:-$repo_root/../dogfooding}"
+if [[ ! -d "$dogfood_path" ]]; then
+    echo "skip dogfood: missing $dogfood_path"
+    exit 0
+fi
+dogfood_root="$(cd "$dogfood_path" && pwd)"
 dudu_bin="$repo_root/build/dudu"
 timeout_seconds="${DUDU_DOGFOOD_TIMEOUT:-120}"
 

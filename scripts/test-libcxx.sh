@@ -11,6 +11,7 @@ command -v clang++ >/dev/null 2>&1 || {
 }
 
 probe="$(mktemp --suffix=.cpp)"
+clangxx_wrapper="$build_dir/clangxx-libcxx"
 trap 'rm -f "$probe"' EXIT
 printf '#include <filesystem>\nint main() { return 0; }\n' >"$probe"
 if ! clang++ -std=c++20 -stdlib=libc++ -fsyntax-only "$probe" >/dev/null 2>&1; then
@@ -28,6 +29,17 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DDUDU_STRICT=ON \
     -DDUDU_WARN_AS_ERROR=ON
 cmake --build "$build_dir" --parallel "$jobs"
-ctest --test-dir "$build_dir" --output-on-failure
+cat >"$clangxx_wrapper" <<'EOF'
+#!/usr/bin/env sh
+exec clang++ -stdlib=libc++ "$@"
+EOF
+chmod +x "$clangxx_wrapper"
+
+CLANGXX="$clangxx_wrapper" ctest --test-dir "$build_dir" --output-on-failure
+libcxx_tmp="$build_dir/libcxx-tmp"
+rm -rf "$libcxx_tmp"
+mkdir -p "$libcxx_tmp"
+TMPDIR="$libcxx_tmp" CLANGXX="$clangxx_wrapper" \
+    "$build_dir/dudu" "$repo_root/examples/cpp_library.dd" --check
 
 echo "clang + libc++ portability checks passed"

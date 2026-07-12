@@ -67,9 +67,8 @@ struct EnumContext {
 };
 
 bool dudu_primitive_name(std::string_view name) {
-    for (std::string_view primitive :
-         {"bool", "char", "f32", "f64", "i8", "i16", "i32", "i64", "isize",
-          "u8", "u16", "u32", "u64", "usize", "void"}) {
+    for (std::string_view primitive : {"bool", "char", "f32", "f64", "i8", "i16", "i32", "i64",
+                                       "isize", "u8", "u16", "u32", "u64", "usize", "void"}) {
         if (name == primitive) {
             return true;
         }
@@ -375,6 +374,33 @@ void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const 
     }
 }
 
+size_t append_native_function(NativeHeaderScan& scan,
+                              const std::vector<std::pair<int, std::string>>& namespaces,
+                              const NativeCursorIdentityIndex& identities, std::string raw_name,
+                              const std::string& signature, const SourceLocation& location,
+                              const std::string& current_file,
+                              const std::vector<std::string>& template_params = {}) {
+    NativeFunctionDecl fn;
+    fn.name = join_scope(namespaces, raw_name);
+    fn.identity = scanned_identity(identities, NativeCursorKind::Function, raw_name, location,
+                                   fn.name, current_file);
+    fn.template_params = template_params;
+    fn.param_native_spellings = qualify_scoped_types(scan, namespaces, signature_params(signature));
+    fn.param_names.resize(fn.param_native_spellings.size());
+    fn.return_native_spelling =
+        qualify_scoped_type(scan, namespaces, signature_return_type(signature));
+    fn.param_type_refs.reserve(fn.param_native_spellings.size());
+    for (const std::string& param : fn.param_native_spellings) {
+        fn.param_type_refs.push_back(parse_native_type_text(param, location));
+    }
+    fn.return_type_ref = parse_native_type_text(fn.return_native_spelling, location);
+    fn.min_params = static_cast<int>(fn.param_native_spellings.size());
+    fn.variadic = signature.find("...") != std::string::npos;
+    fn.location = location;
+    scan.functions.push_back(std::move(fn));
+    return scan.functions.size() - 1;
+}
+
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
                     std::vector<std::pair<int, size_t>>& classes, std::vector<EnumContext>& enums,
@@ -408,6 +434,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
     static const std::regex fn_decl(
         R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex using_shadow_function(
+        R"(UsingShadowDecl.*\bFunction 0x[0-9A-Fa-f]+ '([A-Za-z_][A-Za-z0-9_]*)' '([^']*)')");
     static const std::regex method_decl(R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex ctor_decl(
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -579,10 +607,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string underlying_type = trim_copy(match[3].str());
         const std::string lowered_type =
             qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
-        const bool useful_alias =
-            (lowered_type != raw_name && lowered_type != name) ||
-            (lowered_type == raw_name && dudu_primitive_name(raw_name) &&
-             underlying_type != raw_name);
+        const bool useful_alias = (lowered_type != raw_name && lowered_type != name) ||
+                                  (lowered_type == raw_name && dudu_primitive_name(raw_name) &&
+                                   underlying_type != raw_name);
         if (!starts_with(raw_name, "__") || useful_alias) {
             const TypeRef type_ref =
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
@@ -721,41 +748,32 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             enums.push_back(
                 {.depth = depth, .type_name = name, .value_scope = std::move(value_scope)});
         }
+    } else if (line.find("UsingShadowDecl") != std::string::npos &&
+               std::regex_search(line, match, using_shadow_function)) {
+        const std::string raw_name = match[1].str();
+        if (!starts_with(raw_name, "__")) {
+            append_native_function(scan, namespaces, identities, raw_name, match[2].str(),
+                                   decl_location, current_file);
+        }
     } else if (line.find("FunctionDecl") != std::string::npos &&
                std::regex_search(line, match, fn_decl)) {
-        const std::string name = join_scope(namespaces, match[1].str());
-        if (starts_with(name, "__")) {
+        const std::string raw_name = match[1].str();
+        if (starts_with(raw_name, "__")) {
             return;
         }
         const std::string signature = match[2].str();
-        NativeFunctionDecl fn;
-        fn.name = name;
-        fn.identity = scanned_identity(identities, NativeCursorKind::Function, match[1].str(),
-                                       decl_location, name, current_file);
+        std::vector<std::string> template_params;
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
-            fn.template_params = templates.back().params;
+            template_params = templates.back().params;
         }
-        fn.param_native_spellings =
-            qualify_scoped_types(scan, namespaces, signature_params(signature));
-        fn.param_names.resize(fn.param_native_spellings.size());
-        fn.return_native_spelling =
-            qualify_scoped_type(scan, namespaces, signature_return_type(signature));
-        fn.param_type_refs.reserve(fn.param_native_spellings.size());
-        for (const std::string& param : fn.param_native_spellings) {
-            fn.param_type_refs.push_back(parse_native_type_text(param, decl_location));
-        }
-        fn.return_type_ref = parse_native_type_text(fn.return_native_spelling, decl_location);
-        fn.min_params = static_cast<int>(fn.param_native_spellings.size());
-        fn.variadic = signature.find("...") != std::string::npos;
-        fn.location = decl_location;
-        scan.functions.push_back(std::move(fn));
-        functions.push_back({depth, scan.functions.size() - 1});
-        param_targets.push_back({.depth = depth,
-                                 .kind = ParamTargetKind::Function,
-                                 .primary = scan.functions.size() - 1});
-        comment_targets.push_back({.depth = depth,
-                                   .kind = CommentTargetKind::Function,
-                                   .primary = scan.functions.size() - 1});
+        const size_t function_index =
+            append_native_function(scan, namespaces, identities, raw_name, signature, decl_location,
+                                   current_file, template_params);
+        functions.push_back({depth, function_index});
+        param_targets.push_back(
+            {.depth = depth, .kind = ParamTargetKind::Function, .primary = function_index});
+        comment_targets.push_back(
+            {.depth = depth, .kind = CommentTargetKind::Function, .primary = function_index});
     } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;

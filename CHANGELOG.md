@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Imported C++ functions introduced through namespace `using` declarations now
+  retain their visible overloads, fixing libc++ APIs such as `std.sqrt`,
+  `std.sin`, and `std.cos` on macOS.
+- Added a local Clang plus libc++ portability lane that also exercises native
+  header scanning, and made external dogfood validation skip cleanly when the
+  separately checked-out dogfood repositories are absent.
 - Made compiler artifact timestamps portable across libstdc++ and Apple
   libc++, declared ripgrep as a release-gate dependency, and made installer
   lifecycle version fixtures derive from the version under test.

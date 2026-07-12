@@ -1292,6 +1292,39 @@ void test_native_scan_preserves_namespace_value_owners() {
     assert(has_value("second.value"));
 }
 
+void test_native_scan_imports_using_shadow_function_overloads() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-NamespaceDecl 0x1 <cmath:1:1, line:5:1> line:1:11 std\n"
+        "  |-UsingDecl 0x2 <line:2:1, col:9> col:9 ::sqrt\n"
+        "  |-UsingShadowDecl 0x3 <col:9> col:9 implicit Function 0x10 'sqrt' 'double "
+        "(double) noexcept(true)'\n"
+        "  |-UsingShadowDecl 0x4 <col:9> col:9 implicit Function 0x11 'sqrt' 'float "
+        "(float) noexcept'\n"
+        "  `-UsingShadowDecl 0x5 <col:9> col:9 implicit FunctionTemplate 0x12 'sqrt'\n",
+        {.file = dudu::SourceFileName("cmath"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto overload_count =
+        std::ranges::count_if(scan.functions, [](const dudu::NativeFunctionDecl& function) {
+            return function.name == "std.sqrt";
+        });
+    assert(overload_count == 2);
+    assert(std::ranges::any_of(scan.functions, [](const dudu::NativeFunctionDecl& function) {
+        return function.name == "std.sqrt" &&
+               dudu::type_ref_text(function.return_type_ref) == "f64" &&
+               function.param_type_refs.size() == 1 &&
+               dudu::type_ref_text(function.param_type_refs.front()) == "f64";
+    }));
+    assert(std::ranges::any_of(scan.functions, [](const dudu::NativeFunctionDecl& function) {
+        return function.name == "std.sqrt" &&
+               dudu::type_ref_text(function.return_type_ref) == "f32" &&
+               function.param_type_refs.size() == 1 &&
+               dudu::type_ref_text(function.param_type_refs.front()) == "f32";
+    }));
+}
+
 void test_native_scan_merges_reopened_namespaces() {
     dudu::NativeHeaderScan scan;
     for (const std::string source : {"first.hpp", "second.hpp"}) {
@@ -1344,6 +1377,7 @@ int main() {
         test_native_scan_ignores_anonymous_record_definitions();
         test_native_scan_preserves_scoped_enum_owners();
         test_native_scan_preserves_namespace_value_owners();
+        test_native_scan_imports_using_shadow_function_overloads();
         test_native_scan_merges_reopened_namespaces();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
