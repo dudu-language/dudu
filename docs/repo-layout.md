@@ -36,9 +36,9 @@ repo when it exists locally, not a subdirectory of this repository.
 
 Dogfood projects such as these should live next to the Dudu repo:
 
-- `/home/vega/Coding/GameDev/duduplayground`
-- `/home/vega/Coding/Graphics/raymarch-dd`
-- `/home/vega/Coding/Web/dudu-webserver`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/duduplayground`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver`
 
 If a playground case becomes important enough to keep, promote it into one of
 the tracked locations:

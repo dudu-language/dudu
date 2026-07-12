@@ -15,9 +15,9 @@ be deleted.
 Use this as the execution goal for the whole destringing slice:
 
 ```text
-Execute Coding/GameDev/dudu/docs/destringing-goals.md in order until all six
+Execute Coding/LangDev/Dudu/dudu/docs/destringing-goals.md in order until all six
 goals are complete. Treat this as the top-priority architecture slice of
-Coding/GameDev/dudu/docs/le_plan.md: get Dudu off raw source/string semantics
+Coding/LangDev/Dudu/dudu/docs/le_plan.md: get Dudu off raw source/string semantics
 and onto structured AST, semantic facts, module metadata, and explicitly named
 native-boundary metadata. Do not preserve compatibility syntax or fallback
 compiler paths; Dudu has no released users. Strings are allowed only for
@@ -30,7 +30,7 @@ it from coming back, keep validation fast, commit and push stable green
 milestones, and update this document when implementation discoveries tighten the
 spec. Avoid getting stuck behind one slow or hanging validation case; isolate
 slow tests from the fast loop and keep moving on the architectural goal. When
-all six goals are complete, resume Coding/GameDev/dudu/docs/le_plan.md.
+all six goals are complete, resume Coding/LangDev/Dudu/dudu/docs/le_plan.md.
 ```
 
 ## Goal 1: Lock Statement AST To Structured Nodes

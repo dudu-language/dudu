@@ -234,8 +234,8 @@ def main():
     workspaces = [
         (
             "raymarch-dd",
-            Path("/home/vega/Coding/Graphics/raymarch-dd"),
-            Path("/home/vega/Coding/Graphics/raymarch-dd/src/main.dd"),
+            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd"),
+            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd/src/main.dd"),
             {
                 "definition": "setup_monitor_rect()",
                 "definition_uri_suffix": "/src/windowing.dd",
@@ -246,8 +246,8 @@ def main():
         ),
         (
             "dudu-webserver",
-            Path("/home/vega/Coding/Web/dudu-webserver"),
-            Path("/home/vega/Coding/Web/dudu-webserver/src/server.dd"),
+            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver"),
+            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver/src/server.dd"),
             {
                 "definition": "parse_request(raw)",
                 "definition_uri_suffix": "/src/request.dd",

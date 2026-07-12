@@ -62,9 +62,9 @@ The public example set is:
 - C/C++ native import smoke through fixtures and examples
 - SDL/raylib examples when those packages are installed
 - `examples/` through `./scripts/test_examples.sh`
-- `/home/vega/Coding/Graphics/raymarch-dd`
-- `/home/vega/Coding/Web/dudu-webserver`
-- `/home/vega/Coding/ML/dudu-datascience`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience`
 
 `scripts/test_examples.sh` checks that public examples use current language
 syntax and validates optional native packages when present. Missing optional
@@ -91,7 +91,7 @@ Minimum checks:
 
 ```sh
 ./scripts/check_targets.sh
-cd /home/vega/Coding/ML/dudu-datascience
+cd /home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience
 dudu run --timings
 ./scripts/check_target_api.sh
 ```

@@ -18,15 +18,15 @@ The target behavior is grounded in how mature systems already work:
 - NumPy parses `x[a, :, b, None, ...]` into structured index records before
   deciding scalar, view, boolean, or fancy-index behavior. See the local source
   snapshot at
-  `/home/vega/Coding/LangDev/numpy/numpy/_core/src/multiarray/mapping.h` and
-  `/home/vega/Coding/LangDev/numpy/numpy/_core/src/multiarray/mapping.c`.
+  `/home/vega/Coding/LangDev/Dudu/references/numpy/numpy/_core/src/multiarray/mapping.h` and
+  `/home/vega/Coding/LangDev/Dudu/references/numpy/numpy/_core/src/multiarray/mapping.c`.
 - PyTorch exposes the same idea to C++ as a sequence of `TensorIndex` values.
-  See `/home/vega/Coding/LangDev/pytorch/aten/src/ATen/TensorIndexing.h` and
-  `/home/vega/Coding/LangDev/pytorch/aten/src/ATen/TensorIndexing.cpp`.
+  See `/home/vega/Coding/LangDev/Dudu/references/pytorch/aten/src/ATen/TensorIndexing.h` and
+  `/home/vega/Coding/LangDev/Dudu/references/pytorch/aten/src/ATen/TensorIndexing.cpp`.
 - Julia lowers indexing to `getindex(A, I...)` and normalizes index arguments
   through array/library dispatch. See
-  `/home/vega/Coding/LangDev/julia/base/multidimensional.jl` and
-  `/home/vega/Coding/LangDev/julia/base/views.jl`.
+  `/home/vega/Coding/LangDev/Dudu/references/julia/base/multidimensional.jl` and
+  `/home/vega/Coding/LangDev/Dudu/references/julia/base/views.jl`.
 
 The shared lesson is that syntax is generic. Tensor policy is not syntax.
 

@@ -29,7 +29,7 @@ Heavy backend checks such as BLAS, OpenCL, ROCm, CUDA, LibTorch, or dataset
 training can be optional probes, but they should still be tracked as Dudu
 validation work rather than hidden in unrelated scratch repos.
 
-Dogfood repos such as `/home/vega/Coding/ML/dudu-datascience` are useful real
+Dogfood repos such as `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience` are useful real
 usage pressure and can contain aspirational API sketches, but they are not the
 compiler suite. Once a dogfood sketch clarifies a language requirement, move
 the required behavior into Dudu fixtures or optional probes.
@@ -367,7 +367,7 @@ This bottling step is worthwhile even if the first package is small. It proves
 that Dudu can support serious library abstraction instead of making every user
 see the native/backend glue.
 
-Status: `/home/vega/Coding/ML/dudu-datascience` now has a package-shaped
+Status: `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience` now has a package-shaped
 `src/ndad.dd` plus `src/ndad/backends.dd` for the CPU/OpenBLAS tensor surface.
 Default `dudu run` uses `ndad` and links OpenBLAS without OpenCL. The optional
 OpenCL target still uses the older `dudu_tensor` prototype so CPU-only `ndad`
@@ -594,7 +594,7 @@ and implementation.
 ## Fancy Indexing Target Forms
 
 The scratch dogfood file
-`/home/vega/Coding/Web/dudu-webserver/indexingcoolness.dd` sketches the kind of
+`/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver/indexingcoolness.dd` sketches the kind of
 indexing Dudu should eventually make pleasant. That file is not the spec. The
 compiler plan should use it as a source of target cases, then normalize those
 cases into syntax that is close to Python/NumPy/PyTorch while avoiding their
@@ -1076,15 +1076,15 @@ Status:
   explicit reference mutation.
 - `tests/fixtures/tensor_dogfood/openblas_compare.dd` compares reusable Dudu
   tensor `matmul` against CBLAS `sgemm` through normal C interop.
-- `/home/vega/Coding/ML/dudu-datascience/src/blas_demos.dd` is a separate
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience/src/blas_demos.dd` is a separate
   dogfood repo demo that links `openblas` through `dudu.toml`, imports
   `cblas.h`, compares pure Dudu row-major matmul against `cblas_sgemm`, and
   prints verifiable results.
 - Done for proof only: the compiler repo and `dudu-datascience` prove CBLAS
   interop with tiny row-major tensors.
 - Dogfood target API status is now tracked by
-  `/home/vega/Coding/ML/dudu-datascience/spec/target_api/manifest.tsv` and
-  verified by `/home/vega/Coding/ML/dudu-datascience/scripts/check_target_api.sh`.
+  `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience/spec/target_api/manifest.tsv` and
+  verified by `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience/scripts/check_target_api.sh`.
   The graduated specs `tensor_surface.dd`, `advanced_indexing.dd`,
   `blas_backend.dd`, `gpu_backend.dd`, and `autograd_training.dd` have named
   runnable `dudu` targets.
@@ -1163,7 +1163,7 @@ Status:
 - Done: `scripts/probe_optional.sh opencl` runs the existing host API probe and
   the tensor add/matmul probes when OpenCL is discoverable through
   `pkg-config`.
-- Done: `/home/vega/Coding/ML/dudu-datascience/src/target_gpu_backend.dd`
+- Done: `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience/src/target_gpu_backend.dd`
   graduates the target API shape for `tensor.to(opencl.default())`, device
   `matmul`, device row indexing, explicit `.cpu()` transfer, and comparison
   against CPU tensor math. This uses ordinary method overloads and a local
@@ -1173,7 +1173,7 @@ Status:
 
 ### 5. Autograd Prototype
 
-Status: `/home/vega/Coding/ML/dudu-datascience/src/target_autograd_training.dd`
+Status: `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience/src/target_autograd_training.dd`
 now runs a small `mald` proof using ordinary Dudu classes, parameter pointers,
 `Loss.backward()`, and `SGD` to train an OR classifier on top of `ndad`.
 

@@ -595,8 +595,8 @@ Required fixture families:
 
 Dogfood checks:
 
-- `/home/vega/Coding/Graphics/raymarch-dd`
-- `/home/vega/Coding/Web/dudu-webserver`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd`
+- `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver`
 
 Measure:
 

@@ -135,10 +135,10 @@ Acceptance:
 - `mald` sample imports normal Dudu packages and runs a tiny training loop
 - no user-facing example needs native helper headers
 
-Status: `/home/vega/Coding/ML/dudu-datascience` now bottles the CPU/OpenBLAS
+Status: `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience` now bottles the CPU/OpenBLAS
 surface as `ndad`, keeps OpenCL in the older optional `dudu_tensor` target, and
 graduates a small `mald` autograd/training layer on top of `ndad`.
-`DUDU_BIN=/home/vega/Coding/LangDev/dudu/build/dudu ./scripts/check_target_api.sh`
+`DUDU_BIN=/home/vega/Coding/LangDev/Dudu/dudu/build/dudu ./scripts/check_target_api.sh`
 passed on 2026-07-02 with 5 graduated specs and 0 pending specs.
 
 ## 3. Improve Tensor/Generic Editor Intelligence

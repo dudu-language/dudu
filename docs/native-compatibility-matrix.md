@@ -29,7 +29,7 @@ Last targeted Eigen probe run: 2026-07-12 with
 alias construction, inherited `dot`, inherited `operator+`, and `sum` on the
 result without wrappers.
 
-Last local dogfood run: 2026-07-01 with `scripts/test_dogfood.sh`.
+Last local dogfood run: 2026-07-12 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
 `/echo`, and `/routes`. `dudu-datascience` built and its target API
@@ -95,9 +95,9 @@ periodically because they catch whole-project friction that small fixtures miss.
 
 | Repo | Domain | Current Use | Status |
 | --- | --- | --- | --- |
-| `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
-| `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
-| `/home/vega/Coding/ML/dudu-datascience` | tensor indexing / BLAS / OpenCL / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, BLAS backend, OpenCL GPU backend, and `mald` autograd training examples. CPU/OpenBLAS demos import package-shaped `ndad`; optional OpenCL remains isolated in the older `dudu_tensor` target until backend extension modules are cleaner. | local dogfood via `dudu run --timings` and `./scripts/check_target_api.sh`; passed on 2026-07-02 |
+| `/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
+| `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
+| `/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-datascience` | tensor indexing / BLAS / OpenCL / ML-shaped API | Data-science indexing tour plus target API graduation manifest for tensor surface, advanced indexing, BLAS backend, OpenCL GPU backend, and `mald` autograd training examples. CPU/OpenBLAS demos import package-shaped `ndad`; optional OpenCL remains isolated in the older `dudu_tensor` target until backend extension modules are cleaner. | local dogfood via `dudu run --timings` and `./scripts/check_target_api.sh`; passed on 2026-07-02 |
 
 ## Planned Matrix Targets
 

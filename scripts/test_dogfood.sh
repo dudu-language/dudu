@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-coding_root="${DUDU_DOGFOOD_ROOT:-$(cd "$repo_root/../.." && pwd)}"
+dogfood_root="${DUDU_DOGFOOD_ROOT:-$(cd "$repo_root/../dogfooding" && pwd)}"
 dudu_bin="$repo_root/build/dudu"
 timeout_seconds="${DUDU_DOGFOOD_TIMEOUT:-120}"
 
@@ -92,9 +92,9 @@ smoke_webserver() {
         grep -Fq '"GET /health"'
 }
 
-raymarch_repo="$coding_root/Graphics/raymarch-dd"
-webserver_repo="$coding_root/Web/dudu-webserver"
-datascience_repo="$coding_root/ML/dudu-datascience"
+raymarch_repo="$dogfood_root/raymarch-dd"
+webserver_repo="$dogfood_root/dudu-webserver"
+datascience_repo="$dogfood_root/dudu-datascience"
 
 build_project "raymarch-dd" "$raymarch_repo"
 

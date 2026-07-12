@@ -82,6 +82,7 @@ dudu --version
 
 - `dudu`, the project driver
 - `duc`, the lower-level compiler driver
+- `dudu-lsp`, the language server used by editor integrations
 - docs
 - editor support files
 
