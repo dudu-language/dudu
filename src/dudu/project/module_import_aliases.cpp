@@ -122,8 +122,8 @@ ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
                                const std::map<std::string, TypeRef>& type_substitutions,
                                const SourceLocation& location) {
     if (klass.identity.canonical_path.empty() && klass.identity.usr.empty()) {
-        klass.identity =
-            module_symbol_identity(klass.origin_module.empty() ? name : klass.origin_module);
+        klass.identity = module_symbol_identity(
+            klass.origin_module.empty() ? name : klass.origin_module + "." + klass.name);
     }
     klass.name = name;
     klass.location = location;

@@ -38,6 +38,12 @@ TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type) {
     return type;
 }
 
+bool is_canonical_native_type_ref(const TypeRef& type) {
+    return (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
+            type.kind == TypeKind::Template) &&
+           type_ref_head_name(type).starts_with("__dudu_native_identity_");
+}
+
 const NativeTypeDecl* native_type_decl_for_binding(const Symbols& symbols,
                                                    std::string_view binding) {
     const auto identity = symbols.native_type_identity_by_binding.find(std::string(binding));

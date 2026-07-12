@@ -6,6 +6,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/format/format_path.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser.hpp"
@@ -165,6 +166,40 @@ void test_module_loader_resolves_source_root_import_from_submodule() {
     assert(module.module_units[1].dependencies.size() == 1);
     assert(module.module_units[1].dependencies[0].import_module_path == "ndad");
     assert(module.module_units[1].dependencies[0].resolved_module_path == "ndad");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_imported_classes_keep_distinct_symbol_identities() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_imported_class_identity_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "models.dd", "class Box[T]:\n"
+                                  "    value: T\n"
+                                  "\n"
+                                  "class Other:\n"
+                                  "    value: i32\n");
+    write_file(dir / "main.dd", "from models import Box\n"
+                                 "from models import Other\n"
+                                 "\n"
+                                 "def main() -> i32:\n"
+                                 "    box = Box[i32](42)\n"
+                                 "    other = Other(1)\n"
+                                 "    return box.value + other.value\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    std::map<std::string, std::string> identities;
+    for (const dudu::ClassDecl& klass : module.native_classes) {
+        if (klass.name == "Box" || klass.name == "models.Box" || klass.name == "Other" ||
+            klass.name == "models.Other") {
+            identities[klass.name] = dudu::native_symbol_identity_key(klass.identity);
+        }
+    }
+    assert(identities.at("Box") == "path:models.Box");
+    assert(identities.at("models.Box") == "path:models.Box");
+    assert(identities.at("Other") == "path:models.Other");
+    assert(identities.at("models.Other") == "path:models.Other");
+    assert(identities.at("Box") != identities.at("Other"));
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
@@ -599,6 +634,7 @@ int main() {
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
         test_module_loader_resolves_source_root_import_from_submodule();
+        test_imported_classes_keep_distinct_symbol_identities();
         test_project_index_records_module_graph();
         test_project_index_resolves_path_dependency_modules();
         test_project_index_source_stamps_detect_changed_modules();

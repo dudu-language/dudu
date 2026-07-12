@@ -6,11 +6,12 @@
 #include "dudu/core/shape_value_expr.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat_literals.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
 
-#include <cctype>
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <set>
@@ -280,45 +281,44 @@ bool is_variant_value(const TypeRef& expected, const Expr& expr, const TypeRef& 
     return matches == 1;
 }
 
-bool has_internal_cpp_identifier(std::string_view name) {
-    size_t pos = 0;
-    while (pos < name.size()) {
-        while (pos < name.size() &&
-               (std::isalnum(static_cast<unsigned char>(name[pos])) == 0 && name[pos] != '_')) {
-            ++pos;
-        }
-        const size_t start = pos;
-        while (pos < name.size() &&
-               (std::isalnum(static_cast<unsigned char>(name[pos])) != 0 || name[pos] == '_')) {
-            ++pos;
-        }
-        if (pos > start && name.substr(start, 2) == "__") {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool is_internal_cpp_template_artifact(const TypeRef& type) {
-    if ((type.kind == TypeKind::Const || type.kind == TypeKind::Reference ||
-         type.kind == TypeKind::Pointer) &&
-        type.children.size() == 1) {
-        return is_internal_cpp_template_artifact(type.children.front());
-    }
-    return type.kind == TypeKind::Template && !type.children.empty() &&
-           has_internal_cpp_identifier(type.name);
-}
-
-bool is_native_internal_template_result(const TypeRef& expected, const TypeRef& got) {
-    if (expected.kind != TypeKind::Template) {
-        return false;
-    }
-    return is_internal_cpp_template_artifact(got);
-}
-
 bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
     const auto inner = unary_child_ref(got, TypeKind::Const);
     return inner.has_value() && type_ref_equivalent(expected, *inner);
+}
+
+bool all_unknown_type_refs(const std::vector<TypeRef>& types) {
+    return std::ranges::all_of(types,
+                               [](const TypeRef& type) { return type.kind == TypeKind::Unknown; });
+}
+
+bool native_dependent_type_refs_equivalent(const TypeRef& left, const TypeRef& right) {
+    if (left.kind != right.kind || left.name != right.name || left.value != right.value) {
+        return false;
+    }
+    if (left.children.size() != right.children.size()) {
+        return (left.children.empty() && all_unknown_type_refs(right.children)) ||
+               (right.children.empty() && all_unknown_type_refs(left.children));
+    }
+    for (size_t i = 0; i < left.children.size(); ++i) {
+        if (!native_dependent_type_refs_equivalent(left.children[i], right.children[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool contains_canonical_native_type_ref(const TypeRef& type) {
+    if (is_canonical_native_type_ref(type)) {
+        return true;
+    }
+    return std::ranges::any_of(type.children, contains_canonical_native_type_ref);
+}
+
+bool canonical_native_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    return type_assignment_allowed(expected, got) ||
+           (contains_canonical_native_type_ref(expected) &&
+            contains_canonical_native_type_ref(got) &&
+            native_dependent_type_refs_equivalent(expected, got));
 }
 
 bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeRef& got_ref) {
@@ -336,7 +336,6 @@ bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeR
            is_value_from_reference(expected_ref, got_ref) ||
            is_value_from_const(expected_ref, got_ref) ||
            is_native_function_pointer(expected_ref, got_ref) ||
-           is_native_internal_template_result(expected_ref, got_ref) ||
            native_associated_type_assignment_allowed(expected_ref, got_ref);
 }
 
@@ -364,13 +363,15 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
 }
 
 bool type_assignment_allowed(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
-    const TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
-    const TypeRef resolved_got = resolve_alias_ref(symbols, got);
+    const TypeRef resolved_expected =
+        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, expected));
+    const TypeRef resolved_got =
+        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, got));
     const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
     const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
     if (!type_ref_same_shape(canonical_expected, resolved_expected) &&
         !type_ref_same_shape(canonical_got, resolved_got)) {
-        return type_assignment_allowed(canonical_expected, canonical_got);
+        return canonical_native_assignment_allowed(canonical_expected, canonical_got);
     }
     return type_assignment_allowed(resolved_expected, resolved_got);
 }
@@ -423,7 +424,6 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
            is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
            is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
-           is_native_internal_template_result(normalized_expected_ref, normalized_got_ref) ||
            native_associated_type_assignment_allowed(normalized_expected_ref, normalized_got_ref) ||
            (is_native_string_view_type(normalized_expected_ref) &&
             expr.kind == ExprKind::StringLiteral) ||
@@ -434,13 +434,16 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
 
 bool assignment_type_allowed(const Symbols& symbols, const TypeRef& expected, const Expr& expr,
                              const TypeRef& got) {
-    const TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
-    const TypeRef resolved_got = resolve_alias_ref(symbols, got);
+    const TypeRef resolved_expected =
+        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, expected));
+    const TypeRef resolved_got =
+        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, got));
     const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
     const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
     if (!type_ref_same_shape(canonical_expected, resolved_expected) &&
         !type_ref_same_shape(canonical_got, resolved_got)) {
-        return assignment_type_allowed(canonical_expected, expr, canonical_got);
+        return assignment_type_allowed(canonical_expected, expr, canonical_got) ||
+               canonical_native_assignment_allowed(canonical_expected, canonical_got);
     }
     return assignment_type_allowed(resolved_expected, expr, resolved_got);
 }

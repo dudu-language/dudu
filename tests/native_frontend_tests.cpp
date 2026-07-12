@@ -13,6 +13,7 @@
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <exception>
 #include <filesystem>
@@ -1077,6 +1078,47 @@ void test_native_scan_ignores_anonymous_record_definitions() {
     assert(saw_named);
 }
 
+void test_native_scan_preserves_scoped_enum_owners() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-NamespaceDecl 0x1 <test.hpp:1:1, line:8:1> line:1:11 ns\n"
+        "  |-EnumDecl 0x2 <line:2:1, col:27> col:12 class First 'int'\n"
+        "  | |-EnumConstantDecl 0x3 <col:20> col:20 Same 'ns::First'\n"
+        "  | `-EnumConstantDecl 0x4 <col:26> col:26 FirstOnly 'ns::First'\n"
+        "  |-EnumDecl 0x5 <line:3:1, col:28> col:12 class Second 'int'\n"
+        "  | |-EnumConstantDecl 0x6 <col:21> col:21 Same 'ns::Second'\n"
+        "  | `-EnumConstantDecl 0x7 <col:27> col:27 SecondOnly 'ns::Second'\n"
+        "  `-EnumDecl 0x8 <line:4:1, col:24> col:8 Plain\n"
+        "    `-EnumConstantDecl 0x9 <col:16> col:16 PlainValue 'ns::Plain'\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto has_type = [&](const std::string& name) {
+        return std::ranges::any_of(scan.types,
+                                   [&](const dudu::NativeTypeDecl& type) {
+                                       return type.name == name;
+                                   });
+    };
+    const auto value_type = [&](const std::string& name) -> std::string {
+        for (const dudu::NativeValueDecl& value : scan.values) {
+            if (value.name == name) {
+                return dudu::type_ref_text(value.type_ref);
+            }
+        }
+        return {};
+    };
+
+    assert(has_type("ns.First"));
+    assert(has_type("ns.Second"));
+    assert(has_type("ns.Plain"));
+    assert(value_type("ns.First.Same") == "ns.First");
+    assert(value_type("ns.Second.Same") == "ns.Second");
+    assert(value_type("ns.First.FirstOnly") == "ns.First");
+    assert(value_type("ns.Second.SecondOnly") == "ns.Second");
+    assert(value_type("ns.PlainValue") == "ns.Plain");
+}
+
 } // namespace
 
 int main() {
@@ -1108,6 +1150,7 @@ int main() {
         test_native_scan_retries_with_c_prelude_for_context_headers(root);
         test_aliased_c_import_prefixes_visible_transitive_functions(root);
         test_native_scan_ignores_anonymous_record_definitions();
+        test_native_scan_preserves_scoped_enum_owners();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

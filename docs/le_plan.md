@@ -1413,14 +1413,16 @@ push. They are not release packaging work.
    compile-time shape assertions. One-element tensor/view selections use
    PyTorch-style `.item()` for scalar extraction until rank/pack-count
    constraints justify direct scalar return typing. Shape generic inference
-   should work when argument types uniquely carry the facts, such as
+   works when argument types uniquely carry the facts, such as
    convolution image/kernel extents, but underdetermined reshape-style APIs
-   should spell the target shape explicitly. Remaining Dudu-language polish for
-   this numeric stack is better compile-time shape arithmetic where it pays:
-   symbolic dimensions such as `M`, `K`, and `N` already flow through shaped
-   metadata, but expressions such as `C * H * W` or `H - K + 1` should stay
-   checked compile-time shape/value expressions instead of forcing APIs to
-   widen to `dyn`.
+   spell the target shape explicitly. Compile-time shape/value arithmetic is
+   implemented for symbolic dimensions and integer expressions, including
+   forms such as `C * H * W` and `H - K + 1`. Generic value extents are usable
+   in bodies and result types, constant results fold, unsupported operations
+   and runtime `dyn` arithmetic are rejected, and mismatched composed shapes
+   receive Dudu-source diagnostics. The complete tensor target manifest proves
+   this alongside arbitrary-rank indexing, broadcasting, scatter, views, and
+   reductions without compiler knowledge of tensor backends.
    The source of truth is [Generics Plan](generics-plan.md#shape-and-const-arithmetic).
    The separate ecosystem proof is to bottle the reference surface into
    ordinary Dudu packages such as `ndad` and `mald` so user code imports clean

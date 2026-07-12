@@ -150,8 +150,8 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("array[list[i32]][4]")));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
                                           dudu::parse_type_text("array[list[str]][4]")));
-    assert(dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
-                                         dudu::parse_type_text("__detail.__unique_ptr_t[Node]")));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
+                                          dudu::parse_type_text("__detail.__unique_ptr_t[Node]")));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr,
                                           dudu::parse_type_text("__m128")));
 
@@ -183,6 +183,39 @@ void test_type_compat_uses_type_ast_for_pointers() {
         malformed_lower_failed = true;
     }
     assert(malformed_lower_failed);
+}
+
+void test_native_dependent_unknowns_require_matching_known_identity() {
+    const auto iterator_type = [](bool explicit_unknown, std::string element) {
+        dudu::TypeRef metadata;
+        metadata.kind = dudu::TypeKind::Template;
+        metadata.name = "__impl.Meta";
+        if (explicit_unknown) {
+            metadata.children.push_back({});
+        }
+        dudu::TypeRef pointer;
+        pointer.kind = dudu::TypeKind::Associated;
+        pointer.name = "pointer";
+        pointer.children.push_back(std::move(metadata));
+        dudu::TypeRef iterator;
+        iterator.kind = dudu::TypeKind::Template;
+        iterator.name = "__impl.Iterator";
+        iterator.children.push_back(std::move(pointer));
+        iterator.children.push_back(dudu::parse_type_text("native.Container[" + element + "]"));
+        return iterator;
+    };
+
+    dudu::Symbols symbols;
+    symbols.native_type_identity_by_binding["native.Container"] = "usr:native.Container";
+    const dudu::Expr value = dudu::parse_expr_text("value");
+    assert(dudu::assignment_type_allowed(symbols, iterator_type(false, "i32"), value,
+                                         iterator_type(true, "i32")));
+    assert(!dudu::assignment_type_allowed(symbols, iterator_type(false, "i32"), value,
+                                          iterator_type(true, "str")));
+
+    dudu::Symbols no_native_identity;
+    assert(!dudu::assignment_type_allowed(no_native_identity, iterator_type(false, "i32"), value,
+                                          iterator_type(true, "i32")));
 }
 
 void test_can_assign_resolves_alias_type_refs() {
@@ -479,6 +512,7 @@ int main() {
         test_ast_assignment_display_types();
         test_missing_expression_is_not_unknown();
         test_type_compat_uses_type_ast_for_pointers();
+        test_native_dependent_unknowns_require_matching_known_identity();
         test_can_assign_resolves_alias_type_refs();
         test_core_type_helpers_use_type_ast();
         test_builtin_method_signature_uses_type_ast();

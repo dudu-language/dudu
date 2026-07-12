@@ -59,6 +59,12 @@ struct ParamTarget {
     size_t next_param = 0;
 };
 
+struct EnumContext {
+    int depth = 0;
+    std::string type_name;
+    std::string value_scope;
+};
+
 NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, NativeCursorKind kind,
                                 std::string_view spelling, const SourceLocation& location,
                                 std::string canonical_path, const std::string& current_file) {
@@ -342,7 +348,7 @@ void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const 
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
                     std::vector<std::pair<int, size_t>>& classes,
-                    std::vector<std::pair<int, std::string>>& enums,
+                    std::vector<EnumContext>& enums,
                     std::vector<TemplateContext>& templates,
                     std::vector<std::pair<int, size_t>>& functions,
                     std::vector<ParamTarget>& param_targets,
@@ -359,7 +365,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex specialization_decl(
         R"((ClassTemplate(Partial)?SpecializationDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
-    static const std::regex enum_decl(R"(EnumDecl.*\b([A-Za-z_][A-Za-z0-9_]*)\b)");
+    static const std::regex enum_decl(
+        R"(EnumDecl.*(?:line:[0-9]+:[0-9]+|col:[0-9]+)(?: referenced)? (?:(class|struct) )?([A-Za-z_][A-Za-z0-9_]*)(?: '[^']*')?$)");
     static const std::regex template_type_param(
         R"(TemplateTypeParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex template_value_param(
@@ -397,7 +404,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!classes.empty() && classes.back().first >= depth) {
         classes.pop_back();
     }
-    while (!enums.empty() && enums.back().first >= depth) {
+    while (!enums.empty() && enums.back().depth >= depth) {
         enums.pop_back();
     }
     while (!templates.empty() && templates.back().depth >= depth) {
@@ -523,10 +530,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         const std::string name = match[1].str();
+        namespaces.push_back({depth, name});
         if (starts_with(name, "__")) {
             return;
         }
-        namespaces.push_back({depth, name});
         scan.namespaces.push_back(
             {.name = name,
              .identity = scanned_identity(identities, NativeCursorKind::Namespace, name,
@@ -642,19 +649,34 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
     } else if (line.find("EnumDecl") != std::string::npos &&
                std::regex_search(line, match, enum_decl)) {
-        const std::string name = match[1].str();
-        if (!starts_with(name, "__")) {
+        const bool scoped = match[1].matched;
+        const std::string raw_name = match[2].str();
+        const std::string name = class_name(scan, namespaces, classes, raw_name);
+        if (!starts_with(raw_name, "__")) {
             scan.types.push_back(
                 {.name = name,
                  .native_spelling = "",
                  .type_ref = {},
-                 .identity = scanned_identity(identities, NativeCursorKind::Type, name,
+                 .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
                                               decl_location, name, current_file),
                  .location = decl_location});
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
-            enums.push_back({depth, name});
+            std::string value_scope;
+            if (scoped) {
+                value_scope = name;
+            } else if (!classes.empty()) {
+                value_scope = scan.classes[classes.back().second].name;
+            } else {
+                value_scope = join_scope(namespaces, "");
+                if (!value_scope.empty()) {
+                    value_scope.pop_back();
+                }
+            }
+            enums.push_back({.depth = depth,
+                             .type_name = name,
+                             .value_scope = std::move(value_scope)});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
                std::regex_search(line, match, fn_decl)) {
@@ -775,17 +797,19 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                        decl_location);
     } else if (line.find("EnumConstantDecl") != std::string::npos &&
                std::regex_search(line, match, enum_value_decl)) {
-        const std::string name = match[1].str();
-        if (!starts_with(name, "__")) {
-            const std::string type = match.size() > 2
-                                         ? dudu_type(match[2].str())
-                                         : (enums.empty() ? "i32" : enums.back().second);
+        const std::string raw_name = match[1].str();
+        if (!starts_with(raw_name, "__")) {
+            const std::string type =
+                enums.empty() ? dudu_type(match[2].str()) : enums.back().type_name;
+            const std::string name = enums.empty() || enums.back().value_scope.empty()
+                                         ? raw_name
+                                         : enums.back().value_scope + "." + raw_name;
             scan.values.push_back(
                 {.name = name,
                  .native_spelling = type,
                  .type_ref = parse_native_type_text(type, decl_location),
                  .enum_constant = true,
-                 .identity = scanned_identity(identities, NativeCursorKind::Value, name,
+                 .identity = scanned_identity(identities, NativeCursorKind::Value, raw_name,
                                               decl_location, name, current_file),
                  .location = decl_location});
             comment_targets.push_back({.depth = depth,
@@ -823,7 +847,7 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump, const Sourc
                     const NativeCursorIdentityIndex& identities) {
     std::vector<std::pair<int, std::string>> namespaces;
     std::vector<std::pair<int, size_t>> classes;
-    std::vector<std::pair<int, std::string>> enums;
+    std::vector<EnumContext> enums;
     std::vector<TemplateContext> templates;
     std::vector<std::pair<int, size_t>> functions;
     std::vector<ParamTarget> param_targets;

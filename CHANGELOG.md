@@ -354,6 +354,16 @@
 
 ### Fixed
 
+- Preserved C++ enum ownership in native scans: scoped enumerators remain under
+  their enum type, unscoped enumerators remain in their enclosing namespace or
+  class, and different scoped enums may reuse the same enumerator spelling.
+- Gave imported Dudu classes declaration-specific `module.Class` identities
+  instead of collapsing every class from one module to a shared module
+  identity, preserving generic argument compatibility and distinct class
+  semantics.
+- Removed permissive compatibility for arbitrary compiler-internal-looking C++
+  templates. Native aliases must now resolve through scanner metadata and
+  structured type identity rather than bypassing generic argument checks.
 - Kept invalid project configuration errors outside LSP source-recovery
   fallbacks, and aligned the fast no-op CMake assertion with manifest-backed
   self-healing generation.

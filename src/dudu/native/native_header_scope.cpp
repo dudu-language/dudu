@@ -30,8 +30,13 @@ class_scoped_type_name(const NativeHeaderScan& scan,
         if (std::ranges::find(klass.generic_params, name) != klass.generic_params.end()) {
             return name;
         }
-        if (std::ranges::any_of(klass.type_aliases,
-                                [&](const TypeAliasDecl& alias) { return alias.name == name; })) {
+        const size_t dot = name.find('.');
+        const std::string_view first =
+            dot == std::string::npos ? std::string_view{name}
+                                     : std::string_view{name}.substr(0, dot);
+        if (std::ranges::any_of(klass.type_aliases, [&](const TypeAliasDecl& alias) {
+                return alias.name == first;
+            })) {
             return klass.name + "." + name;
         }
         const std::string nested = klass.name + "." + name;
@@ -100,14 +105,14 @@ std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
         out.push_back(']');
         return out;
     }
-    if (type.find('.') != std::string::npos)
-        return type;
     if (const auto scoped = class_scoped_type_name(scan, classes, type)) {
         return *scoped;
     }
     if (const auto scoped = namespace_scoped_type_name(scan, namespaces, type)) {
         return *scoped;
     }
+    if (type.find('.') != std::string::npos)
+        return type;
     return type;
 }
 

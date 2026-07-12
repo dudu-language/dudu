@@ -61,6 +61,7 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
                           const TypeRef& type, const std::string& message);
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type);
 TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type);
+bool is_canonical_native_type_ref(const TypeRef& type);
 const NativeTypeDecl* native_type_decl_for_binding(const Symbols& symbols,
                                                    std::string_view binding);
 const ClassDecl* native_class_decl_for_binding(const Symbols& symbols, std::string_view binding);
