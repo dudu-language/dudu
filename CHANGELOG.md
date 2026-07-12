@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Centralized the toolchain version in the root `VERSION` file and propagated
+  it through `dudu`, `duc`, `dudu-lsp`, generated C++ schema banners, extension
+  metadata checks, and install artifacts.
 - Applied LSP incremental document edits by their ordered UTF-16 ranges instead
   of mistaking each patch for a complete file, preserving diagnostics, semantic
   tokens, and inlay hints through invalid edits and repairs.
@@ -16,6 +19,9 @@
 
 ### Added
 
+- Licensed Dudu under the user's choice of MIT or Apache-2.0, documented
+  contribution and generated-output terms, and installed the license metadata
+  with the toolchain documentation.
 - Added an authoritative distribution plan covering dual MIT/Apache-2.0
   licensing, the pre-distribution alpha gate, tagged release authority,
   local-first validation, source and binary installation, atomic self-update,

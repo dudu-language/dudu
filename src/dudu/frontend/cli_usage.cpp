@@ -1,5 +1,7 @@
 #include "dudu/frontend/cli_usage.hpp"
 
+#include "dudu/core/version.hpp"
+
 #include <iostream>
 
 namespace dudu {
@@ -46,7 +48,7 @@ void print_cli_usage(bool project_driver) {
 }
 
 void print_cli_version(bool project_driver) {
-    std::cout << (project_driver ? "dudu" : "duc") << " 0.1.0\n";
+    std::cout << (project_driver ? "dudu" : "duc") << ' ' << kToolchainVersion << '\n';
 }
 
 } // namespace dudu

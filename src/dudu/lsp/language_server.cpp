@@ -1,5 +1,7 @@
 #include "dudu/lsp/language_server.hpp"
 
+#include "dudu/core/version.hpp"
+
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
@@ -242,7 +244,7 @@ class LanguageServer {
     }
 
     static std::string initialize_result() {
-        return "{\"capabilities\":{"
+        return std::string("{\"capabilities\":{") +
                "\"positionEncoding\":\"utf-16\","
                "\"textDocumentSync\":2,"
                "\"documentFormattingProvider\":true,"
@@ -261,7 +263,8 @@ class LanguageServer {
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
                "\"workspaceSymbolProvider\":true"
-               "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"0.1.0\"}}";
+               "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"" +
+               std::string(kToolchainVersion) + "\"}}";
     }
 
     static bool bool_setting(const Json* object, std::string_view name, bool default_value) {

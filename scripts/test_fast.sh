@@ -3,7 +3,9 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
+toolchain_version="$(tr -d '\r\n' <"$repo_root/VERSION")"
 
+"$repo_root/scripts/sync_version.py"
 "$repo_root/scripts/check_ast_migration_guards.sh"
 bash -n "$repo_root/scripts/install-local.sh"
 "$repo_root/scripts/build.sh" >/dev/null
@@ -252,7 +254,7 @@ compile_and_expect native_scan_local 42
 compile_and_expect value_match_string 42
 compile_and_expect value_match_assign 60
 "$repo_root/build/dudu" check "$repo_root/tests/fixtures/project_import_metadata/main.dd"
-"$repo_root/build/dudu" --version | grep -q '^dudu 0\.1\.0$'
+"$repo_root/build/dudu" --version | grep -Fqx "dudu $toolchain_version"
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet] [--timings]'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'

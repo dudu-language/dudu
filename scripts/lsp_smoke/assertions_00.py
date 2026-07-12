@@ -1,4 +1,9 @@
 initialize = next(item for item in responses if item.get("id") == 1)
+toolchain_version = (Path(repo_root) / "VERSION").read_text().strip()
+assert initialize["result"]["serverInfo"] == {
+    "name": "dudu-lsp",
+    "version": toolchain_version,
+}
 assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
 assert initialize["result"]["capabilities"]["referencesProvider"] is True

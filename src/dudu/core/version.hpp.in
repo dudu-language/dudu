@@ -1,0 +1,10 @@
+#pragma once
+
+#include <string_view>
+
+namespace dudu {
+
+inline constexpr std::string_view kToolchainVersion = "@DUDU_VERSION@";
+inline constexpr int kGeneratedCppSchemaVersion = @DUDU_CPP_SCHEMA_VERSION@;
+
+} // namespace dudu

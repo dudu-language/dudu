@@ -1,0 +1,12 @@
+Dudu is copyright 2026 Dudu contributors.
+
+Dudu is licensed under either the Apache License, Version 2.0, or the MIT
+License, at your option. Contributions intentionally submitted for inclusion
+in Dudu are accepted under the same terms unless explicitly stated otherwise.
+
+Dudu does not claim copyright over programs written by users or over generated
+C/C++ output produced from those programs. Dudu-owned runtime, prelude, and
+support code included in generated output remains available under Dudu's dual
+MIT OR Apache-2.0 license.
+
+Third-party components retain their own copyright and license terms.

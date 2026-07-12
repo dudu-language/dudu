@@ -6,6 +6,7 @@ from pathlib import Path
 repo_root = sys.argv[1]
 smoke_dir = Path(__file__).resolve().parent / "lsp_smoke"
 context = {
+    "Path": Path,
     "repo_root": repo_root,
     "subprocess": subprocess,
 }

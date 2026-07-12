@@ -375,6 +375,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
     const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
+    emit_generated_banner(out);
     out << "#pragma once\n\n";
     if (options.emit_prelude) {
         emit_includes(out, module);
@@ -402,6 +403,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
 
 std::string emit_c_header(const ModuleAst& module) {
     std::ostringstream out;
+    emit_generated_banner(out);
     out << "#pragma once\n\n"
         << "#include <stdbool.h>\n"
         << "#include <stddef.h>\n"
@@ -438,6 +440,7 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
     const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
+    emit_generated_banner(out);
     if (emit_options.emit_prelude) {
         emit_includes(out, module);
         emit_result_prelude(out, module);
@@ -475,6 +478,7 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     const CppEmitOptions options = source_emit_options({}, module, aliases);
     const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
+    emit_generated_banner(out);
     emit_includes(out, module);
     emit_result_prelude(out, module);
 

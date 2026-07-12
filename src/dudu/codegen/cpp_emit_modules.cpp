@@ -303,6 +303,7 @@ void emit_module_includes(std::ostringstream& out, const ModuleAst& unit) {
 
 std::string runtime_header(const ModuleAst& module) {
     std::ostringstream out;
+    emit_generated_banner(out);
     out << "#pragma once\n\n";
     emit_includes(out, module);
     emit_result_prelude(out, module);

@@ -247,3 +247,15 @@ dudu-lsp
 
 The full implementation plan lives in [`docs/le_plan.md`](docs/le_plan.md).
 Developer command details live in [`docs/developer-guide.md`](docs/developer-guide.md).
+
+## License
+
+Dudu is licensed under either the
+[Apache License 2.0](LICENSE-APACHE) or the [MIT License](LICENSE-MIT), at your
+option. Contributions are accepted under the same terms unless explicitly
+stated otherwise.
+
+Dudu does not claim copyright over programs written by users or over generated
+C/C++ program output. Dudu-owned runtime, prelude, or support code included in
+generated output remains available under the same dual license. See
+[`COPYRIGHT`](COPYRIGHT) for the complete project statement.

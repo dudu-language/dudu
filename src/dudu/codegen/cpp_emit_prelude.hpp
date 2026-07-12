@@ -9,6 +9,7 @@
 namespace dudu {
 
 std::vector<std::string> namespace_aliases(const ModuleAst& module);
+void emit_generated_banner(std::ostringstream& out);
 void emit_includes(std::ostringstream& out, const ModuleAst& module);
 void emit_result_prelude(std::ostringstream& out, const ModuleAst& module);
 

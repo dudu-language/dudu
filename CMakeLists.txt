@@ -4,6 +4,18 @@ project(dudu LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" DUDU_VERSION)
+string(STRIP "${DUDU_VERSION}" DUDU_VERSION)
+if(NOT DUDU_VERSION MATCHES "^[0-9]+[.][0-9]+[.][0-9]+(-[0-9A-Za-z.-]+)?$")
+    message(FATAL_ERROR "VERSION is not a valid Dudu semantic version: ${DUDU_VERSION}")
+endif()
+set(DUDU_CPP_SCHEMA_VERSION 1)
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/core/version.hpp.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/dudu/core/version.hpp"
+    @ONLY
+)
+
 file(GLOB DUDU_LLVM_PREFIXES LIST_DIRECTORIES true
     "/usr/lib/llvm-*"
     "/opt/homebrew/opt/llvm"
@@ -52,7 +64,10 @@ foreach(subsystem IN LISTS DUDU_SUBSYSTEM_DIRS)
 endforeach()
 
 add_library(dudu_frontend ${DUDU_FRONTEND_SOURCES})
-target_include_directories(dudu_frontend PUBLIC src)
+target_include_directories(dudu_frontend PUBLIC
+    src
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
 target_include_directories(dudu_frontend PRIVATE ${DUDU_LIBCLANG_INCLUDE_DIR})
 target_link_libraries(dudu_frontend PRIVATE ${DUDU_LIBCLANG_LIBRARY})
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
@@ -83,7 +98,13 @@ install(DIRECTORY docs/
     FILES_MATCHING PATTERN "*.md"
 )
 
-install(FILES README.md CHANGELOG.md
+install(FILES
+    README.md
+    CHANGELOG.md
+    COPYRIGHT
+    LICENSE-APACHE
+    LICENSE-MIT
+    VERSION
     DESTINATION ${CMAKE_INSTALL_DOCDIR}
 )
 
