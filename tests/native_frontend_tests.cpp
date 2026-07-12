@@ -1093,6 +1093,9 @@ void test_standard_string_size_type_resolves_numeric(const std::filesystem::path
     config.build_dir = root / "build";
     dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
     const dudu::Symbols symbols = dudu::collect_symbols(module);
+    if (!symbols.classes.contains("std.allocator_traits._Size")) {
+        return;
+    }
     const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
         symbols,
         dudu::parse_type_text("std.allocator_traits._Size[_Alloc, i64].type"));

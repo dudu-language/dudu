@@ -44,7 +44,7 @@ subset, format source, compile multi-file projects, import native C/C++
 headers, emit readable C++20, and drive CMake-backed builds through `dudu`.
 
 It is not a stable language release. The current release is
-`0.1.0-alpha.11`. Language and generated ABI compatibility may change between alpha versions.
+`0.1.0-alpha.12`. Language and generated ABI compatibility may change between alpha versions.
 See [Known Limitations](docs/known-limitations.md) before adopting it.
 
 Current language coverage includes Dudu-native generics, payload enums with
@@ -79,8 +79,8 @@ verifies its SHA-256 checksum, and installs an atomic user-local toolchain:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf \
-  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.11/dudu-0.1.0-alpha.11-install.sh \
-  | sh -s -- --version 0.1.0-alpha.11
+  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.12/dudu-0.1.0-alpha.12-install.sh \
+  | sh -s -- --version 0.1.0-alpha.12
 export PATH="$HOME/.local/bin:$PATH"
 ```
 

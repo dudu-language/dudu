@@ -15,7 +15,7 @@ published constraints, not promises of silent compatibility.
 ## Hosts And Installation
 
 - Linux x86_64 and macOS Apple Silicon are the validated release hosts for
-  `0.1.0-alpha.11`.
+  `0.1.0-alpha.12`.
 - Windows is not supported by the first alpha.
 - Both checkout and tagged bootstrap installation build locally and require
   CMake, a C++20 compiler, and libclang development files. The bootstrap,

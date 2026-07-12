@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12] - 2026-07-12
+
+- Made the libstdc++ dependent `std::string::size_type` regression assertion
+  conditional on that implementation symbol, so the same native test suite
+  runs correctly against libc++.
+
 ## [0.1.0-alpha.11] - 2026-07-12
 
 - Native header analysis now retains internal class-template metadata required

@@ -1,6 +1,6 @@
 # Installing Dudu
 
-Dudu is pre-alpha. The current release is `0.1.0-alpha.11`; language and
+Dudu is pre-alpha. The current release is `0.1.0-alpha.12`; language and
 generated ABI compatibility may change between alpha versions.
 
 ## Current Installation
