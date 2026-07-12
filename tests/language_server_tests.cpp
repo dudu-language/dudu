@@ -665,6 +665,35 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     assert(alias_hover.find("Native widget class docs.") != std::string::npos);
 }
 
+void test_lsp_signature_help_resolves_native_callable_values() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_callable_value_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_callback.hpp",
+               "#pragma once\n"
+               "using NativeTransform = int (*)(int);\n"
+               "inline int increment(int value) { return value + 1; }\n"
+               "/** Applies the installed native transform. */\n"
+               "inline NativeTransform transform = increment;\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"native_callback.hpp\" as native\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return native.transform(41)\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":29}}").parse();
+    const std::string signature = dudu::signature_help_json(&doc, &params);
+    assert(signature.find("native.transform(i32) -> i32") != std::string::npos);
+    assert(signature.find("Applies the installed native transform.") != std::string::npos);
+
+    dudu::Json hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":20}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &hover_params);
+    assert(hover.find("Applies the installed native transform.") != std::string::npos);
+}
+
 void test_lsp_inlay_hints_include_native_parameter_names() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() /
@@ -1044,6 +1073,7 @@ int main() {
         test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
+        test_lsp_signature_help_resolves_native_callable_values();
         test_lsp_inlay_hints_include_native_parameter_names();
         test_lsp_inlay_hints_include_builtin_method_parameter_names();
         test_lsp_module_completion_uses_loaded_module_units();

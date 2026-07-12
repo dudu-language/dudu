@@ -193,17 +193,28 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
 std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const Expr& expr,
                                                const std::string& callee,
                                                const SourceLocation* location) {
-    if (!scope.local_type_refs.contains(callee)) {
+    const TypeRef* value_type = local_type_ref_ptr(scope, callee);
+    const bool local_value = value_type != nullptr;
+    if (value_type == nullptr) {
+        const auto native = scope.symbols.native_value_type_refs.find(callee);
+        if (native != scope.symbols.native_value_type_refs.end()) {
+            value_type = &native->second;
+        }
+    }
+    if (value_type == nullptr) {
         return std::nullopt;
     }
 
     FunctionSignature function_signature;
-    if (parse_local_function_type(scope, callee, function_signature)) {
+    if (parse_function_type_or_alias(scope.symbols, *value_type, function_signature)) {
         check_call_args_ast(scope, callee, function_signature, expr.children, location);
         return signature_return_type_ref(function_signature);
     }
 
-    const TypeRef receiver_type = local_type_ref(scope, callee);
+    if (!local_value) {
+        return std::nullopt;
+    }
+    const TypeRef& receiver_type = *value_type;
     std::vector<TypeRef> arg_types;
     arg_types.reserve(expr.children.size());
     for (const Expr& arg : expr.children) {

@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v26";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v27";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");

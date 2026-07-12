@@ -10,6 +10,8 @@
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/project/module_names.hpp"
+#include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_function_type.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -554,6 +556,7 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     std::vector<SignatureCandidate> signatures;
     if (const ProjectIndex* index = completion_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
+        const Symbols semantic_symbols = collect_symbols(current);
         add_member_signature_candidates(signatures, current, call, params);
         add_constructor_signature_candidates(signatures, current, call.name);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
@@ -562,6 +565,21 @@ std::string signature_help_json(const Document* doc, const Json* params) {
                  symbol.kind == lsp_symbol_kind::Method)) {
                 signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
             }
+        }
+        for (const NativeValueDecl& value : current.native_values) {
+            if (!symbol_matches(value.name, call.name)) {
+                continue;
+            }
+            FunctionSignature signature;
+            if (!parse_function_type_or_alias(semantic_symbols, native_value_type_ref(value),
+                                              signature)) {
+                continue;
+            }
+            std::string label = function_type(signature);
+            if (label.starts_with("fn")) {
+                label.replace(0, 2, call.name);
+            }
+            signatures.push_back({.label = std::move(label), .documentation = value.doc_comment});
         }
     }
     std::ostringstream out;

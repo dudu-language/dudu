@@ -114,25 +114,10 @@ bool is_comparison_op(std::string_view op) {
     return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
 }
 
-bool parse_function_type_or_alias(const Symbols& symbols, const TypeRef& type_ref,
-                                  std::set<std::string>& seen_aliases, FunctionSignature& out) {
-    if (parse_function_type(type_ref, out)) {
-        return true;
-    }
-    if (type_ref.kind != TypeKind::Named || !seen_aliases.insert(type_ref.name).second) {
-        return false;
-    }
-    const auto alias = symbols.alias_type_refs.find(type_ref.name);
-    return alias != symbols.alias_type_refs.end() &&
-           parse_function_type_or_alias(symbols, alias->second, seen_aliases, out);
-}
-
 bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
                                FunctionSignature& out) {
-    std::set<std::string> seen_aliases;
     const TypeRef local_type = local_type_ref(scope, name);
-    if (has_type_ref(local_type) &&
-        parse_function_type_or_alias(scope.symbols, local_type, seen_aliases, out)) {
+    if (has_type_ref(local_type) && parse_function_type_or_alias(scope.symbols, local_type, out)) {
         return true;
     }
     return false;

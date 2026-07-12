@@ -1612,6 +1612,11 @@ push. They are not release packaging work.
    string-returning overloads work without wrappers; native C++ method
    templates preserve scanned template parameter metadata so unresolved method
    templates do not mask concrete overloads.
+   Native function-pointer typedefs retain structured parameter and result
+   types instead of collapsing to `*void`. Imported global function-pointer
+   values are callable through their aliases with Dudu argument diagnostics,
+   nullable comparison behavior, hover documentation, and signature help. The
+   libxml2 probe exercises this path through `xmlFree` without a wrapper.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests

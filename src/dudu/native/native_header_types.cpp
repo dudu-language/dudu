@@ -219,6 +219,58 @@ std::string lower_suffix_array_type(std::string base, const std::vector<std::str
     return out;
 }
 
+std::optional<std::string> lower_function_pointer_type(const std::string& type) {
+    size_t declarator_open = type.find('(');
+    while (declarator_open != std::string::npos) {
+        const size_t declarator_close = matching_paren(type, declarator_open);
+        if (declarator_close == std::string::npos) {
+            return std::nullopt;
+        }
+        const std::string declarator =
+            trim_copy(type.substr(declarator_open + 1, declarator_close - declarator_open - 1));
+        size_t params_open = declarator_close + 1;
+        while (params_open < type.size() && type[params_open] == ' ') {
+            ++params_open;
+        }
+        if (declarator.starts_with("*") && !declarator.starts_with("**") &&
+            params_open < type.size() && type[params_open] == '(') {
+            const size_t params_close = matching_paren(type, params_open);
+            if (params_close == std::string::npos) {
+                return std::nullopt;
+            }
+            const std::string result_type = trim_copy(type.substr(0, declarator_open));
+            if (result_type.empty()) {
+                return std::nullopt;
+            }
+            const std::vector<std::string> params = split_cpp_top_level_args(
+                std::string_view(type).substr(params_open + 1, params_close - params_open - 1));
+            std::string out = "fn(";
+            bool first = true;
+            for (std::string param : params) {
+                if (param == "void") {
+                    if (params.size() == 1) {
+                        continue;
+                    }
+                    return std::nullopt;
+                }
+                if (param == "...") {
+                    return std::nullopt;
+                }
+                if (!first) {
+                    out += ", ";
+                }
+                first = false;
+                out += dudu_type(std::move(param));
+            }
+            out += ") -> ";
+            out += dudu_type(result_type);
+            return out;
+        }
+        declarator_open = type.find('(', declarator_close + 1);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string dudu_type(std::string type) {
@@ -232,8 +284,8 @@ std::string dudu_type(std::string type) {
     }
     if (type == "const char *")
         return "cstr";
-    if (type.find("(*)") != std::string::npos || type.find("(*") != std::string::npos) {
-        return "*void";
+    if (const std::optional<std::string> function_pointer = lower_function_pointer_type(type)) {
+        return *function_pointer;
     }
     int pointer_depth = 0;
     bool reference = false;
@@ -286,10 +338,12 @@ std::vector<std::string> signature_params(const std::string& signature) {
     if (open == std::string::npos || close == std::string::npos || close <= open + 1)
         return {};
     std::vector<std::string> out;
-    for (std::string part :
-         split_cpp_top_level_args(signature.substr(open + 1, close - open - 1))) {
-        if (part != "...")
+    const std::vector<std::string> parts =
+        split_cpp_top_level_args(signature.substr(open + 1, close - open - 1));
+    for (std::string part : parts) {
+        if (part != "..." && !(part == "void" && parts.size() == 1)) {
             out.push_back(dudu_type(std::move(part)));
+        }
     }
     return out;
 }

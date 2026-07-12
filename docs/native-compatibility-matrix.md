@@ -19,6 +19,11 @@ Last targeted tensor backend probe run: 2026-07-02 with
 `dudu-datascience` target API checker. OpenBLAS tensor comparison and OpenCL
 tensor add/matmul probes passed locally.
 
+Last targeted native callable-value probe run: 2026-07-12 with
+`scripts/probe_optional.sh libxml2`. Function-pointer typedef aliases retain
+their parameter and result types, and the fixture calls the imported
+`xmlFree` allocator value directly without a wrapper.
+
 Last local dogfood run: 2026-07-01 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
@@ -56,7 +61,7 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
 | libevent | event loop / network | C API, opaque pointers, config/base lifecycle, `cstr` return | pass | `scripts/probe_optional.sh` / `libevent_base.dd` | no |
-| libxml2 | XML | `import cxx`, C-style globals from a C++-aware C header, parser lifecycle, returned buffers, link flags | pass | `scripts/probe_optional.sh` / `libxml_parse_memory.dd` | allocator globals such as `xmlFree` are function-pointer native values and need richer function-pointer typedef metadata |
+| libxml2 | XML | `import cxx`, C-style globals from a C++-aware C header, parser lifecycle, returned buffers, callable function-pointer allocator values, link flags | pass | `scripts/probe_optional.sh` / `libxml_parse_memory.dd` | no |
 | Expat | XML | C API, opaque parser pointer, enum status, string input, lifecycle | pass | `scripts/probe_optional.sh` / `expat_parse.dd` | no |
 | Cairo | 2D graphics | C API, opaque drawing context/surface pointers, enum constants, image buffer inspection, lifecycle | pass | `scripts/probe_optional.sh` / `cairo_image_surface.dd` | no |
 | FreeType | font / text | C API, typedefed opaque pointer, output params, version query, lifecycle | pass | `scripts/probe_optional.sh` / `freetype_version.dd` | no |

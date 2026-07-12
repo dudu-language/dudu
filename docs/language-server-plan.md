@@ -488,6 +488,10 @@ class, enum, enum-value, method, and function docs, plus leading-comment docs
 for constants and aliases. Hover for selective imports preserves suffix
 identity, so `Mode.Play` resolves through the imported `Mode` symbol to the enum
 variant docs.
+Native callable values declared through C/C++ function-pointer typedefs
+participate in signature help using the same alias-aware structured function
+type used by compiler call checking. Scanner documentation attached to the
+native value is shown in both signature help and hover.
 
 Semantic tokens are also ProjectIndex-aware for Dudu imports. Module aliases
 such as `math`, selective imported classes such as `Player`, imported functions
@@ -499,7 +503,8 @@ Remaining work:
 
 1. Decide whether one-line declarations such as fields, constants, and aliases
    need a larger-doc form beyond leading `#` comments.
-2. Add direct native C/C++ documentation fixtures once scanner support exists.
+2. Extend direct native C/C++ documentation fixtures to additional declaration
+   shapes when scanner support grows.
 3. Extend parser diagnostics for malformed docstrings if new malformed cases
    appear beyond unterminated triple strings and misplaced docstrings.
 4. Add larger-doc LSP fixtures for fields/constants/aliases if a larger-doc

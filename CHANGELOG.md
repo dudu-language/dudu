@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added structured native function-pointer typedefs and callable native global
+  values, including argument checking, nullable function-pointer comparisons,
+  signature help, scanner docs, and direct libxml2 allocator calls.
 - Added canonical formatter support for Python-shaped multiline docstrings,
   including indentation normalization, internal blank-line preservation, and
   byte-preserving handling of runtime and unterminated triple-string literals.

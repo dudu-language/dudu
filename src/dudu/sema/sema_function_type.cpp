@@ -2,7 +2,9 @@
 
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/sema/sema_context.hpp"
 
+#include <set>
 #include <sstream>
 #include <utility>
 
@@ -11,6 +13,21 @@ namespace {
 
 bool missing_type_ref(const TypeRef& type) {
     return !has_type_ref(type);
+}
+
+bool parse_function_type_or_alias_impl(const Symbols& symbols, const TypeRef& type,
+                                       std::set<std::string>& seen_aliases,
+                                       FunctionSignature& out) {
+    if (parse_function_type(type, out)) {
+        return true;
+    }
+    if ((type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) ||
+        !seen_aliases.insert(type.name).second) {
+        return false;
+    }
+    const auto alias = symbols.alias_type_refs.find(type.name.str());
+    return alias != symbols.alias_type_refs.end() &&
+           parse_function_type_or_alias_impl(symbols, alias->second, seen_aliases, out);
 }
 
 } // namespace
@@ -141,6 +158,12 @@ bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
     }
     set_signature_param_types(out, std::move(param_types));
     return true;
+}
+
+bool parse_function_type_or_alias(const Symbols& symbols, const TypeRef& type,
+                                  FunctionSignature& out) {
+    std::set<std::string> seen_aliases;
+    return parse_function_type_or_alias_impl(symbols, type, seen_aliases, out);
 }
 
 } // namespace dudu

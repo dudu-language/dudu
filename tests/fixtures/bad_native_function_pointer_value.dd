@@ -1,0 +1,5 @@
+from c.path import native_function_pointer_value.h as native
+
+
+def main() -> i32:
+    return native.dudu_transform("wrong")

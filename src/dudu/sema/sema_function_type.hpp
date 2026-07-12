@@ -20,5 +20,7 @@ size_t signature_fixed_param_count(const FunctionSignature& signature, size_t ar
 size_t signature_param_index_for_arg(const FunctionSignature& signature, size_t arg_index,
                                      size_t arg_count);
 bool parse_function_type(const TypeRef& type, FunctionSignature& out);
+bool parse_function_type_or_alias(const Symbols& symbols, const TypeRef& type,
+                                  FunctionSignature& out);
 
 } // namespace dudu

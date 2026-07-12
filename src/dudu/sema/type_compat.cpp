@@ -220,9 +220,9 @@ bool is_value_wrapper_assignment(const TypeRef& expected, const Expr& expr, cons
     return assignment_type_allowed(inner, expr, got);
 }
 
-bool is_null_pointer(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    return pointer_pointee_ref(expected).has_value() && expr.kind == ExprKind::NoneLiteral &&
-           type_ref_is_name(got, "None");
+bool is_null_pointer_like(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
+    return (pointer_pointee_ref(expected).has_value() || expected.kind == TypeKind::Function) &&
+           expr.kind == ExprKind::NoneLiteral && type_ref_is_name(got, "None");
 }
 
 bool is_null_cstr(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
@@ -414,7 +414,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            type_ref_is_auto(normalized_got_ref) ||
            (is_string_type(normalized_expected_ref) && is_string_type(normalized_got_ref)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
-           is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
+           is_null_pointer_like(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_cstr(normalized_expected_ref, expr, normalized_got_ref) ||
            is_void_pointer_target(normalized_expected_ref, normalized_got_ref) ||
            is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||

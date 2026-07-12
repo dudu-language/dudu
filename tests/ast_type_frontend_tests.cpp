@@ -349,6 +349,9 @@ void test_native_header_types_split_cpp_templates() {
            "tuple[__decay_and_strip[_Elements].__type...]");
     assert(dudu::dudu_type("typename iterator_traits<_IIter>::difference_type") ==
            "iterator_traits[_IIter].difference_type");
+    assert(dudu::dudu_type("int (*)(float, const char *)") == "fn(f32, cstr) -> i32");
+    assert(dudu::dudu_type("void (*)(void)") == "fn() -> void");
+    assert(dudu::signature_params("int (void)").empty());
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
 
