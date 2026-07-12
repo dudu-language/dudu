@@ -27,19 +27,23 @@ grep -Fqx 'fixture=fixture.bin' "$manifest"
 grep -Eq '^fixture_sha256=[0-9a-f]{64}$' "$manifest"
 [[ -f "$work/fixture.bin.sha256" ]]
 
-"$repo_root/scripts/build-deb.sh" \
-    --build-dir "$work/deb-build" --output "$work/deb" >/dev/null
-deb="$(find "$work/deb" -name 'dudu_*.deb' -print -quit)"
-[[ -f "$deb" ]]
-dpkg-deb --info "$deb" >/dev/null
-dpkg-deb --extract "$deb" "$work/deb-root"
-grep -Fqx deb "$work/deb-root/usr/share/dudu/install-owner"
-"$work/deb-root/usr/bin/dudu" --version | grep -Fqx "dudu $version"
-if "$work/deb-root/usr/bin/dudu" update --check >"$work/deb-update.out" \
-    2>"$work/deb-update.err"; then
-    echo "deb-owned Dudu unexpectedly allowed self-update" >&2
-    exit 1
+if command -v dpkg-deb >/dev/null 2>&1; then
+    "$repo_root/scripts/build-deb.sh" \
+        --build-dir "$work/deb-build" --output "$work/deb" >/dev/null
+    deb="$(find "$work/deb" -name 'dudu_*.deb' -print -quit)"
+    [[ -f "$deb" ]]
+    dpkg-deb --info "$deb" >/dev/null
+    dpkg-deb --extract "$deb" "$work/deb-root"
+    grep -Fqx deb "$work/deb-root/usr/share/dudu/install-owner"
+    "$work/deb-root/usr/bin/dudu" --version | grep -Fqx "dudu $version"
+    if "$work/deb-root/usr/bin/dudu" update --check >"$work/deb-update.out" \
+        2>"$work/deb-update.err"; then
+        echo "deb-owned Dudu unexpectedly allowed self-update" >&2
+        exit 1
+    fi
+    grep -Fq "owned by dpkg" "$work/deb-update.err"
+else
+    echo "skip Debian package checks: dpkg-deb is not available"
 fi
-grep -Fq "owned by dpkg" "$work/deb-update.err"
 
 echo "package recipe checks passed"

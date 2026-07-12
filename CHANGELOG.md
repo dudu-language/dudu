@@ -8,6 +8,8 @@
   ordinary imported types.
 - Explicit native template calls no longer reinterpret concrete uppercase Dudu
   types as unresolved native placeholders after structured substitution.
+- Release package validation now keeps portable recipe checks active on macOS
+  while requiring Debian artifact inspection only on hosts with `dpkg-deb`.
 - Generated CMake now reports the actual `$<TARGET_FILE:...>` artifact to the
   project driver instead of Dudu guessing Linux `.so` paths, making shared
   library output copying portable to macOS `.dylib` and multi-config layouts.
