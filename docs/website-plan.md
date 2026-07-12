@@ -1,5 +1,9 @@
 # Dudulang.org Website Plan
 
+Status: implemented and deployed at <https://dudulang.org>. The source lives in
+`site/`; production deployment is an explicit manual workflow through
+Cloudflare Pages.
+
 Dudu should have a GitHub Pages site intended for `dudulang.org`.
 
 The site is marketing and documentation, not the compiler itself. Its job is to

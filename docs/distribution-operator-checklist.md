@@ -21,7 +21,7 @@ and GitHub Actions secrets.
 | Homebrew | Public tap repository `dudu-language/homebrew-dudu` exists | None |
 | `.deb` download | GitHub access is sufficient | No account setup |
 | Website domain | `dudulang.org` is owned; `dudulang.com` is occupied by an unrelated site | None |
-| Cloudflare Pages | Scoped credential can manage Pages; manual deploy workflow exists | Activate the custom domain after the first deployment |
+| Cloudflare Pages | `dudu` project deployed; `dudulang.org` and `www.dudulang.org` are active with HTTPS | None |
 
 Availability and account state can change. Recheck them immediately before
 purchase or publication.
@@ -124,13 +124,17 @@ a hosted CI secret.
 `dudulang.com` is occupied by an unrelated website. Dudu owns
 `dudulang.org`, which is the canonical public identity.
 
-The remaining operator work is:
+The website deployment is complete:
 
 1. Ensure registrar account MFA and recovery information remain current.
 2. Keep the GitHub Actions Cloudflare token scoped to Pages and the
    `dudulang.org` zone.
-3. Deploy the `dudu` Pages project through the manual website workflow.
-4. Attach `dudulang.org` as the production custom domain and verify HTTPS.
+3. Use the manual `Deploy Dudu website` workflow for intentional production
+   updates.
+
+The `dudu` Cloudflare Pages project serves both `dudulang.org` and
+`www.dudulang.org`. The apex domain is canonical, HTTP redirects to HTTPS, and
+the deployed `/install.sh` is assembled directly from the repository root.
 
 The local scoped Cloudflare credential can read the active `dudulang.org`
 zone. Domain purchase, billing, account recovery, and credential rotation
