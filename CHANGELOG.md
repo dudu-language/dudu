@@ -16,6 +16,10 @@
 
 ### Added
 
+- Added an authoritative distribution plan covering dual MIT/Apache-2.0
+  licensing, the pre-distribution alpha gate, tagged release authority,
+  local-first validation, source and binary installation, atomic self-update,
+  editor publication, and package-manager ownership.
 - Added the typed `move(value)` builtin for explicit C++ move semantics without
   importing or spelling `std.move` in Dudu source.
 - Imported C++ static data members now remain owned by their classes through

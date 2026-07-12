@@ -1035,6 +1035,11 @@ Rules:
 
 ## Distribution
 
+The authoritative current distribution design and pre-distribution alpha gate
+live in [Distribution Plan](distribution-plan.md). This section records the
+original artifact/channel targets; where it differs from that plan, the
+dedicated plan wins.
+
 Dudu should be easy to install without asking users to build the compiler by
 hand.
 

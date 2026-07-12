@@ -37,6 +37,12 @@ Current direction notes:
   [Public Readiness Plan](public-readiness-plan.md). That plan selects the
   near-term work for finalizing indexing/shaped generics, bottled numeric
   library proof, editor intelligence, diagnostics, and dependency bootstrapping.
+- Licensing, the pre-distribution alpha gate, tagged releases, source/binary
+  installation, self-update, editor publication, and package channels are
+  defined in the authoritative
+  [Distribution Plan](distribution-plan.md). Normal development validates
+  locally; remote automation is reserved for manual release-candidate checks
+  and tagged artifact production rather than a push-wait-fix loop.
 - Concurrency stays ordinary until proven otherwise: prefer blocking functions,
   threads, queues, `select`/`poll`/platform event APIs, and explicit state
   machines over core-language `async`/`await`. See
@@ -2908,17 +2914,14 @@ push. They are not release packaging work.
    that user CMake can consume explicitly. `dudu init` may create an initial
    CMake file, but after creation that file belongs to the user.
 
-   Near-term distribution should stay in the dev/source-install lane until the
-   CLI and compiler pipeline are boring. Add a real local install path first:
-   CMake install targets, `cmake --install`/`make install` support where the
-   generator provides it, and a `scripts/install-local.sh` that works on Linux
-   and macOS, including Apple Silicon Macs. That script should install or link
-   `dudu`, `duc`, the language server, runtime/prelude headers, editor support,
-   and any required CMake/toolchain integration files from a checkout without
-   pretending to be a package manager. Tagged GitHub releases can then ship
-   source tarballs and maybe Linux/macOS binaries. Homebrew, AUR, apt, winget,
-   and similar package-manager distribution should wait until command behavior,
-   versioning, changelog practice, and dependency requirements are stable.
+   Distribution, licensing, release automation, source/binary installers,
+   self-update ownership, editor publication, and package-manager sequencing
+   are specified in [Distribution Plan](distribution-plan.md). The first public
+   milestone is a tagged alpha with a source-building user-local installer,
+   atomic update/rollback, and a pre-release editor extension. Homebrew, AUR,
+   and downloadable `.deb` packages consume the same immutable tag after that
+   primary path works; official distribution repositories are not alpha
+   blockers.
 
    Status: CMake install targets now install `dudu`, `duc`, docs, and editor
    support. `scripts/install-local.sh` configures, builds, and installs this
