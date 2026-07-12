@@ -104,6 +104,11 @@ void emit_cmake_target(std::ostringstream& out, const ProjectConfig& config,
     out << ")\n";
 }
 
+void emit_target_artifact_manifest(std::ostringstream& out, const std::string& target) {
+    out << "file(GENERATE OUTPUT \"${CMAKE_CURRENT_BINARY_DIR}/dudu-target-artifact.txt\"\n"
+        << "    CONTENT \"$<TARGET_FILE:" << target << ">\")\n";
+}
+
 std::vector<std::filesystem::path> generated_module_sources(const ModuleAst& module,
                                                             bool test_source = false) {
     return test_source ? cpp_test_module_source_paths(module) : cpp_module_source_paths(module);
@@ -215,8 +220,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n\n";
     emit_pkg_config(out, config);
     emit_cmake_target(out, config, project_dir, target);
-    out << "file(GENERATE OUTPUT \"${CMAKE_CURRENT_BINARY_DIR}/dudu-target-artifact.txt\"\n"
-        << "    CONTENT \"$<TARGET_FILE:" << target << ">\")\n";
+    emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
@@ -288,6 +292,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "    ${DUDU_GENERATED}\n";
     emit_cmake_sources(out, config, project_dir);
     out << ")\n";
+    emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",

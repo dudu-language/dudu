@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+trap 'status=$?; printf "%s:%s: command failed (%s): %s\n" "${BASH_SOURCE[0]}" "$LINENO" "$status" "$BASH_COMMAND" >&2; exit "$status"' ERR
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
 
+echo "test runner smoke: basic and zero-test suites"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
 grep -Eq "cmake build/dudu-tests/dudu_tests-[0-9a-f]+-cmake/source/CMakeLists\\.txt" \
     "$repo_root/build/dudu_test_steps.err"
-grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+-cmake/build/dudu_tests-[0-9a-f]+" \
+grep -Eq "test .*/?build/dudu-tests/dudu_tests-[0-9a-f]+-cmake/build/dudu_tests-[0-9a-f]+" \
     "$repo_root/build/dudu_test_steps.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/simple_program.dd" \
     >"$repo_root/build/dudu_tests_zero.out"
 grep -q "running 0 tests" "$repo_root/build/dudu_tests_zero.out"
 grep -q "test result: ok. 0 passed; 0 failed; 0 filtered out" \
     "$repo_root/build/dudu_tests_zero.out"
+echo "test runner smoke: discovery and filtering"
 test_discovery_dir="$repo_root/build/dudu_test_discovery"
 rm -rf "$test_discovery_dir"
 mkdir -p "$test_discovery_dir"
@@ -48,6 +52,7 @@ if [ "$unfiltered_test_binary" = "$filtered_test_binary" ]; then
     echo "dudu test reused the unfiltered binary path for a filtered test" >&2
     exit 1
 fi
+echo "test runner smoke: failure and decorator behavior"
 cat >"$repo_root/build/dudu_failing_test.dd" <<'DD'
 @test
 def fails():
@@ -101,6 +106,7 @@ if "$repo_root/build/dudu" test "$repo_root/build/dudu_should_panic_fails.dd" \
 fi
 grep -q "FAILED does_not_panic: expected panic" \
     "$repo_root/build/dudu_should_panic_fails.out"
+echo "test runner smoke: output capture"
 cat >"$repo_root/build/dudu_capture_test.dd" <<'DD'
 @test
 def passing_output():
@@ -129,4 +135,5 @@ fi
 grep -q "visible failure line" "$repo_root/build/dudu_capture_fail.out"
 grep -q "FAILED failing_output: assert failed: 1 == 2" \
     "$repo_root/build/dudu_capture_fail.out"
+echo "test runner smoke: codegen shapes"
 "$repo_root/scripts/test_codegen_shapes.sh"
