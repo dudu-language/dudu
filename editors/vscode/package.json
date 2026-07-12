@@ -1,10 +1,29 @@
 {
-  "name": "dudu-syntax",
+  "name": "dudu",
   "displayName": "Dudu",
   "description": "Syntax highlighting, formatting, diagnostics, and commands for Dudu .dd source files.",
   "version": "0.1.0",
   "publisher": "dudu",
-  "main": "./extension.js",
+  "duduToolchain": {
+    "minimumVersion": "0.1.0-alpha.1"
+  },
+  "license": "MIT OR Apache-2.0",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wegfawefgawefg/dudu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wegfawefgawefg/dudu/issues"
+  },
+  "homepage": "https://github.com/wegfawefgawefg/dudu#readme",
+  "keywords": [
+    "dudu",
+    "language",
+    "c++",
+    "systems programming"
+  ],
+  "main": "./dist/extension.js",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -127,6 +146,16 @@
     }
   },
   "dependencies": {
+    "semver": "^7.7.3",
     "vscode-languageclient": "^10.0.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.25.10"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "esbuild extension.js --bundle --minify --external:vscode --platform=node --target=node20 --outfile=dist/extension.js",
+    "package": "npm run build && vsce package --pre-release"
   }
 }

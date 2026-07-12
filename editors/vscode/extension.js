@@ -1,6 +1,8 @@
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const { execFile } = require("child_process");
+const semver = require("semver");
 const { LanguageClient, State } = require("vscode-languageclient/node");
 
 let terminal;
@@ -24,6 +26,25 @@ function duduPath() {
 
 function duduLspPath() {
   return vscode.workspace.getConfiguration("dudu").get("lspPath", "dudu-lsp");
+}
+
+function checkToolchainVersion(context) {
+  const minimum = context.extension.packageJSON.duduToolchain?.minimumVersion;
+  if (!minimum) {
+    return;
+  }
+  execFile(duduPath(), ["--version"], { cwd: workspaceDirectory() }, (error, stdout) => {
+    if (error) {
+      return;
+    }
+    const installed = stdout.trim().split(/\s+/).at(-1);
+    if (!semver.valid(installed) || !semver.lt(installed, minimum)) {
+      return;
+    }
+    vscode.window.showWarningMessage(
+      `Dudu ${installed} is older than the extension minimum ${minimum}. Run dudu update.`,
+    );
+  });
 }
 
 function activeDuduFile() {
@@ -216,6 +237,7 @@ async function toggleDuduInlayHints() {
 }
 
 function activate(context) {
+  checkToolchainVersion(context);
   statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
   context.subscriptions.push(statusItem);
   diagnosticsSubscription = vscode.languages.onDidChangeDiagnostics(() => updateStatus());

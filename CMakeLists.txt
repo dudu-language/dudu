@@ -108,9 +108,8 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/install-owner"
     DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu
 )
 
-install(DIRECTORY editors/
+install(DIRECTORY editors/vim editors/nvim
     DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/editors
-    PATTERN "node_modules" EXCLUDE
 )
 
 install(DIRECTORY docs/

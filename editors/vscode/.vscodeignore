@@ -1,0 +1,7 @@
+.gitignore
+.vscodeignore
+extension.js
+node_modules/**
+package-lock.json
+dist/**/*.map
+resources/*.svg

@@ -38,6 +38,7 @@ def main() -> int:
 
     if args.write:
         package["version"] = marketplace_version
+        package.setdefault("duduToolchain", {})["minimumVersion"] = toolchain_version
         lock["version"] = marketplace_version
         lock.setdefault("packages", {}).setdefault("", {})["version"] = marketplace_version
         write_json(package_path, package)
@@ -47,6 +48,12 @@ def main() -> int:
     if package.get("version") != marketplace_version:
         errors.append(
             f"{package_path}: expected version {marketplace_version}, got {package.get('version')}"
+        )
+    minimum_toolchain = package.get("duduToolchain", {}).get("minimumVersion")
+    if minimum_toolchain != toolchain_version:
+        errors.append(
+            f"{package_path}: expected minimum Dudu toolchain {toolchain_version}, got "
+            f"{minimum_toolchain}"
         )
     if lock.get("version") != marketplace_version:
         errors.append(
