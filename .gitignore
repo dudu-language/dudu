@@ -8,6 +8,7 @@ third_party/
 compile_commands.json
 node_modules/
 dist/
+.wrangler/
 .dudu_native_headers_*
 *.o
 *.obj

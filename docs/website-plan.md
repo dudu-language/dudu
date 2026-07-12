@@ -189,23 +189,26 @@ Suggested small-print tone:
 Experimental. Native. Weirdly sincere.
 ```
 
-## GitHub Pages
+## Hosting And Deployment
 
-The repo should publish the site from a normal docs/site source tree and a
-GitHub Actions workflow.
+The canonical site is hosted by Cloudflare Pages because `dudulang.org` is
+already an active Cloudflare zone. GitHub remains the source repository and
+release authority.
 
 Preferred shape:
 
 - `site/` for source.
 - `site/package.json` if a static-site framework is used.
-- `.github/workflows/pages.yml` for deploy.
-- Published artifact goes to GitHub Pages.
+- `.github/workflows/pages.yml` for manual direct deployment.
+- Published artifact goes to the `dudu` Cloudflare Pages project.
+- `dudulang.org` is the production custom domain.
 
 Keep it static, cheap, and boring. The site should not require a backend.
 
-`dudulang.org` should point at GitHub Pages with the normal Pages custom domain
-flow. The repository should keep any required `CNAME` file or Pages metadata in
-the site source so deployment is reproducible.
+Normal compiler pushes must not deploy the website. The workflow is
+`workflow_dispatch` only, assembles `site/` plus the root bootstrap installer,
+and uses a scoped Cloudflare token stored in GitHub Actions. This preserves
+explicit release control while still making deployment reproducible.
 
 ## Implementation Checklist
 
@@ -219,8 +222,8 @@ the site source so deployment is reproducible.
   behavior.
 - Add a status badge or short status block that says the compiler is
   experimental.
-- Add GitHub Actions deployment.
-- Configure `dudulang.org` as the Pages custom domain.
+- Add manual GitHub Actions deployment to Cloudflare Pages.
+- Configure `dudulang.org` as the Cloudflare Pages custom domain.
 - Keep the site static and free of backend requirements.
 
 ## Content Requirements

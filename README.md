@@ -1,5 +1,8 @@
 # dudu
 
+[Website](https://dudulang.org) | [Install](docs/installing.md) |
+[Language Guide](docs/language.md) | [Known Limitations](docs/known-limitations.md)
+
 Dudu is a statically typed Python-shaped systems language that compiles to
 readable C++20.
 
@@ -53,6 +56,9 @@ with a lockfile, so early Dudu packages can be consumed before a central package
 registry exists.
 
 ## Install
+
+See [Installing Dudu](docs/installing.md) for every planned release channel,
+ownership rules, and validation status.
 
 Install prerequisites.
 

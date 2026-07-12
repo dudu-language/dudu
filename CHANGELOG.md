@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Added the static `dudulang.org` project site, including install, docs,
+  examples, interop, and roadmap pages, plus manual Cloudflare Pages
+  deployment and a single authoritative installation-channel guide.
+
 - Added immutable tagged source archives and SHA-256 release manifests, a
   portable source bootstrap installer, versioned installer ownership, atomic
   update/rollback, guarded uninstall, and package-manager self-update refusal.

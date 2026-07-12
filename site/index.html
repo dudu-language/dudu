@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Dudu is a statically typed Python-shaped systems language that compiles to readable C++20.">
+    <meta name="theme-color" content="#3a2119">
+    <title>Dudu | Python-shaped systems programming</title>
+    <link rel="icon" href="/assets/icon.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/layout.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a>
+        <div class="nav-links">
+          <a href="/install.html">Install</a>
+          <a href="/docs.html">Docs</a>
+          <a href="/examples.html">Examples</a>
+          <a href="/interop.html">Interop</a>
+          <a href="/roadmap.html">Roadmap</a>
+        </div>
+        <div class="nav-meta"><span>0.1.0-alpha.1</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <h1 class="hero-title"><span>Dudu</span><img src="/assets/icon.svg" alt="Dudu logo"></h1>
+            <p class="hero-lede">Write like Python. Compile to readable C++.</p>
+            <p class="hero-sub">A statically typed systems language with direct C and C++ interop. Brown on purpose.</p>
+            <div class="actions">
+              <a class="button primary" href="/install.html">Install Dudu</a>
+              <a class="button" href="https://github.com/dudu-language/dudu">View source</a>
+            </div>
+            <div class="status-line"><span class="status-dot"></span>Experimental. Native. Weirdly sincere.</div>
+          </div>
+          <div class="quick-links" aria-label="Quick links">
+            <a class="quick-link" href="/install.html"><span class="quick-icon">&gt;</span><span><strong>Quickstart</strong><small>Build and run a project in five minutes</small></span></a>
+            <a class="quick-link" href="/docs.html"><span class="quick-icon">#</span><span><strong>Language guide</strong><small>Types, control flow, modules, and memory</small></span></a>
+            <a class="quick-link" href="/interop.html"><span class="quick-icon">+</span><span><strong>Native interop</strong><small>Use C headers and C++ libraries directly</small></span></a>
+            <a class="quick-link" href="/roadmap.html"><span class="quick-icon">*</span><span><strong>Roadmap</strong><small>What works and what still needs work</small></span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="different">
+        <div class="container">
+          <p class="section-kicker">No fire required</p>
+          <h2 class="section-title">Built different</h2>
+          <div class="feature-grid">
+            <article class="feature"><span class="eyebrow">01 / PYTHON-SHAPED</span><h3>Readable at a glance</h3><p>Indentation, familiar expressions, inference, classes, enums, match, and generics without pretending runtime dynamism is free.</p></article>
+            <article class="feature"><span class="eyebrow">02 / NATIVE</span><h3>The ecosystem already exists</h3><p>Import C and C++ headers, call native libraries, use CMake projects, and emit C++20 that humans can inspect.</p></article>
+            <article class="feature"><span class="eyebrow">03 / SYSTEMS</span><h3>Control stays visible</h3><p>Fixed-width types, arrays, pointers, references, deterministic native code, and explicit ownership where it matters.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band alt">
+        <div class="container code-layout">
+          <div class="copy">
+            <p class="section-kicker" style="text-align:left">Actual Dudu</p>
+            <h2>Python on top. C++ underneath.</h2>
+            <p>Dudu keeps the source compact while preserving native types and ordinary control flow. The compiler emits readable C++20 and hands serious project builds to CMake.</p>
+            <ul class="plain-list"><li>Multi-file modules</li><li>Native generics and fixed arrays</li><li>Payload enums and exhaustive match</li><li>LSP, formatting, tests, and project driver</li></ul>
+          </div>
+          <div class="code-window">
+            <div class="code-label">src/main.dd</div>
+            <pre><code><span class="kw">from</span> c <span class="kw">import</span> raylib.h <span class="kw">as</span> rl
+
+<span class="kw">class</span> <span class="ty">Player</span>:
+    hp: <span class="ty">i32</span>
+    pos: <span class="ty">Vec2</span>
+
+<span class="kw">def</span> <span class="fn">main</span>() -&gt; <span class="ty">i32</span>:
+    player = <span class="ty">Player</span>(hp=<span class="num">100</span>, pos=<span class="ty">Vec2</span>(<span class="num">400.0</span>, <span class="num">300.0</span>))
+    rl.InitWindow(<span class="num">800</span>, <span class="num">600</span>, <span class="str">"dudu"</span>)
+
+    <span class="kw">while not</span> rl.WindowShouldClose():
+        rl.BeginDrawing()
+        rl.DrawCircle(player.pos.x, player.pos.y, <span class="num">40.0</span>, rl.BROWN)
+        rl.EndDrawing()
+
+    rl.CloseWindow()
+    <span class="kw">return</span> <span class="num">0</span></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="container showcase-layout">
+          <div class="screenshot-frame"><img src="/assets/raymarch.png" alt="A pixel-sharp raymarched sphere rendered by a Dudu SDL3 dogfood project"></div>
+          <div class="showcase-copy">
+            <p class="section-kicker" style="text-align:left">Dogfooded</p>
+            <h2>Not a syntax mockup.</h2>
+            <p>The compiler is exercised through real projects using SDL3, raylib, ImGui, glm, SQLite, the C and C++ standard libraries, and generated multi-module CMake builds.</p>
+            <p><a href="https://github.com/dudu-language/dudu/tree/master/dogfooding">Browse the dogfood projects</a></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="band alt">
+        <div class="container">
+          <div class="notice"><strong>Pre-alpha means pre-alpha.</strong> Dudu is usable for experiments and dogfooding, but language and generated ABI compatibility can change. Read the known limitations before adopting it.</div>
+          <div class="actions" style="justify-content:center; margin:34px 0 0"><a class="button primary" href="/install.html">Try Dudu</a><a class="button" href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md">Known limitations</a></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><span>Dudu Language. MIT OR Apache-2.0.</span><span>The compiler is serious. The color choice is not.</span></div></footer>
+  </body>
+</html>

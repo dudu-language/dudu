@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Real Dudu code examples."><title>Examples | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
+<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a href="/install.html">Install</a><a href="/docs.html">Docs</a><a aria-current="page" href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.1</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
+<main><section class="page-hero"><div class="container"><h1>Examples</h1><p>Small syntax samples and larger dogfood projects that compile through the real toolchain.</p></div></section><article class="prose">
+  <h2>Generics and fixed shapes</h2><div class="code-window"><pre><code><span class="kw">def</span> <span class="fn">apply_conv2d</span>[H, W, K](
+    image: &amp;<span class="ty">array</span>[<span class="ty">f32</span>][H, W],
+    kernel: &amp;<span class="ty">array</span>[<span class="ty">f32</span>][K, K],
+) -&gt; <span class="ty">array</span>[<span class="ty">f32</span>][H - K + <span class="num">1</span>, W - K + <span class="num">1</span>]:
+    out: <span class="ty">array</span>[<span class="ty">f32</span>][H - K + <span class="num">1</span>, W - K + <span class="num">1</span>]
+    <span class="comment"># ordinary typed loops fill out</span>
+    <span class="kw">return</span> out</code></pre></div>
+  <h2>Payload enums and match</h2><div class="code-window"><pre><code><span class="kw">enum</span> <span class="ty">Message</span>:
+    Move(<span class="ty">i32</span>, <span class="ty">i32</span>)
+    Write(<span class="ty">str</span>)
+    Quit
+
+<span class="kw">def</span> <span class="fn">handle</span>(message: &amp;<span class="kw">const</span>[<span class="ty">Message</span>]):
+    <span class="kw">match</span> message:
+        <span class="ty">Message</span>.Move(x, y): print(x, y)
+        <span class="ty">Message</span>.Write(text): print(text)
+        <span class="ty">Message</span>.Quit: print(<span class="str">"done"</span>)</code></pre></div>
+  <h2>Real projects</h2><div class="link-grid">
+    <a class="link-card" href="https://github.com/dudu-language/dudu/tree/master/dogfooding/raymarch-dd"><strong>raymarch-dd</strong><span>SDL3, threads, native pixel formats, vector math, and text rendering.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/tree/master/dogfooding/dudu-webserver"><strong>dudu-webserver</strong><span>HTTP routing and native library integration.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/tree/master/examples"><strong>Compiler examples</strong><span>Focused language and C/C++ interoperability fixtures.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/tree/master/tests"><strong>Validation suite</strong><span>Parser, semantic analysis, code generation, LSP, native headers, and projects.</span></a>
+  </div>
+</article></main><footer class="site-footer"><div class="footer-inner"><span>Examples are validated against the current compiler.</span><a href="/install.html">Install Dudu</a></div></footer></body></html>

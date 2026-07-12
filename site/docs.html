@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Dudu language and toolchain documentation."><title>Docs | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
+<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a href="/install.html">Install</a><a aria-current="page" href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.1</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
+<main><section class="page-hero"><div class="container"><h1>Documentation</h1><p>Dudu is Python-shaped, statically typed, and native. These are the canonical language, compiler, and project references.</p></div></section><article class="prose">
+  <h2>Start here</h2><div class="link-grid">
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/language.md"><strong>Language guide</strong><span>Syntax, types, functions, classes, arrays, generics, and control flow.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/developer-guide.md"><strong>Developer guide</strong><span>Projects, native libraries, builds, tests, and practical workflows.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md"><strong>Known limitations</strong><span>Current pre-alpha constraints without marketing varnish.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/project-driver-plan.md"><strong>Project driver</strong><span>How dudu, CMake, dependencies, modules, and native projects fit together.</span></a>
+  </div>
+  <h2>Language shape</h2><p>Dudu source uses <code>.dd</code>. Types are static, declarations and control flow resemble Python, and the compiler rejects unsupported dynamic Python behavior rather than hiding it behind a runtime.</p>
+  <div class="code-window"><pre><code><span class="kw">enum</span> <span class="ty">Result</span>[T, E]:
+    Ok(T)
+    Err(E)
+
+<span class="kw">def</span> <span class="fn">divide</span>(a: <span class="ty">i32</span>, b: <span class="ty">i32</span>) -&gt; <span class="ty">Result</span>[<span class="ty">i32</span>, <span class="ty">str</span>]:
+    <span class="kw">if</span> b == <span class="num">0</span>:
+        <span class="kw">return</span> <span class="ty">Result</span>.Err(<span class="str">"division by zero"</span>)
+    <span class="kw">return</span> <span class="ty">Result</span>.Ok(a / b)</code></pre></div>
+  <h2>Architecture references</h2><div class="link-grid">
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/le_plan.md"><strong>Implementation plan</strong><span>The broad compiler and language completion plan.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/header-awareness-plan.md"><strong>Native header awareness</strong><span>Clang-backed C and C++ declaration scanning and identity.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/language-server-plan.md"><strong>Language server</strong><span>Diagnostics, semantic tokens, hover, navigation, references, and inlay hints.</span></a>
+    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/distribution-plan.md"><strong>Distribution</strong><span>Releases, installers, package ownership, editor channels, and updates.</span></a>
+  </div>
+</article></main><footer class="site-footer"><div class="footer-inner"><span>Dudu docs track master during pre-alpha.</span><a href="https://github.com/dudu-language/dudu/tree/master/docs">All repository docs</a></div></footer></body></html>
