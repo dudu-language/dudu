@@ -1,0 +1,41 @@
+#pragma once
+
+#include "dudu/core/ast.hpp"
+#include "dudu/macro/macro_registry.hpp"
+
+#include <filesystem>
+#include <set>
+#include <string>
+#include <vector>
+
+namespace dudu::macro {
+
+struct WorkerBuildOptions {
+    std::filesystem::path cache_dir;
+    std::string package;
+    std::string compiler = "c++";
+    std::string cpp_standard = "c++20";
+    std::string toolchain_identity;
+    std::vector<std::filesystem::path> runtime_include_dirs;
+    std::filesystem::path runtime_library;
+    std::vector<std::filesystem::path> include_dirs;
+    std::vector<std::filesystem::path> library_dirs;
+    std::vector<std::filesystem::path> cpp_sources;
+    std::vector<std::string> defines;
+    std::vector<std::string> compiler_flags;
+    std::vector<std::string> libraries;
+    std::vector<std::string> linker_flags;
+    std::vector<std::string> capabilities;
+    std::set<std::string> non_cacheable_macros;
+};
+
+struct WorkerBinary {
+    std::filesystem::path executable;
+    std::string identity;
+    bool cache_hit = false;
+};
+
+WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
+                                 const WorkerBuildOptions& options);
+
+} // namespace dudu::macro

@@ -95,8 +95,9 @@ void emit_dispatch_entry(std::ostringstream& out, const Definition& definition,
     }
     out << "        auto expansion = " << definition.function->cpp_name
         << "(std::move(input));\n"
-        << "        return {.expansion = sdk_bridge::to_protocol(expansion), .cacheable = "
-        << (cacheable ? "true" : "false") << "};\n"
+        << "        return ExpansionResponse{.expansion = sdk_bridge::to_protocol(expansion), "
+           ".cacheable = "
+        << (cacheable ? "true" : "false") << ", .external_input_hashes = {}};\n"
         << "    }\n";
 }
 
@@ -127,7 +128,8 @@ std::string generate_worker_source(const Plan& plan, const WorkerSourceOptions& 
     for (const auto& [_, definition] : plan.definitions) {
         emit_catalog_entry(out, definition);
     }
-    out << "    return serve_worker(catalog, [](const ExpansionRequest& request) {\n";
+    out << "    return serve_worker(catalog, [](const ExpansionRequest& request) "
+           "-> ExpansionResponse {\n";
     for (const auto& [_, definition] : plan.definitions) {
         emit_dispatch_entry(out, definition,
                             !options.non_cacheable_macros.contains(definition.identity));

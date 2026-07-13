@@ -176,6 +176,8 @@ struct Expression {
     SourceRange range = {};
     std::optional<TypeRef> resolved_type = {};
     std::optional<SymbolIdentity> identity = {};
+    std::vector<Expression> callee = {};
+    std::vector<Expression> template_arguments = {};
 };
 
 struct Statement {
@@ -188,6 +190,11 @@ struct Statement {
     std::optional<Expression> condition = {};
     std::vector<Statement> children = {};
     SourceRange range = {};
+    std::optional<Expression> message = {};
+    std::optional<Expression> iterable = {};
+    std::optional<Expression> pattern = {};
+    std::optional<Expression> guard = {};
+    std::string operator_name = {};
 };
 
 struct AttributeArgument {
@@ -267,6 +274,17 @@ struct EnumDecl {
     std::optional<SymbolIdentity> identity = {};
 };
 
+struct ConstantDecl {
+    std::string name = {};
+    TypeRef type = {};
+    Expression value = {};
+    std::vector<Attribute> attributes = {};
+    std::string documentation = {};
+    Visibility visibility = Visibility::Default;
+    SourceRange range = {};
+    std::optional<SymbolIdentity> identity = {};
+};
+
 struct ClassDecl {
     std::string name = {};
     std::vector<GenericParameter> generic_parameters = {};
@@ -278,17 +296,8 @@ struct ClassDecl {
     Visibility visibility = Visibility::Default;
     SourceRange range = {};
     std::optional<SymbolIdentity> identity = {};
-};
-
-struct ConstantDecl {
-    std::string name = {};
-    TypeRef type = {};
-    Expression value = {};
-    std::vector<Attribute> attributes = {};
-    std::string documentation = {};
-    Visibility visibility = Visibility::Default;
-    SourceRange range = {};
-    std::optional<SymbolIdentity> identity = {};
+    std::vector<ConstantDecl> constants = {};
+    std::vector<ConstantDecl> static_fields = {};
 };
 
 struct ImplementationDecl {
@@ -418,10 +427,10 @@ std::vector<std::uint8_t> encode(const EnumVariant& value);
 EnumVariant decode_EnumVariant(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
 std::vector<std::uint8_t> encode(const EnumDecl& value);
 EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
-std::vector<std::uint8_t> encode(const ClassDecl& value);
-ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
 std::vector<std::uint8_t> encode(const ConstantDecl& value);
 ConstantDecl decode_ConstantDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+std::vector<std::uint8_t> encode(const ClassDecl& value);
+ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
 std::vector<std::uint8_t> encode(const ImplementationDecl& value);
 ImplementationDecl decode_ImplementationDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
 std::vector<std::uint8_t> encode(const Declaration& value);

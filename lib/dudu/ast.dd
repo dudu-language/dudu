@@ -150,6 +150,8 @@ class Expression:
     range: SourceRange = SourceRange()
     resolved_type: Option[TypeRef] = None
     identity: Option[SymbolIdentity] = None
+    callee: list[Expression] = []
+    template_arguments: list[Expression] = []
 
 class Statement:
     kind: StatementKind = StatementKind.Unknown
@@ -161,6 +163,11 @@ class Statement:
     condition: Option[Expression] = None
     children: list[Statement] = []
     range: SourceRange = SourceRange()
+    message: Option[Expression] = None
+    iterable: Option[Expression] = None
+    pattern: Option[Expression] = None
+    guard: Option[Expression] = None
+    operator_name: str = str()
 
 class AttributeArgument:
     name: str = str()
@@ -231,6 +238,16 @@ class EnumDecl:
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
+class ConstantDecl:
+    name: str = str()
+    type: TypeRef = TypeRef()
+    value: Expression = Expression()
+    attributes: list[Attribute] = []
+    documentation: str = str()
+    visibility: Visibility = Visibility.Default
+    range: SourceRange = SourceRange()
+    identity: Option[SymbolIdentity] = None
+
 class ClassDecl:
     name: str = str()
     generic_parameters: list[GenericParameter] = []
@@ -242,16 +259,8 @@ class ClassDecl:
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
-
-class ConstantDecl:
-    name: str = str()
-    type: TypeRef = TypeRef()
-    value: Expression = Expression()
-    attributes: list[Attribute] = []
-    documentation: str = str()
-    visibility: Visibility = Visibility.Default
-    range: SourceRange = SourceRange()
-    identity: Option[SymbolIdentity] = None
+    constants: list[ConstantDecl] = []
+    static_fields: list[ConstantDecl] = []
 
 class ImplementationDecl:
     contract: TypeRef = TypeRef()
@@ -355,10 +364,7 @@ def string_expression(value: str) -> Expression:
 
 
 def call_expression(callee: Expression, arguments: list[Expression]) -> Expression:
-    children = [callee]
-    for argument in arguments:
-        children.append(argument)
-    return Expression(kind=ExpressionKind.Call, children=children)
+    return Expression(kind=ExpressionKind.Call, children=arguments, callee=[callee])
 
 
 def function_declaration(value: FunctionDecl) -> Declaration:

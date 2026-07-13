@@ -46,7 +46,9 @@
       {"name": "type_arguments", "type": "TypeRef", "tag": 6, "repeated": true},
       {"name": "range", "type": "SourceRange", "tag": 7},
       {"name": "resolved_type", "type": "TypeRef", "tag": 8, "optional": true},
-      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true}
+      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true},
+      {"name": "callee", "type": "Expression", "tag": 10, "repeated": true},
+      {"name": "template_arguments", "type": "Expression", "tag": 11, "repeated": true}
     ]},
     {"name": "Statement", "fields": [
       {"name": "kind", "type": "StatementKind", "tag": 1},
@@ -57,7 +59,12 @@
       {"name": "target", "type": "Expression", "tag": 6, "optional": true},
       {"name": "condition", "type": "Expression", "tag": 7, "optional": true},
       {"name": "children", "type": "Statement", "tag": 8, "repeated": true},
-      {"name": "range", "type": "SourceRange", "tag": 9}
+      {"name": "range", "type": "SourceRange", "tag": 9},
+      {"name": "message", "type": "Expression", "tag": 10, "optional": true},
+      {"name": "iterable", "type": "Expression", "tag": 11, "optional": true},
+      {"name": "pattern", "type": "Expression", "tag": 12, "optional": true},
+      {"name": "guard", "type": "Expression", "tag": 13, "optional": true},
+      {"name": "operator_name", "type": "string", "tag": 14}
     ]},
     {"name": "AttributeArgument", "fields": [
       {"name": "name", "type": "string", "tag": 1},
@@ -128,6 +135,16 @@
       {"name": "range", "type": "SourceRange", "tag": 8},
       {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true}
     ]},
+    {"name": "ConstantDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "type", "type": "TypeRef", "tag": 2},
+      {"name": "value", "type": "Expression", "tag": 3},
+      {"name": "attributes", "type": "Attribute", "tag": 4, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 5},
+      {"name": "visibility", "type": "Visibility", "tag": 6},
+      {"name": "range", "type": "SourceRange", "tag": 7},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 8, "optional": true}
+    ]},
     {"name": "ClassDecl", "fields": [
       {"name": "name", "type": "string", "tag": 1},
       {"name": "generic_parameters", "type": "GenericParameter", "tag": 2, "repeated": true},
@@ -138,17 +155,9 @@
       {"name": "documentation", "type": "string", "tag": 7},
       {"name": "visibility", "type": "Visibility", "tag": 8},
       {"name": "range", "type": "SourceRange", "tag": 9},
-      {"name": "identity", "type": "SymbolIdentity", "tag": 10, "optional": true}
-    ]},
-    {"name": "ConstantDecl", "fields": [
-      {"name": "name", "type": "string", "tag": 1},
-      {"name": "type", "type": "TypeRef", "tag": 2},
-      {"name": "value", "type": "Expression", "tag": 3},
-      {"name": "attributes", "type": "Attribute", "tag": 4, "repeated": true},
-      {"name": "documentation", "type": "string", "tag": 5},
-      {"name": "visibility", "type": "Visibility", "tag": 6},
-      {"name": "range", "type": "SourceRange", "tag": 7},
-      {"name": "identity", "type": "SymbolIdentity", "tag": 8, "optional": true}
+      {"name": "identity", "type": "SymbolIdentity", "tag": 10, "optional": true},
+      {"name": "constants", "type": "ConstantDecl", "tag": 11, "repeated": true},
+      {"name": "static_fields", "type": "ConstantDecl", "tag": 12, "repeated": true}
     ]},
     {"name": "ImplementationDecl", "fields": [
       {"name": "contract", "type": "TypeRef", "tag": 1},

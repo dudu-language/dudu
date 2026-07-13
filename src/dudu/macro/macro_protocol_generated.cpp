@@ -32,10 +32,10 @@ void encode_into(wire::Writer& writer, const EnumVariant& value);
 EnumVariant decode_EnumVariant_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const EnumDecl& value);
 EnumDecl decode_EnumDecl_from(wire::Reader reader);
-void encode_into(wire::Writer& writer, const ClassDecl& value);
-ClassDecl decode_ClassDecl_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const ConstantDecl& value);
 ConstantDecl decode_ConstantDecl_from(wire::Reader reader);
+void encode_into(wire::Writer& writer, const ClassDecl& value);
+ClassDecl decode_ClassDecl_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const ImplementationDecl& value);
 ImplementationDecl decode_ImplementationDecl_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const Declaration& value);
@@ -239,6 +239,12 @@ void encode_into(wire::Writer& writer, const Expression& value) {
     if (value.identity.has_value()) {
         writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
+    for (const auto& item : value.callee) {
+        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.template_arguments) {
+        writer.write_message(11, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
 }
 
 Expression decode_Expression_from(wire::Reader reader) {
@@ -274,6 +280,12 @@ Expression decode_Expression_from(wire::Reader reader) {
         case 9:
             value.identity = decode_SymbolIdentity_from(reader.read_message(field_type));
             break;
+        case 10:
+            value.callee.push_back(decode_Expression_from(reader.read_message(field_type)));
+            break;
+        case 11:
+            value.template_arguments.push_back(decode_Expression_from(reader.read_message(field_type)));
+            break;
         default:
             reader.skip(field_type);
             break;
@@ -306,6 +318,21 @@ void encode_into(wire::Writer& writer, const Statement& value) {
         writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, item); });
     }
     writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, value.range); });
+    if (value.message.has_value()) {
+        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, *value.message); });
+    }
+    if (value.iterable.has_value()) {
+        writer.write_message(11, [&](wire::Writer& nested) { encode_into(nested, *value.iterable); });
+    }
+    if (value.pattern.has_value()) {
+        writer.write_message(12, [&](wire::Writer& nested) { encode_into(nested, *value.pattern); });
+    }
+    if (value.guard.has_value()) {
+        writer.write_message(13, [&](wire::Writer& nested) { encode_into(nested, *value.guard); });
+    }
+    if (!value.operator_name.empty()) {
+        writer.write_string(14, value.operator_name);
+    }
 }
 
 Statement decode_Statement_from(wire::Reader reader) {
@@ -340,6 +367,21 @@ Statement decode_Statement_from(wire::Reader reader) {
             break;
         case 9:
             value.range = decode_SourceRange_from(reader.read_message(field_type));
+            break;
+        case 10:
+            value.message = decode_Expression_from(reader.read_message(field_type));
+            break;
+        case 11:
+            value.iterable = decode_Expression_from(reader.read_message(field_type));
+            break;
+        case 12:
+            value.pattern = decode_Expression_from(reader.read_message(field_type));
+            break;
+        case 13:
+            value.guard = decode_Expression_from(reader.read_message(field_type));
+            break;
+        case 14:
+            value.operator_name = reader.read_string(field_type);
             break;
         default:
             reader.skip(field_type);
@@ -765,79 +807,6 @@ EnumDecl decode_EnumDecl_from(wire::Reader reader) {
     return value;
 }
 
-void encode_into(wire::Writer& writer, const ClassDecl& value) {
-    if (!value.name.empty()) {
-        writer.write_string(1, value.name);
-    }
-    for (const auto& item : value.generic_parameters) {
-        writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, item); });
-    }
-    for (const auto& item : value.bases) {
-        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, item); });
-    }
-    for (const auto& item : value.fields) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, item); });
-    }
-    for (const auto& item : value.methods) {
-        writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, item); });
-    }
-    for (const auto& item : value.attributes) {
-        writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, item); });
-    }
-    if (!value.documentation.empty()) {
-        writer.write_string(7, value.documentation);
-    }
-    writer.write_varint(8, static_cast<std::uint64_t>(value.visibility));
-    writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, value.range); });
-    if (value.identity.has_value()) {
-        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
-    }
-}
-
-ClassDecl decode_ClassDecl_from(wire::Reader reader) {
-    ClassDecl value;
-    std::uint32_t tag = 0;
-    wire::FieldType field_type = wire::FieldType::Varint;
-    while (reader.next(tag, field_type)) {
-        switch (tag) {
-        case 1:
-            value.name = reader.read_string(field_type);
-            break;
-        case 2:
-            value.generic_parameters.push_back(decode_GenericParameter_from(reader.read_message(field_type)));
-            break;
-        case 3:
-            value.bases.push_back(decode_TypeRef_from(reader.read_message(field_type)));
-            break;
-        case 4:
-            value.fields.push_back(decode_FieldDecl_from(reader.read_message(field_type)));
-            break;
-        case 5:
-            value.methods.push_back(decode_FunctionDecl_from(reader.read_message(field_type)));
-            break;
-        case 6:
-            value.attributes.push_back(decode_Attribute_from(reader.read_message(field_type)));
-            break;
-        case 7:
-            value.documentation = reader.read_string(field_type);
-            break;
-        case 8:
-            value.visibility = static_cast<Visibility>(reader.read_varint(field_type));
-            break;
-        case 9:
-            value.range = decode_SourceRange_from(reader.read_message(field_type));
-            break;
-        case 10:
-            value.identity = decode_SymbolIdentity_from(reader.read_message(field_type));
-            break;
-        default:
-            reader.skip(field_type);
-            break;
-        }
-    }
-    return value;
-}
-
 void encode_into(wire::Writer& writer, const ConstantDecl& value) {
     if (!value.name.empty()) {
         writer.write_string(1, value.name);
@@ -886,6 +855,91 @@ ConstantDecl decode_ConstantDecl_from(wire::Reader reader) {
             break;
         case 8:
             value.identity = decode_SymbolIdentity_from(reader.read_message(field_type));
+            break;
+        default:
+            reader.skip(field_type);
+            break;
+        }
+    }
+    return value;
+}
+
+void encode_into(wire::Writer& writer, const ClassDecl& value) {
+    if (!value.name.empty()) {
+        writer.write_string(1, value.name);
+    }
+    for (const auto& item : value.generic_parameters) {
+        writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.bases) {
+        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.fields) {
+        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.methods) {
+        writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.attributes) {
+        writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    if (!value.documentation.empty()) {
+        writer.write_string(7, value.documentation);
+    }
+    writer.write_varint(8, static_cast<std::uint64_t>(value.visibility));
+    writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, value.range); });
+    if (value.identity.has_value()) {
+        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+    }
+    for (const auto& item : value.constants) {
+        writer.write_message(11, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.static_fields) {
+        writer.write_message(12, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+}
+
+ClassDecl decode_ClassDecl_from(wire::Reader reader) {
+    ClassDecl value;
+    std::uint32_t tag = 0;
+    wire::FieldType field_type = wire::FieldType::Varint;
+    while (reader.next(tag, field_type)) {
+        switch (tag) {
+        case 1:
+            value.name = reader.read_string(field_type);
+            break;
+        case 2:
+            value.generic_parameters.push_back(decode_GenericParameter_from(reader.read_message(field_type)));
+            break;
+        case 3:
+            value.bases.push_back(decode_TypeRef_from(reader.read_message(field_type)));
+            break;
+        case 4:
+            value.fields.push_back(decode_FieldDecl_from(reader.read_message(field_type)));
+            break;
+        case 5:
+            value.methods.push_back(decode_FunctionDecl_from(reader.read_message(field_type)));
+            break;
+        case 6:
+            value.attributes.push_back(decode_Attribute_from(reader.read_message(field_type)));
+            break;
+        case 7:
+            value.documentation = reader.read_string(field_type);
+            break;
+        case 8:
+            value.visibility = static_cast<Visibility>(reader.read_varint(field_type));
+            break;
+        case 9:
+            value.range = decode_SourceRange_from(reader.read_message(field_type));
+            break;
+        case 10:
+            value.identity = decode_SymbolIdentity_from(reader.read_message(field_type));
+            break;
+        case 11:
+            value.constants.push_back(decode_ConstantDecl_from(reader.read_message(field_type)));
+            break;
+        case 12:
+            value.static_fields.push_back(decode_ConstantDecl_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);
@@ -1585,17 +1639,6 @@ EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes,
     return decode_EnumDecl_from(wire::Reader::root(bytes, limits));
 }
 
-std::vector<std::uint8_t> encode(const ClassDecl& value) {
-    wire::Writer writer;
-    encode_into(writer, value);
-    return writer.take();
-}
-
-ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
-    return decode_ClassDecl_from(wire::Reader::root(bytes, limits));
-}
-
 std::vector<std::uint8_t> encode(const ConstantDecl& value) {
     wire::Writer writer;
     encode_into(writer, value);
@@ -1605,6 +1648,17 @@ std::vector<std::uint8_t> encode(const ConstantDecl& value) {
 ConstantDecl decode_ConstantDecl(std::span<const std::uint8_t> bytes,
                        const wire::DecodeLimits& limits) {
     return decode_ConstantDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::vector<std::uint8_t> encode(const ClassDecl& value) {
+    wire::Writer writer;
+    encode_into(writer, value);
+    return writer.take();
+}
+
+ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes,
+                       const wire::DecodeLimits& limits) {
+    return decode_ClassDecl_from(wire::Reader::root(bytes, limits));
 }
 
 std::vector<std::uint8_t> encode(const ImplementationDecl& value) {

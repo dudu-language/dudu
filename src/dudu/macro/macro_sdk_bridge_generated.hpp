@@ -97,10 +97,10 @@ DuduDuduAstEnumVariant from_protocol(const protocol::EnumVariant& input);
 protocol::EnumVariant to_protocol(const DuduDuduAstEnumVariant& input);
 DuduDuduAstEnumDecl from_protocol(const protocol::EnumDecl& input);
 protocol::EnumDecl to_protocol(const DuduDuduAstEnumDecl& input);
-DuduDuduAstClassDecl from_protocol(const protocol::ClassDecl& input);
-protocol::ClassDecl to_protocol(const DuduDuduAstClassDecl& input);
 DuduDuduAstConstantDecl from_protocol(const protocol::ConstantDecl& input);
 protocol::ConstantDecl to_protocol(const DuduDuduAstConstantDecl& input);
+DuduDuduAstClassDecl from_protocol(const protocol::ClassDecl& input);
+protocol::ClassDecl to_protocol(const DuduDuduAstClassDecl& input);
 DuduDuduAstImplementationDecl from_protocol(const protocol::ImplementationDecl& input);
 protocol::ImplementationDecl to_protocol(const DuduDuduAstImplementationDecl& input);
 DuduDuduAstDeclaration from_protocol(const protocol::Declaration& input);
@@ -233,6 +233,14 @@ inline DuduDuduAstExpression from_protocol(const protocol::Expression& input) {
     if (input.identity.has_value()) {
         out.identity = from_protocol(*input.identity);
     }
+    out.callee.reserve(input.callee.size());
+    for (const auto& item : input.callee) {
+        out.callee.push_back(from_protocol(item));
+    }
+    out.template_arguments.reserve(input.template_arguments.size());
+    for (const auto& item : input.template_arguments) {
+        out.template_arguments.push_back(from_protocol(item));
+    }
     return out;
 }
 
@@ -256,6 +264,14 @@ inline protocol::Expression to_protocol(const DuduDuduAstExpression& input) {
     }
     if (input.identity.has_value()) {
         out.identity = to_protocol(*input.identity);
+    }
+    out.callee.reserve(input.callee.size());
+    for (const auto& item : input.callee) {
+        out.callee.push_back(to_protocol(item));
+    }
+    out.template_arguments.reserve(input.template_arguments.size());
+    for (const auto& item : input.template_arguments) {
+        out.template_arguments.push_back(to_protocol(item));
     }
     return out;
 }
@@ -284,6 +300,19 @@ inline DuduDuduAstStatement from_protocol(const protocol::Statement& input) {
         out.children.push_back(from_protocol(item));
     }
     out.range = from_protocol(input.range);
+    if (input.message.has_value()) {
+        out.message = from_protocol(*input.message);
+    }
+    if (input.iterable.has_value()) {
+        out.iterable = from_protocol(*input.iterable);
+    }
+    if (input.pattern.has_value()) {
+        out.pattern = from_protocol(*input.pattern);
+    }
+    if (input.guard.has_value()) {
+        out.guard = from_protocol(*input.guard);
+    }
+    out.operator_name = input.operator_name;
     return out;
 }
 
@@ -311,6 +340,19 @@ inline protocol::Statement to_protocol(const DuduDuduAstStatement& input) {
         out.children.push_back(to_protocol(item));
     }
     out.range = to_protocol(input.range);
+    if (input.message.has_value()) {
+        out.message = to_protocol(*input.message);
+    }
+    if (input.iterable.has_value()) {
+        out.iterable = to_protocol(*input.iterable);
+    }
+    if (input.pattern.has_value()) {
+        out.pattern = to_protocol(*input.pattern);
+    }
+    if (input.guard.has_value()) {
+        out.guard = to_protocol(*input.guard);
+    }
+    out.operator_name = input.operator_name;
     return out;
 }
 
@@ -614,6 +656,42 @@ inline protocol::EnumDecl to_protocol(const DuduDuduAstEnumDecl& input) {
     return out;
 }
 
+inline DuduDuduAstConstantDecl from_protocol(const protocol::ConstantDecl& input) {
+    DuduDuduAstConstantDecl out;
+    out.name = input.name;
+    out.type = from_protocol(input.type);
+    out.value = from_protocol(input.value);
+    out.attributes.reserve(input.attributes.size());
+    for (const auto& item : input.attributes) {
+        out.attributes.push_back(from_protocol(item));
+    }
+    out.documentation = input.documentation;
+    out.visibility = static_cast<DuduDuduAstVisibility>(input.visibility);
+    out.range = from_protocol(input.range);
+    if (input.identity.has_value()) {
+        out.identity = from_protocol(*input.identity);
+    }
+    return out;
+}
+
+inline protocol::ConstantDecl to_protocol(const DuduDuduAstConstantDecl& input) {
+    protocol::ConstantDecl out;
+    out.name = input.name;
+    out.type = to_protocol(input.type);
+    out.value = to_protocol(input.value);
+    out.attributes.reserve(input.attributes.size());
+    for (const auto& item : input.attributes) {
+        out.attributes.push_back(to_protocol(item));
+    }
+    out.documentation = input.documentation;
+    out.visibility = static_cast<protocol::Visibility>(input.visibility);
+    out.range = to_protocol(input.range);
+    if (input.identity.has_value()) {
+        out.identity = to_protocol(*input.identity);
+    }
+    return out;
+}
+
 inline DuduDuduAstClassDecl from_protocol(const protocol::ClassDecl& input) {
     DuduDuduAstClassDecl out;
     out.name = input.name;
@@ -642,6 +720,14 @@ inline DuduDuduAstClassDecl from_protocol(const protocol::ClassDecl& input) {
     out.range = from_protocol(input.range);
     if (input.identity.has_value()) {
         out.identity = from_protocol(*input.identity);
+    }
+    out.constants.reserve(input.constants.size());
+    for (const auto& item : input.constants) {
+        out.constants.push_back(from_protocol(item));
+    }
+    out.static_fields.reserve(input.static_fields.size());
+    for (const auto& item : input.static_fields) {
+        out.static_fields.push_back(from_protocol(item));
     }
     return out;
 }
@@ -675,41 +761,13 @@ inline protocol::ClassDecl to_protocol(const DuduDuduAstClassDecl& input) {
     if (input.identity.has_value()) {
         out.identity = to_protocol(*input.identity);
     }
-    return out;
-}
-
-inline DuduDuduAstConstantDecl from_protocol(const protocol::ConstantDecl& input) {
-    DuduDuduAstConstantDecl out;
-    out.name = input.name;
-    out.type = from_protocol(input.type);
-    out.value = from_protocol(input.value);
-    out.attributes.reserve(input.attributes.size());
-    for (const auto& item : input.attributes) {
-        out.attributes.push_back(from_protocol(item));
+    out.constants.reserve(input.constants.size());
+    for (const auto& item : input.constants) {
+        out.constants.push_back(to_protocol(item));
     }
-    out.documentation = input.documentation;
-    out.visibility = static_cast<DuduDuduAstVisibility>(input.visibility);
-    out.range = from_protocol(input.range);
-    if (input.identity.has_value()) {
-        out.identity = from_protocol(*input.identity);
-    }
-    return out;
-}
-
-inline protocol::ConstantDecl to_protocol(const DuduDuduAstConstantDecl& input) {
-    protocol::ConstantDecl out;
-    out.name = input.name;
-    out.type = to_protocol(input.type);
-    out.value = to_protocol(input.value);
-    out.attributes.reserve(input.attributes.size());
-    for (const auto& item : input.attributes) {
-        out.attributes.push_back(to_protocol(item));
-    }
-    out.documentation = input.documentation;
-    out.visibility = static_cast<protocol::Visibility>(input.visibility);
-    out.range = to_protocol(input.range);
-    if (input.identity.has_value()) {
-        out.identity = to_protocol(*input.identity);
+    out.static_fields.reserve(input.static_fields.size());
+    for (const auto& item : input.static_fields) {
+        out.static_fields.push_back(to_protocol(item));
     }
     return out;
 }
