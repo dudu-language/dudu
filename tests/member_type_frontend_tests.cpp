@@ -38,6 +38,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <string_view>
 #include <vector>
 
@@ -124,7 +125,10 @@ void test_instance_storage_uses_type_ast_receiver() {
     dudu::ClassDecl owner;
     owner.name = "Box";
     owner.generic_params = {"T"};
-    owner.fields.push_back({"value", dudu::parse_type_text("T"), {}, {}});
+    dudu::FieldDecl owner_value;
+    owner_value.name = "value";
+    owner_value.type_ref = dudu::parse_type_text("T");
+    owner.fields.push_back(std::move(owner_value));
 
     dudu::ClassDecl wrapper;
     wrapper.name = "Wrapper";
@@ -205,7 +209,10 @@ void test_inherited_field_lookup_uses_type_ast_receiver() {
     dudu::ClassDecl box;
     box.name = "Box";
     box.generic_params = {"T"};
-    box.fields.push_back({"value", dudu::parse_type_text("T"), {}, {}});
+    dudu::FieldDecl box_value;
+    box_value.name = "value";
+    box_value.type_ref = dudu::parse_type_text("T");
+    box.fields.push_back(std::move(box_value));
 
     dudu::ClassDecl wrapper;
     wrapper.name = "Wrapper";
@@ -243,8 +250,14 @@ void test_result_field_lookup_resolves_alias_type_refs() {
 void test_swizzle_lookup_uses_type_ast_receiver() {
     dudu::ClassDecl vec2;
     vec2.name = "Vec2";
-    vec2.fields.push_back({"x", dudu::parse_type_text("f32"), {}, {}});
-    vec2.fields.push_back({"y", dudu::parse_type_text("f32"), {}, {}});
+    dudu::FieldDecl x;
+    x.name = "x";
+    x.type_ref = dudu::parse_type_text("f32");
+    vec2.fields.push_back(std::move(x));
+    dudu::FieldDecl y;
+    y.name = "y";
+    y.type_ref = dudu::parse_type_text("f32");
+    vec2.fields.push_back(std::move(y));
 
     dudu::Symbols symbols;
     symbols.classes.emplace("Vec2", &vec2);

@@ -132,7 +132,8 @@ void check_naming(const ModuleAst& module) {
                                "reserved Python-style dunder function name: " + fn.name +
                                    "; use normal Dudu names and decorators such as @operator(...)");
         }
-        if (!has_decorator(fn, "extern_c") && !is_dudu_snake_case(fn.name)) {
+        if (!has_decorator(fn, "extern_c") && !has_decorator(fn, "macro") &&
+            !is_dudu_snake_case(fn.name)) {
             fail_naming(fn.location, "function names must be snake_case", fn.name);
         }
         for (const ParamDecl& param : fn.params) {

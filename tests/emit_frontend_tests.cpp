@@ -487,6 +487,23 @@ void test_class_emit_order_uses_type_ast_fields() {
     assert(cpp.find("\nstruct Node {") < cpp.find("\nstruct Holder {"));
 }
 
+void test_class_defaults_use_complete_enums_and_optional_values() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "enum State:\n"
+        "    Ready\n"
+        "    Done\n"
+        "\n"
+        "class Item:\n"
+        "    state: State = State.Ready\n"
+        "    value: Option[i32] = None\n",
+        "class_enum_optional_defaults.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("enum class State {") < cpp.find("struct Item {"));
+    assert(cpp.find("State state = State::Ready;") != std::string::npos);
+    assert(cpp.find("std::optional<int32_t> value = std::nullopt;") != std::string::npos);
+}
+
 void test_operator_continuation_is_part_of_return_expression() {
     const dudu::ModuleAst module = dudu::parse_source("def value(x: i32) -> i32:\n"
                                                       "    return x\n"
@@ -528,6 +545,7 @@ int main() {
         test_receiver_reference_emission();
         test_class_construction_distinguishes_aggregates_and_constructors();
         test_class_emit_order_uses_type_ast_fields();
+        test_class_defaults_use_complete_enums_and_optional_values();
         test_operator_continuation_is_part_of_return_expression();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

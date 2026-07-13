@@ -512,6 +512,9 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     write_file(dir / "main.dd", "import camera as cam\n"
                                 "import renderer.camera as render_camera\n"
                                 "\n"
+                                "def relay(value: cam.Camera) -> cam.Camera:\n"
+                                "    return value\n"
+                                "\n"
                                 "def main() -> i32:\n"
                                 "    first: cam.Camera = cam.make_camera(1)\n"
                                 "    second: render_camera.Camera = render_camera.make_camera(2)\n"
@@ -559,6 +562,12 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("return DuduRendererCameraCamera{.x = x};") != std::string::npos);
     assert(by_path.at("main.cpp").find("dudu_camera_make_camera(1)") != std::string::npos);
+    assert(by_path.at("main.hpp").find(
+               "DuduCameraCamera dudu_main_relay(DuduCameraCamera value);") !=
+           std::string::npos);
+    assert(by_path.at("main.cpp").find(
+               "DuduCameraCamera dudu_main_relay(DuduCameraCamera value)") !=
+           std::string::npos);
     assert(by_path.at("main.cpp")
                .find("dudu_renderer_camera_make_camera(2)") !=
            std::string::npos);

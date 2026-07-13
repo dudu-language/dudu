@@ -43,31 +43,13 @@ void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& mo
     }
 }
 
-void emit_enums(std::ostringstream& out, const ModuleAst& module,
-                const std::vector<std::string>& aliases, const CppEmitOptions& options) {
+void emit_value_enums(std::ostringstream& out, const ModuleAst& module,
+                      const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
-        const std::string& name = emitted_name(en, options);
         if (enum_has_payload_fields(en)) {
-            out << "struct " << name << " {\n";
-            for (const EnumValueDecl& value : en.values) {
-                out << "    struct " << value.name << " {\n";
-                for (const EnumPayloadField& field : value.payload_fields) {
-                    out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
-                        << field.name << "{};\n";
-                }
-                out << "    };\n";
-            }
-            out << "    std::variant<";
-            for (size_t i = 0; i < en.values.size(); ++i) {
-                if (i > 0) {
-                    out << ", ";
-                }
-                out << en.values[i].name;
-            }
-            out << "> value;\n";
-            out << "};\n\n";
             continue;
         }
+        const std::string& name = emitted_name(en, options);
         out << "enum class " << name;
         if (enum_has_underlying_type(en)) {
             out << " : " << lower_cpp_type(en.underlying_type_ref, aliases, options);
@@ -83,6 +65,41 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
         }
         out << "};\n\n";
     }
+}
+
+void emit_payload_enums(std::ostringstream& out, const ModuleAst& module,
+                        const std::vector<std::string>& aliases,
+                        const CppEmitOptions& options) {
+    for (const EnumDecl& en : module.enums) {
+        if (!enum_has_payload_fields(en)) {
+            continue;
+        }
+        const std::string& name = emitted_name(en, options);
+        out << "struct " << name << " {\n";
+        for (const EnumValueDecl& value : en.values) {
+            out << "    struct " << value.name << " {\n";
+            for (const EnumPayloadField& field : value.payload_fields) {
+                out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
+                    << field.name << "{};\n";
+            }
+            out << "    };\n";
+        }
+        out << "    std::variant<";
+        for (size_t i = 0; i < en.values.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << en.values[i].name;
+        }
+        out << "> value;\n";
+        out << "};\n\n";
+    }
+}
+
+void emit_enums(std::ostringstream& out, const ModuleAst& module,
+                const std::vector<std::string>& aliases, const CppEmitOptions& options) {
+    emit_value_enums(out, module, aliases, options);
+    emit_payload_enums(out, module, aliases, options);
 }
 
 } // namespace dudu

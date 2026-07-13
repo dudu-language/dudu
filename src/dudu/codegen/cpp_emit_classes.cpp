@@ -4,6 +4,7 @@
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
+#include "dudu/codegen/cpp_stmt_emit_support.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
@@ -530,8 +531,14 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;
             if (has_expr(field.value_expr)) {
-                out << " = "
-                    << lower_cpp_expr_ast(field.value_expr, aliases, CppLocalContext{}, options);
+                out << " = ";
+                if (is_template_type(field.type_ref, "Option") &&
+                    field.value_expr.kind == ExprKind::NoneLiteral) {
+                    out << "std::nullopt";
+                } else {
+                    out << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols,
+                                      options);
+                }
             } else if (field.type_ref.kind != TypeKind::Reference) {
                 out << "{}";
             }
@@ -540,7 +547,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         for (const ConstDecl& field : klass.static_fields) {
             out << "    inline static " << lower_cpp_type(field.type_ref, aliases, options) << ' '
                 << field.name << " = "
-                << lower_cpp_expr_ast(field.value_expr, aliases, CppLocalContext{}, options)
+                << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols, options)
                 << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {

@@ -320,4 +320,6 @@ if(DUDU_BUILD_TESTS)
     add_test(NAME dudu_format_tests COMMAND dudu_format_tests)
     add_test(NAME dudu_macro_protocol_tests COMMAND dudu_macro_protocol_tests)
     add_test(NAME dudu_macro_syntax_tests COMMAND dudu_macro_syntax_tests)
+    add_test(NAME dudu_macro_sdk_compile_tests
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/test_macro_sdk_compile.sh $<TARGET_FILE:duc>)
 endif()

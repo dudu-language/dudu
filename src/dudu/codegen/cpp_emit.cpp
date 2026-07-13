@@ -52,8 +52,8 @@ void add_native_type_alias_mappings(CppEmitOptions& options, const ModuleAst& mo
                 continue;
             }
             const std::string stripped = type.name.substr(prefix.size());
-            options.generated_type_names[type.name] =
-                native_alias_emit_name(type, stripped);
+            options.generated_type_names.try_emplace(type.name,
+                                                     native_alias_emit_name(type, stripped));
         }
     }
 }
@@ -386,8 +386,9 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     emit_enum_forward_declarations(out, module, emit_options);
     emit_class_forward_declarations(out, module, emit_options);
     emit_function_declarations(out, module, aliases, true, false, emit_options);
+    emit_value_enums(out, module, aliases, emit_options);
     emit_classes(out, module, aliases, function_returns, symbols, true, emit_options);
-    emit_enums(out, module, aliases, emit_options);
+    emit_payload_enums(out, module, aliases, emit_options);
     emit_early_functions(out, module, aliases, function_returns, symbols, true, false,
                          emit_options);
     emit_constants(out, module, aliases, emit_options);
@@ -451,8 +452,9 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     emit_class_forward_declarations(out, module, emit_options);
     emit_function_declarations(out, module, aliases, false, emit_options.test_source,
                                emit_options);
+    emit_value_enums(out, module, aliases, emit_options);
     emit_classes(out, module, aliases, function_returns, symbols, false, emit_options);
-    emit_enums(out, module, aliases, emit_options);
+    emit_payload_enums(out, module, aliases, emit_options);
     emit_early_functions(out, module, aliases, function_returns, symbols, false,
                          emit_options.test_source, emit_options);
     emit_constants(out, module, aliases, emit_options);

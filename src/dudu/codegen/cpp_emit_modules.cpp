@@ -157,8 +157,9 @@ void add_native_generated_names(CppEmitOptions& options, const ModuleAst& unit) 
     }
     for (const ClassDecl& klass : unit.native_classes) {
         if (const auto name = strip_native_alias_prefix(klass.name, aliases)) {
-            options.generated_type_names[klass.name] = *name;
-            options.generated_value_names[klass.name] = *name;
+            const std::string emitted = klass.cpp_name.empty() ? *name : klass.cpp_name;
+            options.generated_type_names[klass.name] = emitted;
+            options.generated_value_names[klass.name] = emitted;
         }
     }
     for (const NativeValueDecl& value : unit.native_values) {

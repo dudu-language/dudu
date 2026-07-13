@@ -11,6 +11,7 @@ python3 "$repo_root/scripts/generate_macro_ast.py" \
     --cpp-header "$repo_root/src/dudu/macro/macro_protocol_generated.hpp" \
     --cpp-source "$repo_root/src/dudu/macro/macro_protocol_generated.cpp" \
     --dudu-sdk "$repo_root/lib/dudu/ast.dd" \
+    --cpp-sdk-bridge "$repo_root/src/dudu/macro/macro_sdk_bridge_generated.hpp" \
     --check
 "$repo_root/scripts/check_ast_migration_guards.sh"
 bash -n "$repo_root/scripts/install-local.sh"

@@ -248,7 +248,8 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
         check_single_string_arg(decorator, "section",
                                 "@section requires exactly one string literal argument");
     }
-    if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
+    if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "macro" ||
+        text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
         text == "virtual" || text == "override" || text == "abstract" || text == "test" ||
         text == "test.ignore" || text == "test.should_panic" ||
