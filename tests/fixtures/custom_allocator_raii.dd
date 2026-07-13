@@ -1,0 +1,21 @@
+class OwnedBytes:
+    data: *u8
+    count: usize
+
+    def drop(self):
+        free(self.data)
+
+
+class HeapAllocator:
+    allocation_count: usize
+
+    def make_bytes(self, count: usize) -> OwnedBytes:
+        self.allocation_count += 1
+        return OwnedBytes(malloc[u8](count), count)
+
+
+def main() -> i32:
+    allocator = HeapAllocator(0)
+    bytes = allocator.make_bytes(4)
+    bytes.data[0] = 42
+    return i32(bytes.data[0]) + i32(allocator.allocation_count) - 1

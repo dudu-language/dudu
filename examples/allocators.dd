@@ -1,6 +1,7 @@
 # Allocation helpers and custom arena APIs.
 
 from c import string.h as cstr
+from cpp import memory
 
 
 class Enemy:
@@ -69,6 +70,6 @@ def demo_raw_bytes():
 def demo_arena(arena: &Arena):
     raw: *u8 = arena.alloc(sizeof[Enemy](), alignof[Enemy]())
     enemy: *Enemy = *Enemy(raw)
-
-    *enemy = make_enemy(50, 4.0, 8.0)
+    std.construct_at(enemy, make_enemy(50, 4.0, 8.0))
+    std.destroy_at(enemy)
     arena.reset()

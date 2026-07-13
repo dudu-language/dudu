@@ -945,6 +945,9 @@ handlers: map[str, fn(Event)] = {
 
 ## Allocation
 
+The canonical allocation and lifetime reference is
+[Allocation And Lifetimes](allocation-and-lifetimes.md).
+
 Dudu does not impose an ownership or allocator model.
 
 Value construction is the default:

@@ -15,7 +15,9 @@ compile_and_expect type_aliases 42
 compile_and_expect enums 42
 compile_and_expect explicit_casts 42
 compile_and_expect allocation 17
+compile_and_expect allocation_native_interop 42
 compile_and_expect arena_allocator 43
+compile_and_expect custom_allocator_raii 42
 compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42; compile_and_expect cpp_move_unique_ptr 42; compile_and_expect move_shadow 42; compile_and_expect cpp_filesystem_path 42; compile_and_expect cpp_chrono_timer 42
 compile_and_expect cpp_template_member 42

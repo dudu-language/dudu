@@ -1,0 +1,15 @@
+from cpp import memory
+
+
+class Enemy:
+    hp: i32
+    x: f32
+
+
+def main() -> i32:
+    storage: *Enemy = malloc[Enemy](1)
+    enemy: *Enemy = std.construct_at(storage, Enemy(40, 2.0))
+    result = enemy.hp + i32(enemy.x)
+    std.destroy_at(enemy)
+    free(storage)
+    return result
