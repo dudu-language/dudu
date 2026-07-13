@@ -62,6 +62,20 @@ header path token, not as a Dudu module name. Quotes are not needed for normal
 header paths. If a generated or vendor path contains spaces or other unusual
 characters, a quoted target may be accepted as path include syntax.
 
+The complete matrix is:
+
+| Language boundary | Header search | Source-relative path |
+| --- | --- | --- |
+| C | `from c import SDL3/SDL.h` | `from c.path import vendor/foo.h` |
+| C with alias | `from c import sqlite3.h as sqlite` | `from c.path import vendor/foo.h as foo` |
+| C API with C++ linkage | `from cxx import libxml/parser.h` | `from cxx.path import vendor/c_api.h` |
+| C API with C++ linkage and alias | `from cxx import libxml/parser.h as xml` | `from cxx.path import vendor/c_api.h as c_api` |
+| C++ | `from cpp import thread` | `from cpp.path import vendor/math.hpp` |
+| C++ with alias | `from cpp import thread as threading` | `from cpp.path import vendor/math.hpp as math` |
+
+Aliases are optional in every row. `c`, `cxx`, and `cpp` control scanner and
+linkage semantics; `.path` controls include resolution independently.
+
 ## Native Names
 
 Unaliased native imports expose declarations according to their real C/C++
@@ -93,6 +107,28 @@ from c import math.h
 root = sqrt(4.0)
 ```
 
+Prefixed C APIs are normally clearest without aliases because their own names
+already provide a boundary:
+
+```python
+from c import SDL3/SDL.h
+from c import sqlite3.h
+from c import curl/curl.h
+from c import libavcodec/avcodec.h
+from c import vulkan/vulkan.h
+from c import zstd.h
+
+window = SDL_CreateWindow("demo", 800, 600, 0)
+database: *sqlite3
+curl = curl_easy_init()
+packet = av_packet_alloc()
+version = vkEnumerateInstanceVersion(&api_version)
+compressed = ZSTD_compress(dst, dst_capacity, src, src_size, 3)
+```
+
+These names remain the native names from their headers. Dudu does not add an
+extra synthetic namespace.
+
 Multiple C++ headers may contribute to the same namespace. This is normal and
 must merge when the declarations are compatible:
 
@@ -113,6 +149,16 @@ library's global namespace is too broad:
 ```python
 from c import raylib.h as ray
 from c.path import vendor/foo.h as vendor
+```
+
+For example, a broad local C API can be contained without changing its emitted
+C names:
+
+```python
+from c.path import vendor/legacy_api.h as legacy
+
+handle = legacy.open_context()
+legacy.process_context(handle)
 ```
 
 Aliased native imports are hygienic. They expose scanned names through the alias
@@ -204,8 +250,19 @@ from cpp.path import vendor/foo.hpp as foo
 
 The language server should use those ranges so Ctrl-click can distinguish:
 
-- `cpp`: native C++ import semantics/help
-- `path`: quoted include semantics/help
-- `vendor/foo.hpp`: header definition/open path behavior, with path segments
-  handled separately when possible
-- `foo`: alias binding definition/references
+- `cpp`: native C++ import semantics in hover; it has no source definition
+- `path`: source-relative quoted-include semantics in hover; it has no source
+  definition
+- every segment of `vendor/foo.hpp`: opens the resolved header
+- `foo`: opens the aliased header; find-references reports uses of the alias
+
+This behavior applies equally to `c`, `cxx`, and `cpp` imports. Header-search
+imports resolve through configured include directories, `pkg-config`, and the
+compiler's system include paths. Path imports resolve from the importing source
+file before configured include paths.
+
+## Related Reference
+
+- [C and C++ interop](interop.md)
+- [Generics, native templates, and macros](native-templates-and-macros.md)
+- [Native compatibility matrix](native-compatibility-matrix.md)

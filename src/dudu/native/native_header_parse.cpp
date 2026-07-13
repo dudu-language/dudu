@@ -27,6 +27,7 @@ struct TemplateContext {
     std::vector<bool> param_has_default;
     std::vector<TypeRef> param_defaults;
     int last_param_depth = -1;
+    SourceLocation location;
 };
 
 enum class CommentTargetKind {
@@ -410,7 +411,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<CommentTarget>& comment_targets,
                     const NativeCursorIdentityIndex& identities, const SourceLocation& location,
                     std::string& current_file) {
-    const SourceLocation decl_location = ast_source_location(line, location, current_file);
+    SourceLocation decl_location = ast_source_location(line, location, current_file);
     if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
         current_file = concrete_file;
     }
@@ -479,21 +480,28 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                              .params = {},
                              .param_has_default = {},
                              .param_defaults = {},
-                             .last_param_depth = -1});
+                             .last_param_depth = -1,
+                             .location = decl_location});
     } else if (line.find("ClassTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Class,
                              .params = {},
                              .param_has_default = {},
                              .param_defaults = {},
-                             .last_param_depth = -1});
+                             .last_param_depth = -1,
+                             .location = decl_location});
     } else if (line.find("FunctionTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Function,
                              .params = {},
                              .param_has_default = {},
                              .param_defaults = {},
-                             .last_param_depth = -1});
+                             .last_param_depth = -1,
+                             .location = decl_location});
+    }
+    if (!templates.empty() && decl_location.file == location.file &&
+        templates.back().location.file != location.file) {
+        decl_location = templates.back().location;
     }
     if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos) {
         std::string name;

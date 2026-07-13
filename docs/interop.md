@@ -74,3 +74,6 @@ macros are still callable with call syntax, so `assert expr` remains Dudu
 syntax while `assert(expr)` can call a native macro.
 
 See `examples/macro_bomb.dd` for a compact imported-macro stress example.
+
+The four distinct generic/template/macro mechanisms are documented in
+[Generics, Native Templates, And Macros](native-templates-and-macros.md).

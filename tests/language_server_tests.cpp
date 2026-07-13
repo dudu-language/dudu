@@ -740,6 +740,98 @@ void test_lsp_native_member_docs_reach_completion_and_signature_help() {
     assert(alias_hover.find("Native widget class docs.") != std::string::npos);
 }
 
+void test_lsp_native_macro_identity_completion_signature_and_definition() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_macro_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path header = dir / "native_macros.hpp";
+    write_file(header, "#pragma once\n"
+                       "#define NATIVE_MAGIC 21\n"
+                       "#define NATIVE_SCALE(value) ((value) * 2)\n"
+                       "#define NATIVE_FIRST(first, ...) (first)\n");
+
+    const std::string source = "from cpp.path import native_macros.hpp as macros\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    value = macros.NATIVE_SCALE(macros.NATIVE_MAGIC)\n"
+                               "    return macros.NATIVE_FIRST(value, 0)\n";
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    dudu::Json hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":26}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &hover_params);
+    assert(hover.find("macro macros.NATIVE_SCALE") != std::string::npos);
+
+    dudu::Json completion_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":19}}").parse();
+    const std::string completion = dudu::completion_json(&doc, &completion_params);
+    assert(completion.find("NATIVE_SCALE") != std::string::npos);
+    assert(completion.find("NATIVE_MAGIC") != std::string::npos);
+
+    dudu::Json signature_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":38}}").parse();
+    const std::string signature = dudu::signature_help_json(&doc, &signature_params);
+    assert(signature.find("NATIVE_FIRST") != std::string::npos);
+
+    const std::string definition = dudu::definition_json(doc, &hover_params);
+    assert(definition.find(dudu::file_uri(header)) != std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
+void test_lsp_native_template_identity_completion_signature_and_definition() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() /
+        ("dudu_lsp_native_template_test_" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path header = dir / "native_templates.hpp";
+    write_file(header, "#pragma once\n"
+                       "template <typename T> struct NativeBox { T value; };\n"
+                       "template <typename T> T native_identity(T value) { return value; }\n");
+
+    const std::string source = "from cpp.path import native_templates.hpp\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    box: NativeBox[i32]\n"
+                               "    box.value = native_identity[i32](41)\n"
+                               "    return box.value\n";
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    dudu::Json box_params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":12}}").parse();
+    const std::string box_hover = dudu::hover_json(doc, "", &box_params);
+    assert(box_hover.find("NativeBox") != std::string::npos);
+    const std::string box_definition = dudu::definition_json(doc, &box_params);
+    assert(box_definition.find(dudu::file_uri(header)) != std::string::npos);
+
+    dudu::Json function_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":27}}").parse();
+    const std::string function_hover = dudu::hover_json(doc, "", &function_params);
+    assert(function_hover.find("native_identity") != std::string::npos);
+    assert(dudu::definition_json(doc, &function_params).find(dudu::file_uri(header)) !=
+           std::string::npos);
+
+    dudu::Json signature_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":38}}").parse();
+    const std::string signature = dudu::signature_help_json(&doc, &signature_params);
+    assert(signature.find("native_identity") != std::string::npos);
+
+    dudu::Json completion_params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":4}}").parse();
+    const std::string completion = dudu::completion_json(&doc, &completion_params);
+    assert(completion.find("NativeBox") != std::string::npos);
+    assert(completion.find("native_identity") != std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_signature_help_resolves_native_callable_values() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_callable_value_test";
@@ -1154,6 +1246,8 @@ int main() {
         test_lsp_move_builtin_hover_inlay_and_shadowing();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_native_member_docs_reach_completion_and_signature_help();
+        test_lsp_native_macro_identity_completion_signature_and_definition();
+        test_lsp_native_template_identity_completion_signature_and_definition();
         test_lsp_signature_help_resolves_native_callable_values();
         test_lsp_inlay_hints_include_native_parameter_names();
         test_lsp_inlay_hints_include_builtin_method_parameter_names();

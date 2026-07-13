@@ -66,6 +66,25 @@ void test_lsp_definition_jumps_to_native_header_type() {
     assert(definition.find("\"line\":0") != std::string::npos);
 }
 
+void test_lsp_definition_opens_native_header_from_path_segments_and_alias() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_import_path_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "vendor");
+    write_file(dir / "vendor" / "math.hpp", "#pragma once\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from cpp.path import ./vendor/math.hpp as math\n"};
+    for (const int character : {22, 25, 32, 43}) {
+        dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":0,\"character\":" +
+                                             std::to_string(character) + "}}")
+                                .parse();
+        const std::string definition = dudu::definition_json(doc, &params);
+        assert(definition.find(dudu::file_uri(dir / "vendor" / "math.hpp")) != std::string::npos);
+    }
+}
+
 void test_lsp_definition_jumps_to_parameter_and_inferred_local() {
     const dudu::Document doc{.uri = "file:///local_definition.dd",
                              .path = "local_definition.dd",
@@ -1270,6 +1289,7 @@ void test_lsp_index_operator_definition_and_hover() {
 int main() {
     try {
         test_lsp_definition_jumps_to_native_header_type();
+        test_lsp_definition_opens_native_header_from_path_segments_and_alias();
         test_lsp_definition_jumps_to_parameter_and_inferred_local();
         test_lsp_definition_jumps_to_loop_binding();
         test_lsp_definition_jumps_to_destructured_binding();

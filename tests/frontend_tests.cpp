@@ -91,27 +91,46 @@ void test_import_bindings() {
     assert(collided);
 
     const dudu::ModuleAst direct_native =
-        dudu::parse_source("from cpp import thread\n"
-                           "from c import SDL3/SDL.h as sdl\n"
-                           "from cpp.path import vendor/foo.hpp as foo\n",
+        dudu::parse_source("from c import SDL3/SDL.h\n"
+                           "from c import sqlite3.h as sqlite\n"
+                           "from c.path import vendor/foo.h\n"
+                           "from c.path import vendor/foo.h as foo\n"
+                           "from cxx import libxml/parser.h\n"
+                           "from cxx import libxml/parser.h as xml\n"
+                           "from cxx.path import vendor/c_api.h\n"
+                           "from cxx.path import vendor/c_api.h as c_api\n"
+                           "from cpp import thread\n"
+                           "from cpp import thread as threading\n"
+                           "from cpp.path import vendor/math.hpp\n"
+                           "from cpp.path import vendor/math.hpp as math\n",
                            "direct_native.dd");
-    assert(direct_native.imports.size() == 3);
-    assert(direct_native.imports[0].kind == dudu::ImportKind::ForeignCpp);
-    assert(direct_native.imports[0].native_include_style == dudu::NativeIncludeStyle::System);
-    assert(direct_native.imports[0].module_path == "thread");
-    assert(direct_native.imports[0].alias.empty());
-    assert(dudu::render_import_decl(direct_native.imports[0]) == "from cpp import thread");
-    assert(direct_native.imports[1].kind == dudu::ImportKind::ForeignC);
-    assert(direct_native.imports[1].module_path == "SDL3/SDL.h");
-    assert(direct_native.imports[1].alias == "sdl");
-    assert(direct_native.imports[2].kind == dudu::ImportKind::ForeignCpp);
-    assert(direct_native.imports[2].native_include_style == dudu::NativeIncludeStyle::Path);
-    assert(direct_native.imports[2].module_path == "vendor/foo.hpp");
-    assert(direct_native.imports[2].alias == "foo");
-    assert(direct_native.imports[2].native_language_range.start.column > 0);
-    assert(direct_native.imports[2].native_path_mode_range.start.column > 0);
-    assert(dudu::render_import_decl(direct_native.imports[2]) ==
-           "from cpp.path import vendor/foo.hpp as foo");
+    assert(direct_native.imports.size() == 12);
+    for (size_t index = 0; index < direct_native.imports.size(); ++index) {
+        const dudu::ImportDecl& import = direct_native.imports[index];
+        assert(import.native_include_style == (index % 4 >= 2 ? dudu::NativeIncludeStyle::Path
+                                                              : dudu::NativeIncludeStyle::System));
+        assert(import.alias.empty() == (index % 2 == 0));
+        assert(import.native_language_range.start.column > 0);
+        if (index % 4 >= 2) {
+            assert(import.native_path_mode_range.start.column > 0);
+        }
+    }
+    assert(direct_native.imports[0].kind == dudu::ImportKind::ForeignC);
+    assert(direct_native.imports[4].kind == dudu::ImportKind::ForeignCxx);
+    assert(direct_native.imports[8].kind == dudu::ImportKind::ForeignCpp);
+    assert(dudu::render_import_decl(direct_native.imports[0]) == "from c import SDL3/SDL.h");
+    assert(dudu::render_import_decl(direct_native.imports[5]) ==
+           "from cxx import libxml/parser.h as xml");
+    assert(dudu::render_import_decl(direct_native.imports[11]) ==
+           "from cpp.path import vendor/math.hpp as math");
+
+    const std::string native_cpp = dudu::emit_cpp_source(direct_native);
+    assert(native_cpp.find("extern \"C\" {\n#include <SDL3/SDL.h>\n}") != std::string::npos);
+    assert(native_cpp.find("extern \"C\" {\n#include \"vendor/foo.h\"\n}") != std::string::npos);
+    assert(native_cpp.find("#include <libxml/parser.h>") != std::string::npos);
+    assert(native_cpp.find("#include \"vendor/c_api.h\"") != std::string::npos);
+    assert(native_cpp.find("#include <thread>") != std::string::npos);
+    assert(native_cpp.find("#include \"vendor/math.hpp\"") != std::string::npos);
 }
 
 void write_file(const std::filesystem::path& path, const std::string& text) {
