@@ -387,6 +387,7 @@ last = players.back()
 for player in players:
     print(player.name)</code></pre></div>
         <p>Nonempty literals infer their element type. Empty collections need an explicit type unless a surrounding expected type supplies it. Conflicting element constraints are errors; use an explicit payload enum when mixed values are intentional.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/collections.md">Collection inference and diagnostics</a>
         <h3>Dictionaries</h3>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code>scores: dict[str, i32] = {
     "ada": 99,
@@ -417,6 +418,7 @@ quotient, remainder = divmod_i32(43, 10)</code></pre></div>
 
 scratch: array[f32][64, 64]</code></pre></div>
         <p>The initializer supplies shape when present. An uninitialized fixed array needs explicit extents.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/fixed-arrays-and-numeric-literals.md">Fixed-array and numeric-literal reference</a>
         <h3>Indexing and views</h3>
         <p>Dudu parses Python/NumPy-shaped index items without hard-coding tensor policy into the compiler. Built-in arrays and library types dispatch through the same operator surface.</p>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code>pixel = image[y, x, channel]
@@ -428,6 +430,7 @@ train_x = x[mask, :]
 weights[mask, :] = 0.0
 logits[rows, cols] += 1.0</code></pre></div>
         <p>A scalar index removes an axis, a slice preserves one, <code>None</code> adds an axis, and <code>...</code> fills remaining axes. Result shape is available to the type checker and editor when it can be proven statically; runtime-shaped libraries may retain shape in their own values.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/arrays-views-and-indexing.md">Complete arrays, views, and indexing tutorial</a>
         <h3>C++ standard library containers</h3>
         <p>Dudu's built-in collection names cover common Python-shaped code. They do not restrict native code to that set. Import a C++ header and use its real container, iterator, and algorithm APIs directly.</p>
         <div class="code-window"><div class="code-label">Dudu using C++ sequences</div><pre><code>from cpp import algorithm
@@ -499,12 +502,13 @@ player = Player(100, "Ada")
 
 # Construct one heap object.
 heap_player: *Player = new[Player](100, "Ada")
-delete(heap_player)
+delete heap_player
 
 # Raw storage for native or allocator work.
 bytes: *u8 = malloc[u8](1024)
 free(bytes)</code></pre></div>
         <p>Value containers own their values. Pointer containers do not own pointees. Custom arenas and allocators are ordinary libraries. Lexical scope and C++ destructors provide cleanup; Dudu does not add a general <code>defer</code> statement.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/allocation-and-lifetimes.md">Allocation, ownership, and lifetime reference</a>
       </section>
 
       <section class="docs-section" id="generics">
@@ -523,6 +527,7 @@ class Box[T]:
     def get(self: &const[Self]) -> &const[T]:
         return self.value</code></pre></div>
         <p>Generic functions and classes lower to C++ templates. Compile-time value parameters may describe fixed extents and participate in checked constant expressions.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/generics.md">Generics and value-parameter reference</a>
         <h3>Constants and build values</h3>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code>WIDTH: i32 = 320
 HEIGHT: i32 = 240
@@ -538,6 +543,7 @@ static_assert(PIXELS == 76800)
 if build.DEBUG:
     enable_validation()</code></pre></div>
         <p>Build values come from <code>dudu.toml</code> or compiler definitions. Branches depending only on <code>build.*</code> values are selected at compile time.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/compile-time-programming.md">Compile-time programming reference</a>
       </section>
 
       <section class="docs-section" id="modules">
@@ -603,6 +609,7 @@ std.sort(names.begin(), names.end())</code></pre></div>
 point: vendor_math.vendor.Vec3
 length = vendor_math.vendor.length(point)</code></pre></div>
         <p>Header awareness handles overloads, constructors, methods, operators, templates, const/reference forms, macros that represent complete expressions, and source locations for editor navigation. If a native API cannot be represented directly, <code>cpp(...)</code> is the explicit escape hatch, not normal interop style.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/native-templates-and-macros.md">Native templates and macros reference</a>
         <h3>Dudu called from C++</h3>
         <p>Top-level Dudu classes and functions generate ordinary C++ declarations. Use <code>duc --emit-header</code> for a C++ header and <code>@extern_c</code> plus <code>--emit-c-header</code> for a C ABI.</p>
         <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>duc emit src/library.dd -o build/library.cpp
@@ -719,15 +726,21 @@ duc src/library.dd --emit-header build/library.hpp</code></pre></div>
 
       <section class="docs-section" id="reference">
         <h2>Formal reference</h2>
-        <p>This manual is the public learning and working guide. Exact and implementation-facing material remains in the repository:</p>
+        <p>This manual is the public learning and working guide. Exact language references remain in the repository:</p>
         <ul>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/appearance-spec.md">Appearance spec</a>: canonical source syntax and semantics.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/collections.md">Collections and literal inference</a>: list, dictionary, set, expected-type, and heterogeneous-value rules.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/fixed-arrays-and-numeric-literals.md">Fixed arrays and numeric literals</a>: shape inference, numeric context, layout, and diagnostics.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/compile-time-programming.md">Compile-time programming</a>: constants, <code>@constexpr</code>, build values, and layout checks.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/generics.md">Generics and value parameters</a>: type inference, value arithmetic, <code>dyn</code>, and generated C++ templates.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/import_semantics.md">Import semantics</a>: Dudu modules, native headers, aliases, collisions, and editor ranges.</li>
-          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/developer-guide.md">Developer guide</a>: compiler builds, project backends, validation, and benchmarks.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/native-templates-and-macros.md">Native templates and macros</a>: imported C++ templates, callable macros, and boundary cases.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/allocation-and-lifetimes.md">Allocation and lifetimes</a>: values, RAII, raw storage, custom allocators, and pointer escape diagnostics.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/arrays-views-and-indexing.md">Arrays, views, and indexing</a>: arbitrary-rank slicing, views, library operators, and shape diagnostics.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md">Known limitations</a>: current alpha constraints.</li>
-          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/le_plan.md">Implementation plan</a>: compiler and language completion work.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/native-compatibility-matrix.md">Native compatibility matrix</a>: locally validated C and C++ libraries.</li>
         </ul>
-        <div class="docs-callout warning"><p>Planning documents describe intended capability and engineering work. They are not substitutes for current compiler behavior. Current behavior is defined by the accepted spec, compiler diagnostics, and passing fixtures.</p></div>
+        <div class="docs-callout warning"><p>Dudu is alpha software. The reference pages describe tested current behavior; the limitations page records known boundaries.</p></div>
       </section>
     </article>
 

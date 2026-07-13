@@ -32,7 +32,19 @@ separate pages.
 - `docs/developer-guide.md` owns compiler/project development workflows.
 - `docs/import_semantics.md` owns native and Dudu import behavior.
 - `docs/tests.md` owns test semantics.
-- `docs/known-limitations.md` owns honest pre-alpha constraints.
+- `docs/known-limitations.md` owns honest alpha constraints.
+- `docs/collections.md` owns dynamic collection literals and inference.
+- `docs/fixed-arrays-and-numeric-literals.md` owns fixed storage, shape
+  inference, and contextual numeric widths.
+- `docs/compile-time-programming.md` owns constant evaluation and build values.
+- `docs/generics.md` owns type parameters, value parameters, and extent
+  arithmetic.
+- `docs/native-templates-and-macros.md` owns imported template and macro
+  behavior.
+- `docs/allocation-and-lifetimes.md` owns values, raw allocation, custom
+  allocators, and diagnosed pointer escapes.
+- `docs/arrays-views-and-indexing.md` owns fixed-array and library-defined
+  indexing behavior.
 - `site/docs.html` is the curated public manual, not a second independent spec.
 
 When behavior changes, update the canonical source document and its public
@@ -60,10 +72,16 @@ Dudu docstrings and native scanner metadata by a future `dudu doc` command. The
 generated API surface should include signatures, source links, type layout when
 known, examples, and imported C/C++ documentation when Clang exposes it.
 
-Documentation validation should eventually include:
+`scripts/check_site.sh` is the local publication gate. It verifies site files,
+internal anchors, canonical reference links, syntax-highlighting grammars, and
+the compiler fixtures that back advertised language examples. The complete
+release gate invokes it before packaging. `scripts/deploy-site.sh` invokes the
+same gate before assembling and publishing Cloudflare Pages.
 
-- compile and run fenced Dudu examples;
-- verify internal anchors and external links;
+Documentation validation also includes:
+
+- compile canonical Dudu fixtures backing public examples;
+- verify internal anchors and local links;
 - check CLI excerpts against `dudu --help` and `duc --help`;
 - verify documented imports against real native headers;
 - render desktop and mobile screenshots before publication;

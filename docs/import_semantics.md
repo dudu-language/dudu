@@ -1,4 +1,7 @@
+<a id="import-semantics"></a>
 # Import Semantics
+
+[Dudu manual](https://dudulang.org/docs.html#modules) | Previous: [Generics and value parameters](generics.md) | Next: [Native templates and macros](native-templates-and-macros.md)
 
 Dudu imports should look Python-shaped while preserving C and C++ include
 behavior.
@@ -266,3 +269,25 @@ file before configured include paths.
 - [C and C++ interop](interop.md)
 - [Generics, native templates, and macros](native-templates-and-macros.md)
 - [Native compatibility matrix](native-compatibility-matrix.md)
+
+## Limits
+
+- Dudu modules are source modules, not textual includes; imported declarations
+  are not implicitly re-exported.
+- Native imports depend on configured compiler include paths and Clang scanner
+  metadata.
+- Header aliases create collision boundaries but do not rename declarations
+  inside the native header.
+- Unsupported preprocessor shapes stay at the native boundary rather than
+  becoming ad hoc Dudu syntax.
+
+## Tested Examples
+
+- [`c_import_alias.dd`](../tests/fixtures/c_import_alias.dd) checks aliased C
+  imports and qualified access.
+- [`native_scan_local.dd`](../tests/fixtures/native_scan_local.dd) checks a
+  source-relative native header.
+- [`tests/fixtures/multifile/main.dd`](../tests/fixtures/multifile/main.dd)
+  checks Dudu module imports in an executable project.
+- LSP fixtures check independent navigation ranges for import mode, path
+  segments, imported names, and aliases.

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Completed canonical public references for collection inference, fixed arrays,
+  compile-time programming, generics, native templates and macros, allocation,
+  lifetimes, views, and arbitrary-rank indexing, with tested examples and
+  explicit boundaries.
+- Added a local website publication gate that checks HTML links and anchors,
+  canonical Markdown links, syntax-highlighting grammars, and compiler fixtures
+  before Cloudflare deployment or release packaging.
 - Expanded the public collection and memory documentation with checked examples
   for each built-in collection, native C++ standard containers, and pointer,
   reference, and const qualifier behavior.

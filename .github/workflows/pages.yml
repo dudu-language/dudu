@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Validate static site
+        run: python3 scripts/check_site.py
       - name: Assemble static site
         run: |
           mkdir _site

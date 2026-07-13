@@ -1,4 +1,7 @@
+<a id="native-templates-and-macros"></a>
 # Generics, Native Templates, And Macros
+
+[Dudu manual](https://dudulang.org/docs.html#cpp-interop) | Previous: [Import semantics](import_semantics.md) | Next: [Allocation and lifetimes](allocation-and-lifetimes.md)
 
 Four separate mechanisms use square brackets or call-shaped syntax in Dudu.
 They are not interchangeable.
@@ -136,3 +139,24 @@ in the same editor operations as other native declarations:
 
 Missing source metadata limits navigation, but it does not change generated
 code or invent a Dudu-specific replacement declaration.
+
+## Limits
+
+- Dudu does not parse or emulate the complete C++ template language.
+- Callable macros must expand to complete expressions that Clang can describe.
+- Token pasting, stringizing, declaration generation, and partial-syntax
+  macros require an ordinary native wrapper when they cannot be imported as a
+  complete declaration or expression.
+- User-defined Dudu macros are not part of the current language.
+
+## Tested Examples
+
+- [`native_template_function.dd`](../tests/fixtures/native_template_function.dd)
+  checks explicit imported function-template arguments.
+- [`cpp_template_member.dd`](../tests/fixtures/cpp_template_member.dd) checks
+  imported class and member templates.
+- [`cpp_macro_bomb.dd`](../tests/fixtures/cpp_macro_bomb.dd) checks constants,
+  lowercase names, variadics, and expression macros.
+- [`bad_native_template_function.dd`](../tests/fixtures/bad_native_template_function.dd)
+  and [`bad_variadic_macro_arity.dd`](../tests/fixtures/bad_variadic_macro_arity.dd)
+  verify native-boundary diagnostics.

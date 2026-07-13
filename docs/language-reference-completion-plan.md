@@ -10,6 +10,9 @@ documentation promises it. Each section must end with deterministic fixtures,
 accurate user-facing documentation, and examples checked by the current Dudu
 compiler.
 
+Status: completed on 2026-07-13. All nine sections are implemented, validated,
+linked from the public manual, and covered by the local site publication gate.
+
 ## Engineering Bar
 
 - Do not document intended behavior as implemented behavior.

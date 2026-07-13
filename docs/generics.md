@@ -1,4 +1,7 @@
+<a id="generics-and-value-parameters"></a>
 # Generics And Value Parameters
+
+[Dudu manual](https://dudulang.org/docs.html#generics) | Previous: [Compile-time programming](compile-time-programming.md) | Next: [Import semantics](import_semantics.md)
 
 Dudu generics are compile-time C++ templates with Python-shaped declarations
 and calls. They support Dudu types, imported native types, fixed extents, and
@@ -368,3 +371,25 @@ Dudu diagnoses:
 Hover shows declared generic signatures. Inlay hints show inferred local types,
 including folded result extents such as `array[i32][4]`. Value parameters used
 inside a body are shown as `usize`.
+
+## Limits
+
+- Dudu generics lower to C++ templates; they are not runtime-erased Python
+  generics or unrestricted dependent types.
+- A type parameter cannot be used as a value, and a value parameter cannot be
+  used as a type.
+- `dyn` marks a runtime extent and cannot participate in required compile-time
+  arithmetic.
+- Imported C++ template behavior is limited to declarations Clang can expose
+  and Dudu can represent at the native boundary.
+
+## Tested Examples
+
+- [`generics_reference.dd`](../tests/fixtures/generics_reference.dd) executes
+  inferred and explicit types, generic classes, value parameters, and extent
+  arithmetic.
+- [`generic_substitution_shapes.dd`](../tests/fixtures/generic_substitution_shapes.dd)
+  checks shaped substitution across calls.
+- [`bad_generic_inferred_conflict.dd`](../tests/fixtures/bad_generic_inferred_conflict.dd)
+  and [`bad_generic_value_param_as_type.dd`](../tests/fixtures/bad_generic_value_param_as_type.dd)
+  verify inference and kind diagnostics.

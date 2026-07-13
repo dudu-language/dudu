@@ -1,4 +1,7 @@
+<a id="arrays-views-and-indexing"></a>
 # Arrays, Views, And Indexing
+
+[Dudu manual](https://dudulang.org/docs.html#containers) | Previous: [Allocation and lifetimes](allocation-and-lifetimes.md) | Next: [Known limitations](known-limitations.md)
 
 Dudu gives fixed arrays Python-shaped multidimensional indexing. The language
 defines fixed-array storage and non-owning array views. Numeric libraries can
@@ -369,3 +372,13 @@ shape mismatch: expected [4], got [3] (axis 0 expected 4, got 3)
 The LSP test suite checks inferred view shapes, hover text, bad-shape
 diagnostics, and navigation from an indexed expression to its selected
 `@operator("[]")` declaration.
+
+## Limits
+
+- Built-in fixed arrays provide basic scalar/slice/new-axis/ellipsis indexing;
+  masks, gathers, broadcasting, devices, and autograd are library behavior.
+- A view does not own storage and must not outlive its source.
+- Static result extents are reported only when the compiler can prove them;
+  runtime-shaped libraries retain dynamic shape metadata in their values.
+- Dudu does not bundle NumPy, PyTorch, BLAS, OpenCL, CUDA, or a production
+  tensor library.

@@ -1,4 +1,7 @@
+<a id="fixed-arrays-and-numeric-literals"></a>
 # Fixed Arrays And Numeric Literals
+
+[Dudu manual](https://dudulang.org/docs.html#containers) | Previous: [Collections and literal inference](collections.md) | Next: [Compile-time programming](compile-time-programming.md)
 
 `array[T][shape]` is fixed-size contiguous storage. It lowers to nested
 `std::array` storage and its extents are compile-time values.
@@ -128,3 +131,23 @@ std::array<std::array<float, 3>, 2>
 
 Shape inference is completed before C++ emission. Code generation does not
 re-guess rank or extents from source text.
+
+## Limits
+
+- Fixed-array extents are compile-time values. Use a library-defined dynamic
+  tensor or another owning container for runtime extents.
+- Shape inference requires a non-empty rectangular initializer.
+- Contextual numeric conversion applies to literals, not arbitrary typed
+  runtime expressions.
+- Built-in arrays are row-major contiguous storage; slicing may produce a
+  strided non-owning view.
+
+## Tested Examples
+
+- [`array_literal_inference.dd`](../tests/fixtures/array_literal_inference.dd)
+  covers rank-independent literal shape inference.
+- [`numeric_literal_context.dd`](../tests/fixtures/numeric_literal_context.dd)
+  covers contextual integer and decimal widths.
+- [`bad_array_ragged_inference.dd`](../tests/fixtures/bad_array_ragged_inference.dd)
+  and [`bad_array_shape_mismatch.dd`](../tests/fixtures/bad_array_shape_mismatch.dd)
+  verify rectangularity and explicit-shape diagnostics.

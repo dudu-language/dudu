@@ -1,4 +1,7 @@
+<a id="allocation-and-lifetimes"></a>
 # Allocation And Lifetimes
+
+[Dudu manual](https://dudulang.org/docs.html#memory) | Previous: [Native templates and macros](native-templates-and-macros.md) | Next: [Arrays, views, and indexing](arrays-views-and-indexing.md)
 
 Dudu keeps C++'s value and RAII model while exposing raw allocation for systems
 code. It does not impose ownership checking, borrow checking, a garbage
@@ -226,3 +229,13 @@ programmer's responsibility.
 - [`tests/fixtures/arena_allocator.dd`](../tests/fixtures/arena_allocator.dd): raw arena storage and reset
 - [`tests/fixtures/bad_return_local_address.dd`](../tests/fixtures/bad_return_local_address.dd):
   rejected local pointer escape
+
+## Limits
+
+- Dudu diagnoses direct local-address escapes but does not prove arbitrary
+  pointer lifetimes or aliasing safety.
+- Raw allocation pairs, placement construction, custom arenas, and imported
+  native handles remain the programmer's responsibility.
+- Pointer containers do not acquire ownership of their pointees.
+- Dudu does not add garbage collection, borrow checking, or a mandatory
+  allocator protocol.

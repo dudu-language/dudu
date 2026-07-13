@@ -1,4 +1,7 @@
+<a id="collections-and-literal-inference"></a>
 # Collections And Literal Inference
+
+[Dudu manual](https://dudulang.org/docs.html#containers) | Previous: [Appearance spec](appearance-spec.md) | Next: [Fixed arrays and numeric literals](fixed-arrays-and-numeric-literals.md)
 
 Dudu's built-in dynamic collections lower to standard C++ containers:
 
@@ -120,3 +123,24 @@ ordered: std.map[str, i32]
 
 Their APIs and ownership behavior remain the APIs and behavior of the imported
 C++ types.
+
+## Limits
+
+- Built-in collections are homogeneous. Mixed values require an explicit
+  `variant` element or value type.
+- An empty literal cannot infer missing generic arguments.
+- A list literal selects dynamic `list` storage. It never silently selects a
+  fixed `array`.
+- Native containers retain their own iterator, invalidation, allocation, and
+  exception behavior.
+
+## Tested Examples
+
+- [`containers.dd`](../tests/fixtures/containers.dd) executes inferred list,
+  dictionary, and set operations.
+- [`nested_containers.dd`](../tests/fixtures/nested_containers.dd) checks
+  recursive generic inference.
+- [`bad_list_literal_type.dd`](../tests/fixtures/bad_list_literal_type.dd),
+  [`bad_dict_literal_key_type.dd`](../tests/fixtures/bad_dict_literal_key_type.dd),
+  and [`bad_set_literal_type.dd`](../tests/fixtures/bad_set_literal_type.dd)
+  verify conflicting-element diagnostics.

@@ -238,6 +238,17 @@ Normal compiler pushes must not deploy the website. The workflow is
 and uses a scoped Cloudflare token stored in GitHub Actions. This preserves
 explicit release control while still making deployment reproducible.
 
+Normal publication is local:
+
+```bash
+scripts/deploy-site.sh
+```
+
+That command runs `scripts/check_site.sh`, assembles `site/` with the root
+installer in a temporary directory, and deploys the validated result. The
+GitHub workflow remains a manual backup and runs the structural site checker
+before deployment. Neither path runs on ordinary pushes.
+
 ## Implementation Checklist
 
 - Keep the static site easy to maintain and deploy on Cloudflare Pages.

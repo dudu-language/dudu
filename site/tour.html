@@ -1089,6 +1089,7 @@ logits[rows, cols] += <span class="num">1.0</span></code></pre>
               </div>
             </div>
             <p>The compiler passes typed scalar, slice, ellipsis, new-axis, mask, and index-array arguments to the selected operator. The library decides whether the result is a view, copy, gather, lazy value, or device operation.</p>
+            <p><a href="https://github.com/dudu-language/dudu/blob/master/docs/arrays-views-and-indexing.md">Read the complete arrays, views, and indexing tutorial.</a></p>
 
             <h3>Compile-time extents are optional.</h3>
             <p>A tensor library can keep every shape at runtime, just as NumPy and PyTorch do. Adding extents to a type is optional. It is useful at model, kernel, buffer, and API boundaries where a bad pipeline connection should fail during compilation instead of during a training run.</p>
@@ -1595,7 +1596,7 @@ corner = uv.qqqq</code></pre>
               <li><strong>Not Python with a faster interpreter.</strong><span>Dynamic Python semantics are outside the goal.</span></li>
               <li><strong>Not Rust without braces.</strong><span>Dudu doesn't impose ownership or lifetime rules.</span></li>
               <li><strong>Not a new native ecosystem silo.</strong><span>C, C++, CMake, headers, linkers, debuggers, and profilers remain part of the normal workflow.</span></li>
-              <li><strong>Not stable yet.</strong><span>The current release is a pre-alpha and source compatibility can change.</span></li>
+              <li><strong>Not stable yet.</strong><span>The current release is an alpha and source compatibility can change.</span></li>
               <li><strong>Not every C++ feature rewritten in Python syntax.</strong><span>Direct interop and explicit native escape hatches remain available for unusual cases.</span></li>
             </ul>
             <div class="why-actions">

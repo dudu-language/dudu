@@ -54,10 +54,12 @@ echo "==> source and version checks"
 git -C "$repo_root" diff --check
 "$repo_root/scripts/sync_version.py"
 "$repo_root/scripts/check_ast_migration_guards.sh"
+python3 "$repo_root/scripts/check_site.py" "$repo_root"
 
 echo "==> complete local validation"
 "$repo_root/scripts/test_full.sh"
 "$repo_root/scripts/test_dogfood.sh"
+"$repo_root/scripts/check_site.sh"
 
 echo "==> clean Release build"
 rm -rf "$build_root"

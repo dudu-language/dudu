@@ -1,4 +1,7 @@
+<a id="compile-time-programming"></a>
 # Compile-Time Programming
+
+[Dudu manual](https://dudulang.org/docs.html#generics) | Previous: [Fixed arrays and numeric literals](fixed-arrays-and-numeric-literals.md) | Next: [Generics and value parameters](generics.md)
 
 Dudu uses ordinary typed expressions for constants, layout checks, fixed-array
 extents, value-generic arguments, and build configuration. It lowers these
@@ -248,3 +251,25 @@ When runtime data reaches a constant context, Dudu reports the error when it
 has enough semantic information. Native constant-expression failures are
 reported by the C++ compiler with the generated source location included in
 the build output.
+
+## Limits
+
+- `@constexpr` follows the C++20 constant-expression model; it is not a second
+  interpreter or unrestricted compile-time language.
+- Runtime I/O, allocation, mutable state, and ordinary function calls cannot
+  enter a required constant context.
+- Build values are explicit manifest or `-D` inputs, not ambient environment
+  variables.
+- Native C++ expressions still have to satisfy the imported compiler's
+  constant-expression rules.
+
+## Tested Examples
+
+- [`compile_time_programming.dd`](../tests/fixtures/compile_time_programming.dd)
+  executes constants, `@constexpr`, layout operations, build selection, and
+  value arithmetic.
+- [`bad_constexpr_body_calls_runtime.dd`](../tests/fixtures/bad_constexpr_body_calls_runtime.dd)
+  verifies the runtime-call boundary.
+- [`bad_static_assert.dd`](../tests/fixtures/bad_static_assert.dd) and
+  [`bad_build_flag.dd`](../tests/fixtures/bad_build_flag.dd) verify compile-time
+  diagnostics.
