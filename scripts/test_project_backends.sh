@@ -1,8 +1,28 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
+
+report_project_backend_failure() {
+    local status="$?"
+    local line="$1"
+    if [[ "$-" != *e* ]]; then
+        return "$status"
+    fi
+    echo "project backend test failed at line $line" >&2
+    for output in "$repo_root"/build/project_*_build.err \
+                  "$repo_root"/build/project_*_run.err \
+                  "$repo_root"/build/project_*_test.err \
+                  "$repo_root"/build/project_*_test.out; do
+        [[ -f "$output" ]] || continue
+        echo "--- ${output#"$repo_root/"} ---" >&2
+        cat "$output" >&2
+    done
+    exit "$status"
+}
+
+trap 'report_project_backend_failure "$LINENO"' ERR
 
 # Project fixtures own disposable build trees. Removing them keeps the suite
 # relocatable and prevents CMake caches from another checkout path leaking in.

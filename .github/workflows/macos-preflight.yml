@@ -2,6 +2,15 @@ name: Apple Silicon release preflight
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Validation scope
+        required: true
+        default: release
+        type: choice
+        options:
+          - release
+          - project-backends
 
 permissions:
   contents: read
@@ -29,4 +38,17 @@ jobs:
           cache: npm
           cache-dependency-path: editors/vscode/package-lock.json
       - name: Run complete release portability preflight
+        if: inputs.scope == 'release'
         run: ./scripts/release-check.sh
+      - name: Build project-backend test tools
+        if: inputs.scope == 'project-backends'
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DDUDU_BUILD_TESTS=ON \
+            -DDUDU_STRICT=ON \
+            -DDUDU_WARN_AS_ERROR=ON
+          cmake --build build --parallel 4
+      - name: Run project-backend integration tests
+        if: inputs.scope == 'project-backends'
+        run: ./scripts/test_project_backends.sh
