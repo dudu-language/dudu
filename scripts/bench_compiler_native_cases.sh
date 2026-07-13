@@ -64,9 +64,11 @@ enum Message:
         x: i32
         y: i32
 
-    Write(str)
+    Write:
+        text: str
 
-    Scale(i32)
+    Scale:
+        value: i32
 
 
 EOF

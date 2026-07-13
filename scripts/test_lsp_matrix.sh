@@ -235,10 +235,12 @@ enum OtherMode:
 enum Token:
     Eof
     # Integer token docs.
-    IntLit(i64)
+    IntLit:
+        value: i64
 
 enum OtherToken:
-    IntLit(i64)
+    IntLit:
+        value: i64
 
 # Generic box docs.
 class Box[T]:
@@ -1009,8 +1011,8 @@ def main() -> i32:
     if "enum variant Token.IntLit" not in token_variant_hover_value or "Integer token docs." not in token_variant_hover_value:
         raise AssertionError(f"missing sum-type variant hover docs: {token_variant_hover!r}")
     token_variant_refs = response(messages, 63)
-    token_int_lit_decl = position(entities_source, "    IntLit(i64)", add=4)
-    other_token_int_lit_decl = position(entities_source, "    IntLit(i64)", occurrence=1, add=4)
+    token_int_lit_decl = position(entities_source, "    IntLit:", add=4)
+    other_token_int_lit_decl = position(entities_source, "    IntLit:", occurrence=1, add=4)
     main_token_int_lit = position(main_source, "Token.IntLit", add=len("Token."))
     if not has_start(token_variant_refs, entities.as_uri(), token_int_lit_decl["line"], token_int_lit_decl["character"]):
         raise AssertionError(f"missing Token.IntLit declaration reference: {token_variant_refs!r}")

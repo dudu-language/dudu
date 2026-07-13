@@ -88,9 +88,9 @@ Workspace-symbol results now include class/static member symbols such as
 symbols, so quick-open style searches carry useful context.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant. Payload
-sum-type variants such as `Token.IntLit(i64)` use the same identity path for
-hover and references, so constructor-like variants do not collide with
-same-named variants on other enums.
+sum-type variants such as `Token.IntLit` with a named `value: i64` field use the
+same identity path for hover and references, so constructor-like variants do
+not collide with same-named variants on other enums.
 Completion after enum and sum-type names now uses the same structured type
 alias path: `Mode.` offers `Play` / `Pause`, `Token.` offers payload variants
 such as `IntLit`, and completion items carry enum-member kind plus declaration

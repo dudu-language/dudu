@@ -1,8 +1,9 @@
 enum Token:
     Eof
-    Ident(str)
-    IntLit(i64)
-
+    Ident:
+        text: str
+    IntLit:
+        value: i64
     Punct:
         ch: u8
 

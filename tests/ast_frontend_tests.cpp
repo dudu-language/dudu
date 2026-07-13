@@ -304,8 +304,9 @@ void test_parser_recovery_preserves_class_around_bad_member() {
 void test_parser_recovery_preserves_enum_around_bad_value() {
     const std::string source = "enum Message:\n"
                                "    Ready\n"
-                               "    Broken(i32, )\n"
-                               "    Data(i32)\n";
+                               "    Broken i32\n"
+                               "    Data:\n"
+                               "        value: i32\n";
     const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_enum.dd");
     assert(result.diagnostics.size() == 1);
     assert(result.module.enums.size() == 1);
@@ -896,7 +897,8 @@ void test_payload_enum_ast_shape() {
                                                       "        x: i32\n"
                                                       "        y: i32\n"
                                                       "\n"
-                                                      "    Write(str)\n",
+                                                      "    Write:\n"
+                                                      "        text: str\n",
                                                       "payload_enum_shape.dd");
     assert(module.enums.size() == 1);
     const dudu::EnumDecl& message = module.enums[0];
@@ -904,14 +906,12 @@ void test_payload_enum_ast_shape() {
     assert(message.values[0].name == "Quit");
     assert(message.values[0].payload_fields.empty());
     assert(message.values[1].name == "Move");
-    assert(!message.values[1].tuple_payload);
     assert(message.values[1].payload_fields.size() == 2);
     assert(message.values[1].payload_fields[0].name == "x");
     assert(message.values[1].payload_fields[0].type_ref.kind == dudu::TypeKind::Named);
     assert(message.values[2].name == "Write");
-    assert(message.values[2].tuple_payload);
     assert(message.values[2].payload_fields.size() == 1);
-    assert(message.values[2].payload_fields[0].name == "_0");
+    assert(message.values[2].payload_fields[0].name == "text");
     assert(dudu::type_ref_text(message.values[2].payload_fields[0].type_ref) == "str");
 }
 

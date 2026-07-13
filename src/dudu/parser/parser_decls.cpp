@@ -211,30 +211,11 @@ EnumValueDecl Parser::parse_enum_value() {
     const Token& name = consume_identifier("expected enum value");
     value.name = name.text;
     value.location = name.location;
-    if (match(TokenKind::LParen)) {
-        value.tuple_payload = true;
-        if (!at(TokenKind::RParen)) {
-            size_t index = 0;
-            while (true) {
-                EnumPayloadField field;
-                field.name = "_" + std::to_string(index);
-                field.location = current().location;
-                const JoinedTokens type =
-                    join_until_with_range({TokenKind::Comma, TokenKind::RParen});
-                if (!type.has_tokens) {
-                    throw CompileError(field.location, "enum payload field requires a type");
-                }
-                field.type_ref = parse_type_piece(type);
-                value.payload_fields.push_back(std::move(field));
-                ++index;
-                if (match(TokenKind::Comma)) {
-                    continue;
-                }
-                break;
-            }
-        }
-        consume(TokenKind::RParen, "expected ) after enum payload fields");
-    } else if (match(TokenKind::Colon)) {
+    if (at(TokenKind::LParen)) {
+        fail_current("tuple-style enum payload declarations are not supported; use " +
+                     value.name + ": followed by named fields");
+    }
+    if (match(TokenKind::Colon)) {
         consume(TokenKind::Newline, "expected newline after enum payload header");
         if (!match(TokenKind::Indent)) {
             fail_current("expected indented enum payload fields");

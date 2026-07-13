@@ -784,10 +784,12 @@ void test_lsp_sum_type_variant_hover_and_references_use_identity() {
                              .path = "sum_type_variant_refs.dd",
                              .text = "enum Token:\n"
                                      "    # Integer token docs.\n"
-                                     "    IntLit(i64)\n"
+                                     "    IntLit:\n"
+                                     "        value: i64\n"
                                      "\n"
                                      "enum OtherToken:\n"
-                                     "    IntLit(i64)\n"
+                                     "    IntLit:\n"
+                                     "        value: i64\n"
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    token: Token = Token.IntLit(i64(1))\n"
@@ -795,7 +797,7 @@ void test_lsp_sum_type_variant_hover_and_references_use_identity() {
                                      "    return 0\n"};
     const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
     dudu::Json hover_params =
-        dudu::JsonParser("{\"position\":{\"line\":8,\"character\":26}}").parse();
+        dudu::JsonParser("{\"position\":{\"line\":10,\"character\":26}}").parse();
     const std::string hover = dudu::hover_json(doc, "", &hover_params);
     assert(hover.find("enum variant Token.IntLit") != std::string::npos);
     assert(hover.find("Integer token docs.") != std::string::npos);
@@ -803,9 +805,9 @@ void test_lsp_sum_type_variant_hover_and_references_use_identity() {
     dudu::Json ref_params = dudu::JsonParser("{\"position\":{\"line\":2,\"character\":5}}").parse();
     const std::string refs = dudu::references_json(doc, &ref_params, workspace);
     assert(refs.find("\"start\":{\"line\":2,\"character\":4}") != std::string::npos);
-    assert(refs.find("\"start\":{\"line\":8,\"character\":25}") != std::string::npos);
-    assert(refs.find("\"start\":{\"line\":5,\"character\":4}") == std::string::npos);
-    assert(refs.find("\"start\":{\"line\":9,\"character\":35}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":10,\"character\":25}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":6,\"character\":4}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":11,\"character\":35}") == std::string::npos);
 }
 
 void test_lsp_module_reference_filters_alias_target() {

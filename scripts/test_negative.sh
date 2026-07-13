@@ -32,6 +32,7 @@ expect_fail bad_payload_enum_named_case_field --check "unknown enum payload fiel
 expect_fail bad_payload_enum_named_case_duplicate --check "duplicate enum payload field in pattern: Move.x"
 expect_fail bad_payload_enum_guard_type --check "match guard must be bool, got i32"
 expect_fail bad_payload_enum_guard_after_covered --check "unreachable duplicate case: Message.Move"
+expect_fail bad_tuple_payload_enum --check "tuple-style enum payload declarations are not supported; use Ident: followed by named fields"
 expect_fail bad_option_match_missing --check "non-exhaustive match on wrapper; missing cases: None"
 expect_fail bad_option_match_unreachable_wildcard --check "unreachable wildcard case after exhaustive cases"
 expect_fail bad_option_match_after_wildcard --check "unreachable case after wildcard"

@@ -69,18 +69,37 @@ done = Message.Quit
 line = Message.Write(text="hello")
 ```
 
-Tuple-style payloads are shorter, but named payloads are preferred for public
-APIs:
+Payload declarations always name their fields. Dudu does not support
+tuple-style declarations such as `Ident(str)`. Field names make declarations,
+hover information, generated documentation, diagnostics, and API changes easier
+to understand:
 
 ```python
 enum Token:
     Eof
-    Number(i64)
-    Ident(str)
+
+    Number:
+        value: i64
+
+    Ident:
+        text: str
 ```
 
-This keeps quick internal sum types compact while making serious variants look
-like real data constructors.
+Named fields do not make construction or matching verbose. Generated variant
+constructors accept positional or named arguments:
+
+```python
+token = Token.Ident("name")
+explicit = Token.Ident(text="name")
+
+match token:
+    case Token.Ident(text):
+        print(text)
+```
+
+The declaration defines the meaning and order of the payload. Positional calls
+are concise when that order is obvious; named calls remain available when it is
+not.
 
 ## Matching
 
@@ -172,6 +191,25 @@ is unreachable because a previous pattern already covers it.
 
 `Option[T]` and `Result[T, E]` are matchable:
 
+Conceptually, their payload variants have named fields:
+
+```python
+enum Option[T]:
+    None
+
+    Some:
+        value: T
+
+enum Result[T, E]:
+    Ok:
+        value: T
+
+    Err:
+        error: E
+```
+
+Construction and matching can still use concise positional calls and patterns:
+
 ```python
 match maybe_player:
     case Some(player):
@@ -205,7 +243,7 @@ Simple zero-payload enums lower to C++ `enum class` and support exhaustive
 
 Payload enums now lower to a tagged `std::variant` wrapper with one nested
 struct per variant. Variant constructors such as `Message.Move(x=10, y=20)`,
-tuple-style constructors such as `Message.Write("hello")`, and zero-payload
+positional constructor calls such as `Message.Write("hello")`, and zero-payload
 variants inside payload enums such as `Message.Quit` construct the enclosing
 enum value.
 
@@ -255,7 +293,9 @@ Recursive enums should require an indirection, matching C++/Rust reality:
 
 ```python
 enum Expr:
-    Number(f64)
+    Number:
+        value: f64
+
     Add:
         left: *Expr
         right: *Expr
@@ -268,7 +308,9 @@ Higher-level owning pointers can be used when the ownership model is designed:
 
 ```python
 enum Expr:
-    Number(f64)
+    Number:
+        value: f64
+
     Add:
         left: unique[Expr]
         right: unique[Expr]
@@ -302,9 +344,10 @@ enum Token:
         ch: u8
 ```
 
-Status: an executable lexer-token fixture covers tuple-style payloads, named
-payload blocks, guarded payload cases, named destructuring, and exhaustive
-matching.
+Status: an executable lexer-token fixture covers named payload declarations,
+positional and named construction, guarded payload cases, named destructuring,
+and exhaustive matching. A negative fixture rejects tuple-style payload
+declarations with a replacement diagnostic.
 
 ### UI Events
 
@@ -404,9 +447,14 @@ Named sum type:
 
 ```python
 enum Item:
-    Number(i32)
-    Text(str)
-    Flag(bool)
+    Number:
+        value: i32
+
+    Text:
+        value: str
+
+    Flag:
+        value: bool
 
 items: list[Item] = []
 ```
@@ -488,10 +536,10 @@ Status: simple C-like enum variants are PascalCase in fixtures and compiler
 naming checks. Snake-case enum variants are rejected, so the enum surface
 matches the planned `EnumName.VariantName` spelling.
 
-Status: payload variant syntax parses into the AST for both named field blocks
-and tuple-style payloads. Payload fields are validated for known types,
-duplicate named fields, and snake_case names. Payload enums lower to tagged
-`std::variant` wrappers and support exhaustive `match`.
+Status: payload variant syntax parses named field blocks into the AST.
+Tuple-style payload declarations are rejected. Payload fields are validated for
+known types, duplicate names, and snake_case names. Payload enums lower to
+tagged `std::variant` wrappers and support exhaustive `match`.
 
 Status: `match` and `case` statements parse into statement AST nodes instead of
 being recognized only by a raw unsupported-prefix check. The AST records the

@@ -1,5 +1,6 @@
 enum Expr:
-    Number(f64)
+    Number:
+        value: f64
 
     Add:
         left: *Expr

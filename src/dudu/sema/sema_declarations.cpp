@@ -286,7 +286,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 check_supported_type_shape(field.location, field.type_ref);
                 check_known_type_ref(symbols, field.location, field.type_ref,
                                      "unknown enum payload field type: ");
-                if (!value.tuple_payload && !payload_fields.insert(field.name).second) {
+                if (!payload_fields.insert(field.name).second) {
                     fail(field.location, "duplicate enum payload field: " + en.name + "." +
                                              value.name + "." + field.name);
                 }

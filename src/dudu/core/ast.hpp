@@ -359,7 +359,6 @@ struct EnumValueDecl {
     std::string name;
     Expr value_expr;
     std::vector<EnumPayloadField> payload_fields;
-    bool tuple_payload = false;
     SourceLocation location;
     std::string doc_comment{};
 };

@@ -72,6 +72,37 @@ void test_unterminated_triple_string_contents_are_preserved() {
     assert(dudu::format_source(source) == expected);
 }
 
+void test_enum_variants_are_compact() {
+    const std::string source = "enum Token:\n"
+                               "    Eof\n"
+                               "\n"
+                               "    Ident:\n"
+                               "        text: str\n"
+                               "\n"
+                               "    Pair:\n"
+                               "        left: *Token\n"
+                               "\n"
+                               "        right: *Token\n"
+                               "\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    return 0\n";
+    const std::string expected = "enum Token:\n"
+                                 "    Eof\n"
+                                 "    Ident:\n"
+                                 "        text: str\n"
+                                 "    Pair:\n"
+                                 "        left: *Token\n"
+                                 "        right: *Token\n"
+                                 "\n"
+                                 "\n"
+                                 "def main() -> i32:\n"
+                                 "    return 0\n";
+    const std::string formatted = dudu::format_source(source);
+    assert(formatted == expected);
+    assert(dudu::format_source(formatted) == formatted);
+}
+
 } // namespace
 
 int main() {
@@ -79,6 +110,7 @@ int main() {
     test_one_line_docstrings_stay_compact();
     test_runtime_triple_string_contents_are_preserved();
     test_unterminated_triple_string_contents_are_preserved();
+    test_enum_variants_are_compact();
     std::cout << "format tests passed\n";
     return 0;
 }

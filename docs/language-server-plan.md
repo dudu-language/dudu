@@ -792,9 +792,9 @@ native C/C++ calls can still show useful inferred types.
 Find-references for local variables is covered for same-named locals in
 different functions; local reference collection stays within the selected
 function/method scope when that scope owns the binding.
-Payload sum-type variants such as `Token.IntLit(i64)` are covered for hover and
-references, including a same-named payload variant on another enum to prove the
-qualified enum-member identity is used.
+Payload sum-type variants such as `Token.IntLit` with a named `value: i64` field
+are covered for hover and references, including a same-named payload variant on
+another enum to prove the qualified enum-member identity is used.
 Go-to-definition on Dudu operator use sites is covered in the JSON-RPC matrix:
 the server selects the operator token from AST source locations, infers the
 left/right operand types using the LSP module view, and jumps to the matching
