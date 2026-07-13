@@ -1,0 +1,47 @@
+def sum_view(values: array_view[i32]) -> i32:
+    total = 0
+    for value in values:
+        total += value
+    return total
+
+
+def main() -> i32:
+    image: array[i32] = [
+        [[1, 2, 3, 4], [5, 6, 7, 8]],
+        [[9, 10, 11, 12], [13, 14, 15, 16]],
+    ]
+
+    scalar = image[1, 0, 2]
+    row: array_view[i32][4] = image[0, 1, :]
+    channel: array_view[i32][2, 2] = image[:, :, 0]
+    patch: array_view[i32][2, 2, 2] = image[0:2, 0:2, 1:3]
+    stepped: array_view[i32][2, 2, 2] = image[..., ::2]
+    expanded: array_view[i32][1, 2, 2] = image[None, ..., 2]
+    same: array_view[i32][2, 2, 4] = image[...]
+    resliced: array_view[i32][2, 2] = patch[:, 1, :]
+    clipped: array_view[i32][3] = image[0, 0, 1:99]
+    negative_bound: array_view[i32][dyn] = image[0, 0, -3:]
+
+    if scalar != 11:
+        return 1
+    if sum_view(row) != 26:
+        return 2
+    if sum_view(channel) != 28:
+        return 3
+    if sum_view(patch) != 68:
+        return 4
+    if sum_view(stepped) != 64:
+        return 5
+    if sum_view(expanded) != 36:
+        return 6
+    if sum_view(same) != 136:
+        return 7
+    if sum_view(resliced) != 42:
+        return 8
+    if sum_view(clipped) != 9 or sum_view(negative_bound) != 9:
+        return 9
+
+    channel[1, 0] = 50
+    if image[1, 0, 0] != 50:
+        return 10
+    return 42

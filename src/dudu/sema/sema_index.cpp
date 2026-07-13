@@ -120,19 +120,24 @@ TypeRef dyn_shape_ref(const SourceLocation& location) {
     return named_type_ref("dyn", location);
 }
 
-std::optional<long long> nonnegative_int_expr(const Expr& expr) {
-    if (expr.kind != ExprKind::IntLiteral || expr.value.empty()) {
-        return std::nullopt;
-    }
+std::optional<long long> int_expr_value(const Expr& expr) {
     try {
-        const long long value = std::stoll(expr.value);
-        if (value < 0) {
-            return std::nullopt;
+        if (expr.kind == ExprKind::IntLiteral && !expr.value.empty()) {
+            return std::stoll(expr.value);
         }
-        return value;
+        if (expr.kind == ExprKind::Unary && expr.op == "-" && expr.children.size() == 1 &&
+            expr.children.front().kind == ExprKind::IntLiteral &&
+            !expr.children.front().value.empty()) {
+            return -std::stoll(expr.children.front().value);
+        }
     } catch (const std::exception&) {
-        return std::nullopt;
     }
+    return std::nullopt;
+}
+
+std::optional<long long> nonnegative_int_expr(const Expr& expr) {
+    const std::optional<long long> value = int_expr_value(expr);
+    return value && *value >= 0 ? value : std::nullopt;
 }
 
 std::optional<long long> nonnegative_dim_value(const TypeRef& dim) {
@@ -182,11 +187,15 @@ TypeRef slice_extent_ref(const SourceLocation& location, const TypeRef& source_d
     const Expr& start_expr = slice.children[0];
     const Expr& end_expr = slice_end_expr(slice);
     const Expr* step_expr = slice_step_expr(slice);
+    const std::optional<long long> literal_step =
+        step_expr == nullptr || expr_missing(*step_expr) ? std::optional<long long>{1}
+                                                        : int_expr_value(*step_expr);
+    if (literal_step && *literal_step <= 0) {
+        throw CompileError(step_expr->location, "fixed-array slice step must be positive");
+    }
     const std::optional<long long> start =
         expr_missing(start_expr) ? std::optional<long long>{0} : nonnegative_int_expr(start_expr);
-    const std::optional<long long> step = step_expr == nullptr || expr_missing(*step_expr)
-                                              ? std::optional<long long>{1}
-                                              : nonnegative_int_expr(*step_expr);
+    const std::optional<long long> step = literal_step;
     if (!start || !step || *step <= 0) {
         return dyn_shape_ref(location);
     }

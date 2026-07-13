@@ -66,6 +66,7 @@ compile_and_expect section_attrs 42
 compile_and_expect extern_c_handler 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
+compile_and_expect array_indexing_tutorial 42
 compile_and_expect array_full_matrix_slice 42
 compile_and_expect array_trailing_range_slice 21
 compile_and_expect array_matrix_patch_slice 18

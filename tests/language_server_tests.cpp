@@ -554,6 +554,11 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
     assert(hints.find("array_view[i32][3, 4]") != std::string::npos);
     assert(hints.find("array[f32][1, 1, 1, 2]") != std::string::npos);
     assert(hints.find("\": i32\"") == std::string::npos);
+
+    dudu::Json hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":6}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &hover_params);
+    assert(hover.find("col: array_view[i32][3]") != std::string::npos);
 }
 
 void test_lsp_inlay_hints_type_value_generic_extents_as_usize() {

@@ -706,18 +706,17 @@ image: array[Color][height, width]
 pixel = image[y, x]
 ```
 
-Slicing should be supported for numeric and graphics code, but copy-vs-view
-semantics must be explicit. The preferred model is that slices produce views
-where possible, and callers explicitly copy when they want ownership:
+Fixed-array slices produce non-owning views. Callers copy explicitly when they
+want independent storage:
 
 ```python
 row = mat[row_index, :]
 patch = image[y0:y1, x0:x1]
-copy = list(row)
 ```
 
-The detailed indexing and slicing design is tracked in
-[Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md) and
+The complete user-facing behavior is documented in
+[Arrays, Views, And Indexing](arrays-views-and-indexing.md). The compiler and
+library dispatch boundary is documented in
 [Indexing Dispatch Model](indexing-dispatch-model.md).
 
 For user/library types, bracket syntax dispatches through `@operator("[]")`

@@ -130,6 +130,7 @@ expect_fail bad_index_read_type --emit-cpp "cannot assign i32 to bool without an
 expect_fail bad_empty_index --emit-cpp "index expression expects receiver and index"
 expect_fail bad_index_non_container --emit-cpp "cannot index non-container: value"
 expect_fail bad_array_empty_inference --emit-cpp "array shape cannot be inferred from an empty literal"
+expect_fail bad_array_zero_step --check "fixed-array slice step must be positive"
 expect_fail bad_array_ragged_inference --emit-cpp "ragged array literal"
 expect_fail bad_array_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2, 2\\], got \\[3, 2\\]"
 expect_fail bad_array_empty_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2\\], got \\[0\\]"

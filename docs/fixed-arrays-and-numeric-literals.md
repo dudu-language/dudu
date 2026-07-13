@@ -3,6 +3,9 @@
 `array[T][shape]` is fixed-size contiguous storage. It lowers to nested
 `std::array` storage and its extents are compile-time values.
 
+See [Arrays, Views, And Indexing](arrays-views-and-indexing.md) for
+multidimensional indexing, slicing, ownership, strides, and library operators.
+
 ```python
 samples: array[f32][1024]
 transform: array[f32][4, 4]
