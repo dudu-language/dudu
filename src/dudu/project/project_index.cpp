@@ -1,6 +1,7 @@
 #include "dudu/project/project_index.hpp"
 
 #include "dudu/core/file_io.hpp"
+#include "dudu/macro/macro_expansion.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
@@ -306,6 +307,12 @@ ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
     apply_project_context_to_tree(index.module_, options);
     if (options.include_native_headers) {
         merge_native_headers_for_tree(index.module_, options);
+    }
+    if (options.expand_macros) {
+        index.macro_report_ = macro::expand_module_macros(
+            index.module_, {.project = options.config,
+                            .cache_dir = {},
+                            .request_timeout = std::chrono::milliseconds(5000)});
     }
     analyze_project_module(index.module_, options);
 

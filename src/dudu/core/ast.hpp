@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -442,6 +443,27 @@ struct StaticAssertDecl {
     SourceLocation location;
 };
 
+enum class GeneratedDeclarationKind {
+    Class,
+    Enum,
+    Function,
+    Field,
+    Constant,
+    Implementation,
+};
+
+struct GeneratedDeclarationOrigin {
+    GeneratedDeclarationKind kind = GeneratedDeclarationKind::Function;
+    std::string module_path;
+    std::string owner;
+    std::string name;
+    std::string macro_name;
+    std::string macro_identity;
+    SourceRange invocation;
+    SourceRange definition;
+    SourceRange source_declaration;
+};
+
 struct ModuleAst {
     std::filesystem::path source_path;
     std::string module_path;
@@ -464,6 +486,8 @@ struct ModuleAst {
     std::vector<FunctionDecl> functions;
     std::vector<ConstDecl> constants;
     std::vector<StaticAssertDecl> static_asserts;
+    std::set<std::string> resolved_macro_decorators;
+    std::vector<GeneratedDeclarationOrigin> generated_origins;
     std::vector<ModuleAst> module_units;
 };
 

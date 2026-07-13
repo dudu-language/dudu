@@ -215,9 +215,10 @@ void check_target_decorator_mode(const ModuleAst& module, const Decorator& decor
     }
 }
 
-void check_class_decorator(const Decorator& decorator) {
+void check_class_decorator(const ModuleAst& module, const Decorator& decorator) {
     const std::string text = decorator_name(decorator);
-    if (text == "packed" || decorator_call_matches(decorator, "align")) {
+    if (text == "packed" || decorator_call_matches(decorator, "align") ||
+        module.resolved_macro_decorators.contains(text)) {
         return;
     }
     fail(decorator.location, "unknown class decorator: @" + text);
@@ -225,6 +226,9 @@ void check_class_decorator(const Decorator& decorator) {
 
 void check_function_decorator(const ModuleAst& module, const Decorator& decorator) {
     const std::string text = decorator_name(decorator);
+    if (module.resolved_macro_decorators.contains(text)) {
+        return;
+    }
     if (text == "staticmethod") {
         fail(decorator.location,
              "@staticmethod is not supported; omit self for a class-scoped function");
@@ -306,7 +310,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         class_symbol_storage = with_self_type(*class_symbols, klass.name);
         class_symbols = &*class_symbol_storage;
         for (const Decorator& decorator : klass.decorators) {
-            check_class_decorator(decorator);
+            check_class_decorator(module, decorator);
         }
         std::vector<TypeRef> bases;
         for (const BaseClassDecl& base : klass.base_class_refs) {

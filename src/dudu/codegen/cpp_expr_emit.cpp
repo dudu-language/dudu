@@ -216,6 +216,9 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
             return false;
         }
         const std::string prefix = name.substr(0, dot);
+        if (symbols->module_import_prefixes.contains(prefix) && symbols->types.contains(name)) {
+            return true;
+        }
         return symbols->native_path_prefixes.contains(prefix) &&
                !symbols->module_import_prefixes.contains(prefix);
     }

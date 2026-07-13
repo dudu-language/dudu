@@ -2,15 +2,13 @@
 
 #include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/core/file_io.hpp"
+#include "dudu/macro/macro_hash.hpp"
 #include "dudu/macro/macro_protocol_generated.hpp"
 #include "dudu/macro/macro_worker_codegen.hpp"
 #include "dudu/native/native_build.hpp"
 
 #include <algorithm>
-#include <array>
-#include <cstdint>
 #include <fstream>
-#include <iomanip>
 #include <map>
 #include <optional>
 #include <set>
@@ -21,39 +19,6 @@
 
 namespace dudu::macro {
 namespace {
-
-class StableHash {
-  public:
-    void add(std::string_view value) {
-        mix_u64(value.size());
-        for (const unsigned char byte : value) {
-            mix(byte);
-        }
-    }
-
-    std::string finish() const {
-        std::ostringstream out;
-        out << std::hex << std::setfill('0') << std::setw(16) << first_ << std::setw(16)
-            << second_;
-        return out.str();
-    }
-
-  private:
-    void mix(unsigned char byte) {
-        first_ = (first_ ^ byte) * 1099511628211ULL;
-        second_ =
-            (second_ + byte + 0x9e3779b97f4a7c15ULL) * 14029467366897019727ULL;
-    }
-
-    void mix_u64(std::uint64_t value) {
-        for (std::size_t index = 0; index < sizeof(value); ++index) {
-            mix(static_cast<unsigned char>((value >> (index * 8U)) & 0xffU));
-        }
-    }
-
-    std::uint64_t first_ = 14695981039346656037ULL;
-    std::uint64_t second_ = 1099511628211ULL;
-};
 
 std::vector<const ModuleAst*> units(const ModuleAst& module) {
     if (module.module_units.empty()) {

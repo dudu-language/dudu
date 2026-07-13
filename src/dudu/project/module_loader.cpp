@@ -143,6 +143,11 @@ void append_module(ModuleAst& target, const ModuleAst& source) {
     target.module_import_prefixes.insert(target.module_import_prefixes.end(),
                                          source.module_import_prefixes.begin(),
                                          source.module_import_prefixes.end());
+    target.resolved_macro_decorators.insert(source.resolved_macro_decorators.begin(),
+                                            source.resolved_macro_decorators.end());
+    target.generated_origins.insert(target.generated_origins.end(),
+                                    source.generated_origins.begin(),
+                                    source.generated_origins.end());
     target.enums.insert(target.enums.end(), source.enums.begin(), source.enums.end());
     target.classes.insert(target.classes.end(), source.classes.begin(), source.classes.end());
     target.constants.insert(target.constants.end(), source.constants.begin(),
