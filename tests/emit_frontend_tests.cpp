@@ -93,14 +93,14 @@ void test_value_member_emission() {
 }
 
 void test_inferred_collection_literal_emission() {
-    const dudu::ModuleAst module = dudu::parse_source(
-        "def main() -> i32:\n"
-        "    numbers = [1, 2, 3]\n"
-        "    scores = {\"ada\": 20, \"bob\": 22}\n"
-        "    names = {\"ada\", \"bob\"}\n"
-        "    nested = [[1, 2], [3, 4]]\n"
-        "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n",
-        "inferred_collection_emission.dd");
+    const dudu::ModuleAst module =
+        dudu::parse_source("def main() -> i32:\n"
+                           "    numbers = [1, 2, 3]\n"
+                           "    scores = {\"ada\": 20, \"bob\": 22}\n"
+                           "    names = {\"ada\", \"bob\"}\n"
+                           "    nested = [[1, 2], [3, 4]]\n"
+                           "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n",
+                           "inferred_collection_emission.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("std::vector<int32_t> numbers = {1, 2, 3};") != std::string::npos);
@@ -226,6 +226,19 @@ void test_top_level_array_constant_ast_emission() {
     assert(cpp.find("inline constexpr std::array<std::array<int32_t, 2>, 2> ROWS = "
                     "std::array<std::array<int32_t, 2>, 2>{std::array<int32_t, 2>{1, "
                     "2}, std::array<int32_t, 2>{3, 4}};") != std::string::npos);
+}
+
+void test_compile_time_programming_emission(const std::filesystem::path& root) {
+    const std::filesystem::path path = root / "tests" / "fixtures" / "compile_time_programming.dd";
+    const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("constexpr size_t align_up(size_t value, size_t alignment)") !=
+           std::string::npos);
+    assert(cpp.find("inline constexpr size_t PACKET_BYTES = ") != std::string::npos);
+    assert(cpp.find("static_assert(PACKET_ALIGNMENT == 16);") != std::string::npos);
+    assert(cpp.find("if constexpr ((build::RENDER_BACKEND == \"vulkan\"))") != std::string::npos);
+    assert(cpp.find("std::array<uint32_t, QUEUE_CAPACITY> queue") != std::string::npos);
 }
 
 void test_three_dimensional_array_literal_emission() {
@@ -503,6 +516,7 @@ int main() {
         test_offsetof_string_field_requires_parsed_value();
         test_array_literal_scalar_ast_emission();
         test_top_level_array_constant_ast_emission();
+        test_compile_time_programming_emission(root);
         test_three_dimensional_array_literal_emission();
         test_value_match_ast_emission();
         test_non_returning_value_match_emits_else_chain();
