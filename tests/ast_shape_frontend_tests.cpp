@@ -6,6 +6,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/match_patterns.hpp"
+#include "dudu/core/shape_value_expr.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
@@ -616,6 +617,16 @@ void test_array_literal_shape_inference_is_rank_independent() {
     assert(mismatch.column == wrong.children.front().location.column);
 }
 
+void test_shape_value_arithmetic_normalizes_and_folds() {
+    assert(dudu::shape_value_expr_valid("(H + W) * K / 2 % 7"));
+    assert(!dudu::shape_value_expr_valid("H ** 2"));
+    assert(dudu::normalize_shape_value_expr("(H+W)*K") == "(H + W) * K");
+    assert(dudu::shape_value_expr_substitute("N / 4 + N % 4", {{"N", "10"}}) == "4");
+    assert(dudu::shape_value_expr_substitute("(H - K + 1) * W",
+                                             {{"H", "5"}, {"K", "3"}, {"W", "4"}}) == "12");
+    assert(dudu::shape_value_expr_equivalent("(2 + 2) * 3", "12"));
+}
+
 } // namespace
 
 int main() {
@@ -627,6 +638,7 @@ int main() {
         test_decorator_expression_ast_shape();
         test_type_ast_shape();
         test_array_literal_shape_inference_is_rank_independent();
+        test_shape_value_arithmetic_normalizes_and_folds();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

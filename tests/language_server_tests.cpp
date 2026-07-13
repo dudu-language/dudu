@@ -577,6 +577,28 @@ void test_lsp_inlay_hints_type_value_generic_extents_as_usize() {
     assert(hints.find("\"value\":\"usize\"") != std::string::npos);
 }
 
+void test_lsp_inlay_hints_fold_inferred_value_generic_results() {
+    const dudu::Document doc{.uri = "",
+                             .path = "value_generic_result_inlay.dd",
+                             .text = "def grouped_count[N](values: &array[i32][N]) "
+                                     "-> array[i32][N / 4 + N % 4]:\n"
+                                     "    out: array[i32][N / 4 + N % 4]\n"
+                                     "    return out\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    values: array[i32][10]\n"
+                                     "    groups = grouped_count(values)\n"
+                                     "    return i32(len(groups))\n"};
+
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("array[i32][4]") != std::string::npos);
+
+    dudu::Json hover_params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":6}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &hover_params);
+    assert(hover.find("groups: array[i32][4]") != std::string::npos);
+}
+
 void test_lsp_hover_describes_tensor_indexing_builtin_types() {
     const dudu::Document doc{.uri = "",
                              .path = "tensor_index_builtin_hover.dd",
@@ -1127,6 +1149,7 @@ int main() {
         test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
         test_lsp_inlay_hints_use_inferred_array_literal_shapes();
         test_lsp_inlay_hints_type_value_generic_extents_as_usize();
+        test_lsp_inlay_hints_fold_inferred_value_generic_results();
         test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_move_builtin_hover_inlay_and_shadowing();
         test_lsp_signature_help_uses_visible_imported_functions();

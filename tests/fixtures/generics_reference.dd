@@ -1,0 +1,85 @@
+def choose[T](value: T, fallback: T) -> T:
+    if value < fallback:
+        return fallback
+    return value
+
+
+def first[T](items: &const[list[T]]) -> T:
+    return items[0]
+
+
+class Box[T]:
+    value: T
+
+    def get(self) -> T:
+        return self.value
+
+    def set(self, value: T):
+        self.value = value
+
+
+class Pair[Left, Right]:
+    left: Left
+    right: Right
+
+
+class Vec2[T]:
+    x: T
+    y: T
+
+    @operator("+")
+    def add(self, other: &const[Vec2[T]]) -> Vec2[T]:
+        return Vec2[T](self.x + other.x, self.y + other.y)
+
+
+class SmallBuffer[T, N]:
+    items: array[T][N]
+    count: usize
+
+
+def copy_matrix[T, Rows, Cols](
+    source: &const[array[T][Rows, Cols]],
+) -> array[T][Rows, Cols]:
+    result: array[T][Rows, Cols]
+    for row: usize in range(Rows):
+        for column: usize in range(Cols):
+            result[row, column] = source[row, column]
+    return result
+
+
+def grouped_count[N](values: &array[i32][N]) -> array[i32][N / 4 + N % 4]:
+    groups: array[i32][N / 4 + N % 4]
+    for index: usize in range(N / 4 + N % 4):
+        groups[index] = values[index]
+    return groups
+
+
+def main() -> i32:
+    names: list[str] = ["ada", "grace"]
+    name = first(names)
+
+    box: Box[i32] = Box[i32](1)
+    box.set(4)
+    pair = Pair[str, i32]("score", 5)
+    vector = Vec2[i32](1, 2) + Vec2[i32](3, 4)
+
+    storage: array[i32][2] = [10, 20]
+    small = SmallBuffer[i32, 2](storage, 6)
+
+    values: array[i32][10]
+    groups = grouped_count(values)
+
+    matrix: array[i32][2, 2] = [[1, 2], [3, 7]]
+    copied = copy_matrix(matrix)
+
+    return (
+        choose(2, 0)
+        + i32(len(name))
+        + box.get()
+        + pair.right
+        + vector.x
+        + i32(small.count)
+        + i32(len(groups))
+        + copied[1, 1]
+        + 7
+    )

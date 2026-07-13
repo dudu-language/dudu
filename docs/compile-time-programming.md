@@ -148,12 +148,12 @@ class SmallBuffer[T, N]:
     items: array[T][N]
 
 
-def conv_output_extent[Input, Kernel]() -> usize:
-    return Input - Kernel + 1
-
-
-OUTPUT_H: usize = conv_output_extent[32, 3]()
-static_assert(OUTPUT_H == 30)
+def valid_window[Input, Kernel](
+    input: &array[u8][Input],
+    kernel: &array[u8][Kernel],
+) -> array[u8][Input - Kernel + 1]:
+    output: array[u8][Input - Kernel + 1]
+    return output
 ```
 
 Shaped parameters can supply value arguments without repeating them at the

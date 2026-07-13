@@ -1,0 +1,11 @@
+def grouped_count[N](values: &array[i32][N]) -> array[i32][N / 4 + N % 4]:
+    groups: array[i32][N / 4 + N % 4]
+    for index: usize in range(N / 4 + N % 4):
+        groups[index] = values[index]
+    return groups
+
+
+def main() -> i32:
+    values: array[i32][10]
+    groups = grouped_count(values)
+    return i32(len(groups)) + 38
