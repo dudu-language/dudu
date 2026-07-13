@@ -75,6 +75,17 @@ foreach(subsystem IN LISTS DUDU_SUBSYSTEM_DIRS)
     list(APPEND DUDU_FRONTEND_SOURCES ${subsystem_sources})
 endforeach()
 
+set(DUDU_MACRO_RUNTIME_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_protocol_generated.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_wire.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_worker_runtime.cpp"
+)
+list(REMOVE_ITEM DUDU_FRONTEND_SOURCES ${DUDU_MACRO_RUNTIME_SOURCES})
+
+add_library(dudu_macro_runtime STATIC ${DUDU_MACRO_RUNTIME_SOURCES})
+target_include_directories(dudu_macro_runtime PUBLIC src)
+target_compile_features(dudu_macro_runtime PUBLIC cxx_std_20)
+
 add_library(dudu_frontend ${DUDU_FRONTEND_SOURCES})
 target_include_directories(dudu_frontend PUBLIC
     src
@@ -84,7 +95,7 @@ target_include_directories(dudu_frontend PRIVATE ${DUDU_LIBCLANG_INCLUDE_DIR})
 target_compile_definitions(dudu_frontend PRIVATE
     DUDU_SOURCE_LIBRARY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
-target_link_libraries(dudu_frontend PRIVATE ${DUDU_LIBCLANG_LIBRARY})
+target_link_libraries(dudu_frontend PUBLIC dudu_macro_runtime PRIVATE ${DUDU_LIBCLANG_LIBRARY})
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
 
 add_executable(dudu src/tools/dudu.cpp)
@@ -101,6 +112,18 @@ target_compile_features(dudu-lsp PRIVATE cxx_std_20)
 
 install(TARGETS dudu duc dudu-lsp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(TARGETS dudu_macro_runtime
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(FILES
+    src/dudu/macro/macro_protocol_generated.hpp
+    src/dudu/macro/macro_sdk_bridge_generated.hpp
+    src/dudu/macro/macro_wire.hpp
+    src/dudu/macro/macro_worker_runtime.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dudu/macro
 )
 
 install(PROGRAMS install.sh
@@ -227,6 +250,18 @@ if(DUDU_BUILD_TESTS)
     target_link_libraries(dudu_macro_syntax_tests PRIVATE dudu_frontend)
     target_compile_features(dudu_macro_syntax_tests PRIVATE cxx_std_20)
     target_compile_definitions(dudu_macro_syntax_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+
+    add_executable(dudu_macro_worker_runtime_tests tests/macro_worker_runtime_tests.cpp)
+    target_link_libraries(dudu_macro_worker_runtime_tests PRIVATE dudu_macro_runtime)
+    target_compile_features(dudu_macro_worker_runtime_tests PRIVATE cxx_std_20)
+
+    add_executable(dudu_macro_worker_codegen_tests tests/macro_worker_codegen_tests.cpp)
+    target_link_libraries(dudu_macro_worker_codegen_tests PRIVATE dudu_frontend)
+    target_compile_features(dudu_macro_worker_codegen_tests PRIVATE cxx_std_20)
+
+    add_executable(dudu_macro_worker_process_tests tests/macro_worker_process_tests.cpp)
+    target_link_libraries(dudu_macro_worker_process_tests PRIVATE dudu_frontend)
+    target_compile_features(dudu_macro_worker_process_tests PRIVATE cxx_std_20)
 endif()
 
 option(DUDU_PACKAGE_DEB "Enable Debian package generation through CPack" OFF)
@@ -271,6 +306,9 @@ if(DUDU_STRICT)
         target_compile_options(dudu_format_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(dudu_macro_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(dudu_macro_syntax_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(dudu_macro_worker_runtime_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(dudu_macro_worker_codegen_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(dudu_macro_worker_process_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     if(DUDU_WARN_AS_ERROR)
         target_compile_options(dudu PRIVATE -Werror)
@@ -296,6 +334,9 @@ if(DUDU_STRICT)
             target_compile_options(dudu_format_tests PRIVATE -Werror)
             target_compile_options(dudu_macro_protocol_tests PRIVATE -Werror)
             target_compile_options(dudu_macro_syntax_tests PRIVATE -Werror)
+            target_compile_options(dudu_macro_worker_runtime_tests PRIVATE -Werror)
+            target_compile_options(dudu_macro_worker_codegen_tests PRIVATE -Werror)
+            target_compile_options(dudu_macro_worker_process_tests PRIVATE -Werror)
         endif()
     endif()
 endif()
@@ -320,6 +361,9 @@ if(DUDU_BUILD_TESTS)
     add_test(NAME dudu_format_tests COMMAND dudu_format_tests)
     add_test(NAME dudu_macro_protocol_tests COMMAND dudu_macro_protocol_tests)
     add_test(NAME dudu_macro_syntax_tests COMMAND dudu_macro_syntax_tests)
+    add_test(NAME dudu_macro_worker_runtime_tests COMMAND dudu_macro_worker_runtime_tests)
+    add_test(NAME dudu_macro_worker_codegen_tests COMMAND dudu_macro_worker_codegen_tests)
+    add_test(NAME dudu_macro_worker_process_tests COMMAND dudu_macro_worker_process_tests)
     add_test(NAME dudu_macro_sdk_compile_tests
         COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/test_macro_sdk_compile.sh $<TARGET_FILE:duc>)
 endif()
