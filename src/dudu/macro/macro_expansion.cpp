@@ -185,10 +185,32 @@ void mark_resolved_decorators(ModuleAst& module, const Plan& plan) {
     }
 }
 
+void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
+    std::set<std::string> host_modules;
+    for (const auto& [_, definition] : plan.definitions) {
+        host_modules.insert(definition.module_path);
+    }
+    if (!plan.definitions.empty()) {
+        host_modules.insert("dudu.ast");
+    }
+    if (module.module_units.empty()) {
+        if (host_modules.contains(module.module_path)) {
+            module.compilation_domain = CompilationDomain::MacroHost;
+        }
+        return;
+    }
+    for (ModuleAst& unit : module.module_units) {
+        if (host_modules.contains(unit.module_path)) {
+            unit.compilation_domain = CompilationDomain::MacroHost;
+        }
+    }
+}
+
 } // namespace
 
 ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& options) {
     const Plan plan = build_plan(module);
+    mark_macro_host_modules(module, plan);
     if (plan.invocations.empty()) return {};
     mark_resolved_decorators(module, plan);
 

@@ -1,6 +1,8 @@
+#include "dudu/codegen/cpp_emit_modules.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -73,6 +75,15 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     const dudu::ClassDecl& player = player_class(first.merged_module());
     assert(player.methods.size() == 1);
     assert(player.methods.front().name == "debug_score");
+    const std::vector<dudu::CppModuleArtifact> artifacts =
+        dudu::emit_cpp_module_artifacts(first.merged_module());
+    assert(artifacts.size() == 3);
+    assert(std::none_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
+        return artifact.module_path == "macros" || artifact.module_path == "dudu.ast";
+    }));
+    assert(std::any_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
+        return artifact.content.find("debug_score") != std::string::npos;
+    }));
 
     const dudu::ProjectIndex second = dudu::ProjectIndex::load(options);
     assert(second.macro_report().invocations == 1);

@@ -104,6 +104,10 @@ void analyze_module_tree(const ModuleAst& module, SemanticOptions options) {
         return;
     }
     for (const ModuleAst& unit : module.module_units) {
+        if (unit.compilation_domain == CompilationDomain::MacroHost &&
+            !options.include_macro_host_modules) {
+            continue;
+        }
         analyze_module_in_tree(unit, &module, options);
     }
 }
@@ -115,6 +119,10 @@ std::vector<CompileError> analyze_module_tree_collecting(const ModuleAst& module
     }
     std::vector<CompileError> diagnostics;
     for (const ModuleAst& unit : module.module_units) {
+        if (unit.compilation_domain == CompilationDomain::MacroHost &&
+            !options.include_macro_host_modules) {
+            continue;
+        }
         std::vector<CompileError> unit_diagnostics =
             analyze_module_in_tree_collecting(unit, &module, options);
         diagnostics.insert(diagnostics.end(), std::make_move_iterator(unit_diagnostics.begin()),
@@ -135,7 +143,9 @@ void analyze_module_tree(const ModuleAst& module, const std::vector<std::string>
     const std::set<std::string> selected(module_paths.begin(), module_paths.end());
     bool matched_any = false;
     for (const ModuleAst& unit : module.module_units) {
-        if (selected.contains(unit.module_path)) {
+        if (selected.contains(unit.module_path) &&
+            (options.include_macro_host_modules ||
+             unit.compilation_domain != CompilationDomain::MacroHost)) {
             matched_any = true;
             analyze_module_in_tree(unit, &module, options);
         }

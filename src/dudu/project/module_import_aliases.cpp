@@ -163,6 +163,20 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
         add_module_type_alias(module, prefix, en.name,
                               module_qualified_type_ref(prefix, en.name, import.location),
                               import.location, en.doc_comment);
+        for (const EnumValueDecl& value : en.values) {
+            const std::string exposed_name = prefix + "." + en.name + "." + value.name;
+            module.native_values.push_back(
+                {.name = exposed_name,
+                 .native_spelling = "",
+                 .type_ref = module_qualified_type_ref(prefix, en.name, import.location),
+                 .enum_constant = true,
+                 .identity = module_symbol_identity(
+                     en.origin_module.empty()
+                         ? dependency.module_path + "." + en.name + "." + value.name
+                         : en.origin_module + "." + en.name + "." + value.name),
+                 .location = import.location,
+                 .doc_comment = value.doc_comment});
+        }
     }
     for (const ClassDecl& klass : dependency.classes) {
         add_module_type_alias(module, prefix, klass.name,

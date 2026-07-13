@@ -20,9 +20,16 @@ struct CppModuleArtifact {
     std::string content;
 };
 
+struct CppModuleEmitOptions {
+    bool include_macro_host_modules = false;
+};
+
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module);
 std::vector<CppModuleArtifact>
 emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string>& module_paths);
+std::vector<CppModuleArtifact>
+emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string>& module_paths,
+                          CppModuleEmitOptions options);
 std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& module,
                                                               const std::string& filter = {},
                                                               bool capture_output = true);

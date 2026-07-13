@@ -6,6 +6,7 @@
 #include "dudu/macro/macro_protocol_generated.hpp"
 #include "dudu/macro/macro_worker_codegen.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/sema/sema.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -184,8 +185,10 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         throw std::invalid_argument("macro worker cache directory is required");
     }
     const std::vector<std::string> selected = dependency_closure(module, plan);
+    analyze_module_tree(module, selected,
+                        {.check_bodies = true, .include_macro_host_modules = true});
     const std::vector<CppModuleArtifact> artifacts =
-        emit_cpp_module_artifacts(module, selected);
+        emit_cpp_module_artifacts(module, selected, {.include_macro_host_modules = true});
     const std::string identity = build_identity(artifacts, plan, options);
     const std::filesystem::path cache_entry = options.cache_dir / identity;
     const std::filesystem::path executable = cache_entry / "worker";

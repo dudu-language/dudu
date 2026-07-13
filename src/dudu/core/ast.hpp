@@ -19,6 +19,11 @@ enum class Visibility {
     Private,
 };
 
+enum class CompilationDomain {
+    Target,
+    MacroHost,
+};
+
 enum class ImportKind {
     Module,
     From,
@@ -468,6 +473,7 @@ struct ModuleAst {
     std::filesystem::path source_path;
     std::string module_path;
     std::string doc_comment{};
+    CompilationDomain compilation_domain = CompilationDomain::Target;
     std::map<std::string, std::string> build_values;
     bool target_mode_explicit = false;
     std::vector<ImportDecl> imports;

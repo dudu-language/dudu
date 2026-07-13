@@ -256,7 +256,8 @@ std::string resolved_module_path_for_import(const ModuleAst& unit, const ImportD
 
 CppEmitOptions module_emit_options(const ModuleAst& unit,
                                    const std::map<std::string, const ModuleAst*>& modules,
-                                   bool test_source = false, bool public_abi = false) {
+                                   bool test_source = false, bool public_abi = false,
+                                   bool include_macro_host_modules = false) {
     CppEmitOptions options;
     options.emit_prelude = false;
     options.use_generated_names = true;
@@ -269,7 +270,9 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
             continue;
         }
         const auto dependency = modules.find(resolved_module_path_for_import(unit, import));
-        if (dependency != modules.end()) {
+        if (dependency != modules.end() &&
+            (include_macro_host_modules ||
+             dependency->second->compilation_domain != CompilationDomain::MacroHost)) {
             add_imported_generated_names(options, *dependency->second, import, public_abi,
                                          test_source);
         }
@@ -277,7 +280,10 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
     return options;
 }
 
-std::vector<std::string> module_include_paths(const ModuleAst& unit) {
+std::vector<std::string>
+module_include_paths(const ModuleAst& unit,
+                     const std::map<std::string, const ModuleAst*>& modules,
+                     bool include_macro_host_modules) {
     std::set<std::string> paths;
     for (const ImportDecl& import : unit.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
@@ -286,16 +292,23 @@ std::vector<std::string> module_include_paths(const ModuleAst& unit) {
         if (import.module_path.empty() || import.module_path == unit.module_path) {
             continue;
         }
-        paths.insert(
-            module_artifact_base_for_path(resolved_module_path_for_import(unit, import)).string() +
-            ".hpp");
+        const std::string resolved = resolved_module_path_for_import(unit, import);
+        const auto dependency = modules.find(resolved);
+        if (dependency != modules.end() && !include_macro_host_modules &&
+            dependency->second->compilation_domain == CompilationDomain::MacroHost) {
+            continue;
+        }
+        paths.insert(module_artifact_base_for_path(resolved).string() + ".hpp");
     }
     return {paths.begin(), paths.end()};
 }
 
-void emit_module_includes(std::ostringstream& out, const ModuleAst& unit) {
+void emit_module_includes(std::ostringstream& out, const ModuleAst& unit,
+                          const std::map<std::string, const ModuleAst*>& modules,
+                          bool include_macro_host_modules) {
     out << "#include \"dudu_runtime.hpp\"\n";
-    const std::vector<std::string> includes = module_include_paths(unit);
+    const std::vector<std::string> includes =
+        module_include_paths(unit, modules, include_macro_host_modules);
     for (const std::string& path : includes) {
         out << "#include \"" << path << "\"\n";
     }
@@ -332,20 +345,25 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
 
 std::string header_with_module_includes(const ModuleAst& unit,
                                         const std::map<std::string, const ModuleAst*>& modules,
-                                        bool test_source = false, bool public_abi = false) {
+                                        bool test_source = false, bool public_abi = false,
+                                        bool include_macro_host_modules = false) {
     std::ostringstream out;
-    emit_module_includes(out, unit);
-    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source, public_abi));
+    emit_module_includes(out, unit, modules, include_macro_host_modules);
+    out << emit_cpp_header(
+        unit, module_emit_options(unit, modules, test_source, public_abi,
+                                  include_macro_host_modules));
     return out.str();
 }
 
 std::string source_with_boundary_comment(const ModuleAst& unit,
                                          const std::map<std::string, const ModuleAst*>& modules,
-                                         bool test_source = false, bool public_abi = false) {
+                                         bool test_source = false, bool public_abi = false,
+                                         bool include_macro_host_modules = false) {
     std::ostringstream out;
-    const CppEmitOptions options = module_emit_options(unit, modules, test_source, public_abi);
+    const CppEmitOptions options = module_emit_options(
+        unit, modules, test_source, public_abi, include_macro_host_modules);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
-    emit_module_includes(out, unit);
+    emit_module_includes(out, unit, modules, include_macro_host_modules);
     out << emit_cpp_source(unit, options);
     if (!test_source) {
         emit_entry_point(out, unit, options);
@@ -355,17 +373,20 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
 
 void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
                       const std::map<std::string, const ModuleAst*>& modules,
-                      bool test_source = false, bool public_abi = false) {
+                      bool test_source = false, bool public_abi = false,
+                      bool include_macro_host_modules = false) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(unit, modules, test_source, public_abi)});
+                   .content = header_with_module_includes(
+                       unit, modules, test_source, public_abi, include_macro_host_modules)});
     out.push_back(
         {.path = base.string() + ".cpp",
          .module_path = unit.module_path,
          .kind = CppModuleArtifactKind::Source,
-         .content = source_with_boundary_comment(unit, modules, test_source, public_abi)});
+         .content = source_with_boundary_comment(
+             unit, modules, test_source, public_abi, include_macro_host_modules)});
 }
 
 std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
@@ -380,8 +401,11 @@ std::set<std::string> module_filter(const std::vector<std::string>& module_paths
     return {module_paths.begin(), module_paths.end()};
 }
 
-bool should_emit_module(const std::set<std::string>& module_paths, const ModuleAst& unit) {
-    return module_paths.empty() || module_paths.contains(unit.module_path);
+bool should_emit_module(const std::set<std::string>& module_paths, const ModuleAst& unit,
+                        bool include_macro_host_modules = false) {
+    return (include_macro_host_modules ||
+            unit.compilation_domain != CompilationDomain::MacroHost) &&
+           (module_paths.empty() || module_paths.contains(unit.module_path));
 }
 
 ModuleAst test_harness_module(const ModuleAst& module) {
@@ -405,6 +429,9 @@ std::string test_harness_source(const ModuleAst& module, const std::string& filt
     const std::vector<ModuleAst>& units =
         module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
     for (const ModuleAst& unit : units) {
+        if (unit.compilation_domain == CompilationDomain::MacroHost) {
+            continue;
+        }
         out << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n";
     }
     out << '\n';
@@ -429,6 +456,12 @@ std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module
 
 std::vector<CppModuleArtifact>
 emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string>& module_paths) {
+    return emit_cpp_module_artifacts(module, module_paths, {});
+}
+
+std::vector<CppModuleArtifact>
+emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string>& module_paths,
+                          CppModuleEmitOptions emit_options) {
     std::vector<CppModuleArtifact> out;
     if (module_paths.empty()) {
         return out;
@@ -439,17 +472,19 @@ emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
     if (module.module_units.empty()) {
-        if (should_emit_module(filter, module)) {
+        if (should_emit_module(filter, module, emit_options.include_macro_host_modules)) {
             append_artifacts(out, module, {{module.module_path, &module}}, false,
-                             preserve_public_abi_names(module));
+                             preserve_public_abi_names(module),
+                             emit_options.include_macro_host_modules);
         }
         return out;
     }
     const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
     const bool public_abi = preserve_public_abi_names(module);
     for (const ModuleAst& unit : module.module_units) {
-        if (should_emit_module(filter, unit)) {
-            append_artifacts(out, unit, modules, false, public_abi);
+        if (should_emit_module(filter, unit, emit_options.include_macro_host_modules)) {
+            append_artifacts(out, unit, modules, false, public_abi,
+                             emit_options.include_macro_host_modules);
         }
     }
     return out;
@@ -506,6 +541,9 @@ std::vector<std::filesystem::path> cpp_module_source_paths(const ModuleAst& modu
         module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
     out.reserve(units.size());
     for (const ModuleAst& unit : units) {
+        if (unit.compilation_domain == CompilationDomain::MacroHost) {
+            continue;
+        }
         out.push_back(module_artifact_base(unit).string() + ".cpp");
     }
     return out;
@@ -524,6 +562,9 @@ std::vector<std::filesystem::path> cpp_module_artifact_paths(const ModuleAst& mo
         module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
     out.reserve(1 + units.size() * 2);
     for (const ModuleAst& unit : units) {
+        if (unit.compilation_domain == CompilationDomain::MacroHost) {
+            continue;
+        }
         const std::filesystem::path base = module_artifact_base(unit);
         out.push_back(base.string() + ".hpp");
         out.push_back(base.string() + ".cpp");

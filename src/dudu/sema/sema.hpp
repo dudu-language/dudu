@@ -9,6 +9,7 @@ namespace dudu {
 
 struct SemanticOptions {
     bool check_bodies = false;
+    bool include_macro_host_modules = false;
 };
 
 void analyze_module(const ModuleAst& module, SemanticOptions options = {});
