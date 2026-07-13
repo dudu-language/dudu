@@ -370,15 +370,43 @@ def choose(flag: bool) -> Option[i32]:
           <tr><td><code>list[T]</code></td><td>Dynamic owning sequence, normally lowered through <code>std::vector&lt;T&gt;</code>.</td></tr>
           <tr><td><code>dict[K, V]</code></td><td>Dynamic key/value container.</td></tr>
           <tr><td><code>set[T]</code></td><td>Dynamic set.</td></tr>
+          <tr><td><code>tuple[T...]</code></td><td>Fixed heterogeneous product value with destructuring.</td></tr>
           <tr><td><code>array[T][N]</code></td><td>Fixed contiguous array with compile-time extent.</td></tr>
           <tr><td><code>array[T][M, N]</code></td><td>Fixed contiguous multidimensional array.</td></tr>
         </tbody></table></div>
-        <h3>Container inference</h3>
-        <div class="code-window"><div class="code-label">Dudu</div><pre><code>players = []
+        <h3>Lists</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>numbers = [1, 2, 3]
+# inferred: list[i32]
+
+players: list[Player] = []
 players.append(Player("Ada", 100))
 players.append(Player("Lin", 80))
-# inferred: list[Player]</code></pre></div>
-        <p>Conflicting element constraints are errors. Use an explicit payload enum when mixed values are intentional.</p>
+
+first = players[0]
+last = players.back()
+for player in players:
+    print(player.name)</code></pre></div>
+        <p>Nonempty literals infer their element type. Empty collections need an explicit type unless a surrounding expected type supplies it. Conflicting element constraints are errors; use an explicit payload enum when mixed values are intentional.</p>
+        <h3>Dictionaries</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>scores: dict[str, i32] = {
+    "ada": 99,
+    "lin": 80,
+}
+scores["grace"] = 100
+
+if scores.contains("ada"):
+    print(scores["ada"])</code></pre></div>
+        <h3>Sets</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>visited: set[str] = {"start", "hall"}
+visited.insert("vault")
+
+if visited.contains("vault"):
+    print(visited.size())</code></pre></div>
+        <h3>Tuples and destructuring</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>def divmod_i32(value: i32, divisor: i32) -> tuple[i32, i32]:
+    return value / divisor, value % divisor
+
+quotient, remainder = divmod_i32(43, 10)</code></pre></div>
         <h3>Fixed arrays and inferred shapes</h3>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code>kernel: array[f32] = [
     [1.0, 0.0, -1.0],
@@ -400,6 +428,40 @@ train_x = x[mask, :]
 weights[mask, :] = 0.0
 logits[rows, cols] += 1.0</code></pre></div>
         <p>A scalar index removes an axis, a slice preserves one, <code>None</code> adds an axis, and <code>...</code> fills remaining axes. Result shape is available to the type checker and editor when it can be proven statically; runtime-shaped libraries may retain shape in their own values.</p>
+        <h3>C++ standard library containers</h3>
+        <p>Dudu's built-in collection names cover common Python-shaped code. They do not restrict native code to that set. Import a C++ header and use its real container, iterator, and algorithm APIs directly.</p>
+        <div class="code-window"><div class="code-label">Dudu using C++ sequences</div><pre><code>from cpp import algorithm
+from cpp import array
+from cpp import deque
+from cpp import span
+from cpp import vector
+
+values: std.vector[i32]
+values.push_back(4)
+values.push_back(1)
+std.sort(values.begin(), values.end())
+
+deck: std.deque[i32]
+deck.push_front(2)
+deck.push_back(40)
+
+fixed: std.array[i32, 3] = std.array[i32, 3]({1, 2, 3})
+view: std.span[i32] = std.span[i32](fixed)</code></pre></div>
+        <div class="code-window"><div class="code-label">Dudu using C++ associative containers</div><pre><code>from cpp import map
+from cpp import queue
+from cpp import unordered_set
+
+counts: std.map[i32, i32]
+counts[7] = 42
+
+seen: std.unordered_set[i32]
+seen.insert(7)
+
+jobs: std.priority_queue[i32]
+jobs.push(10)
+jobs.push(42)
+highest = jobs.top()</code></pre></div>
+        <p>The same import model covers <code>std::list</code>, <code>std::forward_list</code>, <code>std::multimap</code>, <code>std::multiset</code>, container adapters, ranges, and third-party C++ container libraries. Dudu does not wrap them into a separate ecosystem.</p>
       </section>
 
       <section class="docs-section" id="memory">
@@ -412,11 +474,24 @@ logits[rows, cols] += 1.0</code></pre></div>
           <tr><td><code>*const[T]</code></td><td>Pointer to read-only <code>T</code>.</td></tr>
           <tr><td><code>const[*T]</code></td><td>Const-qualified pointer binding when that distinction is required.</td></tr>
         </tbody></table></div>
+        <h3>Pointer versus reference</h3>
+        <p>Both forms provide indirect access to another object, but they carry different native contracts:</p>
+        <ul>
+          <li>A reference must bind to a valid object, cannot be <code>None</code>, and cannot be reseated. Use normal member and value syntax through it.</li>
+          <li>A pointer stores an address. It may be <code>None</code>, may be assigned a different address, and must be dereferenced with <code>*</code> when accessing the pointed-to value.</li>
+          <li>Neither form owns an object by itself. A pointer returned by <code>new[T]</code> has an explicit allocation contract and must eventually be passed to <code>delete</code>. Native handles and borrowed pointers follow the imported API's contract.</li>
+          <li>Use references for required borrowed parameters. Use pointers for nullable values, native handles, arrays, allocation, pointer arithmetic, and APIs that specifically expose pointers.</li>
+        </ul>
+        <p>Read qualifiers from the inside out. <code>*const[T]</code> is a pointer to read-only <code>T</code>. <code>const[*T]</code> is a pointer binding that cannot be reseated. <code>const[*const[T]]</code> is a const pointer to read-only <code>T</code>. These map to <code>const T*</code>, <code>T* const</code>, and <code>const T* const</code> in generated C++.</p>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code>value: i32 = 42
 pointer: *i32 = &value
 *pointer = 99
 
+alias: &i32 = value
+alias += 1
+
 read_only: &const[i32] = value
+maybe_value: *i32 = None
 window: *SDL_Window = None</code></pre></div>
         <h3>Allocation</h3>
         <div class="code-window"><div class="code-label">Dudu</div><pre><code># Value construction and RAII are the default.

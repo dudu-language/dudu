@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Expanded the public collection and memory documentation with checked examples
+  for each built-in collection, native C++ standard containers, and pointer,
+  reference, and const qualifier behavior.
 - Removed tuple-style enum payload declarations such as `Ident(str)`. Payload
   variants now always declare named fields, while positional and named
   construction and matching remain available.
