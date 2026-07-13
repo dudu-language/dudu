@@ -27,15 +27,15 @@ struct PackagePlan {
 
 class WorkerSessions {
   public:
-    p::ExpansionResponse expand(const WorkerBinary& binary,
-                                const p::ExpansionRequest& request,
+    p::ExpansionResponse expand(const WorkerBinary& binary, const p::ExpansionRequest& request,
                                 std::chrono::milliseconds timeout) {
         std::lock_guard lock(mutex_);
         const std::string key = binary.executable.string();
         auto found = workers_.find(key);
         if (found == workers_.end() || !found->second.running()) {
             WorkerProcess process = WorkerProcess::launch(
-                binary.executable, {}, {.request_timeout = timeout});
+                binary.executable, {},
+                {.request_timeout = timeout, .working_directory = binary.working_directory});
             const p::MacroCatalog catalog = process.describe();
             if (catalog.binary_identity != binary.identity) {
                 throw std::runtime_error("macro worker binary identity mismatch");
@@ -58,8 +58,7 @@ WorkerSessions& worker_sessions() {
 std::filesystem::path package_manifest(const Definition& definition) {
     const std::filesystem::path candidate = find_project_config(definition.location.file.str());
     std::error_code error;
-    return std::filesystem::is_regular_file(candidate, error) ? candidate
-                                                              : std::filesystem::path{};
+    return std::filesystem::is_regular_file(candidate, error) ? candidate : std::filesystem::path{};
 }
 
 std::map<std::string, PackagePlan> package_plans(const Plan& complete,
@@ -89,7 +88,8 @@ std::vector<std::string> capabilities(const ProjectConfig& config) {
         if (values.empty()) {
             out.push_back(kind);
         } else {
-            for (const std::string& value : values) out.push_back(kind + "=" + value);
+            for (const std::string& value : values)
+                out.push_back(kind + "=" + value);
         }
     }
     return out;
@@ -104,7 +104,8 @@ void normalize_non_cacheable_names(WorkerBuildOptions& options, const Plan& plan
             continue;
         }
         for (const auto& [identity, definition] : plan.definitions) {
-            if (definition.name == name) identities.insert(identity);
+            if (definition.name == name)
+                identities.insert(identity);
         }
     }
     options.non_cacheable_macros = std::move(identities);
@@ -138,30 +139,36 @@ std::vector<p::AttributeArgument> compile_values(const ModuleAst& module) {
 }
 
 SourceRange declaration_range(const p::Declaration& declaration, SourceLocation fallback) {
-    if (declaration.class_decl) return from_protocol(declaration.class_decl->range, fallback);
-    if (declaration.enum_decl) return from_protocol(declaration.enum_decl->range, fallback);
-    if (declaration.function_decl) return from_protocol(declaration.function_decl->range, fallback);
-    if (declaration.field_decl) return from_protocol(declaration.field_decl->range, fallback);
-    if (declaration.constant_decl) return from_protocol(declaration.constant_decl->range, fallback);
+    if (declaration.class_decl)
+        return from_protocol(declaration.class_decl->range, fallback);
+    if (declaration.enum_decl)
+        return from_protocol(declaration.enum_decl->range, fallback);
+    if (declaration.function_decl)
+        return from_protocol(declaration.function_decl->range, fallback);
+    if (declaration.field_decl)
+        return from_protocol(declaration.field_decl->range, fallback);
+    if (declaration.constant_decl)
+        return from_protocol(declaration.constant_decl->range, fallback);
     return {fallback, fallback};
 }
 
 const PackagePlan& package_for(const std::map<std::string, PackagePlan>& packages,
                                const Definition& definition) {
     const std::filesystem::path manifest = package_manifest(definition);
-    const std::string key = manifest.empty()
-                                ? std::filesystem::path(definition.location.file.str())
-                                      .parent_path()
-                                      .lexically_normal()
-                                      .string()
-                                : manifest.lexically_normal().string();
+    const std::string key = manifest.empty() ? std::filesystem::path(definition.location.file.str())
+                                                   .parent_path()
+                                                   .lexically_normal()
+                                                   .string()
+                                             : manifest.lexically_normal().string();
     const auto found = packages.find(key);
-    if (found == packages.end()) throw std::logic_error("macro package plan is missing");
+    if (found == packages.end())
+        throw std::logic_error("macro package plan is missing");
     return found->second;
 }
 
 std::string package_name(const PackagePlan& package) {
-    if (!package.config.name.empty()) return package.config.name;
+    if (!package.config.name.empty())
+        return package.config.name;
     const std::filesystem::path path(package.key);
     return path.filename().empty() ? "macros" : path.filename().string();
 }
@@ -181,7 +188,8 @@ void mark_resolved_decorators(ModuleAst& module, const Plan& plan) {
     if (module.module_units.empty()) {
         mark(module);
     } else {
-        for (ModuleAst& unit : module.module_units) mark(unit);
+        for (ModuleAst& unit : module.module_units)
+            mark(unit);
     }
 }
 
@@ -192,6 +200,7 @@ void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
     }
     if (!plan.definitions.empty()) {
         host_modules.insert("dudu.ast");
+        host_modules.insert("dudu.macro");
     }
     if (module.module_units.empty()) {
         if (host_modules.contains(module.module_path)) {
@@ -211,13 +220,14 @@ void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
 ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& options) {
     const Plan plan = build_plan(module);
     mark_macro_host_modules(module, plan);
-    if (plan.invocations.empty()) return {};
+    if (plan.invocations.empty())
+        return {};
     mark_resolved_decorators(module, plan);
 
     const RuntimeLayout runtime = find_runtime_layout();
-    const std::filesystem::path configured_build =
-        options.project.build_dir.empty() ? std::filesystem::path("build")
-                                          : options.project.build_dir;
+    const std::filesystem::path configured_build = options.project.build_dir.empty()
+                                                       ? std::filesystem::path("build")
+                                                       : options.project.build_dir;
     const std::filesystem::path cache_root =
         options.cache_dir.empty() ? project_path(options.project, configured_build) / ".dudu/macros"
                                   : options.cache_dir;
@@ -226,12 +236,13 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     ExpansionReport report;
 
     for (const auto& [key, package] : packages) {
-        WorkerBuildOptions build = worker_build_options(
-            package.config, runtime, cache_root / "workers", package_name(package),
-            capabilities(package.config));
+        WorkerBuildOptions build =
+            worker_build_options(package.config, runtime, cache_root / "workers",
+                                 package_name(package), capabilities(package.config));
         normalize_non_cacheable_names(build, package.plan);
         WorkerBinary binary = build_worker_binary(module, package.plan, build);
-        if (binary.cache_hit) ++report.worker_cache_hits;
+        if (binary.cache_hit)
+            ++report.worker_cache_hits;
         report.worker_identities.push_back(binary.identity);
         binaries.emplace(key, std::move(binary));
     }
@@ -245,11 +256,10 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         const WorkerBinary& binary = binaries.at(package.key);
         p::Declaration declaration = declaration_for_invocation(module, invocation);
         const SourceRange invocation_range = invocation.decorator->expr.range;
-        p::ExpansionRequest request{
-            .macro_name = invocation.macro->identity,
-            .declaration = declaration,
-            .invocation = to_protocol(invocation_range),
-            .compile_values = compile_values(module)};
+        p::ExpansionRequest request{.macro_name = invocation.macro->identity,
+                                    .declaration = declaration,
+                                    .invocation = to_protocol(invocation_range),
+                                    .compile_values = compile_values(module)};
         const std::string cache_key = expansion_cache_key(binary.identity, request);
         std::optional<p::ExpansionResponse> response =
             read_expansion_cache(cache_root / "expansions", cache_key);
@@ -257,21 +267,26 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
             ++report.expansion_cache_hits;
         } else {
             response = worker_sessions().expand(binary, request, options.request_timeout);
-            if (response->cacheable && response->external_input_hashes.empty())
+            if (response->cacheable)
                 write_expansion_cache(cache_root / "expansions", cache_key, *response);
         }
         ++report.invocations;
-        collected.push_back({.macro_name = invocation.macro->name,
-                             .macro_identity = invocation.macro->identity,
-                             .target_module = invocation.target_module,
-                             .target_name = invocation.target_name,
-                             .target_kind = invocation.target_kind,
-                             .invocation = invocation_range,
-                             .definition = {invocation.macro->location,
-                                            invocation.macro->location},
-                             .source_declaration =
-                                 declaration_range(declaration, invocation.decorator->location),
-                             .expansion = std::move(response->expansion)});
+        report.expansions.push_back({.macro_name = invocation.macro->name,
+                                     .macro_identity = invocation.macro->identity,
+                                     .target_module = invocation.target_module,
+                                     .target_name = invocation.target_name,
+                                     .invocation = request.invocation,
+                                     .expansion = response->expansion});
+        collected.push_back(
+            {.macro_name = invocation.macro->name,
+             .macro_identity = invocation.macro->identity,
+             .target_module = invocation.target_module,
+             .target_name = invocation.target_name,
+             .target_kind = invocation.target_kind,
+             .invocation = invocation_range,
+             .definition = {invocation.macro->location, invocation.macro->location},
+             .source_declaration = declaration_range(declaration, invocation.decorator->location),
+             .expansion = std::move(response->expansion)});
     }
     merge_expansions(module, plan, collected);
     return report;

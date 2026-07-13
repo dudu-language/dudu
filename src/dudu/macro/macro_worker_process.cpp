@@ -100,17 +100,16 @@ wire::Frame read_frame(int fd, Clock::time_point deadline, const wire::DecodeLim
     return wire::decode_frame(bytes, limits);
 }
 
-std::string worker_error_message(const wire::Frame& response,
-                                 const wire::DecodeLimits& limits) {
+std::string worker_error_message(const wire::Frame& response, const wire::DecodeLimits& limits) {
     const protocol::WorkerError error = protocol::decode_WorkerError(response.payload, limits);
     return error.code + ": " + error.message;
 }
 
 } // namespace
 
-WorkerProcess::WorkerProcess(int child_pid, int write_fd, int read_fd,
-                             WorkerProcessOptions options)
-    : child_pid_(child_pid), write_fd_(write_fd), read_fd_(read_fd), options_(options) {}
+WorkerProcess::WorkerProcess(int child_pid, int write_fd, int read_fd, WorkerProcessOptions options)
+    : child_pid_(child_pid), write_fd_(write_fd), read_fd_(read_fd), options_(options) {
+}
 
 WorkerProcess::WorkerProcess(WorkerProcess&& other) noexcept {
     *this = std::move(other);
@@ -160,6 +159,9 @@ WorkerProcess WorkerProcess::launch(const std::filesystem::path& executable,
         ::close(request_pipe[1]);
         ::close(response_pipe[0]);
         ::close(response_pipe[1]);
+        if (!options.working_directory.empty() && ::chdir(options.working_directory.c_str()) != 0) {
+            _exit(126);
+        }
         std::vector<std::string> storage;
         storage.reserve(arguments.size() + 1);
         storage.push_back(executable.string());
@@ -185,17 +187,16 @@ WorkerProcess WorkerProcess::launch(const std::filesystem::path& executable,
     return process;
 }
 
-wire::Frame WorkerProcess::request(protocol::MessageKind kind,
-                                   std::vector<std::uint8_t> payload) {
+wire::Frame WorkerProcess::request(protocol::MessageKind kind, std::vector<std::uint8_t> payload) {
     if (!running()) {
         throw std::runtime_error("macro worker is not running");
     }
     const std::uint64_t request_id = next_request_id_++;
-    const wire::Frame frame = {
-        .protocol_version = static_cast<std::uint16_t>(protocol::protocol_version),
-        .message_kind = static_cast<std::uint16_t>(kind),
-        .request_id = request_id,
-        .payload = std::move(payload)};
+    const wire::Frame frame = {.protocol_version =
+                                   static_cast<std::uint16_t>(protocol::protocol_version),
+                               .message_kind = static_cast<std::uint16_t>(kind),
+                               .request_id = request_id,
+                               .payload = std::move(payload)};
     const Clock::time_point deadline = Clock::now() + options_.request_timeout;
     write_exact(write_fd_, wire::encode_frame(frame), deadline);
     wire::Frame response = read_frame(read_fd_, deadline, options_.decode_limits);
@@ -237,8 +238,8 @@ protocol::MacroCatalog WorkerProcess::describe() {
     return protocol::decode_MacroCatalog(response.payload, options_.decode_limits);
 }
 
-protocol::ExpansionResponse WorkerProcess::expand(
-    const protocol::ExpansionRequest& expansion_request) {
+protocol::ExpansionResponse
+WorkerProcess::expand(const protocol::ExpansionRequest& expansion_request) {
     const wire::Frame response =
         request(protocol::MessageKind::Expand, protocol::encode(expansion_request));
     if (static_cast<protocol::MessageKind>(response.message_kind) !=

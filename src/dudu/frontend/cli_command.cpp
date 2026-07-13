@@ -5,6 +5,7 @@
 #include "dudu/core/file_io.hpp"
 #include "dudu/format/format_path.hpp"
 #include "dudu/frontend/cli_options.hpp"
+#include "dudu/macro/macro_expansion_render.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/native/native_header_cache.hpp"
 #include "dudu/native/native_headers.hpp"
@@ -15,8 +16,8 @@
 #include "dudu/project/project_driver.hpp"
 #include "dudu/project/project_index_cache.hpp"
 #include "dudu/sema/sema.hpp"
-#include "dudu/testing/test_driver.hpp"
 #include "dudu/support/toolchain_manager.hpp"
+#include "dudu/testing/test_driver.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -179,7 +180,8 @@ const ProjectIndex& checked_index(const CliOptions& options, const std::string& 
     const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
                                    options.c_header_output.has_value();
     const bool force_module_tree =
-        !merged_cpp_output && (options.emit_modules || options.project_driver);
+        !merged_cpp_output &&
+        (options.emit_modules || options.expand_macros || options.project_driver);
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     const ProjectIndex& checked =
         cli_project_index_cache.get({.entry_path = options.input,
@@ -507,6 +509,11 @@ int run_cli(int argc, char** argv) {
         }
         return *source;
     };
+    if (options.expand_macros) {
+        const ProjectIndex& index = checked_index(options, input_source(), true);
+        write_text_output(options.output, macro::render_expansion_report(index.macro_report()));
+        return 0;
+    }
     if (options.header_output.has_value()) {
         write_text_output(options.header_output,
                           emit_cpp_header(checked_module(options, input_source(), false)));

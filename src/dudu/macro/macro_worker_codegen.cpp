@@ -3,6 +3,7 @@
 #include "dudu/core/source.hpp"
 
 #include <algorithm>
+#include <map>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -64,6 +65,45 @@ std::string declaration_field(TargetKind kind) {
     throw std::logic_error("unknown macro target kind");
 }
 
+std::string capability_kind(std::string_view name) {
+    if (name == "fs.read")
+        return "CapabilityKind::FsRead";
+    if (name == "fs.write")
+        return "CapabilityKind::FsWrite";
+    if (name == "env.read")
+        return "CapabilityKind::EnvRead";
+    if (name == "process")
+        return "CapabilityKind::Process";
+    if (name == "network")
+        return "CapabilityKind::Network";
+    if (name == "clock")
+        return "CapabilityKind::Clock";
+    if (name == "random")
+        return "CapabilityKind::Random";
+    throw std::invalid_argument("unknown macro capability: " + std::string(name));
+}
+
+void emit_capabilities(std::ostringstream& out, const std::vector<std::string>& values) {
+    std::map<std::string, std::vector<std::string>> grouped;
+    for (const std::string& value : values) {
+        const std::size_t separator = value.find('=');
+        const std::string name = value.substr(0, separator);
+        std::vector<std::string>& scopes = grouped[name];
+        if (separator != std::string::npos)
+            scopes.push_back(value.substr(separator + 1));
+    }
+    for (const auto& [name, scopes] : grouped) {
+        out << "    catalog.capabilities.push_back({.kind = " << capability_kind(name)
+            << ", .values = {";
+        for (std::size_t index = 0; index < scopes.size(); ++index) {
+            if (index != 0)
+                out << ", ";
+            out << cpp_string_literal(scopes[index]);
+        }
+        out << "}});\n";
+    }
+}
+
 void emit_catalog_entry(std::ostringstream& out, const Definition& definition) {
     out << "    catalog.macros.push_back({.name = " << cpp_string_literal(definition.name)
         << ", .entry_point = " << cpp_string_literal(definition.identity)
@@ -72,14 +112,12 @@ void emit_catalog_entry(std::ostringstream& out, const Definition& definition) {
     out << kind.substr(kind.find("::") + 2) << "});\n";
 }
 
-void emit_dispatch_entry(std::ostringstream& out, const Definition& definition,
-                         bool cacheable) {
+void emit_dispatch_entry(std::ostringstream& out, const Definition& definition, bool cacheable) {
     if (definition.function == nullptr || definition.function->cpp_name.empty()) {
         throw CompileError(definition.location,
                            "macro definition is missing its generated worker entry point");
     }
-    out << "    if (request.macro_name == " << cpp_string_literal(definition.identity)
-        << ") {\n";
+    out << "    if (request.macro_name == " << cpp_string_literal(definition.identity) << ") {\n";
     if (definition.accepted_kind == TargetKind::Any) {
         out << "        auto input = sdk_bridge::from_protocol(request.declaration);\n";
     } else {
@@ -93,8 +131,7 @@ void emit_dispatch_entry(std::ostringstream& out, const Definition& definition,
             << "        auto input = sdk_bridge::from_protocol(*request.declaration." << field
             << ");\n";
     }
-    out << "        auto expansion = " << definition.function->cpp_name
-        << "(std::move(input));\n"
+    out << "        auto expansion = " << definition.function->cpp_name << "(std::move(input));\n"
         << "        return ExpansionResponse{.expansion = sdk_bridge::to_protocol(expansion), "
            ".cacheable = "
         << (cacheable ? "true" : "false") << ", .external_input_hashes = {}};\n"
@@ -128,7 +165,9 @@ std::string generate_worker_source(const Plan& plan, const WorkerSourceOptions& 
     for (const auto& [_, definition] : plan.definitions) {
         emit_catalog_entry(out, definition);
     }
-    out << "    return serve_worker(catalog, [](const ExpansionRequest& request) "
+    emit_capabilities(out, options.capabilities);
+    out << "    return serve_worker(catalog, " << cpp_string_literal(options.project_root)
+        << ", [](const ExpansionRequest& request) "
            "-> ExpansionResponse {\n";
     for (const auto& [_, definition] : plan.definitions) {
         emit_dispatch_entry(out, definition,

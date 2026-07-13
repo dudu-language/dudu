@@ -12,6 +12,7 @@ namespace dudu::macro {
 
 struct WorkerBuildOptions {
     std::filesystem::path cache_dir;
+    std::filesystem::path project_root;
     std::string package;
     std::string compiler = "c++";
     std::string cpp_standard = "c++20";
@@ -31,6 +32,7 @@ struct WorkerBuildOptions {
 
 struct WorkerBinary {
     std::filesystem::path executable;
+    std::filesystem::path working_directory;
     std::string identity;
     bool cache_hit = false;
 };

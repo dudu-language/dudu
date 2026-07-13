@@ -69,6 +69,9 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     } else if (argc > 1 && std::string(argv[1]) == "emit-test-modules") {
         options.emit_test_modules = true;
         first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "expand") {
+        options.expand_macros = true;
+        first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
         first_arg = 2;
@@ -235,8 +238,8 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     if (options.input.empty() && !project_format_default && !options.bench && !options.build &&
         !options.check && !options.clean && !options.clean_cache && !options.cmake &&
         !options.deps_fetch && !options.emit_cpp && !options.emit_modules &&
-        !options.init_project && !options.new_project && !options.run && !options.test &&
-        !options.toolchain_update && !options.uninstall) {
+        !options.expand_macros && !options.init_project && !options.new_project && !options.run &&
+        !options.test && !options.toolchain_update && !options.uninstall) {
         fail("missing input file");
     }
     return options;
@@ -256,8 +259,9 @@ CliOptions resolve_project_input(CliOptions options) {
                                                   ? std::filesystem::path("dudu.toml")
                                                   : build_config_path(options.input);
     const ProjectConfig project = parse_project_config(config_path);
-    const bool command_uses_project_entry =
-        options.build || options.run || options.cmake || options.emit_cpp || options.emit_modules;
+    const bool command_uses_project_entry = options.build || options.run || options.cmake ||
+                                            options.emit_cpp || options.emit_modules ||
+                                            options.expand_macros;
     if (!options.input.empty()) {
         const std::string input = options.input.string();
         if (!std::filesystem::exists(options.input) && options.input.extension() != ".dd" &&

@@ -14,6 +14,7 @@ namespace dudu::macro {
 struct WorkerProcessOptions {
     std::chrono::milliseconds request_timeout{5000};
     wire::DecodeLimits decode_limits{};
+    std::filesystem::path working_directory;
 };
 
 class WorkerProcess {

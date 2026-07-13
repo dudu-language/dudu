@@ -9,6 +9,7 @@
 #include "dudu/sema/sema.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <fstream>
 #include <map>
 #include <optional>
@@ -20,6 +21,8 @@
 
 namespace dudu::macro {
 namespace {
+
+std::atomic<std::uint64_t> staging_counter{0};
 
 std::vector<const ModuleAst*> units(const ModuleAst& module) {
     if (module.module_units.empty()) {
@@ -78,6 +81,7 @@ std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, cons
     hash.add(std::to_string(protocol::protocol_version));
     hash.add(std::to_string(protocol::schema_version));
     hash.add(options.package);
+    hash.add(options.project_root.generic_string());
     hash.add(options.compiler);
     hash.add(options.cpp_standard);
     hash.add(options.toolchain_identity);
@@ -125,8 +129,8 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
 std::string compile_command(const std::filesystem::path& dir,
                             const std::vector<CppModuleArtifact>& artifacts,
                             const WorkerBuildOptions& options) {
-    std::string command = shell_quote_arg(options.compiler) + " -std=" +
-                          shell_quote_arg(options.cpp_standard) + " -O2";
+    std::string command = shell_quote_arg(options.compiler) +
+                          " -std=" + shell_quote_arg(options.cpp_standard) + " -O2";
     command += " -I" + shell_quote_path(dir);
     for (const std::filesystem::path& include : options.runtime_include_dirs) {
         command += " -I" + shell_quote_path(include);
@@ -141,6 +145,7 @@ std::string compile_command(const std::filesystem::path& dir,
         command += " " + shell_quote_arg(flag);
     }
     command += " " + shell_quote_path(dir / "worker.cpp");
+    command += " -include dudu/macro/macro_capabilities.hpp";
     for (const CppModuleArtifact& artifact : artifacts) {
         if (artifact.kind == CppModuleArtifactKind::Source) {
             command += " " + shell_quote_path(dir / artifact.path);
@@ -172,8 +177,8 @@ void compile_worker(const std::filesystem::path& dir,
     const std::string command = compile_command(dir, artifacts, options);
     if (run_shell_command(command, log) != 0) {
         const std::optional<std::string> detail = try_read_text_file(log);
-        throw std::runtime_error("could not compile macro worker\ncommand: " + command +
-                                 "\n" + detail.value_or("macro worker compiler failed"));
+        throw std::runtime_error("could not compile macro worker\ncommand: " + command + "\n" +
+                                 detail.value_or("macro worker compiler failed"));
     }
 }
 
@@ -193,20 +198,27 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
     const std::filesystem::path cache_entry = options.cache_dir / identity;
     const std::filesystem::path executable = cache_entry / "worker";
     if (std::filesystem::is_regular_file(executable)) {
-        return {.executable = executable, .identity = identity, .cache_hit = true};
+        return {.executable = executable,
+                .working_directory = options.project_root,
+                .identity = identity,
+                .cache_hit = true};
     }
 
     std::filesystem::create_directories(options.cache_dir);
-    const std::filesystem::path staging = options.cache_dir /
-                                          (identity + ".tmp." + std::to_string(::getpid()));
+    const std::filesystem::path staging =
+        options.cache_dir /
+        (identity + ".tmp." + std::to_string(::getpid()) + "." +
+         std::to_string(staging_counter.fetch_add(1, std::memory_order_relaxed)));
     std::filesystem::remove_all(staging);
     std::filesystem::create_directories(staging);
     write_cpp_artifacts(staging, artifacts);
-    write_text(staging / "worker.cpp",
-               generate_worker_source(plan,
-                                      {.package = options.package,
-                                       .binary_identity = identity,
-                                       .non_cacheable_macros = options.non_cacheable_macros}));
+    write_text(
+        staging / "worker.cpp",
+        generate_worker_source(plan, {.package = options.package,
+                                      .binary_identity = identity,
+                                      .project_root = options.project_root.generic_string(),
+                                      .capabilities = options.capabilities,
+                                      .non_cacheable_macros = options.non_cacheable_macros}));
     try {
         compile_worker(staging, artifacts, options);
         std::error_code error;
@@ -222,7 +234,10 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         std::filesystem::remove_all(staging);
         throw;
     }
-    return {.executable = executable, .identity = identity, .cache_hit = false};
+    return {.executable = executable,
+            .working_directory = options.project_root,
+            .identity = identity,
+            .cache_hit = false};
 }
 
 } // namespace dudu::macro

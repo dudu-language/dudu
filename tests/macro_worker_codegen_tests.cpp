@@ -27,14 +27,20 @@ void test_worker_source_uses_stable_entry_points() {
                                   "    return ast.expansion()\n");
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "macros.dd");
     const dudu::macro::Plan plan = dudu::macro::build_plan(module);
-    const std::string source = dudu::macro::generate_worker_source(
-        plan,
-        {.package = "demo", .binary_identity = "identity-1", .non_cacheable_macros = {}});
+    const std::string source =
+        dudu::macro::generate_worker_source(plan, {.package = "demo",
+                                                   .binary_identity = "identity-1",
+                                                   .project_root = dir.string(),
+                                                   .capabilities = {"fs.read=schemas/**", "clock"},
+                                                   .non_cacheable_macros = {}});
     assert(source.find("#include \"macros.hpp\"") != std::string::npos);
     assert(source.find(".entry_point = \"macros.Debug\"") != std::string::npos);
     assert(source.find("request.declaration.class_decl") != std::string::npos);
     assert(source.find("dudu_macros_Debug(std::move(input))") != std::string::npos);
     assert(source.find(".cacheable = true") != std::string::npos);
+    assert(source.find("CapabilityKind::FsRead") != std::string::npos);
+    assert(source.find("\"schemas/**\"") != std::string::npos);
+    assert(source.find("CapabilityKind::Clock") != std::string::npos);
 }
 
 } // namespace

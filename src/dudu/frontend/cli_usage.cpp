@@ -40,6 +40,7 @@ void print_cli_usage(bool project_driver) {
            "       duc emit-modules [input.dd] -o output-dir [--timings]\n"
            "       duc emit-test-modules [input.dd] -o output-dir [--filter text] "
            "[--no-capture] [--timings]\n"
+           "       duc expand [input.dd] [-o output.dd]\n"
            "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
            "       duc run [input.dd|target] [-o output] [--quiet] [--verbose] [-- args...]\n"
            "       duc test [input.dd|target|filter] [--filter text] [--no-capture] [--quiet] "

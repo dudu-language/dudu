@@ -1,0 +1,28 @@
+# Host-only capability API for user-defined macros.
+
+def read_text(path: str) -> str:
+    return cpp("dudu::macro::host::read_text(path)")
+
+
+def write_text(path: str, contents: str):
+    cpp("dudu::macro::host::write_text(path, contents);")
+
+
+def read_env(name: str) -> str:
+    return cpp("dudu::macro::host::read_env(name)")
+
+
+def run(command: str) -> i32:
+    return cpp("dudu::macro::host::run(command)")
+
+
+def require_network(endpoint: str):
+    cpp("dudu::macro::host::require_network(endpoint);")
+
+
+def clock_ns() -> u64:
+    return cpp("dudu::macro::host::clock_ns()")
+
+
+def random_u64() -> u64:
+    return cpp("dudu::macro::host::random_u64()")

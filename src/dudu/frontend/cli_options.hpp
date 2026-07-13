@@ -27,6 +27,7 @@ struct CliOptions {
     bool emit_cpp = false;
     bool emit_modules = false;
     bool emit_test_modules = false;
+    bool expand_macros = false;
     bool format = false;
     bool init_project = false;
     bool new_project = false;

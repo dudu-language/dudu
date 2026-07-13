@@ -1,5 +1,7 @@
 #include "dudu/macro/macro_worker_runtime.hpp"
 
+#include "dudu/macro/macro_capabilities.hpp"
+
 #include <array>
 #include <cstdint>
 #include <iostream>
@@ -34,9 +36,9 @@ protocol::WorkerError worker_error(std::string code, std::string message) {
 
 void write_error(std::ostream& output, const wire::Frame& request, std::string code,
                  std::string message) {
-    write_worker_frame(
-        output, response_frame(request, protocol::MessageKind::WorkerError,
-                               protocol::encode(worker_error(std::move(code), std::move(message)))));
+    write_worker_frame(output, response_frame(request, protocol::MessageKind::WorkerError,
+                                              protocol::encode(worker_error(std::move(code),
+                                                                            std::move(message)))));
 }
 
 } // namespace
@@ -78,8 +80,8 @@ void write_worker_frame(std::ostream& output, const wire::Frame& frame) {
     }
 }
 
-int serve_worker(std::istream& input, std::ostream& output,
-                 const protocol::MacroCatalog& catalog, const ExpansionDispatch& dispatch,
+int serve_worker(std::istream& input, std::ostream& output, const protocol::MacroCatalog& catalog,
+                 const std::filesystem::path& project_root, const ExpansionDispatch& dispatch,
                  const wire::DecodeLimits& limits) {
     bool negotiated = false;
     while (const std::optional<wire::Frame> request = read_worker_frame(input, limits)) {
@@ -116,10 +118,25 @@ int serve_worker(std::istream& input, std::ostream& output,
             if (kind == protocol::MessageKind::Expand) {
                 const protocol::ExpansionRequest expansion_request =
                     protocol::decode_ExpansionRequest(request->payload, limits);
-                const protocol::ExpansionResponse response = dispatch(expansion_request);
-                write_worker_frame(
-                    output, response_frame(*request, protocol::MessageKind::ExpansionResult,
-                                           protocol::encode(response)));
+                begin_capability_scope(catalog.capabilities, project_root);
+                protocol::ExpansionResponse response;
+                try {
+                    response = dispatch(expansion_request);
+                    CapabilityOutcome outcome = finish_capability_scope();
+                    if (!outcome.deterministic && response.cacheable) {
+                        throw std::runtime_error(
+                            "macro used a non-cacheable capability but is not listed in "
+                            "[macro].allow_non_cacheable");
+                    }
+                    response.cacheable = response.cacheable && outcome.deterministic;
+                    response.external_input_hashes = std::move(outcome.external_input_hashes);
+                } catch (...) {
+                    discard_capability_scope();
+                    throw;
+                }
+                write_worker_frame(output,
+                                   response_frame(*request, protocol::MessageKind::ExpansionResult,
+                                                  protocol::encode(response)));
                 continue;
             }
             if (kind == protocol::MessageKind::Shutdown) {
@@ -134,9 +151,19 @@ int serve_worker(std::istream& input, std::ostream& output,
     return negotiated ? 0 : 1;
 }
 
+int serve_worker(std::istream& input, std::ostream& output, const protocol::MacroCatalog& catalog,
+                 const ExpansionDispatch& dispatch, const wire::DecodeLimits& limits) {
+    return serve_worker(input, output, catalog, std::filesystem::current_path(), dispatch, limits);
+}
+
 int serve_worker(const protocol::MacroCatalog& catalog, const ExpansionDispatch& dispatch,
                  const wire::DecodeLimits& limits) {
     return serve_worker(std::cin, std::cout, catalog, dispatch, limits);
+}
+
+int serve_worker(const protocol::MacroCatalog& catalog, const std::filesystem::path& project_root,
+                 const ExpansionDispatch& dispatch, const wire::DecodeLimits& limits) {
+    return serve_worker(std::cin, std::cout, catalog, project_root, dispatch, limits);
 }
 
 } // namespace dudu::macro

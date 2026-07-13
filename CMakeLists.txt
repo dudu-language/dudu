@@ -76,6 +76,8 @@ foreach(subsystem IN LISTS DUDU_SUBSYSTEM_DIRS)
 endforeach()
 
 set(DUDU_MACRO_RUNTIME_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_capabilities.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_hash.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_protocol_generated.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_wire.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_worker_runtime.cpp"
@@ -120,6 +122,7 @@ install(TARGETS dudu_macro_runtime
 
 install(FILES
     src/dudu/macro/macro_protocol_generated.hpp
+    src/dudu/macro/macro_capabilities.hpp
     src/dudu/macro/macro_sdk_bridge_generated.hpp
     src/dudu/macro/macro_wire.hpp
     src/dudu/macro/macro_worker_runtime.hpp
