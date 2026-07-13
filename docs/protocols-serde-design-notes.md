@@ -231,16 +231,17 @@ The language should provide enough macro and protocol machinery for a library
 to write this:
 
 ```python
-from serde import serde
+from serde import Serde
 
-@serde
+@derive(Serde)
 class Player:
     hp: i32
     name: str
 ```
 
-`@serde` is a library-provided shorthand for generating serialize and
-deserialize support. The more general spelling can stay available:
+`Serde` is a library-provided derive that generates serialize and deserialize
+support. Packages may export narrower `Serialize` and `Deserialize` derives as
+ordinary alternatives:
 
 ```python
 @derive(Serialize, Deserialize)
@@ -264,17 +265,19 @@ That form is useful when a class genuinely implements the methods itself. It
 does not generate boilerplate by itself. A macro/decorator still carries the
 value of inspecting fields and generating the obvious methods.
 
-Field and class metadata should stay Python-shaped:
+Field and class metadata uses the typed helper-attribute shape from the macro
+system:
 
 ```python
-@serde(rename_all="camelCase")
+@derive(Serde)
+@Serde(rename_all="camelCase")
 class Player:
     hp: i32
 
-    @serde(rename="displayName")
+    @Serde(rename="displayName")
     name: str
 
-    @serde(skip)
+    @Serde(skip=True)
     cached_texture: TextureHandle
 ```
 
@@ -302,7 +305,7 @@ impl Deserialize for ThirdPartyString:
 Decorator adapter shape:
 
 ```python
-@serde_for(ThirdPartyString)
+@Serde(for_type=ThirdPartyString)
 class ThirdPartyStringSerde:
     def serialize(value: &ThirdPartyString, s: &Serializer):
         s.string(value.c_str())
@@ -314,7 +317,7 @@ class ThirdPartyStringSerde:
 Likely lookup order for a Serde library:
 
 1. use generated or declared serialize/deserialize support on the type
-2. use a visible external conformance or `@serde_for(Type)` adapter
+2. use a visible external conformance or `@Serde(for_type=Type)` adapter
 3. fail with a diagnostic naming the missing type and field path
 
 ## Associated Types And Traits
@@ -376,9 +379,10 @@ dispatch, or impossible-state checking.
   and precise?
 - Should external conformance support runtime type-erasure adapters, or only
   generic/static dispatch?
-- Should `@serde` be a normal decorator macro layered on `@derive`, or should
-  `@derive(Serialize, Deserialize)` remain the only blessed shape?
-- How should generated macro code appear in LSP hover, go-to-definition, and
-  "show generated C++" views?
+- Whether `Serde` should remain one derive or be a package alias that requests
+  separate `Serialize` and `Deserialize` derives is a library API decision; it
+  does not change the language macro model.
+- Generated macro code follows the source-origin, LSP, and `duc expand` rules in
+  [Dudu Macro System Plan](macro-syntax-plan.md).
 - How much structural matching should libraries be allowed to request without
   making conformance accidental globally?

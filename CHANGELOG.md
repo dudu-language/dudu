@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Replaced the speculative macro syntax notes with a canonical additive,
+  hygienic, typed-AST macro architecture and a separate incremental expansion
+  benchmark contract with explicit release budgets.
 - Completed canonical public references for collection inference, fixed arrays,
   compile-time programming, generics, native templates and macros, allocation,
   lifetimes, views, and arbitrary-rank indexing, with tested examples and

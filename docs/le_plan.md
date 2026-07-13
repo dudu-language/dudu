@@ -656,16 +656,15 @@ Longer-term features:
 - stdout capture: done
 - no-capture mode: done
 
-## 6. Keep Macros And Decorators Conservative
+## 6. Keep Compiler Decorators Conservative
 
 Related specs:
 
 - [Appearance Spec](appearance-spec.md)
 - [Python Subset Compiler Plan](python-subset-compiler-plan.md)
 
-Do not build a full user-defined macro system yet.
-
-Do add compiler-recognized decorators when they remove real friction:
+Compiler-recognized decorators remain direct language features when they remove
+real friction:
 
 - `@test`
 - `@inline`
@@ -673,9 +672,10 @@ Do add compiler-recognized decorators when they remove real friction:
 - `@operator`
 - target attributes such as `@cuda.global`
 
-User-defined decorators, hygienic macros, and lisp-style compile-time
-metaprogramming are separate language design work and should not block the
-core C/C++ replacement layer.
+Do not reimplement these decorators as user macros merely to reduce the number
+of compiler-known forms. User-defined macros are a separate additive system
+specified in [Dudu Macro System Plan](macro-syntax-plan.md); they do not replace
+layout, ABI, target, test-runner, or operator semantics owned by the language.
 
 ## 7. Add Native Inheritance Deliberately
 
@@ -1571,13 +1571,29 @@ push. They are not release packaging work.
 
 8. Macro Surface Prerequisites
 
-   Primary plan: [Macro Syntax Plan](macro-syntax-plan.md).
+   Primary plans:
+
+   - [Dudu Macro System Plan](macro-syntax-plan.md)
+   - [Macro Performance Plan](macro-performance-plan.md)
+
    Related notes: [Protocols And Serde Design Notes](protocols-serde-design-notes.md).
 
-   Start with target syntax for derives, field attributes, serde-like codegen,
-   tests, reflection metadata, binary serialization, and binding generation.
-   Prefer AST-backed declaration macros over raw string macros. Decorators now
-   preserve parsed expression nodes without a raw text mirror, and
+   Implement the accepted additive declaration-macro system end to end. The
+   user surface is Python-shaped `@derive(...)`, typed helper attributes such as
+   `@Json(name="...")`, and attached declaration macros. Macro authors use a
+   versioned public `dudu.ast` API and return hygienic `ast.Expansion` values.
+   Host-native persistent workers, deterministic capability-aware caching,
+   source origins, `duc expand`, LSP integration, and the macro performance
+   budgets are part of the feature, not follow-up polish.
+
+   Do not add quote/splice syntax, source-string output, expression/control-flow
+   macros, custom grammar, internal compiler AST exposure, or macro-installed
+   type-system rules. All expansions are additive and every macro attached to a
+   declaration inspects the same immutable source declaration rather than
+   another macro's output.
+
+   Existing prerequisites: decorators preserve parsed expression nodes without
+   a raw text mirror, and
    compiler-recognized decorators use a shared parsed-expression helper for
    name matching and first-argument extraction. Decorator expression parsing
    uses token-piece parsing directly.
@@ -1587,6 +1603,12 @@ push. They are not release packaging work.
    `@operator(...)`, `@section(...)`, and `@test.should_panic(...)` off raw
    argument text fallback while preserving expression arguments for decorators
    such as `@align(...)` and `@workgroup_size(...)`.
+
+   Completion requires the implementation sequence and acceptance matrix in the
+   macro-system plan, plus the benchmark fixtures and release budgets in the
+   performance plan. Debug, Json, StringEnum, reflection, CLI argument, binary
+   schema, and C export-table packages must prove the public API without
+   compiler special cases.
 
 9. Native Header Hardening
 

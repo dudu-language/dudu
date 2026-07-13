@@ -327,8 +327,9 @@ Use four explicit categories:
 - Token-pasting, stringizing, declaration-generating, and partial-syntax macros
   may require a native wrapper header and must be listed as native-boundary
   limitations.
-- Dudu-defined declaration/decorator/expression macros are design work in
-  [Macro Syntax Plan](macro-syntax-plan.md), not a shipped public feature.
+- Dudu-defined additive declaration and derive macros are specified in
+  [Dudu Macro System Plan](macro-syntax-plan.md), but are not a shipped public
+  feature. Expression and control-flow macros are outside the accepted design.
 - Compiler-known decorators such as `@operator` and `@constexpr` are not proof
   of a general user-defined macro system.
 

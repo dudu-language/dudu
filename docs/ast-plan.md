@@ -1228,8 +1228,11 @@ Without this, generic diagnostics become generated-C++ noise.
 
 ## Macro Implications
 
-Macros should operate on syntax nodes or checked declaration metadata, not loose
-strings.
+User-defined macros operate on a versioned public macro AST schema, not loose
+strings and not the compiler's internal AST classes. The compiler converts
+immutable source declarations and checked declaration metadata into that public
+schema, then validates returned additive expansion nodes before importing them
+into the normal AST.
 
 The AST should let macros inspect or generate:
 
@@ -1238,10 +1241,13 @@ The AST should let macros inspect or generate:
 - function declarations
 - enum declarations
 - attributes/decorators
-- expression nodes for simple expression macros
+- expression and statement nodes needed inside generated declaration bodies
 
-Raw token macros can remain a C/C++ interop escape hatch. Dudu-native macros
-should prefer structured input and structured output.
+Raw token macros remain only at the imported C/C++ preprocessor boundary.
+Dudu-native macros require structured input and structured output. They do not
+support quote/splice syntax, source strings, custom grammar, or expression and
+control-flow rewrites. The complete contract is in
+[Dudu Macro System Plan](macro-syntax-plan.md).
 
 ## Migration Plan
 

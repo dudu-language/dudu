@@ -122,9 +122,11 @@ The wrapper stays at the native boundary and exposes a normal function, type,
 constant, or complete callable macro. This is a C/C++ preprocessor boundary,
 not a second Dudu macro language.
 
-Dudu-defined declaration, decorator, and expression macros are design work in
-[Macro Syntax Plan](macro-syntax-plan.md). Compiler-known decorators such as
-`@operator` and `@constexpr` are language features, not user-defined macros.
+Dudu-defined additive declaration and derive macros are specified in
+[Dudu Macro System Plan](macro-syntax-plan.md). Expression and control-flow
+macros are not part of that system. Compiler-known decorators such as
+`@operator` and `@constexpr` remain language features rather than user-defined
+macros.
 
 ## Editor Behavior
 
@@ -147,7 +149,7 @@ code or invent a Dudu-specific replacement declaration.
 - Token pasting, stringizing, declaration generation, and partial-syntax
   macros require an ordinary native wrapper when they cannot be imported as a
   complete declaration or expression.
-- User-defined Dudu macros are not part of the current language.
+- User-defined Dudu macros are specified but not implemented.
 
 ## Tested Examples
 
