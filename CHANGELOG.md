@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13] - 2026-07-13
+
+- Made the project-backend integration suite report the failing command and
+  captured output instead of hiding failures behind redirected logs.
+- Kept GNU linker-script coverage executable on ELF hosts while validating
+  flag and section emission without invoking an incompatible linker on macOS.
+- Made shared-library consumer coverage use each host's native `.so` or
+  `.dylib` suffix so Mach-O install names and runtime lookup remain valid.
+- Added a targeted Apple Silicon project-backend preflight for resolving
+  platform-only failures without rerunning the complete release suite.
+
 ## [0.1.0-alpha.12] - 2026-07-12
 
 - Made the libstdc++ dependent `std::string::size_type` regression assertion

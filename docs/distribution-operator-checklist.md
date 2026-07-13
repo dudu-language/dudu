@@ -159,7 +159,7 @@ Domain: dudulang.org
 ```
 
 Changing one after publication creates migration work, so resolve any naming
-objection before cutting `0.1.0-alpha.12`.
+objection before cutting `0.1.0-alpha.13`.
 
 ## Operator Handoff
 
