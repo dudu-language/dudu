@@ -14,7 +14,8 @@ report_project_backend_failure() {
     for output in "$repo_root"/build/project_*_build.err \
                   "$repo_root"/build/project_*_run.err \
                   "$repo_root"/build/project_*_test.err \
-                  "$repo_root"/build/project_*_test.out; do
+                  "$repo_root"/build/project_*_test.out \
+                  "$repo_root"/build/project_*_verbose.err; do
         [[ -f "$output" ]] || continue
         echo "--- ${output#"$repo_root/"} ---" >&2
         cat "$output" >&2
@@ -278,22 +279,33 @@ if [[ -s "$repo_root/build/project_user_cmake_test.out" ]]; then
     exit 1
 fi
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
-(
-    cd "$repo_root/tests/fixtures/project_linker_script"
-    "$repo_root/build/duc" build -o "$repo_root/build/project_linker_script_bin" --verbose \
-        2>"$repo_root/build/project_linker_script_verbose.err"
-)
-grep -q -- "-Wl,-T,linker.ld" \
-    "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/source/CMakeLists.txt"
-grep -q '__attribute__((section(".dudu_boot")))' \
-    "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/build/generated/main.cpp"
-set +e
-"$repo_root/build/project_linker_script_bin"
-project_linker_script_status=$?
-set -e
-if [[ "$project_linker_script_status" -ne 42 ]]; then
-    echo "project_linker_script returned $project_linker_script_status, expected 42" >&2
-    exit 1
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    (
+        cd "$repo_root/tests/fixtures/project_linker_script"
+        "$repo_root/build/dudu" cmake -o "$repo_root/build/project_linker_script_cmake.txt"
+        "$repo_root/build/duc" emit -o "$repo_root/build/project_linker_script_bin.cpp"
+    )
+    grep -q -- "-Wl,-T,linker.ld" "$repo_root/build/project_linker_script_cmake.txt"
+    grep -q '__attribute__((section(".dudu_boot")))' \
+        "$repo_root/build/project_linker_script_bin.cpp"
+else
+    (
+        cd "$repo_root/tests/fixtures/project_linker_script"
+        "$repo_root/build/duc" build -o "$repo_root/build/project_linker_script_bin" --verbose \
+            2>"$repo_root/build/project_linker_script_verbose.err"
+    )
+    grep -q -- "-Wl,-T,linker.ld" \
+        "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/source/CMakeLists.txt"
+    grep -q '__attribute__((section(".dudu_boot")))' \
+        "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/build/generated/main.cpp"
+    set +e
+    "$repo_root/build/project_linker_script_bin"
+    project_linker_script_status=$?
+    set -e
+    if [[ "$project_linker_script_status" -ne 42 ]]; then
+        echo "project_linker_script returned $project_linker_script_status, expected 42" >&2
+        exit 1
+    fi
 fi
 cmake_project_dir="$repo_root/build/project_cmake"
 rm -rf "$cmake_project_dir" "$repo_root/build/project_cmake_build"
