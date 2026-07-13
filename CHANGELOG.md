@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Release packaging now anchors relative VSIX output paths before entering the
+  editor directory and gives downloadable Debian packages URL-safe filenames.
+- Linux is the alpha release-producing host. Apple Silicon source bootstrap is
+  documented as best-effort and its hosted portability preflight is manual and
+  non-blocking.
+
 ## [0.1.0-alpha.13] - 2026-07-13
 
 - Made the project-backend integration suite report the failing command and

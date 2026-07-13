@@ -45,7 +45,7 @@ release manifest. AUR publication remains pending upstream account access.
 | Channel | User command or artifact | Ownership |
 | --- | --- | --- |
 | Bootstrap installer | `curl -sSf https://dudulang.org/install.sh | sh -s -- --version VERSION` | Dudu installer |
-| GitHub source archive | `dudu-VERSION-source.tar.gz` plus SHA-256 manifest | User/source build |
+| GitHub source archive | `dudu-VERSION.tar.gz` plus SHA-256 manifest | User/source build |
 | Debian/Ubuntu download | `dudu_VERSION_amd64.deb` attached to GitHub Releases | `dpkg`/APT |
 | Homebrew tap | `brew install dudu-language/dudu/dudu` (best-effort on macOS pending user confirmation) | Homebrew |
 | Arch AUR | Package `dudu` | pacman/AUR helper |
