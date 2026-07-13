@@ -1,0 +1,239 @@
+{
+  "schema": "dudu.macro.ast",
+  "version": 1,
+  "enums": [
+    {"name": "Visibility", "values": ["Default", "Private"]},
+    {"name": "DeclarationKind", "values": ["Unknown", "Class", "Enum", "Function", "Field", "Constant", "Implementation"]},
+    {"name": "TypeKind", "values": ["Unknown", "Named", "Qualified", "Value", "Template", "Associated", "Pointer", "Reference", "Const", "Volatile", "Atomic", "Device", "Storage", "Shared", "Static", "FixedArray", "Function", "PackExpansion", "Shaped"]},
+    {"name": "ExpressionKind", "values": ["Missing", "Name", "BoolLiteral", "IntLiteral", "FloatLiteral", "StringLiteral", "NoneLiteral", "Unary", "Binary", "Call", "TemplateCall", "Member", "Index", "ListLiteral", "DictLiteral", "DictEntry", "NamedArg", "Slice", "Ellipsis", "NewAxis", "PackExpansion", "SetLiteral", "TupleLiteral", "CppEscape"]},
+    {"name": "StatementKind", "values": ["Unknown", "Expression", "Variable", "Assign", "CompoundAssign", "Return", "If", "Elif", "Else", "Match", "Case", "While", "For", "Break", "Continue", "Try", "Except", "Raise", "Delete", "Assert", "DebugAssert", "CppEscape", "Pass"]},
+    {"name": "DiagnosticSeverity", "values": ["Note", "Warning", "Error"]},
+    {"name": "OriginKind", "values": ["Source", "MacroInvocation", "MacroDefinition", "Generated"]},
+    {"name": "CapabilityKind", "values": ["FsRead", "FsWrite", "EnvRead", "Process", "Network", "Clock", "Random"]},
+    {"name": "MessageKind", "values": ["Hello", "HelloAck", "Describe", "Catalog", "Expand", "ExpansionResult", "Shutdown", "WorkerError"]}
+  ],
+  "structs": [
+    {"name": "SourcePosition", "fields": [
+      {"name": "line", "type": "u32", "tag": 1},
+      {"name": "column", "type": "u32", "tag": 2},
+      {"name": "offset", "type": "u64", "tag": 3}
+    ]},
+    {"name": "SourceRange", "fields": [
+      {"name": "file", "type": "string", "tag": 1},
+      {"name": "start", "type": "SourcePosition", "tag": 2},
+      {"name": "end", "type": "SourcePosition", "tag": 3}
+    ]},
+    {"name": "SymbolIdentity", "fields": [
+      {"name": "package", "type": "string", "tag": 1},
+      {"name": "module", "type": "string", "tag": 2},
+      {"name": "path", "type": "string", "tag": 3},
+      {"name": "native_identity", "type": "string", "tag": 4}
+    ]},
+    {"name": "TypeRef", "fields": [
+      {"name": "kind", "type": "TypeKind", "tag": 1},
+      {"name": "name", "type": "string", "tag": 2},
+      {"name": "value", "type": "string", "tag": 3},
+      {"name": "children", "type": "TypeRef", "tag": 4, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 5},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 6, "optional": true}
+    ]},
+    {"name": "Expression", "fields": [
+      {"name": "kind", "type": "ExpressionKind", "tag": 1},
+      {"name": "name", "type": "string", "tag": 2},
+      {"name": "value", "type": "string", "tag": 3},
+      {"name": "operator_name", "type": "string", "tag": 4},
+      {"name": "children", "type": "Expression", "tag": 5, "repeated": true},
+      {"name": "type_arguments", "type": "TypeRef", "tag": 6, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 7},
+      {"name": "resolved_type", "type": "TypeRef", "tag": 8, "optional": true},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true}
+    ]},
+    {"name": "Statement", "fields": [
+      {"name": "kind", "type": "StatementKind", "tag": 1},
+      {"name": "name", "type": "string", "tag": 2},
+      {"name": "type", "type": "TypeRef", "tag": 3, "optional": true},
+      {"name": "expression", "type": "Expression", "tag": 4, "optional": true},
+      {"name": "value", "type": "Expression", "tag": 5, "optional": true},
+      {"name": "target", "type": "Expression", "tag": 6, "optional": true},
+      {"name": "condition", "type": "Expression", "tag": 7, "optional": true},
+      {"name": "children", "type": "Statement", "tag": 8, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 9}
+    ]},
+    {"name": "AttributeArgument", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "value", "type": "Expression", "tag": 2},
+      {"name": "range", "type": "SourceRange", "tag": 3}
+    ]},
+    {"name": "Attribute", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "arguments", "type": "AttributeArgument", "tag": 2, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 3},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 4, "optional": true}
+    ]},
+    {"name": "GenericParameter", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "type", "type": "TypeRef", "tag": 2, "optional": true},
+      {"name": "default_type", "type": "TypeRef", "tag": 3, "optional": true},
+      {"name": "default_value", "type": "Expression", "tag": 4, "optional": true},
+      {"name": "variadic", "type": "bool", "tag": 5},
+      {"name": "range", "type": "SourceRange", "tag": 6}
+    ]},
+    {"name": "Parameter", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "type", "type": "TypeRef", "tag": 2},
+      {"name": "default_value", "type": "Expression", "tag": 3, "optional": true},
+      {"name": "variadic", "type": "bool", "tag": 4},
+      {"name": "range", "type": "SourceRange", "tag": 5}
+    ]},
+    {"name": "FieldDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "type", "type": "TypeRef", "tag": 2},
+      {"name": "value", "type": "Expression", "tag": 3, "optional": true},
+      {"name": "attributes", "type": "Attribute", "tag": 4, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 5},
+      {"name": "visibility", "type": "Visibility", "tag": 6},
+      {"name": "range", "type": "SourceRange", "tag": 7},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 8, "optional": true}
+    ]},
+    {"name": "FunctionDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "generic_parameters", "type": "GenericParameter", "tag": 2, "repeated": true},
+      {"name": "parameters", "type": "Parameter", "tag": 3, "repeated": true},
+      {"name": "return_type", "type": "TypeRef", "tag": 4, "optional": true},
+      {"name": "body", "type": "Statement", "tag": 5, "repeated": true},
+      {"name": "attributes", "type": "Attribute", "tag": 6, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 7},
+      {"name": "visibility", "type": "Visibility", "tag": 8},
+      {"name": "is_static", "type": "bool", "tag": 9},
+      {"name": "is_abstract", "type": "bool", "tag": 10},
+      {"name": "is_virtual", "type": "bool", "tag": 11},
+      {"name": "range", "type": "SourceRange", "tag": 12},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 13, "optional": true}
+    ]},
+    {"name": "EnumVariant", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "fields", "type": "FieldDecl", "tag": 2, "repeated": true},
+      {"name": "value", "type": "Expression", "tag": 3, "optional": true},
+      {"name": "attributes", "type": "Attribute", "tag": 4, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 5}
+    ]},
+    {"name": "EnumDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "generic_parameters", "type": "GenericParameter", "tag": 2, "repeated": true},
+      {"name": "underlying_type", "type": "TypeRef", "tag": 3, "optional": true},
+      {"name": "variants", "type": "EnumVariant", "tag": 4, "repeated": true},
+      {"name": "attributes", "type": "Attribute", "tag": 5, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 6},
+      {"name": "visibility", "type": "Visibility", "tag": 7},
+      {"name": "range", "type": "SourceRange", "tag": 8},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true}
+    ]},
+    {"name": "ClassDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "generic_parameters", "type": "GenericParameter", "tag": 2, "repeated": true},
+      {"name": "bases", "type": "TypeRef", "tag": 3, "repeated": true},
+      {"name": "fields", "type": "FieldDecl", "tag": 4, "repeated": true},
+      {"name": "methods", "type": "FunctionDecl", "tag": 5, "repeated": true},
+      {"name": "attributes", "type": "Attribute", "tag": 6, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 7},
+      {"name": "visibility", "type": "Visibility", "tag": 8},
+      {"name": "range", "type": "SourceRange", "tag": 9},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 10, "optional": true}
+    ]},
+    {"name": "ConstantDecl", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "type", "type": "TypeRef", "tag": 2},
+      {"name": "value", "type": "Expression", "tag": 3},
+      {"name": "attributes", "type": "Attribute", "tag": 4, "repeated": true},
+      {"name": "documentation", "type": "string", "tag": 5},
+      {"name": "visibility", "type": "Visibility", "tag": 6},
+      {"name": "range", "type": "SourceRange", "tag": 7},
+      {"name": "identity", "type": "SymbolIdentity", "tag": 8, "optional": true}
+    ]},
+    {"name": "ImplementationDecl", "fields": [
+      {"name": "contract", "type": "TypeRef", "tag": 1},
+      {"name": "target", "type": "TypeRef", "tag": 2},
+      {"name": "methods", "type": "FunctionDecl", "tag": 3, "repeated": true},
+      {"name": "range", "type": "SourceRange", "tag": 4}
+    ]},
+    {"name": "Declaration", "fields": [
+      {"name": "kind", "type": "DeclarationKind", "tag": 1},
+      {"name": "class_decl", "type": "ClassDecl", "tag": 2, "optional": true},
+      {"name": "enum_decl", "type": "EnumDecl", "tag": 3, "optional": true},
+      {"name": "function_decl", "type": "FunctionDecl", "tag": 4, "optional": true},
+      {"name": "field_decl", "type": "FieldDecl", "tag": 5, "optional": true},
+      {"name": "constant_decl", "type": "ConstantDecl", "tag": 6, "optional": true},
+      {"name": "implementation_decl", "type": "ImplementationDecl", "tag": 7, "optional": true}
+    ]},
+    {"name": "SourceOrigin", "fields": [
+      {"name": "kind", "type": "OriginKind", "tag": 1},
+      {"name": "range", "type": "SourceRange", "tag": 2},
+      {"name": "macro_name", "type": "string", "tag": 3},
+      {"name": "macro_identity", "type": "SymbolIdentity", "tag": 4, "optional": true},
+      {"name": "parent", "type": "u64", "tag": 5, "optional": true}
+    ]},
+    {"name": "GeneratedDeclaration", "fields": [
+      {"name": "declaration", "type": "Declaration", "tag": 1},
+      {"name": "origin", "type": "SourceOrigin", "tag": 2}
+    ]},
+    {"name": "Diagnostic", "fields": [
+      {"name": "severity", "type": "DiagnosticSeverity", "tag": 1},
+      {"name": "code", "type": "string", "tag": 2},
+      {"name": "message", "type": "string", "tag": 3},
+      {"name": "range", "type": "SourceRange", "tag": 4},
+      {"name": "notes", "type": "Diagnostic", "tag": 5, "repeated": true}
+    ]},
+    {"name": "Expansion", "fields": [
+      {"name": "members", "type": "GeneratedDeclaration", "tag": 1, "repeated": true},
+      {"name": "siblings", "type": "GeneratedDeclaration", "tag": 2, "repeated": true},
+      {"name": "implementations", "type": "GeneratedDeclaration", "tag": 3, "repeated": true},
+      {"name": "diagnostics", "type": "Diagnostic", "tag": 4, "repeated": true}
+    ]},
+    {"name": "Capability", "fields": [
+      {"name": "kind", "type": "CapabilityKind", "tag": 1},
+      {"name": "values", "type": "string", "tag": 2, "repeated": true}
+    ]},
+    {"name": "MacroDescriptor", "fields": [
+      {"name": "name", "type": "string", "tag": 1},
+      {"name": "entry_point", "type": "string", "tag": 2},
+      {"name": "accepted_kind", "type": "DeclarationKind", "tag": 3},
+      {"name": "attribute_schema", "type": "ClassDecl", "tag": 4, "optional": true},
+      {"name": "definition", "type": "SourceRange", "tag": 5}
+    ]},
+    {"name": "MacroCatalog", "fields": [
+      {"name": "package", "type": "string", "tag": 1},
+      {"name": "binary_identity", "type": "string", "tag": 2},
+      {"name": "macros", "type": "MacroDescriptor", "tag": 3, "repeated": true},
+      {"name": "capabilities", "type": "Capability", "tag": 4, "repeated": true}
+    ]},
+    {"name": "Hello", "fields": [
+      {"name": "compiler_version", "type": "string", "tag": 1},
+      {"name": "protocol_version", "type": "u32", "tag": 2},
+      {"name": "schema_version", "type": "u32", "tag": 3},
+      {"name": "max_frame_bytes", "type": "u64", "tag": 4}
+    ]},
+    {"name": "HelloAck", "fields": [
+      {"name": "worker_version", "type": "string", "tag": 1},
+      {"name": "protocol_version", "type": "u32", "tag": 2},
+      {"name": "schema_version", "type": "u32", "tag": 3},
+      {"name": "accepted", "type": "bool", "tag": 4},
+      {"name": "reason", "type": "string", "tag": 5}
+    ]},
+    {"name": "ExpansionRequest", "fields": [
+      {"name": "macro_name", "type": "string", "tag": 1},
+      {"name": "declaration", "type": "Declaration", "tag": 2},
+      {"name": "invocation", "type": "SourceRange", "tag": 3},
+      {"name": "compile_values", "type": "AttributeArgument", "tag": 4, "repeated": true}
+    ]},
+    {"name": "ExpansionResponse", "fields": [
+      {"name": "expansion", "type": "Expansion", "tag": 1},
+      {"name": "cacheable", "type": "bool", "tag": 2},
+      {"name": "external_input_hashes", "type": "string", "tag": 3, "repeated": true}
+    ]},
+    {"name": "WorkerError", "fields": [
+      {"name": "code", "type": "string", "tag": 1},
+      {"name": "message", "type": "string", "tag": 2},
+      {"name": "diagnostics", "type": "Diagnostic", "tag": 3, "repeated": true}
+    ]}
+  ]
+}

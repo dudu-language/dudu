@@ -59,6 +59,7 @@ set(DUDU_SUBSYSTEM_DIRS
     sema
     codegen
     native
+    macro
     project
     lsp
     format
@@ -115,6 +116,15 @@ install(DIRECTORY editors/vim editors/nvim
 install(DIRECTORY docs/
     DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs
     FILES_MATCHING PATTERN "*.md"
+)
+
+install(DIRECTORY lib/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/lib
+    FILES_MATCHING PATTERN "*.dd"
+)
+
+install(FILES schema/macro_ast.json
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/schema
 )
 
 install(FILES
@@ -205,6 +215,10 @@ if(DUDU_BUILD_TESTS)
     add_executable(dudu_format_tests tests/format_tests.cpp)
     target_link_libraries(dudu_format_tests PRIVATE dudu_frontend)
     target_compile_features(dudu_format_tests PRIVATE cxx_std_20)
+
+    add_executable(dudu_macro_protocol_tests tests/macro_protocol_tests.cpp)
+    target_link_libraries(dudu_macro_protocol_tests PRIVATE dudu_frontend)
+    target_compile_features(dudu_macro_protocol_tests PRIVATE cxx_std_20)
 endif()
 
 option(DUDU_PACKAGE_DEB "Enable Debian package generation through CPack" OFF)
@@ -247,6 +261,7 @@ if(DUDU_STRICT)
         target_compile_options(dudu_parser_range_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(dudu_project_config_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(dudu_format_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(dudu_macro_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     if(DUDU_WARN_AS_ERROR)
         target_compile_options(dudu PRIVATE -Werror)
@@ -270,6 +285,7 @@ if(DUDU_STRICT)
             target_compile_options(dudu_parser_range_tests PRIVATE -Werror)
             target_compile_options(dudu_project_config_tests PRIVATE -Werror)
             target_compile_options(dudu_format_tests PRIVATE -Werror)
+            target_compile_options(dudu_macro_protocol_tests PRIVATE -Werror)
         endif()
     endif()
 endif()
@@ -292,4 +308,5 @@ if(DUDU_BUILD_TESTS)
     add_test(NAME dudu_parser_range_tests COMMAND dudu_parser_range_tests)
     add_test(NAME dudu_project_config_tests COMMAND dudu_project_config_tests)
     add_test(NAME dudu_format_tests COMMAND dudu_format_tests)
+    add_test(NAME dudu_macro_protocol_tests COMMAND dudu_macro_protocol_tests)
 endif()

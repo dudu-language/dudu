@@ -6,6 +6,12 @@ source "$repo_root/scripts/test_helpers.sh"
 toolchain_version="$(tr -d '\r\n' <"$repo_root/VERSION")"
 
 "$repo_root/scripts/sync_version.py"
+python3 "$repo_root/scripts/generate_macro_ast.py" \
+    --schema "$repo_root/schema/macro_ast.json" \
+    --cpp-header "$repo_root/src/dudu/macro/macro_protocol_generated.hpp" \
+    --cpp-source "$repo_root/src/dudu/macro/macro_protocol_generated.cpp" \
+    --dudu-sdk "$repo_root/lib/dudu/ast.dd" \
+    --check
 "$repo_root/scripts/check_ast_migration_guards.sh"
 bash -n "$repo_root/scripts/install-local.sh"
 bash -n "$repo_root/scripts/release-check.sh"
