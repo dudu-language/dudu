@@ -16,6 +16,7 @@
 #include "dudu/core/control_flow.hpp"
 #include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
@@ -278,10 +279,17 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 out << ";\n";
             } else {
-                const std::string value = lower_emitted_expr(stmt.value_expr, aliases, locals,
-                                                             local_type_refs, symbols, options);
                 const TypeRef inferred_ref = infer_emitted_local_type_ref(
                     stmt.value_expr, local_type_refs, function_returns, symbols);
+                const bool inferred_collection =
+                    is_collection_literal(stmt.value_expr) && has_type_ref(inferred_ref);
+                const std::string value =
+                    inferred_collection
+                        ? lower_expr_as_type_ref(inferred_ref, stmt.value_expr, aliases, locals,
+                                                 local_type_refs, function_returns, symbols,
+                                                 options)
+                        : lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs,
+                                             symbols, options);
                 locals.bind(lhs);
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
@@ -289,7 +297,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     local_type_refs.emplace(
                         lhs, named_type_ref("auto", stmt_target_expr(stmt).location));
                 }
-                out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
+                out << indent(depth)
+                    << (inferred_collection
+                            ? lower_declared_stmt_type(inferred_ref, aliases, options)
+                            : "auto")
+                    << ' ' << lhs << " = " << value << ";\n";
             }
             return;
         }

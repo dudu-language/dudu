@@ -299,6 +299,11 @@ void test_emitted_local_expression_type_inference() {
     expect_emitted_local_type("queue.pop()", locals, functions, "i32");
     expect_emitted_local_type("make_values()[0]", locals, functions, "i32");
     expect_emitted_local_type("make_matrix()[1][0]", locals, functions, "i32");
+    expect_emitted_local_type("[1, 2, 3]", locals, functions, "list[i32]");
+    expect_emitted_local_type("{\"one\": 1, \"two\": 2}", locals, functions,
+                              "dict[str, i32]");
+    expect_emitted_local_type("{\"one\", \"two\"}", locals, functions, "set[str]");
+    expect_emitted_local_type("[[1, 2], [3, 4]]", locals, functions, "list[list[i32]]");
 
     const dudu::ModuleAst module = dudu::parse_source("class lowercase:\n"
                                                       "    value: i32\n",
@@ -307,6 +312,93 @@ void test_emitted_local_expression_type_inference() {
     const dudu::TypeRef constructed =
         dudu::infer_emitted_local_type_ref(dudu::parse_expr_text("lowercase(1)"), {}, {}, &symbols);
     assert(dudu::type_ref_text(constructed) == "lowercase");
+}
+
+void test_collection_literal_binding_inference() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "def first(values: list[i32]) -> i32:\n"
+        "    return values[0]\n"
+        "\n"
+        "def fractions() -> list[f32]:\n"
+        "    return [1.0, 2]\n"
+        "\n"
+        "def main() -> i32:\n"
+        "    numbers = [1, 2, 3]\n"
+        "    scores = {\"ada\": 20, \"bob\": 22}\n"
+        "    names = {\"ada\", \"bob\"}\n"
+        "    nested = [[1, 2], [3, 4]]\n"
+        "    groups = {\"a\": {\"x\": 5}, \"b\": {\"x\": 6}}\n"
+        "    wide: dict[str, u64] = {\"count\": 9}\n"
+        "    offsets: set[usize] = {1, 2}\n"
+        "    mixed: list[variant[i32, str]] = [1, \"two\"]\n"
+        "    numbers.append(4)\n"
+        "    total = 0\n"
+        "    for number in numbers:\n"
+        "        total += number\n"
+        "    return first(numbers) + scores[\"bob\"] + nested[1][0] + "
+        "groups[\"a\"][\"x\"] + total\n",
+        "collection_literal_inference.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+
+    const auto expect_rejected = [](std::string_view declaration, std::string_view expected) {
+        bool rejected = false;
+        try {
+            const dudu::ModuleAst bad = dudu::parse_source(
+                "def main() -> i32:\n    " + std::string(declaration) + "\n    return 0\n",
+                "bad_collection_literal.dd");
+            dudu::analyze_module(bad, {.check_bodies = true});
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(expected) != std::string::npos;
+        }
+        assert(rejected);
+    };
+    expect_rejected("items = []", "cannot infer type of empty collection literal");
+    expect_rejected("items = [1, \"two\"]", "list element type mismatch");
+    expect_rejected("items = {\"one\": 1, \"two\": False}", "dict value type mismatch");
+    expect_rejected("items = {1, \"two\"}", "set element type mismatch");
+}
+
+void test_fixed_array_literal_inference_and_numeric_context() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "def main() -> i32:\n"
+        "    line: array[i32] = [1, 2, 3]\n"
+        "    matrix: array[f32] = [[1.0, 2.0], [3.0, 4.0]]\n"
+        "    cube: array[u8] = [[[1, 2]], [[3, 4]]]\n"
+        "    volume: array[i64] = [[[[1, 2]]], [[[3, 4]]]]\n"
+        "    zero_inner: array[i32] = [[], []]\n"
+        "    return line[0] + i32(matrix[1, 1]) + i32(cube[1, 0, 0]) + "
+        "i32(volume[1, 0, 0, 0])\n",
+        "fixed_array_inference.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+
+    const auto expect_rejected = [](const std::string& source, std::string_view expected,
+                                    int expected_line) {
+        bool rejected = false;
+        try {
+            const dudu::ModuleAst bad = dudu::parse_source(source, "bad_fixed_array.dd");
+            dudu::analyze_module(bad, {.check_bodies = true});
+        } catch (const dudu::CompileError& error) {
+            rejected = error.location().line == expected_line &&
+                       std::string(error.what()).find(expected) != std::string::npos;
+        }
+        assert(rejected);
+    };
+    expect_rejected("def main() -> i32:\n    values: array[i32] = []\n    return 0\n",
+                    "array shape cannot be inferred from an empty literal", 2);
+    expect_rejected("def main() -> i32:\n"
+                    "    values: array[i32] = [\n"
+                    "        [1, 2],\n"
+                    "        [3],\n"
+                    "    ]\n"
+                    "    return 0\n",
+                    "ragged array literal", 4);
+    expect_rejected("def main() -> i32:\n"
+                    "    values: array[i32][2, 2] = [\n"
+                    "        [1, 2, 3],\n"
+                    "        [4, 5, 6],\n"
+                    "    ]\n"
+                    "    return 0\n",
+                    "array literal shape mismatch: expected [2, 2], got [2, 3]", 3);
 }
 
 void test_tuple_expression_inference_uses_type_ast() {
@@ -339,6 +431,8 @@ int main() {
         test_explicit_shape_value_generic_call_inference();
         test_direct_call_return_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
+        test_collection_literal_binding_inference();
+        test_fixed_array_literal_inference_and_numeric_context();
         test_tuple_expression_inference_uses_type_ast();
         test_result_constructor_inference_uses_type_ast();
     } catch (const std::exception& error) {

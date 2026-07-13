@@ -111,6 +111,35 @@ void add_type_hint(std::vector<InlayHint>& hints, const Document& doc, const Sym
                      .kind = 1});
 }
 
+void add_inferred_array_shape_hint(std::vector<InlayHint>& hints, const Document& doc,
+                                   const Symbols& symbols, const TypeRef& declared,
+                                   const TypeRef& inferred) {
+    if (declared.kind != TypeKind::Template || declared.name != "array" ||
+        declared.range.end.line <= 0 || declared.range.end.column <= 0) {
+        return;
+    }
+    const std::vector<std::string> extents = explicit_array_shape_values(inferred);
+    if (extents.empty()) {
+        return;
+    }
+    std::ostringstream label;
+    label << '[';
+    for (size_t i = 0; i < extents.size(); ++i) {
+        if (i > 0) {
+            label << ", ";
+        }
+        label << extents[i];
+    }
+    label << ']';
+    const InlayTypeDetail detail = inlay_type_detail(doc, symbols, inferred, "");
+    hints.push_back({.line = declared.range.end.line - 1,
+                     .character = declared.range.end.column - 1,
+                     .label = label.str(),
+                     .label_json = {},
+                     .tooltip_json = inlay_tooltip_json(detail),
+                     .kind = 1});
+}
+
 void add_argument_type_hint(std::vector<InlayHint>& hints, const Document& doc,
                             const Symbols& symbols, const Expr& expr, const TypeRef& type) {
     const std::string label = type_label(type);
@@ -469,6 +498,10 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
     if (stmt.kind == StmtKind::VarDecl) {
         TypeRef type = has_stmt_type_ref(stmt) ? effective_inlay_var_type(stmt)
                                                : infer_type(scope, stmt.value_expr);
+        if (options.inferred_types && has_stmt_type_ref(stmt) &&
+            type.kind == TypeKind::FixedArray) {
+            add_inferred_array_shape_hint(hints, doc, scope.symbols, stmt_type_ref(stmt), type);
+        }
         if (options.inferred_types &&
             !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
             add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, type);

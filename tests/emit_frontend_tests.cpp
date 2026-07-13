@@ -92,6 +92,23 @@ void test_value_member_emission() {
     assert(cpp.find("return player.health;") != std::string::npos);
 }
 
+void test_inferred_collection_literal_emission() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "def main() -> i32:\n"
+        "    numbers = [1, 2, 3]\n"
+        "    scores = {\"ada\": 20, \"bob\": 22}\n"
+        "    names = {\"ada\", \"bob\"}\n"
+        "    nested = [[1, 2], [3, 4]]\n"
+        "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n",
+        "inferred_collection_emission.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::vector<int32_t> numbers = {1, 2, 3};") != std::string::npos);
+    assert(cpp.find("std::unordered_map<std::string, int32_t> scores") != std::string::npos);
+    assert(cpp.find("std::unordered_set<std::string> names") != std::string::npos);
+    assert(cpp.find("std::vector<std::vector<int32_t>> nested") != std::string::npos);
+}
+
 void test_c_imports_emit_c_linkage() {
     const dudu::ModuleAst module = dudu::parse_source("from c import math.h\n"
                                                       "from cxx import libxml/parser.h\n"
@@ -476,6 +493,7 @@ int main() {
         test_image_filter_emission(root);
         test_pointer_member_emission(root);
         test_value_member_emission();
+        test_inferred_collection_literal_emission();
         test_c_imports_emit_c_linkage();
         test_path_imports_emit_quoted_includes();
         test_templated_pointer_cast_emission();

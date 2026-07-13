@@ -459,6 +459,23 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
     assert(quiet_hints.find("\"label\":\"left:\"") == std::string::npos);
 }
 
+void test_lsp_inlay_hints_show_inferred_collection_types() {
+    const dudu::Document doc{
+        .uri = "file:///collection_inlay_hints.dd",
+        .path = "collection_inlay_hints.dd",
+        .text = "def main() -> i32:\n"
+                "    numbers = [1, 2, 3]\n"
+                "    scores = {\"ada\": 20, \"bob\": 22}\n"
+                "    names = {\"ada\", \"bob\"}\n"
+                "    nested = [[1, 2], [3, 4]]\n"
+                "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n"};
+    const std::string hints = dudu::inlay_hints_json(doc, nullptr);
+    assert(hints.find("list[i32]") != std::string::npos);
+    assert(hints.find("dict[str, i32]") != std::string::npos);
+    assert(hints.find("set[str]") != std::string::npos);
+    assert(hints.find("list[list[i32]]") != std::string::npos);
+}
+
 void test_lsp_inlay_hints_show_inferred_tensor_view_shapes() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_tensor_inlay_shape_test";
@@ -520,6 +537,7 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
                                      "    patch = matrix[1:3, 2:4]\n"
                                      "    expanded = matrix[:, None, 1]\n"
                                      "    same = matrix[...]\n"
+                                     "    volume: array[f32] = [[[[1.0, 2.0]]]]\n"
                                      "    return col[1] + row[2] + patch[1, 0] + expanded[2, 0] + "
                                      "same[2, 3]\n"};
 
@@ -534,6 +552,7 @@ void test_lsp_inlay_hints_use_inferred_array_literal_shapes() {
     assert(hints.find("array_view[i32][2, 2]") != std::string::npos);
     assert(hints.find("array_view[i32][3, 1]") != std::string::npos);
     assert(hints.find("array_view[i32][3, 4]") != std::string::npos);
+    assert(hints.find("array[f32][1, 1, 1, 2]") != std::string::npos);
     assert(hints.find("\": i32\"") == std::string::npos);
 }
 
@@ -1104,6 +1123,7 @@ int main() {
         test_lsp_member_completion_includes_ast_docs();
         test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_inlay_hints_show_inferred_types_and_receiver();
+        test_lsp_inlay_hints_show_inferred_collection_types();
         test_lsp_inlay_hints_show_inferred_tensor_view_shapes();
         test_lsp_inlay_hints_use_inferred_array_literal_shapes();
         test_lsp_inlay_hints_type_value_generic_extents_as_usize();

@@ -1,0 +1,25 @@
+def sum_shapes() -> i32:
+    line: array[i32] = [1, 2, 3]
+    matrix: array[f32] = [
+        [1.0, 2.0],
+        [3.0, 4.0],
+    ]
+    cube: array[u8] = [
+        [[1, 2]],
+        [[3, 4]],
+    ]
+    volume: array[i64] = [
+        [[[1, 2]]],
+        [[[3, 4]]],
+    ]
+    zero_inner: array[i32] = [[], []]
+    return (
+        line[0]
+        + i32(matrix[1, 1])
+        + i32(cube[1, 0, 0])
+        + i32(volume[1, 0, 0, 0])
+        + i32(len(zero_inner))
+    )
+
+def main() -> i32:
+    return sum_shapes()

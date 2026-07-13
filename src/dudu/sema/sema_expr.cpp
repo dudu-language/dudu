@@ -1,5 +1,7 @@
 #include "dudu/sema/sema_expr.hpp"
 
+#include "dudu/sema/collection_literal_inference.hpp"
+
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/naming.hpp"
@@ -94,9 +96,20 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::NoneLiteral:
         return named_type_ref("None", type_location);
     case ExprKind::ListLiteral:
-        return named_type_ref("list", type_location);
     case ExprKind::DictLiteral:
-        return named_type_ref("dict", type_location);
+    case ExprKind::SetLiteral: {
+        const CollectionLiteralInference inferred = infer_collection_literal_type(
+            &scope.symbols, expr, [&](const Expr& child) {
+                return infer_expr_type_ast(scope, child, location);
+            });
+        if (inferred.status == CollectionLiteralStatus::Inferred) {
+            return inferred.type_ref;
+        }
+        const std::string name = expr.kind == ExprKind::ListLiteral
+                                     ? "list"
+                                     : expr.kind == ExprKind::DictLiteral ? "dict" : "set";
+        return named_type_ref(name, type_location);
+    }
     case ExprKind::DictEntry:
         return named_type_ref("auto", type_location);
     case ExprKind::NamedArg:
@@ -129,8 +142,6 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         return pack_expansion_type_ref(infer_expr_type_ast(scope, expr.children.front(), location),
                                        type_location);
-    case ExprKind::SetLiteral:
-        return named_type_ref("set", type_location);
     case ExprKind::Name:
         if (is_discard_binding(expr.name)) {
             if (location != nullptr) {

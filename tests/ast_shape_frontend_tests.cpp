@@ -589,6 +589,33 @@ void test_type_ast_shape() {
            "std::array<std::array<float, 4>, 4>");
 }
 
+void test_array_literal_shape_inference_is_rank_independent() {
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        {"[1, 2, 3]", "array[i32][3]"},
+        {"[[1, 2], [3, 4]]", "array[i32][2, 2]"},
+        {"[[[1, 2]], [[3, 4]]]", "array[i32][2, 1, 2]"},
+        {"[[[[1, 2]]], [[[3, 4]]]]", "array[i32][2, 1, 1, 2]"},
+        {"[[], []]", "array[i32][2, 0]"},
+    };
+    for (const auto& [literal, expected] : cases) {
+        const dudu::ArrayShapeInference inferred = dudu::infer_array_literal_shape_type(
+            dudu::parse_type_text("array[i32]"), dudu::parse_expr_text(literal));
+        assert(inferred.status == dudu::ArrayShapeStatus::Inferred);
+        assert(dudu::type_ref_text(inferred.type_ref) == expected);
+    }
+
+    const dudu::Expr ragged = dudu::parse_expr_text("[[1, 2], [3]]");
+    const dudu::ArrayShapeInference bad = dudu::infer_array_literal_shape_type(
+        dudu::parse_type_text("array[i32]"), ragged);
+    assert(bad.status == dudu::ArrayShapeStatus::RaggedLiteral);
+    assert(bad.error_location.column == ragged.children[1].location.column);
+
+    const dudu::Expr wrong = dudu::parse_expr_text("[[1, 2, 3], [4, 5, 6]]");
+    const dudu::SourceLocation mismatch =
+        dudu::array_shape_mismatch_location(wrong, {2, 2}, {2, 3});
+    assert(mismatch.column == wrong.children.front().location.column);
+}
+
 } // namespace
 
 int main() {
@@ -599,6 +626,7 @@ int main() {
         test_dereference_postfix_expression_shape();
         test_decorator_expression_ast_shape();
         test_type_ast_shape();
+        test_array_literal_shape_inference_is_rank_independent();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

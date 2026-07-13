@@ -4,6 +4,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_signature_match.hpp"
+#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -448,6 +449,17 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return named_type_ref("ellipsis", expr.location);
     case ExprKind::NewAxis:
         return named_type_ref("new_axis", expr.location);
+    case ExprKind::ListLiteral:
+    case ExprKind::DictLiteral:
+    case ExprKind::SetLiteral: {
+        const CollectionLiteralInference inferred = infer_collection_literal_type(
+            symbols, expr, [&](const Expr& child) {
+                return infer_emitted_local_type_ref(child, local_type_refs, function_returns,
+                                                    symbols);
+            });
+        return inferred.status == CollectionLiteralStatus::Inferred ? inferred.type_ref
+                                                                    : TypeRef{};
+    }
     case ExprKind::PackExpansion:
         if (expr.children.size() != 1) {
             return {};
@@ -463,11 +475,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::Unknown:
     case ExprKind::CppEscape:
     case ExprKind::DictEntry:
-    case ExprKind::DictLiteral:
     case ExprKind::Lambda:
-    case ExprKind::ListLiteral:
     case ExprKind::NamedArg:
-    case ExprKind::SetLiteral:
     case ExprKind::TupleLiteral:
         return {};
     }

@@ -12,6 +12,7 @@
 #include "dudu/sema/sema_bindings.hpp"
 #include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_body_internal.hpp"
+#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
@@ -57,6 +58,25 @@ TypeRef substitute_method_self_type(const ClassDecl& klass, const TypeRef& type,
         return type;
     }
     return substitute_type_ref(type, {{"Self", generic_self_type_ref(klass, location)}});
+}
+
+TypeRef infer_binding_type(FunctionScope& scope, const Expr& expr,
+                           const SourceLocation& location) {
+    if (!is_collection_literal(expr)) {
+        return infer_expr_type_ast(scope, expr, &location);
+    }
+    const CollectionLiteralInference inferred = infer_collection_literal_type(
+        &scope.symbols, expr, [&](const Expr& child) {
+            const SourceLocation& child_location = diagnostic_location(location, child);
+            return infer_expr_type_ast(scope, child, &child_location);
+        });
+    if (inferred.status != CollectionLiteralStatus::Inferred) {
+        const SourceLocation error_location = inferred.error_location.line > 0
+                                                  ? inferred.error_location
+                                                  : location;
+        sema_fail(error_location, collection_literal_error(inferred));
+    }
+    return inferred.type_ref;
 }
 
 void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
@@ -233,7 +253,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                       "array shape cannot be inferred from an empty literal");
         }
         if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
-            sema_fail(diagnostic_location(stmt.location, stmt.value_expr), "ragged array literal");
+            sema_fail(inferred.error_location.line > 0 ? inferred.error_location : stmt.location,
+                      "ragged array literal");
         }
         const std::vector<size_t> explicit_shape = explicit_array_shape(declared_type);
         const TypeRef explicit_element = explicit_array_element_type_ref(declared_type);
@@ -241,7 +262,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             const ArrayShapeInference actual =
                 infer_array_literal_shape_type(declared_type.children.front(), stmt.value_expr);
             if (actual.status == ArrayShapeStatus::RaggedLiteral) {
-                sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
+                sema_fail(actual.error_location.line > 0 ? actual.error_location : stmt.location,
                           "ragged array literal");
             }
             if (actual.status == ArrayShapeStatus::EmptyLiteral &&
@@ -251,7 +272,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                               shape_display(explicit_shape) + ", got [0]");
             }
             if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
-                sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
+                sema_fail(array_shape_mismatch_location(stmt.value_expr, explicit_shape,
+                                                        actual.shape),
                           "array literal shape mismatch: expected " +
                               shape_display(explicit_shape) + ", got " +
                               shape_display(actual.shape));
@@ -314,8 +336,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             const std::string& name = stmt_target_expr(stmt).name;
             check_local_binding_name(diagnostic_location(stmt.location, stmt_target_expr(stmt)),
                                      name);
-            const TypeRef inferred = infer_expr_type_ast(
-                scope, stmt.value_expr, &diagnostic_location(stmt.location, stmt.value_expr));
+            const TypeRef inferred = infer_binding_type(
+                scope, stmt.value_expr, diagnostic_location(stmt.location, stmt.value_expr));
             bind_local(scope, name, inferred);
             if (is_dudu_all_caps(name)) {
                 scope.constants.insert(name);
@@ -374,7 +396,8 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
                           "array shape cannot be inferred from an empty literal");
             }
             if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
-                sema_fail(diagnostic_location(constant.location, constant.value_expr),
+                sema_fail(inferred.error_location.line > 0 ? inferred.error_location
+                                                           : constant.location,
                           "ragged array literal");
             }
             const TypeRef constant_type = inferred.status == ArrayShapeStatus::Inferred
