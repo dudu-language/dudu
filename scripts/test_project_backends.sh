@@ -436,21 +436,26 @@ if [[ "$project_library_status" -ne 42 ]]; then
     echo "project_library_caller returned $project_library_status, expected 42" >&2
     exit 1
 fi
-rm -f "$repo_root/build/libproject_shared.so" "$repo_root/build/libproject_shared.so.cpp"
+shared_library_suffix="so"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    shared_library_suffix="dylib"
+fi
+shared_library="$repo_root/build/libproject_shared.$shared_library_suffix"
+rm -f "$shared_library" "$shared_library.cpp"
 (
     cd "$repo_root/tests/fixtures/project_shared_library"
-    "$repo_root/build/duc" build -o "$repo_root/build/libproject_shared.so" --verbose \
+    "$repo_root/build/duc" build -o "$shared_library" --verbose \
         2>"$repo_root/build/project_shared_library_verbose.err"
     "$repo_root/build/duc" main.dd --emit-header "$repo_root/build/project_shared_library.hpp"
 )
-test -f "$repo_root/build/libproject_shared.so"
+test -f "$shared_library"
 grep -q "add_library(project_shared SHARED" \
     "$repo_root/tests/fixtures/project_shared_library/build/cmake-backend/source/CMakeLists.txt"
 printf '#include "project_shared_library.hpp"\nint main() { return answer(); }\n' \
     >"$repo_root/build/project_shared_library_caller.cpp"
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" \
     "$repo_root/build/project_shared_library_caller.cpp" \
-    "$repo_root/build/libproject_shared.so" -Wl,-rpath,"$repo_root/build" \
+    "$shared_library" -Wl,-rpath,"$repo_root/build" \
     -o "$repo_root/build/project_shared_library_caller"
 set +e
 "$repo_root/build/project_shared_library_caller"
