@@ -1,5 +1,5 @@
 def main() -> i32:
-    cache: dict[str, dict[i32, set[f32]]] = {
+    cache = {
         "first": {
             7: {1.0, 2.0},
         },

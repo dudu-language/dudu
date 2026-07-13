@@ -389,16 +389,20 @@ for player in players:
         <p>Nonempty literals infer their element type. Empty collections need an explicit type unless a surrounding expected type supplies it. Conflicting element constraints are errors; use an explicit payload enum when mixed values are intentional.</p>
         <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/collections.md">Collection inference and diagnostics</a>
         <h3>Dictionaries</h3>
-        <div class="code-window"><div class="code-label">Dudu</div><pre><code>scores: dict[str, i32] = {
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>scores = {
     "ada": 99,
     "lin": 80,
 }
+# inferred: dict[str, i32]
+
 scores["grace"] = 100
 
 if scores.contains("ada"):
     print(scores["ada"])</code></pre></div>
         <h3>Sets</h3>
-        <div class="code-window"><div class="code-label">Dudu</div><pre><code>visited: set[str] = {"start", "hall"}
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>visited = {"start", "hall"}
+# inferred: set[str]
+
 visited.insert("vault")
 
 if visited.contains("vault"):
