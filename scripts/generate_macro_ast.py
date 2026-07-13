@@ -93,7 +93,7 @@ def dudu_default(field: dict[str, Any], first_values: dict[str, str]) -> str:
     if kind in {"u32", "u64", "i64", "f64"}:
         return "0"
     if kind == "string":
-        return '""'
+        return "str()"
     if kind == "bytes":
         return "[]"
     if kind in first_values:

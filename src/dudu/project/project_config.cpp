@@ -142,6 +142,36 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
     return out;
 }
 
+bool parse_true(const std::filesystem::path& path, const std::string& line,
+                const std::string& value) {
+    if (trim_copy(value) != "true") {
+        fail(path, "expected true", line);
+    }
+    return true;
+}
+
+void parse_macro_capability(ProjectConfig& config, const std::filesystem::path& path,
+                            const std::string& line, const std::string& name,
+                            const std::string& value) {
+    static const std::set<std::string> scoped = {"fs.read", "fs.write", "env.read", "process",
+                                                 "network"};
+    static const std::set<std::string> unscoped = {"clock", "random"};
+    if (scoped.contains(name)) {
+        std::vector<std::string> values = parse_string_array(path, line, value);
+        if (values.empty()) {
+            fail(path, "macro capability '" + name + "' requires at least one scope", line);
+        }
+        config.macro_capabilities[name] = std::move(values);
+        return;
+    }
+    if (unscoped.contains(name)) {
+        (void)parse_true(path, line, value);
+        config.macro_capabilities[name] = {};
+        return;
+    }
+    fail(path, "unknown macro capability '" + name + "'", line);
+}
+
 std::map<std::string, std::string> parse_inline_table(const std::filesystem::path& path,
                                                       const std::string& line, std::string value) {
     value = trim_copy(std::move(value));
@@ -456,6 +486,11 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         } else if (section == "deps") {
             ProjectDependency dependency = parse_dependency(path, line, name, value);
             config.dependencies[dependency.name] = std::move(dependency);
+        } else if (section == "macro.capabilities") {
+            parse_macro_capability(config, path, line, name, value);
+        } else if (section == "macro" && name == "allow_non_cacheable") {
+            const std::vector<std::string> names = parse_string_array(path, line, value);
+            config.non_cacheable_macros.insert(names.begin(), names.end());
         } else if (section == "build" && name == "dir") {
             config.build_dir = unquote(path, line, value);
         } else if (section == "build" && name == "backend") {

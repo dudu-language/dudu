@@ -1608,7 +1608,13 @@ push. They are not release packaging work.
    macro-system plan, plus the benchmark fixtures and release budgets in the
    performance plan. Debug, Json, StringEnum, reflection, CLI argument, binary
    schema, and C export-table packages must prove the public API without
-   compiler special cases.
+   compiler special cases. Completion also includes the documentation and
+   website gate in the macro-system plan: reconcile the language docs, status,
+   limitations, roadmap, and changelog; publish a substantial
+   `docs/macros.md`; expand the website Tour and Docs with fixture-backed macro
+   definitions, invocations, expansions, diagnostics, editor behavior,
+   packaging, caching, and performance examples; validate and deploy the
+   Cloudflare site. Do not leave those as post-implementation cleanup.
 
 9. Native Header Hardening
 

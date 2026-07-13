@@ -1,0 +1,8 @@
+import dudu.ast as ast
+
+
+def main() -> i32:
+    item = ast.named_type("Player")
+    if item.name == "Player":
+        return 42
+    return 0

@@ -7,6 +7,7 @@
 #include "dudu/parser/parser.hpp"
 #include "dudu/project/module_import_aliases.hpp"
 #include "dudu/project/module_names.hpp"
+#include "dudu/project/standard_library.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -47,15 +48,19 @@ std::string import_package_name(const std::string& module_path) {
 std::filesystem::path
 module_root_for_source(const std::filesystem::path& entry_root, const std::filesystem::path& source,
                        const std::map<std::string, std::filesystem::path>& module_roots) {
-    std::filesystem::path best = entry_root;
-    size_t best_size = best.string().size();
+    std::filesystem::path best;
+    size_t best_size = 0;
+    if (path_is_under(source, entry_root)) {
+        best = entry_root;
+        best_size = best.string().size();
+    }
     for (const auto& [_, root] : module_roots) {
         if (path_is_under(source, root) && root.string().size() >= best_size) {
             best = root;
             best_size = root.string().size();
         }
     }
-    return best;
+    return best.empty() ? source.parent_path() : best;
 }
 
 std::filesystem::path
@@ -438,7 +443,7 @@ LoadSourceTreeResult load_source_tree_impl(const LoadSourceTreeOptions& options,
         canonical_overrides[canonical_source_path(path)] = source;
     }
     std::map<std::string, std::filesystem::path> canonical_module_roots;
-    for (const auto& [name, path] : options.module_roots) {
+    for (const auto& [name, path] : with_standard_module_roots(options.module_roots)) {
         canonical_module_roots[name] = canonical_source_path(path);
     }
     std::vector<std::filesystem::path> stack;
@@ -492,7 +497,7 @@ std::vector<std::filesystem::path>
 source_tree_files(const std::filesystem::path& entry,
                   const std::map<std::string, std::filesystem::path>& module_roots) {
     std::map<std::string, std::filesystem::path> canonical_module_roots;
-    for (const auto& [name, path] : module_roots) {
+    for (const auto& [name, path] : with_standard_module_roots(module_roots)) {
         canonical_module_roots[name] = canonical_source_path(path);
     }
     std::vector<std::filesystem::path> stack;

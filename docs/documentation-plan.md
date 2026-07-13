@@ -41,6 +41,10 @@ separate pages.
   arithmetic.
 - `docs/native-templates-and-macros.md` owns imported template and macro
   behavior.
+- `docs/macros.md` owns user-defined declaration-macro authoring, consumption,
+  expansion inspection, capabilities, caching, diagnostics, editor behavior,
+  and performance. It must clearly distinguish this feature from imported
+  C/C++ macros and compiler-known decorators.
 - `docs/allocation-and-lifetimes.md` owns values, raw allocation, custom
   allocators, and diagnosed pointer escapes.
 - `docs/arrays-views-and-indexing.md` owns fixed-array and library-defined
@@ -64,6 +68,9 @@ clearly marked as illustrative.
 - Keep navigation, anchors, and search usable without JavaScript; JavaScript may
   improve filtering and current-section tracking.
 - Keep the documentation version aligned with the released toolchain version.
+- Treat a user-defined macro implementation milestone as incomplete until the
+  Tour, Docs manual, long-form macro guide, changelog, status, limitations, and
+  deployed site all describe the shipped behavior.
 
 ## Tooling Direction
 

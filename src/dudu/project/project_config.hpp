@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,8 @@ struct ProjectConfig {
     std::map<std::string, ProjectTarget> targets;
     std::map<std::string, ProjectDependency> dependencies;
     std::map<std::string, std::string> build_values;
+    std::map<std::string, std::vector<std::string>> macro_capabilities;
+    std::set<std::string> non_cacheable_macros;
     std::string compiler;
     std::vector<std::string> c_sources;
     std::vector<std::string> cpp_sources;

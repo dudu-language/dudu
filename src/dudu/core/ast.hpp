@@ -252,6 +252,7 @@ struct FieldDecl {
     std::string name;
     TypeRef type_ref;
     Expr value_expr;
+    std::vector<Decorator> decorators;
     SourceLocation location;
     std::string doc_comment{};
 };
@@ -352,6 +353,7 @@ struct NativeNamespaceDecl {
 struct EnumPayloadField {
     std::string name;
     TypeRef type_ref;
+    std::vector<Decorator> decorators;
     SourceLocation location;
 };
 
@@ -359,6 +361,7 @@ struct EnumValueDecl {
     std::string name;
     Expr value_expr;
     std::vector<EnumPayloadField> payload_fields;
+    std::vector<Decorator> decorators;
     SourceLocation location;
     std::string doc_comment{};
 };
@@ -369,6 +372,7 @@ struct EnumDecl {
     TypeRef underlying_type_ref;
     std::string origin_module;
     std::vector<EnumValueDecl> values;
+    std::vector<Decorator> decorators;
     SourceLocation location;
     SourceRange range;
     std::string doc_comment{};
@@ -397,6 +401,7 @@ struct ConstDecl {
     std::string cpp_name;
     TypeRef type_ref;
     Expr value_expr;
+    std::vector<Decorator> decorators;
     std::string origin_module;
     SourceLocation location;
     std::string doc_comment{};

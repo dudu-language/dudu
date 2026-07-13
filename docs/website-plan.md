@@ -189,6 +189,13 @@ and memory examples, deliberate omissions, portability boundaries, and the
 newer type-system ideas Dudu adopts. Keep normal tooling expectations such as
 the LSP out of the homepage language-feature list.
 
+Once user-defined macros land, the Tour also shows their practical effect with
+side-by-side handwritten declarations, macro invocations, and generated Dudu.
+It covers Debug, Json/serde-style generation, StringEnum, reflection, CLI
+arguments, binary schemas, and native export tables without presenting macros
+as custom syntax or text substitution. The section links to the full public
+macro guide at `docs/macros.md`.
+
 Suggested hero copy direction:
 
 ```text
@@ -216,6 +223,13 @@ API direction, and completion criteria are defined in
 [`documentation-plan.md`](documentation-plan.md). The public manual must remain
 usable without JavaScript; client-side filtering and current-section tracking
 are enhancements only.
+
+The Docs manual includes a runnable user-defined macro quickstart, exact
+`@macro`/`@derive`/helper-attribute syntax, package and capability configuration,
+`duc expand`, diagnostics, editor behavior, generated source origins, caching,
+and measured performance. Every advertised example is fixture-backed, and the
+manual links to the long-form macro guide rather than duplicating an
+implementation plan.
 
 ## Hosting And Deployment
 

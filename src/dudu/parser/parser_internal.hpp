@@ -69,9 +69,9 @@ class Parser {
 
     ClassDecl parse_class(const Token& start, Visibility visibility,
                           const std::vector<Decorator>& decorators);
-    FieldDecl parse_field();
-    EnumDecl parse_enum(const Token& start);
-    EnumValueDecl parse_enum_value();
+    FieldDecl parse_field(const std::vector<Decorator>& decorators = {});
+    EnumDecl parse_enum(const Token& start, const std::vector<Decorator>& decorators);
+    EnumValueDecl parse_enum_value(const std::vector<Decorator>& decorators);
     void parse_type_decl(const Token& start, ModuleAst& module);
     FunctionDecl parse_function(const Token& start, Visibility visibility,
                                 const std::vector<Decorator>& decorators,
@@ -79,7 +79,7 @@ class Parser {
     std::vector<std::string> parse_generic_params();
     void parse_params(std::vector<ParamDecl>& params, const TypeRef& receiver_type);
     void skip_signature_separators();
-    ConstDecl parse_constant();
+    ConstDecl parse_constant(const std::vector<Decorator>& decorators = {});
     StaticAssertDecl parse_static_assert();
 
     std::vector<Stmt> parse_statement_block();

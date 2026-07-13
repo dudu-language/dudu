@@ -457,6 +457,45 @@ C++ remains available through the ordinary emission tools.
    reporting to `dudu bench compiler`.
 9. Audit the implementation for internal AST exposure, source-string output,
    macro-specific type-system rules, hidden nondeterminism, and stale syntax.
+10. Reconcile every language reference, status page, example, and changelog
+    entry with the implemented behavior. Create `docs/macros.md` as the
+    substantial public macro guide, then expand the website Tour and Docs with
+    runnable macro definitions, invocations, generated declarations,
+    `duc expand`, diagnostics, editor behavior, package layout, capabilities,
+    caching, and performance results. Link the guide from both public pages and
+    deploy the validated site.
+
+## Documentation And Website Completion Gate
+
+The macro system is not complete when only the compiler tests pass. The same
+milestone must update all public documentation and the deployed website.
+
+`docs/macros.md` is the long-form public guide. It must cover:
+
+- the boundary between compiler-known decorators, imported C/C++ macros, and
+  user-defined Dudu declaration macros;
+- `@macro`, `@derive`, attached declaration macros, and typed helper
+  attributes;
+- the public `dudu.ast` read model and builders without exposing compiler AST
+  internals;
+- complete Debug, Json, StringEnum, reflection, CLI argument, binary schema,
+  and C export-table examples;
+- generated Dudu output and source origins through `duc expand`;
+- macro packages, ordinary imports, capabilities, deterministic caching,
+  persistent workers, and failure isolation;
+- diagnostics, hover, definition, references, completion, rename, and
+  generated-member navigation;
+- measured cold, warm, cached, and incremental performance;
+- the unsupported forms listed in Non-Goals and the ordinary Dudu replacement
+  for each.
+
+The website Tour must explain the feature with concise side-by-side examples:
+handwritten declarations, a macro invocation, and the equivalent generated
+Dudu. The Docs manual must contain a runnable quickstart, exact syntax and CLI
+reference, authoring and consumption examples, failure diagnostics, editor
+behavior, package configuration, and a link to `docs/macros.md` for the full
+guide. Public examples must be backed by compiler fixtures. The final local
+site gate and Cloudflare deployment are part of this task.
 
 ## Acceptance
 
@@ -471,3 +510,7 @@ C++ remains available through the ordinary emission tools.
 - Native C/C++ macros remain a separate interop mechanism.
 - Quote/splice syntax, source-string generation, and custom grammar are absent.
 - The performance benchmark suite meets its release budgets.
+- `docs/macros.md`, the website Tour, and the website Docs describe the final
+  implementation with fixture-backed examples and no stale candidate syntax.
+- The changelog, language status, limitations, and roadmap agree with the
+  implementation, and the validated website is deployed.

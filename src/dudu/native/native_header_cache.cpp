@@ -305,6 +305,7 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
             current_class->fields.push_back({.name = fields[0],
                                              .type_ref = cached_type_ref(fields[1], decl_location),
                                              .value_expr = {},
+                                             .decorators = {},
                                              .location = decl_location,
                                              .doc_comment = fields[2]});
         } else if (tag == "SFLD" && fields.size() == 6 && current_class != nullptr) {
@@ -314,6 +315,7 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                  .cpp_name = {},
                  .type_ref = cached_type_ref(fields[1], decl_location),
                  .value_expr = {},
+                 .decorators = {},
                  .origin_module = {},
                  .location = decl_location,
                  .doc_comment = fields[2]});

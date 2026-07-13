@@ -136,8 +136,8 @@ ModuleAst Parser::parse() {
                 module.classes.push_back(parse_class(previous(), visibility, decorators));
                 decorators.clear();
             } else if (match_identifier("enum")) {
-                require_no_decorators(decorators, "enum");
-                module.enums.push_back(parse_enum(previous()));
+                module.enums.push_back(parse_enum(previous(), decorators));
+                decorators.clear();
             } else if (match_identifier("type")) {
                 require_no_decorators(decorators, "type declaration");
                 parse_type_decl(previous(), module);
@@ -150,8 +150,8 @@ ModuleAst Parser::parse() {
                 }
                 decorators.clear();
             } else if (current().kind == TokenKind::Identifier && at_next(TokenKind::Colon)) {
-                require_no_decorators(decorators, "constant");
-                module.constants.push_back(parse_constant());
+                module.constants.push_back(parse_constant(decorators));
+                decorators.clear();
             } else if (check_text("static_assert")) {
                 require_no_decorators(decorators, "static_assert");
                 module.static_asserts.push_back(parse_static_assert());
@@ -332,10 +332,9 @@ ImportDecl Parser::parse_import(const Token& start) {
     if (current().kind == TokenKind::Identifier &&
         (current().text == "c" || current().text == "cxx" || current().text == "cpp")) {
         const std::string language(current().text);
-        throw CompileError(current().location,
-                           "native imports use `from " + language +
-                               " import header` or `from " + language +
-                               ".path import header`");
+        throw CompileError(current().location, "native imports use `from " + language +
+                                                   " import header` or `from " + language +
+                                                   ".path import header`");
     }
 
     ImportDecl import;

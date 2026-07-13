@@ -106,6 +106,49 @@ void test_project_dependency_manifest_and_lockfile(const std::filesystem::path& 
     assert(rejected);
 }
 
+void test_macro_capability_manifest(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-macro-capabilities";
+    std::filesystem::remove_all(project);
+    write_text(project / "dudu.toml", "name = \"macro_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[macro]\n"
+                                      "allow_non_cacheable = [\"GenerateAssets\"]\n"
+                                      "\n"
+                                      "[macro.capabilities]\n"
+                                      "fs.read = [\"schemas/**\"]\n"
+                                      "env.read = [\"TARGET\"]\n"
+                                      "clock = true\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
+    assert(config.macro_capabilities.at("fs.read") == std::vector<std::string>{"schemas/**"});
+    assert(config.macro_capabilities.at("env.read") == std::vector<std::string>{"TARGET"});
+    assert(config.macro_capabilities.contains("clock"));
+    assert(config.macro_capabilities.at("clock").empty());
+    assert(config.non_cacheable_macros.contains("GenerateAssets"));
+
+    write_text(project / "dudu.toml", "[macro.capabilities]\nprocess = []\n");
+    bool empty_scope_rejected = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        empty_scope_rejected =
+            std::string(error.what()).find("requires at least one scope") != std::string::npos;
+    }
+    assert(empty_scope_rejected);
+
+    write_text(project / "dudu.toml", "[macro.capabilities]\nfilesystem = true\n");
+    bool unknown_rejected = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        unknown_rejected =
+            std::string(error.what()).find("unknown macro capability") != std::string::npos;
+    }
+    assert(unknown_rejected);
+}
+
 void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     const std::filesystem::path project = root / "build" / "project-config-cmake-depends";
     std::filesystem::remove_all(project);
@@ -361,6 +404,7 @@ int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_project_dependency_manifest_and_lockfile(DUDU_REPO_ROOT);
+        test_macro_capability_manifest(DUDU_REPO_ROOT);
         test_cmake_emit_depends_on_manifest(DUDU_REPO_ROOT);
         test_cmake_project_config(DUDU_REPO_ROOT);
         test_quoted_manifest_strings(DUDU_REPO_ROOT);

@@ -122,29 +122,29 @@ class SourcePosition:
     offset: u64 = 0
 
 class SourceRange:
-    file: str = ""
+    file: str = str()
     start: SourcePosition = SourcePosition()
     end: SourcePosition = SourcePosition()
 
 class SymbolIdentity:
-    package: str = ""
-    module: str = ""
-    path: str = ""
-    native_identity: str = ""
+    package: str = str()
+    module: str = str()
+    path: str = str()
+    native_identity: str = str()
 
 class TypeRef:
     kind: TypeKind = TypeKind.Unknown
-    name: str = ""
-    value: str = ""
+    name: str = str()
+    value: str = str()
     children: list[TypeRef] = []
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
 class Expression:
     kind: ExpressionKind = ExpressionKind.Missing
-    name: str = ""
-    value: str = ""
-    operator_name: str = ""
+    name: str = str()
+    value: str = str()
+    operator_name: str = str()
     children: list[Expression] = []
     type_arguments: list[TypeRef] = []
     range: SourceRange = SourceRange()
@@ -153,7 +153,7 @@ class Expression:
 
 class Statement:
     kind: StatementKind = StatementKind.Unknown
-    name: str = ""
+    name: str = str()
     type: Option[TypeRef] = None
     expression: Option[Expression] = None
     value: Option[Expression] = None
@@ -163,18 +163,18 @@ class Statement:
     range: SourceRange = SourceRange()
 
 class AttributeArgument:
-    name: str = ""
+    name: str = str()
     value: Expression = Expression()
     range: SourceRange = SourceRange()
 
 class Attribute:
-    name: str = ""
+    name: str = str()
     arguments: list[AttributeArgument] = []
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
 class GenericParameter:
-    name: str = ""
+    name: str = str()
     type: Option[TypeRef] = None
     default_type: Option[TypeRef] = None
     default_value: Option[Expression] = None
@@ -182,30 +182,30 @@ class GenericParameter:
     range: SourceRange = SourceRange()
 
 class Parameter:
-    name: str = ""
+    name: str = str()
     type: TypeRef = TypeRef()
     default_value: Option[Expression] = None
     variadic: bool = False
     range: SourceRange = SourceRange()
 
 class FieldDecl:
-    name: str = ""
+    name: str = str()
     type: TypeRef = TypeRef()
     value: Option[Expression] = None
     attributes: list[Attribute] = []
-    documentation: str = ""
+    documentation: str = str()
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
 class FunctionDecl:
-    name: str = ""
+    name: str = str()
     generic_parameters: list[GenericParameter] = []
     parameters: list[Parameter] = []
     return_type: Option[TypeRef] = None
     body: list[Statement] = []
     attributes: list[Attribute] = []
-    documentation: str = ""
+    documentation: str = str()
     visibility: Visibility = Visibility.Default
     is_static: bool = False
     is_abstract: bool = False
@@ -214,41 +214,41 @@ class FunctionDecl:
     identity: Option[SymbolIdentity] = None
 
 class EnumVariant:
-    name: str = ""
+    name: str = str()
     fields: list[FieldDecl] = []
     value: Option[Expression] = None
     attributes: list[Attribute] = []
     range: SourceRange = SourceRange()
 
 class EnumDecl:
-    name: str = ""
+    name: str = str()
     generic_parameters: list[GenericParameter] = []
     underlying_type: Option[TypeRef] = None
     variants: list[EnumVariant] = []
     attributes: list[Attribute] = []
-    documentation: str = ""
+    documentation: str = str()
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
 class ClassDecl:
-    name: str = ""
+    name: str = str()
     generic_parameters: list[GenericParameter] = []
     bases: list[TypeRef] = []
     fields: list[FieldDecl] = []
     methods: list[FunctionDecl] = []
     attributes: list[Attribute] = []
-    documentation: str = ""
+    documentation: str = str()
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
 
 class ConstantDecl:
-    name: str = ""
+    name: str = str()
     type: TypeRef = TypeRef()
     value: Expression = Expression()
     attributes: list[Attribute] = []
-    documentation: str = ""
+    documentation: str = str()
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
@@ -271,7 +271,7 @@ class Declaration:
 class SourceOrigin:
     kind: OriginKind = OriginKind.Source
     range: SourceRange = SourceRange()
-    macro_name: str = ""
+    macro_name: str = str()
     macro_identity: Option[SymbolIdentity] = None
     parent: Option[u64] = None
 
@@ -281,8 +281,8 @@ class GeneratedDeclaration:
 
 class Diagnostic:
     severity: DiagnosticSeverity = DiagnosticSeverity.Note
-    code: str = ""
-    message: str = ""
+    code: str = str()
+    message: str = str()
     range: SourceRange = SourceRange()
     notes: list[Diagnostic] = []
 
@@ -297,33 +297,33 @@ class Capability:
     values: list[str] = []
 
 class MacroDescriptor:
-    name: str = ""
-    entry_point: str = ""
+    name: str = str()
+    entry_point: str = str()
     accepted_kind: DeclarationKind = DeclarationKind.Unknown
     attribute_schema: Option[ClassDecl] = None
     definition: SourceRange = SourceRange()
 
 class MacroCatalog:
-    package: str = ""
-    binary_identity: str = ""
+    package: str = str()
+    binary_identity: str = str()
     macros: list[MacroDescriptor] = []
     capabilities: list[Capability] = []
 
 class Hello:
-    compiler_version: str = ""
+    compiler_version: str = str()
     protocol_version: u32 = 0
     schema_version: u32 = 0
     max_frame_bytes: u64 = 0
 
 class HelloAck:
-    worker_version: str = ""
+    worker_version: str = str()
     protocol_version: u32 = 0
     schema_version: u32 = 0
     accepted: bool = False
-    reason: str = ""
+    reason: str = str()
 
 class ExpansionRequest:
-    macro_name: str = ""
+    macro_name: str = str()
     declaration: Declaration = Declaration()
     invocation: SourceRange = SourceRange()
     compile_values: list[AttributeArgument] = []
@@ -334,8 +334,8 @@ class ExpansionResponse:
     external_input_hashes: list[str] = []
 
 class WorkerError:
-    code: str = ""
-    message: str = ""
+    code: str = str()
+    message: str = str()
     diagnostics: list[Diagnostic] = []
 
 def named_type(name: str) -> TypeRef:

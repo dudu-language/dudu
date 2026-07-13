@@ -871,6 +871,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             {.name = match[1].str(),
              .type_ref = parse_native_type_text(type, decl_location),
              .value_expr = {},
+             .decorators = {},
              .location = decl_location});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Field,
@@ -918,6 +919,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                  .cpp_name = {},
                  .type_ref = parse_native_type_text(type, decl_location),
                  .value_expr = {},
+                 .decorators = {},
                  .origin_module = {},
                  .location = decl_location});
             comment_targets.push_back(

@@ -96,12 +96,12 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                 continue;
             }
             if (is_all_caps_identifier(current())) {
-                require_no_decorators(member_decorators, "class constant");
-                klass.constants.push_back(parse_constant());
+                klass.constants.push_back(parse_constant(member_decorators));
+                member_decorators.clear();
                 continue;
             }
-            require_no_decorators(member_decorators, "field");
-            FieldDecl field = parse_field();
+            FieldDecl field = parse_field(member_decorators);
+            member_decorators.clear();
             if (field.type_ref.kind == TypeKind::Static) {
                 if (expr_missing(field.value_expr)) {
                     throw CompileError(field.location, "static field requires an initializer");
@@ -114,6 +114,7 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                 }
                 static_field.type_ref = field.type_ref.children[0];
                 static_field.value_expr = field.value_expr;
+                static_field.decorators = field.decorators;
                 static_field.location = field.location;
                 klass.static_fields.push_back(std::move(static_field));
             } else {
@@ -134,8 +135,9 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
     return klass;
 }
 
-FieldDecl Parser::parse_field() {
+FieldDecl Parser::parse_field(const std::vector<Decorator>& decorators) {
     FieldDecl field;
+    field.decorators = decorators;
     const Token& name = consume_identifier("expected field name");
     field.name = name.text;
     field.location = name.location;
@@ -153,8 +155,9 @@ FieldDecl Parser::parse_field() {
     return field;
 }
 
-EnumDecl Parser::parse_enum(const Token& start) {
+EnumDecl Parser::parse_enum(const Token& start, const std::vector<Decorator>& decorators) {
     EnumDecl en;
+    en.decorators = decorators;
     en.range.start = start.location;
     const Token& name = consume_identifier("expected enum name");
     en.location = name.location;
@@ -169,6 +172,7 @@ EnumDecl Parser::parse_enum(const Token& start) {
         fail_current("expected indented enum body");
     }
     bool can_accept_docstring = true;
+    std::vector<Decorator> value_decorators;
     while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
         if (match(TokenKind::Newline)) {
             continue;
@@ -191,43 +195,60 @@ EnumDecl Parser::parse_enum(const Token& start) {
                                    "statement in the enum body",
                                    "dudu.parser.misplaced_docstring");
             }
-            en.values.push_back(parse_enum_value());
+            if (match(TokenKind::At)) {
+                value_decorators.push_back(parse_decorator(previous()));
+                continue;
+            }
+            en.values.push_back(parse_enum_value(value_decorators));
+            value_decorators.clear();
         } catch (const CompileError& error) {
             if (!recovering()) {
                 throw;
             }
             record_diagnostic(error);
+            value_decorators.clear();
             can_accept_docstring = false;
             synchronize_block_item(item_begin);
         }
     }
+    require_no_decorators(value_decorators, "enum body");
     consume(TokenKind::Dedent, "expected dedent after enum body");
     en.range.end = current().location;
     return en;
 }
 
-EnumValueDecl Parser::parse_enum_value() {
+EnumValueDecl Parser::parse_enum_value(const std::vector<Decorator>& decorators) {
     EnumValueDecl value;
+    value.decorators = decorators;
     const Token& name = consume_identifier("expected enum value");
     value.name = name.text;
     value.location = name.location;
     if (at(TokenKind::LParen)) {
-        fail_current("tuple-style enum payload declarations are not supported; use " +
-                     value.name + ": followed by named fields");
+        fail_current("tuple-style enum payload declarations are not supported; use " + value.name +
+                     ": followed by named fields");
     }
     if (match(TokenKind::Colon)) {
         consume(TokenKind::Newline, "expected newline after enum payload header");
         if (!match(TokenKind::Indent)) {
             fail_current("expected indented enum payload fields");
         }
+        std::vector<Decorator> field_decorators;
         while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
             if (match(TokenKind::Newline)) {
                 continue;
             }
-            const FieldDecl field = parse_field();
-            value.payload_fields.push_back(
-                {.name = field.name, .type_ref = field.type_ref, .location = field.location});
+            if (match(TokenKind::At)) {
+                field_decorators.push_back(parse_decorator(previous()));
+                continue;
+            }
+            const FieldDecl field = parse_field(field_decorators);
+            field_decorators.clear();
+            value.payload_fields.push_back({.name = field.name,
+                                            .type_ref = field.type_ref,
+                                            .decorators = field.decorators,
+                                            .location = field.location});
         }
+        require_no_decorators(field_decorators, "enum payload");
         consume(TokenKind::Dedent, "expected dedent after enum payload fields");
         return value;
     } else if (match(TokenKind::Assign)) {
@@ -376,8 +397,9 @@ void Parser::skip_signature_separators() {
     }
 }
 
-ConstDecl Parser::parse_constant() {
+ConstDecl Parser::parse_constant(const std::vector<Decorator>& decorators) {
     ConstDecl constant;
+    constant.decorators = decorators;
     const Token& name = consume_identifier("expected constant name");
     constant.name = name.text;
     constant.location = name.location;
