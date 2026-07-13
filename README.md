@@ -59,29 +59,13 @@ registry exists.
 See [Installing Dudu](docs/installing.md) for every planned release channel,
 ownership rules, and validation status.
 
-Install prerequisites.
-
-Ubuntu/Debian:
-
-```sh
-sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config
-```
-
-macOS:
-
-```sh
-xcode-select --install
-brew install cmake llvm
-```
-
 The primary installer builds the immutable tagged source archive locally,
-verifies its SHA-256 checksum, and installs an atomic user-local toolchain:
+offers to install missing native dependencies, verifies its SHA-256 checksum,
+and installs an atomic user-local toolchain:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -sSf \
-  https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.13/dudu-0.1.0-alpha.13-install.sh \
-  | sh -s -- --version 0.1.0-alpha.13
-export PATH="$HOME/.local/bin:$PATH"
+curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh | sh
+dudu --version
 ```
 
 Installer-owned toolchains update and roll back without replacing the active

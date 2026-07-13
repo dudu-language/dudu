@@ -16,8 +16,10 @@ bash -n "$repo_root/scripts/build-deb.sh"
 bash -n "$repo_root/scripts/generate-package-recipes.sh"
 bash -n "$repo_root/scripts/package-vscode.sh"
 bash -n "$repo_root/scripts/test-bootstrap-lifecycle.sh"
+bash -n "$repo_root/scripts/test-installer-dependencies.sh"
 bash -n "$repo_root/scripts/test-packages.sh"
 bash -n "$repo_root/scripts/test-vscode-package.sh"
+"$repo_root/scripts/test-installer-dependencies.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 ctest --test-dir "$repo_root/build" --output-on-failure
 

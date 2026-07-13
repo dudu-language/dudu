@@ -1,5 +1,5 @@
 def fixed_array_mix(n: i32) -> i64:
-    values: i32[8]
+    values: array[i32][8]
     for i: i32 in range(8):
         values[i] = i * 3 + 1
 

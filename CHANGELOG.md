@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+- Removed tuple-style enum payload declarations such as `Ident(str)`. Payload
+  variants now always declare named fields, while positional and named
+  construction and matching remain available.
+- Add a long-form Why Dudu page with Python/C++/Rust comparisons, explicit
+  language tradeoffs, measured native/CPython scalar, list, particle, and
+  CPU-threading microbenchmarks, and reproducible benchmark inputs.
+- Move the homepage language summary away from presenting editor tooling as a
+  language feature.
+- The bootstrap installer now detects missing native dependencies and, after
+  explicit approval, installs them through APT, DNF, Pacman, or
+  Homebrew so the primary installation remains a single command.
+- Reworked the project homepage and installation guide around the current
+  alpha release, package channels, editor extension, and one-command setup.
 - Release packaging now anchors relative VSIX output paths before entering the
   editor directory and gives downloadable Debian packages URL-safe filenames.
 - Linux is the alpha release-producing host. Apple Silicon source bootstrap is

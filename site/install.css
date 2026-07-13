@@ -1,0 +1,333 @@
+.install-page {
+  --ink: #ffffff;
+  --muted: #a8a8a8;
+  --dim: #838383;
+  --page: #1a1a1a;
+  --panel: #1a1a1a;
+  --panel-2: #202020;
+  --line: #3b3b3b;
+  background: var(--page);
+}
+
+.install-page .site-header {
+  background: #111212;
+}
+
+.install-page .nav {
+  width: calc(100% - 36px);
+  max-width: none;
+  margin: 0 18px;
+}
+
+.install-page .brand {
+  gap: 2px;
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.install-page .brand-mark {
+  width: 25px;
+  height: 25px;
+}
+
+.install-page main {
+  background: linear-gradient(
+    130deg,
+    rgba(126, 68, 43, 0.24) 0,
+    rgba(126, 68, 43, 0.24) 100px,
+    transparent 900px
+  );
+}
+
+.install-container,
+.install-layout {
+  width: min(940px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.install-hero {
+  padding: 72px 0 64px;
+  border-bottom: 1px solid var(--line);
+}
+
+.install-version {
+  margin: 0 0 12px;
+  color: #b47a59;
+  font-family: "Roboto Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
+.install-hero h1 {
+  margin: 0 0 18px;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.install-hero p:last-child {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.install-hero code {
+  color: var(--ink);
+}
+
+.install-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 64px;
+  padding: 56px 0 96px;
+}
+
+.install-sidebar {
+  align-self: start;
+  position: sticky;
+  top: 92px;
+}
+
+.install-sidebar nav {
+  border-left: 1px solid var(--line);
+}
+
+.install-sidebar a {
+  display: block;
+  padding: 7px 0 7px 15px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.install-sidebar a:hover {
+  color: var(--ink);
+  border-left: 1px solid #b47a59;
+  margin-left: -1px;
+}
+
+.install-sidebar p {
+  margin: 26px 0 0;
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.install-sidebar strong {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.install-content {
+  min-width: 0;
+}
+
+.install-content section {
+  margin: 0 0 72px;
+  scroll-margin-top: 86px;
+}
+
+.install-content section:last-child {
+  margin-bottom: 0;
+}
+
+.install-content h2 {
+  margin: 0 0 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.install-content h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.install-content p {
+  color: var(--muted);
+}
+
+.install-content code:not(pre code) {
+  color: #d8b29c;
+}
+
+.install-content .code-window {
+  margin: 10px 0;
+  background: #111313;
+}
+
+.install-content pre {
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.primary-install {
+  margin-bottom: 16px !important;
+  border-color: #704834;
+}
+
+.primary-install pre {
+  padding: 20px 18px;
+  color: #fff;
+}
+
+.dependency-heading {
+  margin-top: 32px !important;
+  margin-bottom: 12px !important;
+  color: var(--muted);
+  font-size: 14px !important;
+}
+
+.platform-picker {
+  display: inline-flex;
+  margin: 0 0 24px;
+  border: 1px solid var(--line);
+}
+
+.platform-picker button {
+  min-width: 96px;
+  padding: 8px 16px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+  background: #171818;
+  font: inherit;
+  cursor: pointer;
+}
+
+.platform-picker button:last-child {
+  border-right: 0;
+}
+
+.platform-picker button[aria-selected="true"] {
+  color: #fff;
+  background: #704834;
+}
+
+.platform-picker button:focus-visible {
+  outline: 2px solid #b47a59;
+  outline-offset: 2px;
+}
+
+.platform-panel[hidden] {
+  display: none;
+}
+
+.platform-panel > p:first-child {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.support-note {
+  padding-left: 12px;
+  border-left: 2px solid #81563e;
+  color: var(--dim) !important;
+  font-size: 13px !important;
+}
+
+.channel-list {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.channel {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.channel > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.channel strong,
+.channel span {
+  display: block;
+}
+
+.channel strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.channel span {
+  color: var(--dim);
+  font-size: 12px;
+  text-align: right;
+}
+
+.channel .channel-state {
+  margin-top: 8px;
+  text-align: left;
+}
+
+.editor-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0;
+}
+
+.editor-links .button.primary {
+  width: auto;
+  min-width: 132px;
+}
+
+@media (max-width: 760px) {
+  .install-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-top: 36px;
+  }
+
+  .install-sidebar {
+    display: none;
+  }
+
+  .install-hero {
+    padding: 50px 0 42px;
+  }
+
+  .install-hero h1 {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 520px) {
+  .install-page .nav {
+    width: calc(100% - 24px);
+    margin: 0 12px;
+  }
+
+  .install-page .brand-word {
+    display: inline;
+  }
+
+  .install-page .nav-links a:nth-child(n + 3) {
+    display: none;
+  }
+
+  .install-content section {
+    margin-bottom: 56px;
+  }
+
+  .primary-install pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .channel > div:first-child {
+    display: block;
+  }
+
+  .channel span {
+    margin-top: 3px;
+    text-align: left;
+  }
+}

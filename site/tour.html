@@ -1,0 +1,1613 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A detailed tour of Dudu: Python-shaped syntax, native C++ behavior, performance, interop, and numerical indexing.">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>Dudu Language Tour</title>
+    <link rel="icon" href="/assets/icon.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/layout.css">
+    <link rel="stylesheet" href="/why.css">
+    <link rel="stylesheet" href="/assets/syntax.css">
+    <script defer data-manual src="/vendor/prism/prism-core.min.js"></script>
+    <script defer src="/vendor/prism/prism-clike.min.js"></script>
+    <script defer src="/vendor/prism/prism-c.min.js"></script>
+    <script defer src="/vendor/prism/prism-cpp.min.js"></script>
+    <script defer src="/vendor/prism/prism-python.min.js"></script>
+    <script defer src="/vendor/prism/prism-rust.min.js"></script>
+    <script defer src="/vendor/prism/prism-glsl.min.js"></script>
+    <script defer src="/vendor/prism/prism-bash.min.js"></script>
+    <script defer src="/assets/syntax.js"></script>
+  </head>
+  <body class="why-page" data-code-language="dudu">
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="/"><span class="brand-word">Dudu</span><img class="brand-mark" src="/assets/poop.svg" alt=""></a>
+        <div class="nav-links">
+          <a aria-current="page" href="/tour.html">Tour</a>
+          <a href="/install.html">Install</a>
+          <a href="/docs.html">Docs</a>
+          <a href="/roadmap.html">Roadmap</a>
+        </div>
+        <div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="why-hero">
+        <div class="why-container why-hero-grid">
+          <div>
+            <h1>The gist of it is I wanted C+- but with Python syntax. So I made that. It is nice.</h1>
+          </div>
+          <div class="why-intro">
+            <p>I also want native performance, predictable memory use, and access to C and C++ libraries.</p>
+            <p>Dudu is a statically typed language with Python-shaped syntax that compiles to C++.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="why-layout why-container">
+        <article class="why-content">
+          <section id="motivation" class="why-section opening-section">
+            <h2>What I wanted from existing languages.</h2>
+            <div class="language-notes">
+              <article>
+                <h3>Python</h3>
+                <p>I like Python's basic syntax. CPython is too slow and uses too much memory for many programs I want to write. Python annotations aren't checked at runtime, and the language has accumulated more syntax over time.</p>
+              </article>
+              <article>
+                <h3>C</h3>
+                <p>I like C's direct memory model, portability, and lack of forms that bait programmers into trying to be clever. It doesn't have operator overloading, which sucks for graphics and game development. Header files kind of suck, and I'd like a better match statement.</p>
+              </article>
+              <article>
+                <h3>Rust</h3>
+                <p>I like Rust's enums, matching, results, tooling, and compile-time checks. I find Rust's ownership semantics more annoying than helpful. I think traits and <code>dyn</code> are great in narrow cases, but unnecessarily clever and footgunish in many others. C and C++ libraries are accessed through FFI bindings. That's a foreign-language boundary, often with conversion and copying, not direct use of the native library. Rust libraries generally need Rust-facing bindings, so the ecosystem has a bootstrapping problem and feels like a walled garden.</p>
+              </article>
+              <article>
+                <h3>C++</h3>
+                <p>C++ has a great ecosystem and libraries, mature tools, operator overloading, and nearly every feature you could want. It can be hard to read sometimes, and I don't have the muscle memory to write it quickly. C++ code is also full of boilerplate noise that distracts from the actual logic. The same logic expressed in Python is often easier to hold in your head.</p>
+              </article>
+            </div>
+            <p class="thesis">Dudu is C+- in the shape of Python.</p>
+          </section>
+
+          <section id="looks-like-python" class="why-section">
+            <h2>Dudu looks like Python.</h2>
+            <p>Dudu uses Python-style indentation, functions, calls, classes, loops, named arguments, imports, and indexing.</p>
+
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code><span class="kw">def</span> <span class="fn">clamp</span>(value: <span class="ty">int</span>, low: <span class="ty">int</span>, high: <span class="ty">int</span>) -&gt; <span class="ty">int</span>:
+    <span class="kw">if</span> value &lt; low:
+        <span class="kw">return</span> low
+    <span class="kw">if</span> value &gt; high:
+        <span class="kw">return</span> high
+    <span class="kw">return</span> value</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">def</span> <span class="fn">clamp</span>(value: <span class="ty">i32</span>, low: <span class="ty">i32</span>, high: <span class="ty">i32</span>) -&gt; <span class="ty">i32</span>:
+    <span class="kw">if</span> value &lt; low:
+        <span class="kw">return</span> low
+    <span class="kw">if</span> value &gt; high:
+        <span class="kw">return</span> high
+    <span class="kw">return</span> value</code></pre>
+              </div>
+            </div>
+
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Player</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name: <span class="ty">str</span>, hp: <span class="ty">int</span>):
+        self.name = name
+        self.hp = hp
+
+    <span class="kw">def</span> <span class="fn">damage</span>(self, amount: <span class="ty">int</span>):
+        self.hp -= amount</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Player</span>:
+    name: <span class="ty">str</span>
+    hp: <span class="ty">i32</span>
+
+    <span class="kw">def</span> <span class="fn">damage</span>(self, amount: <span class="ty">i32</span>):
+        self.hp -= amount
+
+player = <span class="ty">Player</span>(name=<span class="str">"Ada"</span>, hp=<span class="num">100</span>)</code></pre>
+              </div>
+            </div>
+
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Python module</div>
+                <pre><code><span class="kw">from</span> renderer.camera <span class="kw">import</span> Camera
+camera = <span class="ty">Camera</span>()</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu module</div>
+                <pre><code><span class="kw">from</span> renderer.camera <span class="kw">import</span> Camera
+camera = <span class="ty">Camera</span>()</code></pre>
+              </div>
+            </div>
+            <p class="fine-print">This is source familiarity, not Python compatibility. Dudu is statically typed and has native value, reference, pointer, and lifetime behavior.</p>
+          </section>
+
+          <section id="inference" class="why-section inference-section">
+            <h2>Type annotations are optional when the type is clear.</h2>
+            <p>Dudu is statically typed, but that doesn't mean every binding needs an annotation. The compiler follows types through literals, expressions, function calls, constructors, operators, indexing, and generic substitutions. The editor can display those inferred types as inlay hints without putting them in the source.</p>
+
+            <div class="comparison inference-comparison">
+              <div class="code-window">
+                <div class="code-label">Explicit but repetitive</div>
+                <pre><code>direction: Vec3 = normalize(player.aim)
+velocity: Vec3 = direction * launch_speed
+position: Vec3 = player.position + muzzle_offset
+projectile: Projectile = Projectile(
+    position=position,
+    velocity=velocity,
+    owner=player.id,
+)
+active: list[Projectile] = projectiles_for(scene)
+active.append(projectile)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Normal Dudu</div>
+                <pre><code>direction = normalize(player.aim)
+velocity = direction * launch_speed
+position = player.position + muzzle_offset
+projectile = Projectile(
+    position=position,
+    velocity=velocity,
+    owner=player.id,
+)
+active = projectiles_for(scene)
+active.append(projectile)</code></pre>
+              </div>
+            </div>
+            <p>These compile to the same native types and operations. An annotation doesn't make an inferred binding safer after the compiler already knows its exact type.</p>
+
+            <h3>Write the type when it supplies information.</h3>
+            <div class="comparison comparison-three inference-cases">
+              <div class="code-window">
+                <div class="code-label">Function contract</div>
+                <pre><code>def load_mesh(
+    path: str,
+    flags: LoadFlags,
+) -> Result[Mesh, LoadError]:
+    ...</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">No initializer to inspect</div>
+                <pre><code>vertices: list[Vertex] = []
+lookup: dict[str, Entity] = {}
+scratch: array[u8][4096]
+
+# The element and storage types
+# cannot come from empty values.</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Native layout or intent</div>
+                <pre><code>pixels: *u8 = map_framebuffer()
+timeout_ms: u32 = 250
+weights: list[f32] = []
+
+# Width, pointer behavior, and ABI
+# are part of the requested type.</code></pre>
+              </div>
+            </div>
+
+            <div class="language-notes inference-notes">
+              <article><h3>Usually inferred</h3><p>Local call results, constructors, arithmetic, loop variables, indexed values, views, generic results, and non-empty container literals.</p></article>
+              <article><h3>Usually written</h3><p>Function parameters and value returns, public fields, empty containers, uninitialized storage, raw pointers, fixed-width ABI values, and compile-time shape contracts.</p></article>
+            </div>
+          </section>
+
+          <section id="simpler-python" class="why-section">
+            <h2>Differences from Python.</h2>
+            <p>Some differences are required for static compilation. Others remove syntax that I don't want in Dudu.</p>
+
+            <div class="decision-list">
+              <article>
+                <h3>Class fields provide aggregate construction.</h3>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="decorator">@dataclass</span>
+<span class="kw">class</span> <span class="ty">Point</span>:
+    x: <span class="ty">float</span>
+    y: <span class="ty">float</span></code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">class</span> <span class="ty">Point</span>:
+    x: <span class="ty">f32</span>
+    y: <span class="ty">f32</span>
+
+point = <span class="ty">Point</span>(x=<span class="num">2.0</span>, y=<span class="num">4.0</span>)</code></pre></div>
+                </div>
+              </article>
+
+              <article>
+                <h3>No dunder protocol.</h3>
+                <p>Python routes a large part of the language through reserved method names. Dudu uses ordinary methods and explicit operator declarations.</p>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">class</span> <span class="ty">Buffer</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, values: <span class="ty">list</span>[<span class="ty">int</span>]):
+        self.values = values
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self):
+        <span class="kw">return</span> len(self.values)
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, index):
+        <span class="kw">return</span> self.values[index]
+
+    <span class="kw">def</span> <span class="fn">__setitem__</span>(self, index, value):
+        self.values[index] = value
+
+    <span class="kw">def</span> <span class="fn">__add__</span>(self, other):
+        <span class="kw">return</span> <span class="ty">Buffer</span>(self.values + other.values)</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">class</span> <span class="ty">Buffer</span>:
+    values: <span class="ty">list</span>[<span class="ty">i32</span>]
+
+    <span class="kw">def</span> <span class="fn">size</span>(self) -&gt; <span class="ty">usize</span>:
+        <span class="kw">return</span> len(self.values)
+
+    <span class="decorator">@operator</span>(<span class="str">"[]"</span>)
+    <span class="kw">def</span> <span class="fn">get</span>(self, index: <span class="ty">usize</span>) -&gt; <span class="ty">i32</span>:
+        <span class="kw">return</span> self.values[index]
+
+    <span class="decorator">@operator</span>(<span class="str">"[]="</span>)
+    <span class="kw">def</span> <span class="fn">set</span>(self, index: <span class="ty">usize</span>, value: <span class="ty">i32</span>):
+        self.values[index] = value
+
+    <span class="decorator">@operator</span>(<span class="str">"+"</span>)
+    <span class="kw">def</span> <span class="fn">add</span>(self, other: <span class="ty">Buffer</span>) -&gt; <span class="ty">Buffer</span>:
+        combined: <span class="ty">list</span>[<span class="ty">i32</span>] = []
+        <span class="kw">for</span> value <span class="kw">in</span> self.values:
+            combined.append(value)
+        <span class="kw">for</span> value <span class="kw">in</span> other.values:
+            combined.append(value)
+        <span class="kw">return</span> <span class="ty">Buffer</span>(values=combined)</code></pre></div>
+                </div>
+              </article>
+
+              <article>
+                <h3>Type annotations are checked.</h3>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Valid Python at runtime</div><pre><code>health: <span class="ty">int</span> = <span class="str">"probably fine"</span>
+health += <span class="num">1</span>  <span class="comment"># fails only when executed</span></code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu compile error</div><pre><code>health: <span class="ty">i32</span> = <span class="str">"probably fine"</span>
+<span class="comment"># cannot assign str to i32</span></code></pre></div>
+                </div>
+                <p>Dudu uses explicit widths such as <code>i32</code>, <code>u64</code>, <code>f32</code>, and <code>f64</code>. There is no platform-dependent native <code>int</code> hiding in Dudu-owned APIs.</p>
+              </article>
+
+              <article>
+                <h3>Variables keep one type.</h3>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Valid Python</div><pre><code>value = <span class="num">10</span>
+value = <span class="str">"ten"</span>
+value = <span class="ty">Player</span>()</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu compile error</div><pre><code>value = <span class="num">10</span>
+value = <span class="str">"ten"</span>
+<span class="comment"># cannot assign str to i32</span></code></pre></div>
+                </div>
+              </article>
+
+              <article>
+                <h3>Lists have one element type.</h3>
+                <p>Most Python lists already contain one kind of value. The Dudu form makes that element type part of the list type.</p>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Python homogeneous list</div><pre><code>players: <span class="ty">list</span>[<span class="ty">Player</span>] = [
+    <span class="ty">Player</span>(<span class="str">"Ada"</span>, <span class="num">100</span>),
+    <span class="ty">Player</span>(<span class="str">"Lin"</span>, <span class="num">80</span>),
+]
+players.append(<span class="ty">Player</span>(<span class="str">"Grace"</span>, <span class="num">90</span>))</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu homogeneous list</div><pre><code>players: <span class="ty">list</span>[<span class="ty">Player</span>] = [
+    <span class="ty">Player</span>(name=<span class="str">"Ada"</span>, hp=<span class="num">100</span>),
+    <span class="ty">Player</span>(name=<span class="str">"Lin"</span>, hp=<span class="num">80</span>),
+]
+players.append(<span class="ty">Player</span>(name=<span class="str">"Grace"</span>, hp=<span class="num">90</span>))</code></pre></div>
+                </div>
+
+                <h4>Heterogeneous lists</h4>
+                <p>Python can put unrelated values in the same list. Dudu doesn't do that implicitly, and most lists shouldn't be heterogeneous anyway. When several forms belong together, use a payload enum so every case is explicit and checked.</p>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Python heterogeneous list</div><pre><code>items = [<span class="num">10</span>, <span class="str">"ten"</span>, <span class="ty">Player</span>(<span class="str">"Ada"</span>, <span class="num">100</span>)]
+items.append(<span class="num">4.5</span>)</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu variant list</div><pre><code><span class="kw">enum</span> <span class="ty">Item</span>:
+    Integer:
+        value: <span class="ty">i32</span>
+    Text:
+        value: <span class="ty">str</span>
+    PlayerValue:
+        value: <span class="ty">Player</span>
+
+items: <span class="ty">list</span>[<span class="ty">Item</span>] = [
+    <span class="ty">Item</span>.Integer(value=<span class="num">10</span>),
+    <span class="ty">Item</span>.Text(value=<span class="str">"ten"</span>),
+    <span class="ty">Item</span>.PlayerValue(value=<span class="ty">Player</span>(name=<span class="str">"Ada"</span>, hp=<span class="num">100</span>)),
+]</code></pre></div>
+                </div>
+              </article>
+
+              <article>
+                <h3>Types don't change at runtime.</h3>
+                <div class="comparison compact-comparison">
+                  <div class="code-window"><div class="code-label">Valid Python</div><pre><code><span class="kw">class</span> <span class="ty">Player</span>:
+    name: <span class="ty">str</span>
+    extra_state: <span class="ty">dict</span>[<span class="ty">str</span>, <span class="ty">bool</span>]
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name: <span class="ty">str</span>):
+        self.name = name
+        self.extra_state = {}
+
+    <span class="kw">def</span> <span class="fn">damage</span>(self, amount: <span class="ty">int</span>):
+        self.extra_state[<span class="str">"damage"</span>] = <span class="kw">True</span>
+
+player = <span class="ty">Player</span>(<span class="str">"Ada"</span>)
+<span class="ty">Player</span>.debug_name = <span class="kw">lambda</span> self: self.name.upper()
+player.noclip = <span class="kw">True</span>
+<span class="ty">Player</span>.damage = patched_damage</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu compile errors</div><pre><code><span class="kw">class</span> <span class="ty">Player</span>:
+    name: <span class="ty">str</span>
+    extra_state: <span class="ty">dict</span>[<span class="ty">str</span>, <span class="ty">bool</span>]
+
+    <span class="kw">def</span> <span class="fn">damage</span>(self, amount: <span class="ty">i32</span>):
+        self.extra_state[<span class="str">"damage"</span>] = <span class="kw">True</span>
+
+player = <span class="ty">Player</span>(name=<span class="str">"Ada"</span>, extra_state={})
+
+<span class="ty">Player</span>.debug_name = debug_name
+<span class="error-comment"># error: Player has no class member debug_name</span>
+
+player.noclip = <span class="kw">True</span>
+<span class="error-comment"># error: Player has no field noclip</span>
+
+<span class="ty">Player</span>.damage = patched_damage
+<span class="error-comment"># error: methods can't be replaced at runtime</span></code></pre></div>
+                </div>
+                <p>Fields, methods, and layouts are fixed when the program is compiled. Dudu doesn't support ordinary runtime monkey-patching.</p>
+              </article>
+
+              <article>
+                <h3>Function types use the same function syntax.</h3>
+                <p>Function values use <code>fn(...)</code>, the same argument and return-type shape used by function declarations.</p>
+                <div class="comparison type-comparison">
+                  <div class="code-window"><div class="code-label">Python typing</div><pre><code><span class="kw">from</span> collections.abc <span class="kw">import</span> Callable, Mapping, Sequence
+
+Parser = Callable[
+    [Mapping[
+        <span class="ty">str</span>,
+        Sequence[Callable[[<span class="ty">bytes</span>], <span class="ty">tuple</span>[<span class="ty">int</span>, <span class="ty">str</span> | <span class="ty">None</span>]]],
+    ]],
+    <span class="ty">list</span>[<span class="ty">tuple</span>[<span class="ty">str</span>, <span class="ty">int</span>]],
+]</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">type</span> <span class="ty">Parser</span> = <span class="ty">fn</span>(
+    <span class="ty">dict</span>[
+        <span class="ty">str</span>,
+        <span class="ty">list</span>[<span class="ty">fn</span>(<span class="ty">array</span>[<span class="ty">u8</span>]) -&gt; <span class="ty">tuple</span>[<span class="ty">i32</span>, <span class="ty">Option</span>[<span class="ty">str</span>]]],
+    ]
+) -&gt; <span class="ty">list</span>[<span class="ty">tuple</span>[<span class="ty">str</span>, <span class="ty">i32</span>]]</code></pre></div>
+                </div>
+
+                <h4>Type-heavy code and forward references</h4>
+                <p>Python often uses quoted forward references when annotations mention types that aren't available yet. Dudu resolves the imported and declared types during compilation.</p>
+                <div class="comparison type-heavy-comparison">
+                  <div class="code-window"><div class="code-label">Python string annotations</div><pre><code><span class="kw">from</span> collections.abc <span class="kw">import</span> Callable
+<span class="kw">from</span> typing <span class="kw">import</span> TYPE_CHECKING
+
+<span class="kw">if</span> TYPE_CHECKING:
+    <span class="kw">from</span> engine.assets <span class="kw">import</span> AssetStore
+    <span class="kw">from</span> engine.events <span class="kw">import</span> Event
+    <span class="kw">from</span> engine.scene <span class="kw">import</span> Node, Scene
+
+<span class="kw">class</span> <span class="ty">Editor</span>:
+    scene: <span class="str">"Scene"</span>
+    selected: <span class="str">"Node | None"</span>
+    assets: <span class="str">"AssetStore"</span>
+    listeners: <span class="str">"dict[str, list[Callable[[Event], None]]]"</span>
+
+    <span class="kw">def</span> <span class="fn">open_scene</span>(
+        self,
+        scene: <span class="str">"Scene"</span>,
+        selected: <span class="str">"Node | None"</span>,
+    ) -&gt; <span class="str">"dict[str, Node]"</span>:
+        self.scene = scene
+        self.selected = selected
+        <span class="kw">return</span> scene.nodes</code></pre></div>
+                  <div class="code-window"><div class="code-label">Dudu checked types</div><pre><code><span class="kw">from</span> engine.assets <span class="kw">import</span> AssetStore
+<span class="kw">from</span> engine.events <span class="kw">import</span> Event
+<span class="kw">from</span> engine.scene <span class="kw">import</span> Node, Scene
+
+<span class="kw">class</span> <span class="ty">Editor</span>:
+    scene: <span class="ty">Scene</span>
+    selected: <span class="ty">Option</span>[<span class="ty">Node</span>]
+    assets: <span class="ty">AssetStore</span>
+    listeners: <span class="ty">dict</span>[<span class="ty">str</span>, <span class="ty">list</span>[<span class="ty">fn</span>(<span class="ty">Event</span>)]]
+
+    <span class="kw">def</span> <span class="fn">open_scene</span>(
+        self,
+        scene: <span class="ty">Scene</span>,
+        selected: <span class="ty">Option</span>[<span class="ty">Node</span>],
+    ) -&gt; <span class="ty">dict</span>[<span class="ty">str</span>, <span class="ty">Node</span>]:
+        self.scene = scene
+        self.selected = selected
+        <span class="kw">return</span> scene.nodes</code></pre></div>
+                </div>
+              </article>
+
+              <article>
+                <h3>No <code>async</code>/<code>await</code> syntax.</h3>
+                <p>Use threads, atomics, event loops, callbacks, nonblocking native APIs, or an imported C++ task library. Dudu doesn't define its own async runtime.</p>
+                <div class="code-window"><pre><code><span class="kw">from</span> cpp <span class="kw">import</span> thread
+
+workers: <span class="ty">list</span>[std.thread] = []
+<span class="kw">for</span> worker_id <span class="kw">in</span> range(worker_count):
+    workers.append(std.thread(run_worker, worker_id))</code></pre></div>
+              </article>
+            </div>
+          </section>
+
+          <section id="performance" class="why-section">
+            <h2>Performance and memory use.</h2>
+            <p>Dudu emits C++20 and uses the native optimizer. The generated program doesn't require a Python interpreter or Python objects. It can use normal inlining, autovectorization, SIMD intrinsics, and native CPU threads. Each case below shows the measured Python, Dudu, and handwritten C++ implementation.</p>
+
+            <div class="performance-case">
+              <h3>Scalar accumulation</h3>
+              <p>Ten million iterations, five calls in one process.</p>
+              <div class="comparison comparison-three compact-comparison">
+                <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">def</span> <span class="fn">scalar_sum</span>(n: <span class="ty">int</span>) -&gt; <span class="ty">int</span>:
+    total = <span class="num">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        total += i * <span class="num">3</span>
+    <span class="kw">return</span> total</code></pre></div>
+                <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">def</span> <span class="fn">scalar_sum</span>(n: <span class="ty">i32</span>) -&gt; <span class="ty">i64</span>:
+    total: <span class="ty">i64</span> = <span class="num">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        total += <span class="ty">i64</span>(i) * <span class="num">3</span>
+    <span class="kw">return</span> total</code></pre></div>
+                <div class="code-window"><div class="code-label">C++</div><pre><code><span class="ty">int64_t</span> <span class="fn">scalar_sum</span>(<span class="ty">int32_t</span> n) {
+    <span class="ty">int64_t</span> total = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int32_t</span> i = <span class="num">0</span>; i &lt; n; ++i) {
+        total += <span class="ty">int64_t</span>(i) * <span class="num">3</span>;
+    }
+    <span class="kw">return</span> total;
+}</code></pre></div>
+              </div>
+              <table class="benchmark-table"><thead><tr><th>Language</th><th>Runtime</th><th>Peak RSS</th><th>vs CPython</th></tr></thead><tbody>
+                <tr><th>CPython 3.12</th><td>1.094 s</td><td>12.0 MB</td><td>1x</td></tr>
+                <tr><th>Dudu</th><td>9.22 ms</td><td>3.3 MB</td><td>119x</td></tr>
+                <tr><th>C++</th><td>9.18 ms</td><td>3.6 MB</td><td>119x</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="performance-case">
+              <h3>Build and sum an integer list</h3>
+              <p>Ten million integers, five list constructions and sums in one process.</p>
+              <div class="comparison comparison-three">
+                <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">def</span> <span class="fn">list_accum</span>(n: <span class="ty">int</span>) -&gt; <span class="ty">int</span>:
+    values: <span class="ty">list</span>[<span class="ty">int</span>] = []
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        values.append(i &amp; <span class="num">1023</span>)
+
+    total = <span class="num">0</span>
+    <span class="kw">for</span> value <span class="kw">in</span> values:
+        total += value
+    <span class="kw">return</span> total</code></pre></div>
+                <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">def</span> <span class="fn">list_accum</span>(n: <span class="ty">i32</span>) -&gt; <span class="ty">i64</span>:
+    values: <span class="ty">list</span>[<span class="ty">i32</span>] = []
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        values.append(i &amp; <span class="num">1023</span>)
+
+    total: <span class="ty">i64</span> = <span class="num">0</span>
+    <span class="kw">for</span> value <span class="kw">in</span> values:
+        total += <span class="ty">i64</span>(value)
+    <span class="kw">return</span> total</code></pre></div>
+                <div class="code-window"><div class="code-label">C++</div><pre><code><span class="ty">int64_t</span> <span class="fn">list_accum</span>(<span class="ty">int32_t</span> n) {
+    std::vector&lt;<span class="ty">int32_t</span>&gt; values{};
+    <span class="kw">for</span> (<span class="ty">int32_t</span> i = <span class="num">0</span>; i &lt; n; ++i) {
+        values.push_back(i &amp; <span class="num">1023</span>);
+    }
+    <span class="ty">int64_t</span> total = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int32_t</span> value : values) {
+        total += <span class="ty">int64_t</span>(value);
+    }
+    <span class="kw">return</span> total;
+}</code></pre></div>
+              </div>
+              <table class="benchmark-table"><thead><tr><th>Language</th><th>Runtime</th><th>Peak RSS</th><th>vs CPython</th></tr></thead><tbody>
+                <tr><th>CPython 3.12</th><td>1.732 s</td><td>325 MB</td><td>1x</td></tr>
+                <tr><th>Dudu</th><td>104 ms</td><td>68.9 MB</td><td>16.6x</td></tr>
+                <tr><th>C++</th><td>106 ms</td><td>68.7 MB</td><td>16.4x</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="performance-case">
+              <h3>Construct and update a particle array</h3>
+              <p>500,000 particles updated for 20 steps. The Python class uses <code>__slots__</code> to avoid per-instance dictionaries.</p>
+              <div class="comparison comparison-three performance-comparison">
+                <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">class</span> <span class="ty">Particle</span>:
+    __slots__ = (<span class="str">"x"</span>, <span class="str">"y"</span>, <span class="str">"vx"</span>, <span class="str">"vy"</span>)
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, x, y, vx, vy):
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+
+particles: <span class="ty">list</span>[<span class="ty">Particle</span>] = []
+<span class="kw">for</span> i <span class="kw">in</span> range(count):
+    particles.append(<span class="ty">Particle</span>(
+        float(i &amp; <span class="num">1023</span>),
+        float((i * <span class="num">3</span>) &amp; <span class="num">1023</span>),
+        <span class="num">0.25</span>, -<span class="num">0.125</span>,
+    ))
+
+<span class="kw">for</span> _ <span class="kw">in</span> range(steps):
+    <span class="kw">for</span> particle <span class="kw">in</span> particles:
+        particle.x += particle.vx
+        particle.y += particle.vy</code></pre></div>
+                <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">class</span> <span class="ty">Particle</span>:
+    x: <span class="ty">f32</span>
+    y: <span class="ty">f32</span>
+    vx: <span class="ty">f32</span>
+    vy: <span class="ty">f32</span>
+
+particles: <span class="ty">list</span>[<span class="ty">Particle</span>] = []
+<span class="kw">for</span> i <span class="kw">in</span> range(count):
+    particles.append(<span class="ty">Particle</span>(
+        x=<span class="ty">f32</span>(i &amp; <span class="num">1023</span>),
+        y=<span class="ty">f32</span>((i * <span class="num">3</span>) &amp; <span class="num">1023</span>),
+        vx=<span class="num">0.25</span>, vy=-<span class="num">0.125</span>,
+    ))
+
+<span class="kw">for</span> _ <span class="kw">in</span> range(steps):
+    <span class="kw">for</span> particle: &amp;<span class="ty">Particle</span> <span class="kw">in</span> particles:
+        particle.x += particle.vx
+        particle.y += particle.vy</code></pre></div>
+                <div class="code-window"><div class="code-label">C++</div><pre><code><span class="kw">struct</span> <span class="ty">Particle</span> {
+    <span class="ty">float</span> x, y, vx, vy;
+};
+
+std::vector&lt;<span class="ty">Particle</span>&gt; particles;
+<span class="kw">for</span> (<span class="ty">int32_t</span> i = <span class="num">0</span>; i &lt; count; ++i) {
+    particles.push_back(<span class="ty">Particle</span>{
+        <span class="ty">float</span>(i &amp; <span class="num">1023</span>),
+        <span class="ty">float</span>((i * <span class="num">3</span>) &amp; <span class="num">1023</span>),
+        <span class="num">0.25F</span>, -<span class="num">0.125F</span>,
+    });
+}
+
+<span class="kw">for</span> (<span class="ty">int32_t</span> step = <span class="num">0</span>; step &lt; steps; ++step) {
+    <span class="kw">for</span> (<span class="ty">Particle</span>&amp; particle : particles) {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+    }
+}</code></pre></div>
+              </div>
+              <table class="benchmark-table"><thead><tr><th>Language</th><th>Runtime</th><th>Peak RSS</th><th>vs CPython</th></tr></thead><tbody>
+                <tr><th>CPython 3.12</th><td>407 ms</td><td>78.2 MB</td><td>1x</td></tr>
+                <tr><th>Dudu</th><td>4.57 ms</td><td>11.6 MB</td><td>89x</td></tr>
+                <tr><th>C++</th><td>4.68 ms</td><td>11.6 MB</td><td>87x</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="performance-case">
+              <h3>CPU-bound threads</h3>
+              <p>Sixteen workers, ten million scalar iterations per worker. CPython threads remain serialized by the GIL for this workload. Dudu and C++ use <code>std::thread</code>.</p>
+              <div class="comparison comparison-three threaded-comparison">
+                <div class="code-window"><div class="code-label">Python</div><pre><code><span class="kw">def</span> <span class="fn">threaded_accum</span>(workers: <span class="ty">int</span>, n: <span class="ty">int</span>):
+    output = [<span class="num">0</span>] * workers
+
+    <span class="kw">def</span> <span class="fn">worker</span>(index: <span class="ty">int</span>):
+        total = <span class="num">0</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(n):
+            total += i * <span class="num">3</span>
+        output[index] = total
+
+    threads = []
+    <span class="kw">for</span> index <span class="kw">in</span> range(workers):
+        thread = threading.Thread(
+            target=worker, args=(index,)
+        )
+        threads.append(thread)
+        thread.start()
+    <span class="kw">for</span> thread <span class="kw">in</span> threads:
+        thread.join()
+    <span class="kw">return</span> sum(output)</code></pre></div>
+                <div class="code-window"><div class="code-label">Dudu</div><pre><code><span class="kw">from</span> cpp <span class="kw">import</span> functional
+<span class="kw">from</span> cpp <span class="kw">import</span> thread
+
+<span class="kw">def</span> <span class="fn">worker</span>(index: <span class="ty">i32</span>, n: <span class="ty">i32</span>, out: &amp;<span class="ty">list</span>[<span class="ty">i64</span>]):
+    total: <span class="ty">i64</span> = <span class="num">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        total += <span class="ty">i64</span>(i) * <span class="num">3</span>
+    out[index] = total
+
+out: <span class="ty">list</span>[<span class="ty">i64</span>] = []
+out.resize(worker_count)
+threads: <span class="ty">list</span>[std.thread] = []
+<span class="kw">for</span> index <span class="kw">in</span> range(worker_count):
+    threads.append(std.thread(
+        worker, index, n, std.ref(out)
+    ))
+<span class="kw">for</span> thread: &amp;std.thread <span class="kw">in</span> threads:
+    thread.join()</code></pre></div>
+                <div class="code-window"><div class="code-label">C++</div><pre><code><span class="kw">void</span> <span class="fn">worker</span>(<span class="ty">int32_t</span> index, <span class="ty">int32_t</span> n,
+            std::vector&lt;<span class="ty">int64_t</span>&gt;&amp; out) {
+    <span class="ty">int64_t</span> total = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int32_t</span> i = <span class="num">0</span>; i &lt; n; ++i) {
+        total += <span class="ty">int64_t</span>(i) * <span class="num">3</span>;
+    }
+    out[index] = total;
+}
+
+std::vector&lt;<span class="ty">int64_t</span>&gt; out(worker_count);
+std::vector&lt;std::thread&gt; threads;
+<span class="kw">for</span> (<span class="ty">int32_t</span> index = <span class="num">0</span>;
+     index &lt; worker_count; ++index) {
+    threads.emplace_back(
+        worker, index, n, std::ref(out));
+}
+<span class="kw">for</span> (std::thread&amp; thread : threads) {
+    thread.join();
+}</code></pre></div>
+              </div>
+              <table class="benchmark-table"><thead><tr><th>Language</th><th>Runtime</th><th>Peak RSS</th><th>vs CPython</th></tr></thead><tbody>
+                <tr><th>CPython 3.12</th><td>3.698 s</td><td>11.8 MB</td><td>1x</td></tr>
+                <tr><th>Dudu</th><td>2.70 ms</td><td>4.1 MB</td><td>1,370x</td></tr>
+                <tr><th>C++</th><td>2.35 ms</td><td>4.1 MB</td><td>1,574x</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="benchmark-note">
+              <h3>Benchmark details</h3>
+              <p>Local microbenchmarks, July 2026: Ryzen 9 9950X, CPython 3.12.3, Dudu 0.1.0-alpha.13, C++20 with <code>-O3 -DNDEBUG</code>. Peak RSS is from <code>/usr/bin/time</code>. Results vary by machine and workload.</p>
+              <p>Across scalar, pointer, field, fixed-array, vector, tuple, and callback cases, median Dudu-to-handwritten-C++ ratios ranged from <strong>0.97x to 1.05x</strong> in the same run.</p>
+              <a href="https://github.com/dudu-language/dudu/blob/master/scripts/bench_python.sh">Read and rerun the Python comparison</a>
+            </div>
+          </section>
+
+          <section id="targets" class="why-section">
+            <h2>Other compilation targets.</h2>
+            <p>Dudu emits ordinary C++. A target still needs a working C++ toolchain and appropriate libraries. The following targets are possible through existing C++ toolchains, but are not all validated release targets yet.</p>
+            <div class="target-grid">
+              <article><span class="target-mark">wasm32</span><h3>WebAssembly</h3><p>Generate C++ and use an Emscripten-style toolchain for browser or standalone WASM targets.</p><small>Toolchain path; distribution validation pending</small></article>
+              <article><span class="target-mark">mcu</span><h3>Embedded C++</h3><p>Use freestanding or embedded mode with fixed arrays, raw pointers, memory-mapped registers, and a board toolchain.</p><small>Embedded fixtures exist; board matrix pending</small></article>
+              <article><span class="target-mark">rv64</span><h3>RISC-V</h3><p>Point generated C++ at a RISC-V cross compiler and keep target-specific APIs in normal native headers.</p><small>Toolchain path; hardware validation pending</small></article>
+            </div>
+          </section>
+
+          <section id="less-cute" class="why-section">
+            <h2>Less code golf.</h2>
+            <p>I used to like these forms. I have worked on code where tools converted loops into comprehensions, then I converted them back to edit them, then converted them into comprehensions again before committing. Dudu uses ordinary declarations, functions, loops, and scopes instead.</p>
+
+            <h3>List comprehension</h3>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code>names = [item.name <span class="kw">for</span> item <span class="kw">in</span> items <span class="kw">if</span> item.enabled]</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code>names: <span class="ty">list</span>[<span class="ty">str</span>] = []
+<span class="kw">for</span> item <span class="kw">in</span> items:
+    <span class="kw">if</span> item.enabled:
+        names.append(item.name)</code></pre>
+              </div>
+            </div>
+
+            <h3>Dict comprehension</h3>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code>scores = {player.id: player.score
+          <span class="kw">for</span> player <span class="kw">in</span> players
+          <span class="kw">if</span> player.connected}</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code>scores: <span class="ty">dict</span>[<span class="ty">PlayerId</span>, <span class="ty">i32</span>] = {}
+<span class="kw">for</span> player <span class="kw">in</span> players:
+    <span class="kw">if</span> player.connected:
+        scores[player.id] = player.score</code></pre>
+              </div>
+            </div>
+
+            <h3>Lambda</h3>
+            <p>Lambda is anonymous-function syntax inherited from Lisp and jury-rigged into modern languages. Functions are first-class values in Dudu, so named function declarations cover callback use cases without adding a second function syntax.</p>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code>button.on_click(
+    <span class="kw">lambda</span> event: save_document(event.document)
+)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">def</span> <span class="fn">save_clicked</span>(event: <span class="ty">ClickEvent</span>):
+    save_document(event.document)
+
+button.on_click(save_clicked)</code></pre>
+              </div>
+            </div>
+
+            <h3>Generator</h3>
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code><span class="kw">def</span> <span class="fn">enabled_names</span>(items: <span class="ty">list</span>[<span class="ty">Item</span>]):
+    <span class="kw">for</span> item <span class="kw">in</span> items:
+        <span class="kw">if</span> item.enabled:
+            <span class="kw">yield</span> item.name
+
+<span class="kw">for</span> name <span class="kw">in</span> enabled_names(items):
+    print(name)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu callback</div>
+                <pre><code><span class="kw">def</span> <span class="fn">visit_enabled_names</span>(
+    items: &amp;<span class="kw">const</span>[<span class="ty">list</span>[<span class="ty">Item</span>]],
+    visit: <span class="ty">fn</span>(&amp;<span class="kw">const</span>[<span class="ty">str</span>]),
+):
+    <span class="kw">for</span> item: &amp;<span class="kw">const</span>[<span class="ty">Item</span>] <span class="kw">in</span> items:
+        <span class="kw">if</span> item.enabled:
+            visit(item.name)
+
+visit_enabled_names(items, print_name)</code></pre>
+              </div>
+            </div>
+
+            <h3>Ternary expression</h3>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Python</div>
+                <pre><code>label = <span class="str">"ready"</span> <span class="kw">if</span> connected <span class="kw">else</span> <span class="str">"offline"</span></code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code>label: <span class="ty">str</span>
+<span class="kw">if</span> connected:
+    label = <span class="str">"ready"</span>
+<span class="kw">else</span>:
+    label = <span class="str">"offline"</span></code></pre>
+              </div>
+            </div>
+
+            <h3><code>with</code></h3>
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Python context manager</div>
+                <pre><code><span class="kw">with</span> lock:
+    update_shared_state()
+
+<span class="kw">with</span> open(<span class="str">"state.bin"</span>, <span class="str">"wb"</span>) <span class="kw">as</span> output:
+    output.write(data)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu scope and C++ RAII</div>
+                <pre><code><span class="kw">from</span> cpp <span class="kw">import</span> mutex
+
+<span class="kw">def</span> <span class="fn">update_locked</span>(lock: &amp;std.mutex):
+    guard = std.lock_guard[std.mutex](lock)
+    update_shared_state()
+    <span class="comment"># guard unlocks when this scope ends</span>
+
+output = <span class="ty">File</span>(<span class="str">"state.bin"</span>, <span class="str">"wb"</span>)
+output.write(data)
+<span class="comment"># output closes when its scope ends</span></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section id="cpp" class="why-section">
+            <h2>Some comparisons between C++ and Dudu.</h2>
+
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">C++</div>
+                <pre><code><span class="kw">struct</span> <span class="ty">Particle</span> {
+    <span class="ty">Vec2</span> position;
+    <span class="ty">Vec2</span> velocity;
+    <span class="ty">float</span> lifetime;
+};
+
+<span class="kw">auto</span> particle = <span class="ty">Particle</span>{
+    .position = spawn_position,
+    .velocity = random_velocity(),
+    .lifetime = <span class="num">2.0F</span>,
+};</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Particle</span>:
+    position: <span class="ty">Vec2</span>
+    velocity: <span class="ty">Vec2</span>
+    lifetime: <span class="ty">f32</span>
+
+particle = <span class="ty">Particle</span>(
+    position=spawn_position,
+    velocity=random_velocity(),
+    lifetime=<span class="num">2.0</span>,
+)</code></pre>
+              </div>
+            </div>
+
+            <div class="comparison auto-comparison">
+              <div class="code-window">
+                <div class="code-label">C++ inferred bindings</div>
+                <pre><code><span class="kw">auto</span> monitor = setup_monitor_rect();
+<span class="kw">auto</span> window_size = make_16_9_half(monitor);
+<span class="kw">auto</span> window = SDL_CreateWindow(
+    <span class="str">"renderer"</span>, window_size.width, window_size.height, flags);
+<span class="kw">auto</span> renderer = SDL_CreateRenderer(window, <span class="kw">nullptr</span>);
+<span class="kw">auto</span> texture = SDL_CreateTexture(
+    renderer, SDL_PIXELFORMAT_RGBA8888,
+    SDL_TEXTUREACCESS_STREAMING, render_w, render_h);
+<span class="kw">auto</span> format = SDL_GetPixelFormatDetails(
+    SDL_PIXELFORMAT_RGBA8888);</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu inferred bindings</div>
+                <pre><code>monitor = setup_monitor_rect()
+window_size = make_16_9_half(monitor)
+window = SDL_CreateWindow(
+    <span class="str">"renderer"</span>, window_size.width, window_size.height, flags,
+)
+renderer = SDL_CreateRenderer(window, <span class="kw">None</span>)
+texture = SDL_CreateTexture(
+    renderer, SDL_PIXELFORMAT_RGBA8888,
+    SDL_TEXTUREACCESS_STREAMING, render_w, render_h,
+)
+format = SDL_GetPixelFormatDetails(
+    SDL_PIXELFORMAT_RGBA8888
+)</code></pre>
+              </div>
+            </div>
+
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">C++ operator</div>
+                <pre><code><span class="ty">Vec2</span> <span class="kw">operator</span>+(<span class="kw">const</span> <span class="ty">Vec2</span>&amp; other) <span class="kw">const</span> {
+    <span class="kw">return</span> {x + other.x, y + other.y};
+}</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu operator</div>
+                <pre><code><span class="decorator">@operator</span>(<span class="str">"+"</span>)
+<span class="kw">def</span> <span class="fn">add</span>(self, other: <span class="ty">Vec2</span>) -&gt; <span class="ty">Vec2</span>:
+    <span class="kw">return</span> <span class="ty">Vec2</span>(self.x + other.x, self.y + other.y)</code></pre>
+              </div>
+            </div>
+            <p><code>self</code> is an inferred reference to the current object. Larger inputs can spell <code>&amp;const[Vec2]</code> explicitly to avoid a copy.</p>
+
+            <p>The editor shows inferred types, native definitions, documentation, references, and layout information. The compiler can emit the generated C++ for inspection.</p>
+          </section>
+
+          <section id="native-libraries" class="why-section native-libraries-section">
+            <h2>Import C and C++ libraries directly.</h2>
+            <p>Dudu's native imports expose declarations scanned from the real header. Types, overloads, templates, macros, namespaces, source locations, and documentation remain available to the compiler and editor. This isn't a separate wrapper language or a second package ecosystem.</p>
+            <p>The examples below are representative of the native compatibility suite. The corresponding SDK or development package still has to be installed and linked through the project's normal CMake configuration.</p>
+
+            <div class="native-library-grid">
+              <div class="code-window"><div class="code-label">C++ standard library</div><pre><code>from cpp import algorithm
+from cpp import vector
+
+values: std.vector[i32]
+values.push_back(4)
+values.push_back(1)
+std.sort(values.begin(), values.end())</code></pre></div>
+
+              <div class="code-window"><div class="code-label">SDL3</div><pre><code>from c import SDL3/SDL.h
+
+window = SDL_CreateWindow(
+    "dudu", 1280, 720,
+    SDL_WINDOW_RESIZABLE,
+)
+renderer = SDL_CreateRenderer(window, None)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">raylib</div><pre><code>from c import raylib.h
+
+InitWindow(1280, 720, "dudu")
+while not WindowShouldClose():
+    BeginDrawing()
+    DrawCircleV(position, 24.0, RED)
+    EndDrawing()</code></pre></div>
+
+              <div class="code-window"><div class="code-label">Vulkan</div><pre><code>from c import vulkan/vulkan.h
+
+app = VkApplicationInfo()
+app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO
+create_info = VkInstanceCreateInfo()
+create_info.pApplicationInfo = &app
+instance: VkInstance = None
+check_vk(vkCreateInstance(&create_info, None, &instance))</code></pre></div>
+
+              <div class="code-window"><div class="code-label">OpenCV</div><pre><code>from cpp import opencv2/opencv.hpp as cv
+
+image = cv.imread("frame.png", cv.IMREAD_COLOR)
+edges = cv.Mat()
+cv.Canny(image, edges, 100.0, 200.0)
+cv.imwrite("edges.png", edges)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">SQLite</div><pre><code>from c import sqlite3.h
+
+db: *sqlite3 = None
+if sqlite3_open("app.db", &db) != SQLITE_OK:
+    return Err(DbError.open)
+sqlite3_exec(db, schema, None, None, None)
+sqlite3_close(db)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">FFmpeg</div><pre><code>from c import libavcodec/avcodec.h
+
+packet = av_packet_alloc()
+frame = av_frame_alloc()
+decode_packets(codec, packet, frame)
+av_frame_free(&frame)
+av_packet_free(&packet)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">libcurl</div><pre><code>from c import curl/curl.h
+
+request = curl_easy_init()
+curl_easy_setopt(request, CURLOPT_URL, url)
+curl_easy_setopt(request, CURLOPT_WRITEFUNCTION, on_data)
+result = curl_easy_perform(request)
+curl_easy_cleanup(request)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">Zstandard</div><pre><code>from c import zstd.h
+
+capacity = ZSTD_compressBound(len(source))
+compressed = allocate_bytes(capacity)
+written = ZSTD_compress(
+    compressed.data(), capacity,
+    source.data(), len(source), 3,
+)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">Dear ImGui</div><pre><code>from cpp import imgui.h
+
+ImGui.Begin("Profiler")
+ImGui.Text("frame %.2f ms", frame_ms)
+ImGui.PlotLines(
+    "history", samples.data(), len(samples),
+)
+ImGui.End()</code></pre></div>
+
+              <div class="code-window"><div class="code-label">GLM</div><pre><code>from cpp import glm/glm.hpp
+
+a = glm.vec3(1.0, 2.0, 3.0)
+b = glm.vec3(4.0, 5.0, 6.0)
+normal = glm.normalize(glm.cross(a, b))
+similarity = glm.dot(a, b)</code></pre></div>
+
+              <div class="code-window"><div class="code-label">Boost.Asio</div><pre><code>from cpp import boost/asio.hpp as asio
+
+context = asio.io_context()
+resolver = asio.ip.tcp.resolver(context)
+socket = asio.ip.tcp.socket(context)
+endpoints = resolver.resolve(host, service)
+asio.connect(socket, endpoints)</code></pre></div>
+            </div>
+          </section>
+
+          <section id="indexing" class="why-section indexing-section">
+            <h2>Array and tensor indexing.</h2>
+            <p>Dudu has Python-shaped multidimensional indexing in the language. Fixed arrays use it directly. Numeric libraries can use the same syntax without the compiler knowing about NumPy, PyTorch, BLAS, or a particular GPU backend.</p>
+
+            <h3>Fixed arrays infer their shape.</h3>
+            <div class="comparison indexing-comparison">
+              <div class="code-window">
+                <div class="code-label">Literal and inferred shape</div>
+                <pre><code>image: <span class="ty">array</span>[<span class="ty">u8</span>] = [
+    [[<span class="num">255</span>, <span class="num">0</span>, <span class="num">0</span>], [<span class="num">0</span>, <span class="num">255</span>, <span class="num">0</span>]],
+    [[<span class="num">0</span>, <span class="num">0</span>, <span class="num">255</span>], [<span class="num">255</span>, <span class="num">255</span>, <span class="num">255</span>]],
+]
+
+<span class="comment"># inferred: array[u8][2, 2, 3]</span>
+blue = image[<span class="num">1</span>, <span class="num">0</span>, <span class="num">2</span>]
+<span class="comment"># inferred: u8</span></code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Views preserve result shapes</div>
+                <pre><code>red = image[:, :, <span class="num">0</span>]
+<span class="comment"># array_view[u8][2, 2]</span>
+
+row = image[<span class="num">1</span>, :, :]
+<span class="comment"># array_view[u8][2, 3]</span>
+
+rgb = image[<span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>:<span class="num">3</span>]
+<span class="comment"># array_view[u8][3]</span>
+
+expanded = image[<span class="kw">None</span>, ..., <span class="num">2</span>]
+<span class="comment"># array_view[u8][1, 2, 2]</span></code></pre>
+              </div>
+            </div>
+            <p>A scalar index removes an axis. A slice preserves an axis. <code>None</code> adds one. <code>...</code> fills the remaining axes. The result is computed by one rank-independent view path.</p>
+
+            <div class="comparison comparison-three indexing-syntax-grid">
+              <div class="code-window">
+                <div class="code-label">Ranges and steps</div>
+                <pre><code>middle = samples[<span class="num">10</span>:<span class="num">100</span>]
+every_other = samples[::<span class="num">2</span>]
+thirds = samples[<span class="num">1</span>::<span class="num">3</span>]
+
+patch = image[
+    y0:y1:<span class="num">2</span>,
+    x0:x1:<span class="num">2</span>,
+    :,
+]</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Common ML indexing</div>
+                <pre><code>train_x = x[mask, :]
+correct = logits[
+    arange(batch), labels,
+]
+tokens = embeddings[token_ids, :]
+last_vocab = scores[..., -<span class="num">1</span>]</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Broadcast and assignment</div>
+                <pre><code>normalized = (
+    x - mean[<span class="kw">None</span>, :]
+) * inv_std[<span class="kw">None</span>, :]
+
+weights[mask, :] = <span class="num">0.0</span>
+logits[rows, cols] += <span class="num">1.0</span></code></pre>
+              </div>
+            </div>
+
+            <h3>Libraries define what an index means.</h3>
+            <div class="comparison indexing-hook-comparison">
+              <div class="code-window">
+                <div class="code-label">Simple container</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Grid</span>:
+    <span class="decorator">@operator</span>(<span class="str">"[]"</span>)
+    <span class="kw">def</span> <span class="fn">at</span>(self, y: <span class="ty">i32</span>, x: <span class="ty">i32</span>) -&gt; <span class="ty">Cell</span>:
+        <span class="kw">return</span> self.cells[(y * self.width) + x]
+
+    <span class="decorator">@operator</span>(<span class="str">"[]="</span>)
+    <span class="kw">def</span> <span class="fn">set_at</span>(self, y: <span class="ty">i32</span>, x: <span class="ty">i32</span>, value: <span class="ty">Cell</span>):
+        self.cells[(y * self.width) + x] = value</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Arbitrary-rank tensor library</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Tensor</span>[<span class="ty">T</span>]:
+    <span class="decorator">@operator</span>(<span class="str">"[]"</span>)
+    <span class="kw">def</span> <span class="fn">at</span>[<span class="ty">Idx</span>...](
+        self, *idx: <span class="ty">Idx</span>,
+    ) -&gt; <span class="ty">TensorSelection</span>[<span class="ty">T</span>, <span class="ty">Idx</span>...]:
+        <span class="kw">return</span> select(self, idx...)
+
+    <span class="decorator">@operator</span>(<span class="str">"[]="</span>)
+    <span class="kw">def</span> <span class="fn">set_at</span>[<span class="ty">Idx</span>...](
+        self, *idx: <span class="ty">Idx</span>, value: <span class="ty">T</span>,
+    ):
+        scatter(self, value, idx...)</code></pre>
+              </div>
+            </div>
+            <p>The compiler passes typed scalar, slice, ellipsis, new-axis, mask, and index-array arguments to the selected operator. The library decides whether the result is a view, copy, gather, lazy value, or device operation.</p>
+
+            <h3>Compile-time extents are optional.</h3>
+            <p>A tensor library can keep every shape at runtime, just as NumPy and PyTorch do. Adding extents to a type is optional. It is useful at model, kernel, buffer, and API boundaries where a bad pipeline connection should fail during compilation instead of during a training run.</p>
+
+            <div class="comparison compact-comparison extent-choice-comparison">
+              <div class="code-window">
+                <div class="code-label">Runtime-shaped tensor</div>
+                <pre><code>def classify(
+    images: &Tensor[f32],
+    weights: &Tensor[f32],
+) -> Result[Tensor[f32], ShapeError]:
+    if images.shape[1] != weights.shape[0]:
+        return Err(ShapeError.matmul)
+    return Ok(matmul(images, weights))</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Optional compile-time contract</div>
+                <pre><code>def classify[Batch, Input, Classes](
+    images: &Tensor[f32][Batch, Input],
+    weights: &Tensor[f32][Input, Classes],
+) -> Tensor[f32][Batch, Classes]:
+    return matmul(images, weights)</code></pre>
+              </div>
+            </div>
+            <p>The first form accepts ordinary runtime-shaped tensors. The second carries dimensions through the type system. They can coexist in the same library and program.</p>
+
+            <div class="comparison shape-comparison">
+              <div class="code-window">
+                <div class="code-label">Matrix multiplication</div>
+                <pre><code><span class="kw">def</span> <span class="fn">matmul</span>[<span class="ty">M</span>, <span class="ty">K</span>, <span class="ty">N</span>](
+    left: <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="ty">M</span>, <span class="ty">K</span>],
+    right: <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="ty">K</span>, <span class="ty">N</span>],
+) -&gt; <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="ty">M</span>, <span class="ty">N</span>]:
+    <span class="kw">return</span> backend_matmul(left, right)
+
+left: <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="num">32</span>, <span class="num">784</span>]
+right: <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="num">784</span>, <span class="num">10</span>]
+logits = matmul(left, right)
+<span class="comment"># inferred: Tensor[f32][32, 10]</span></code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Convolution extent arithmetic</div>
+                <pre><code><span class="kw">def</span> <span class="fn">conv2d</span>[<span class="ty">H</span>, <span class="ty">W</span>, <span class="ty">K</span>](
+    image: &amp;<span class="ty">array</span>[<span class="ty">f32</span>][<span class="ty">H</span>, <span class="ty">W</span>],
+    kernel: &amp;<span class="ty">array</span>[<span class="ty">f32</span>][<span class="ty">K</span>, <span class="ty">K</span>],
+) -&gt; <span class="ty">array</span>[<span class="ty">f32</span>][<span class="ty">H</span> - <span class="ty">K</span> + <span class="num">1</span>, <span class="ty">W</span> - <span class="ty">K</span> + <span class="num">1</span>]:
+    <span class="kw">return</span> conv_backend[<span class="ty">H</span>, <span class="ty">W</span>, <span class="ty">K</span>](image, kernel)
+
+image: <span class="ty">array</span>[<span class="ty">f32</span>][<span class="num">4</span>, <span class="num">4</span>]
+kernel: <span class="ty">array</span>[<span class="ty">f32</span>][<span class="num">3</span>, <span class="num">3</span>]
+output = conv2d(image, kernel)
+<span class="comment"># inferred: array[f32][2, 2]</span></code></pre>
+              </div>
+            </div>
+            <p>The caller doesn't write <code>matmul[32, 784, 10](...)</code> or <code>conv2d[4, 4, 3](...)</code>. Dudu infers extents from the arguments. <code>dyn</code> marks only the dimensions known at runtime. An explicit <code>assume_shape[...]</code> check can validate runtime metadata once and then narrow it before calling an API that requires a fixed shape.</p>
+
+            <div class="code-window shape-error-window">
+              <div class="code-label">Shape error</div>
+              <pre><code>weights: <span class="ty">Tensor</span>[<span class="ty">f32</span>][<span class="num">512</span>, <span class="num">10</span>]
+logits = matmul(images, weights)
+
+<span class="error-comment"># error: argument 2 for matmul expects Tensor[f32][784, 10],</span>
+<span class="error-comment">#        got Tensor[f32][512, 10]</span></code></pre>
+            </div>
+
+            <h3>Implementation status</h3>
+            <table class="implementation-table">
+              <thead><tr><th>Area</th><th>Status</th><th>What is covered</th></tr></thead>
+              <tbody>
+                <tr><th>Language syntax</th><td><span class="status-ready">Implemented</span></td><td>Comma indexing, scalar items, slices, steps, ellipsis, <code>None</code> axes, assignment, and compound assignment.</td></tr>
+                <tr><th>Fixed arrays</th><td><span class="status-ready">Implemented</span></td><td>Literal shape inference, arbitrary-rank contiguous storage, rank-independent views, result-shape inference, and shape mismatch diagnostics.</td></tr>
+                <tr><th>Library hooks</th><td><span class="status-ready">Implemented</span></td><td>Fixed and variadic <code>@operator("[]")</code>/<code>@operator("[]=")</code> overloads with typed index packs.</td></tr>
+                <tr><th>Optional static extents</th><td><span class="status-ready">Implemented</span></td><td>Runtime-shaped tensors remain valid. Symbolic dimensions, inference from calls, <code>dyn</code>, arithmetic in result shapes, editor hovers, and inlay result types add compile-time contracts where requested.</td></tr>
+                <tr><th>Reference numeric stack</th><td><span class="status-tested">Validated</span></td><td>Arbitrary-rank storage, views, masks, gathers, scatter, broadcasting, reductions, a BLAS comparison, and OpenCL add/matmul probes.</td></tr>
+                <tr><th>Production array/ML library</th><td><span class="status-pending">Not bundled</span></td><td><code>ndad</code> and <code>mald</code> are dogfooding implementations. They aren't a released NumPy/PyTorch replacement or a packaged GPU stack.</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section id="ml" class="why-section ml-section">
+            <h2>Machine learning code can stay Python-shaped.</h2>
+            <p>Dudu supplies the static language, indexing syntax, generics, native interop, and optional shape contracts. A numeric library supplies tensors, devices, kernels, autograd, optimizers, serialization, and distributed execution. Those layers don't have to be compiler built-ins.</p>
+
+            <h3>A normal model and training loop.</h3>
+            <div class="comparison ml-training-comparison">
+              <div class="code-window">
+                <div class="code-label">Two-layer network</div>
+                <pre><code>class MLP:
+    hidden: Linear
+    output: Linear
+
+    def forward(self, x: &Tensor[f32]) -> Tensor[f32]:
+        x = self.hidden(x)
+        x = relu(x)
+        return self.output(x)
+
+model = MLP(
+    hidden=Linear(784, 512),
+    output=Linear(512, 10),
+).to(device)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Training</div>
+                <pre><code>for batch in train_loader:
+    optimizer.zero_grad()
+
+    images = batch.images.to(device)
+    labels = batch.labels.to(device)
+    logits = model.forward(images)
+    loss = cross_entropy(logits, labels)
+
+    loss.backward()
+    clip_grad_norm(model.parameters(), 1.0)
+    optimizer.step()</code></pre>
+              </div>
+            </div>
+            <p>These tensors may use runtime shapes. Fixed extents are only needed where a compile-time shape contract is useful.</p>
+
+            <h3>Autograd can be ordinary library code.</h3>
+            <div class="comparison autograd-comparison">
+              <div class="code-window">
+                <div class="code-label">Small scalar autograd value</div>
+                <pre><code>class Value:
+    data: f32
+    grad: f32
+    parents: list[*Value]
+    local_grads: list[f32]
+
+    @operator("*")
+    def mul(self, other: &Value) -> Value:
+        return Value(
+            data=self.data * other.data,
+            grad=0.0,
+            parents=[&self, &other],
+            local_grads=[other.data, self.data],
+        )</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Reverse pass</div>
+                <pre><code>def backward(root: &Value):
+    order = topological_order(root)
+    root.grad = 1.0
+
+    i = len(order) - 1
+    while i >= 0:
+        node = order[i]
+        for edge in range(len(node.parents)):
+            parent = node.parents[edge]
+            parent.grad += node.grad * node.local_grads[edge]
+        i -= 1</code></pre>
+              </div>
+            </div>
+            <p>A tensor autograd library uses the same idea with tensor-valued local derivatives, saved operations, device buffers, and backend kernels.</p>
+
+            <h3>A Gemma-shaped decoder block.</h3>
+            <div class="code-window featured-code ml-featured-code">
+              <div class="code-label">Dudu model code using a CUDA-backed tensor library</div>
+              <pre><code>class GemmaBlock:
+    norm: RMSNorm
+    qkv: Linear
+    attention_out: Linear
+    gate: Linear
+    up: Linear
+    down: Linear
+    heads: i32
+    head_dim: i32
+
+    def forward(
+        self,
+        x: &Tensor[f16],
+        cache: &KVCache,
+        positions: &Tensor[i32],
+    ) -> Tensor[f16]:
+        residual = x
+        hidden = self.norm(x)
+
+        qkv = self.qkv(hidden)
+        q, k, v = qkv.split(3, axis=-1)
+        q = q.reshape(batch, tokens, self.heads, self.head_dim)
+        k = k.reshape(batch, tokens, self.heads, self.head_dim)
+        v = v.reshape(batch, tokens, self.heads, self.head_dim)
+        q = q.transpose(0, 2, 1, 3)
+        k = apply_rope(k, positions)
+
+        cache.keys[:, :, positions, :] = k
+        cache.values[:, :, positions, :] = v
+        end = positions[-1] + 1
+
+        context = flash_attention(
+            q,
+            cache.keys[:, :, :end, :],
+            cache.values[:, :, :end, :],
+            causal=True,
+        )
+        attended = residual + self.attention_out(context.flatten(2, 3))
+
+        hidden = self.norm(attended)
+        gated = gelu(self.gate(hidden)) * self.up(hidden)
+        return attended + self.down(gated)</code></pre>
+            </div>
+            <p>The model code doesn't contain CUDA calls. The tensor library dispatches <code>Linear</code>, <code>flash_attention</code>, normalization, and elementwise operations to its selected backend.</p>
+
+            <div class="comparison ml-backend-comparison">
+              <div class="code-window">
+                <div class="code-label">CUDA backend implementation</div>
+                <pre><code>from c import cuda_runtime_api.h
+from c import cublas_v2.h
+
+class CudaBackend:
+    handle: cublasHandle_t
+
+    def matmul(self, out: &Tensor[f32], a: &Tensor[f32], b: &Tensor[f32]):
+        check(cublasSgemm(
+            self.handle, CUBLAS_OP_N, CUBLAS_OP_N,
+            b.cols, a.rows, a.cols,
+            &ONE, b.data, b.cols, a.data, a.cols,
+            &ZERO, out.data, out.cols,
+        ))</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Backend-neutral call site</div>
+                <pre><code>device = Device.cuda(0)
+model = load_gemma("gemma-2b.weights").to(device)
+tokens = tokenizer.encode(prompt).to(device)
+cache = KVCache.allocate(model.config, device)
+
+while tokens[-1] != tokenizer.eos:
+    logits = model.forward(tokens[-1:, None], cache)
+    next_token = sample(logits[:, -1, :], temperature=0.8)
+    tokens.append(next_token)
+
+print(tokenizer.decode(tokens))</code></pre>
+              </div>
+            </div>
+            <p>A CUDA backend is one library choice. The same model surface can dispatch to ROCm, Metal, Vulkan compute, OpenCL, BLAS, or CPU kernels.</p>
+
+            <h3>PPO rollout collection and minibatch gathers.</h3>
+            <div class="code-window featured-code ml-featured-code">
+              <div class="code-label">Runtime-shaped rollout storage</div>
+              <pre><code>class Rollout:
+    observations: Tensor[f32]
+    actions: Tensor[i64]
+    rewards: Tensor[f32]
+    dones: Tensor[bool]
+    values: Tensor[f32]
+
+def collect(envs: &VectorEnv, policy: &Policy, steps: i32) -> Rollout:
+    rollout = Rollout.allocate(steps, envs.count, envs.observation_shape)
+    observation = envs.reset()
+
+    for step in range(steps):
+        action, value = policy.sample(observation)
+        next_observation, reward, done = envs.step(action)
+
+        rollout.observations[step, :, :] = observation
+        rollout.actions[step, :] = action
+        rollout.rewards[step, :] = reward
+        rollout.dones[step, :] = done
+        rollout.values[step, :] = value
+        observation = where(done[:, None], envs.reset_done(done), next_observation)
+
+    return rollout
+
+def minibatch(rollout: &Rollout, ids: &Tensor[i64]) -> Batch:
+    flat_observations = rollout.observations.reshape(-1, rollout.observations.shape[-1])
+    flat_actions = rollout.actions.reshape(-1)
+    flat_returns = compute_returns(rollout).reshape(-1)
+
+    return Batch(
+        observations=flat_observations[ids, :],
+        actions=flat_actions[ids],
+        returns=flat_returns[ids],
+    )</code></pre>
+            </div>
+            <p>Masks, gathers, new axes, ellipsis, slices, scatter assignment, and broadcasting all use the ordinary indexing operator. The tensor library decides which operations are views and which launch gathers or kernels.</p>
+
+            <h3>Existing ML runtimes are still available.</h3>
+            <p>A new systems language normally starts without a tensor ecosystem. Dudu can consume native ML libraries through their existing C or C++ APIs. That is useful immediately, but it depends on the API the upstream project actually publishes.</p>
+            <div class="comparison comparison-three ml-runtime-comparison">
+              <div class="code-window">
+                <div class="code-label">LibTorch C++ API</div>
+                <pre><code>from cpp import torch/torch.h
+
+def train_step(
+    model: &Classifier,
+    optimizer: &torch.optim.Optimizer,
+    images: torch.Tensor,
+    labels: torch.Tensor,
+) -> torch.Tensor:
+    optimizer.zero_grad()
+    logits = model.forward(images)
+    loss = torch.nn.functional.cross_entropy(logits, labels)
+    loss.backward()
+    optimizer.step()
+    return loss</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Python: export JAX once</div>
+                <pre><code>import jax
+from jax import export
+from pathlib import Path
+
+compiled = export.export(
+    jax.jit(policy_step)
+)(observation_spec, weights_spec)
+
+Path("policy.stablehlo.mlir").write_text(
+    compiled.mlir_module()
+)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu: execute through OpenXLA</div>
+                <pre><code>from c import xla/pjrt/c/pjrt_c_api.h
+
+module = read_bytes("policy.stablehlo.mlir")
+client = create_pjrt_client()
+executable = compile_stablehlo(client, module)
+
+inputs = upload_arguments(client, observation, weights)
+outputs = execute(executable, inputs)
+policy_output = download(outputs[0])</code></pre>
+              </div>
+            </div>
+            <p><a href="https://docs.pytorch.org/cppdocs/frontend.html">LibTorch</a> is a native C++ frontend and can be imported directly. JAX is a Python frontend, so Dudu doesn't pretend it is a C++ header library. A native deployment can export StableHLO and execute it through a compatible OpenXLA runtime, but raw StableHLO and custom calls need version-compatible handling. See the <a href="https://docs.jax.dev/en/latest/export/export.html">JAX export documentation</a> for its actual portability guarantees.</p>
+
+            <div class="implementation-note">
+              <strong>Current status:</strong> the language features used here are implemented and exercised by tensor-indexing, BLAS, OpenCL, generics, native-header, and shape-diagnostic fixtures. The full <code>mald</code>/<code>ddtorch</code>-style production framework shown by these examples is not bundled with Dudu.
+            </div>
+          </section>
+
+          <section id="borrowed" class="why-section">
+            <h2>Features taken from other languages.</h2>
+            <p>Dudu includes payload enums, exhaustive matching, results, options, fixed-width scalar types, fixed-shape arrays, and GLSL-style swizzling.</p>
+
+            <h3>Payload enums and exhaustive match</h3>
+            <div class="comparison borrowed-comparison">
+              <div class="code-window">
+                <div class="code-label">Rust</div>
+                <pre><code><span class="kw">enum</span> <span class="ty">Event</span> {
+    Quit,
+    KeyDown { key: <span class="ty">i32</span> },
+    MouseMove { x: <span class="ty">i32</span>, y: <span class="ty">i32</span> },
+}
+
+<span class="kw">fn</span> <span class="fn">score</span>(event: <span class="ty">Event</span>) -&gt; <span class="ty">i32</span> {
+    <span class="kw">match</span> event {
+        <span class="ty">Event</span>::Quit =&gt; <span class="num">0</span>,
+        <span class="ty">Event</span>::KeyDown { key } =&gt; key,
+        <span class="ty">Event</span>::MouseMove { x, y } =&gt; x + y,
+    }
+}</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">enum</span> <span class="ty">Event</span>:
+    Quit
+
+    KeyDown:
+        key: <span class="ty">i32</span>
+
+    MouseMove:
+        x: <span class="ty">i32</span>
+        y: <span class="ty">i32</span>
+
+<span class="kw">def</span> <span class="fn">score</span>(event: <span class="ty">Event</span>) -&gt; <span class="ty">i32</span>:
+    <span class="kw">match</span> event:
+        <span class="kw">case</span> <span class="ty">Event</span>.Quit:
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="kw">case</span> <span class="ty">Event</span>.KeyDown(key):
+            <span class="kw">return</span> key
+        <span class="kw">case</span> <span class="ty">Event</span>.MouseMove(x, y):
+            <span class="kw">return</span> x + y</code></pre>
+              </div>
+            </div>
+            <p>The compiler checks that every variant is handled and reports unreachable cases.</p>
+
+            <h3>Result values</h3>
+            <div class="comparison borrowed-comparison">
+              <div class="code-window">
+                <div class="code-label">Rust</div>
+                <pre><code><span class="kw">fn</span> <span class="fn">read_port</span>(text: &amp;<span class="ty">str</span>) -&gt; <span class="ty">Result</span>&lt;<span class="ty">u16</span>, <span class="ty">ParseError</span>&gt; {
+    text.parse::&lt;<span class="ty">u16</span>&gt;()
+}
+
+<span class="kw">match</span> read_port(input) {
+    Ok(port) =&gt; start(port),
+    Err(error) =&gt; report(error),
+}</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">def</span> <span class="fn">read_port</span>(text: &amp;<span class="kw">const</span>[<span class="ty">str</span>]) -&gt; <span class="ty">Result</span>[<span class="ty">u16</span>, <span class="ty">ParseError</span>]:
+    <span class="kw">return</span> parse_port(text)
+
+<span class="kw">match</span> read_port(input):
+    <span class="kw">case</span> Ok(port):
+        start(port)
+    <span class="kw">case</span> Err(error):
+        report(error)</code></pre>
+              </div>
+            </div>
+            <p><code>Option[T]</code> handles absence in the same style. C++ exceptions remain available for imported-library compatibility.</p>
+
+            <h3>Fixed-shape arrays</h3>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">C++</div>
+                <pre><code><span class="kw">using</span> <span class="ty">Matrix4</span> = std::array&lt;
+    std::array&lt;<span class="ty">float</span>, <span class="num">4</span>&gt;,
+    <span class="num">4</span>
+&gt;;
+
+<span class="ty">Matrix4</span> transform{};
+transform[<span class="num">2</span>][<span class="num">3</span>] = <span class="num">1.0F</span>;</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code><span class="kw">type</span> <span class="ty">Matrix4</span> = <span class="ty">array</span>[<span class="ty">f32</span>][<span class="num">4</span>, <span class="num">4</span>]
+
+transform: <span class="ty">Matrix4</span>
+transform[<span class="num">2</span>, <span class="num">3</span>] = <span class="num">1.0</span></code></pre>
+              </div>
+            </div>
+            <p>Array extents are part of the type. Numeric libraries can define Python-shaped slicing and advanced indexing through the normal indexing operators.</p>
+
+            <h3>GLSL-style swizzling</h3>
+            <div class="comparison compact-comparison swizzle-comparison">
+              <div class="code-window" data-language="glsl">
+                <div class="code-label">GLSL</div>
+                <pre><code>vec4 position = vec4(1.0, 2.0, 3.0, 4.0);
+vec2 xy = position.xy;
+vec2 yx = position.yx;
+vec2 xx = position.xx;
+position.yx = vec2(8.0, 9.0);</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Dudu</div>
+                <pre><code>position = Vec4(1.0, 2.0, 3.0, 4.0)
+xy = position.xy
+yx = position.yx
+xx = position.xx
+position.yx = Vec2(8.0, 9.0)</code></pre>
+              </div>
+            </div>
+            <div class="comparison swizzle-comparison">
+              <div class="code-window">
+                <div class="code-label">Define vector types</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Vec2</span>:
+    x: <span class="ty">f32</span>
+    y: <span class="ty">f32</span>
+
+<span class="kw">class</span> <span class="ty">Vec4</span>:
+    x: <span class="ty">f32</span>
+    y: <span class="ty">f32</span>
+    z: <span class="ty">f32</span>
+    w: <span class="ty">f32</span>
+
+position = <span class="ty">Vec4</span>(<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>, <span class="num">4.0</span>)</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Read and write swizzles</div>
+                <pre><code>xy = position.xy       <span class="comment"># Vec2(1, 2)</span>
+yx = position.yx       <span class="comment"># Vec2(2, 1)</span>
+xx = position.xx       <span class="comment"># Vec2(1, 1)</span>
+
+position.yx = <span class="ty">Vec2</span>(<span class="num">8.0</span>, <span class="num">9.0</span>)
+<span class="comment"># position is now Vec4(9, 8, 3, 4)</span>
+
+position.xx = <span class="ty">Vec2</span>(<span class="num">1.0</span>, <span class="num">2.0</span>)
+<span class="error-comment"># error: swizzle assignment</span>
+<span class="error-comment"># cannot repeat component: xx</span></code></pre>
+              </div>
+            </div>
+            <div class="comparison compact-comparison swizzle-comparison">
+              <div class="code-window">
+                <div class="code-label">Color components</div>
+                <pre><code><span class="kw">class</span> <span class="ty">Color4</span>:
+    r: <span class="ty">f32</span>
+    g: <span class="ty">f32</span>
+    b: <span class="ty">f32</span>
+    a: <span class="ty">f32</span>
+
+bgra = color.bgra
+solid_red = color.rrrr</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Texture components</div>
+                <pre><code><span class="kw">class</span> <span class="ty">TexCoord4</span>:
+    s: <span class="ty">f32</span>
+    t: <span class="ty">f32</span>
+    p: <span class="ty">f32</span>
+    q: <span class="ty">f32</span>
+
+rotated = uv.tspq
+corner = uv.qqqq</code></pre>
+              </div>
+            </div>
+            <p>There is no special <code>Vec4</code> compiler type and no swizzle decorator. Compatible <code>xyzw</code>, <code>rgba</code>, or <code>stpq</code> fields opt a Dudu or imported native vector type into the feature. Reads can repeat components. Writes can't.</p>
+          </section>
+
+          <section id="not" class="why-section final-section">
+            <h2>Current boundaries.</h2>
+            <ul class="boundary-list">
+              <li><strong>Not Python with a faster interpreter.</strong><span>Dynamic Python semantics are outside the goal.</span></li>
+              <li><strong>Not Rust without braces.</strong><span>Dudu doesn't impose ownership or lifetime rules.</span></li>
+              <li><strong>Not a new native ecosystem silo.</strong><span>C, C++, CMake, headers, linkers, debuggers, and profilers remain part of the normal workflow.</span></li>
+              <li><strong>Not stable yet.</strong><span>The current release is a pre-alpha and source compatibility can change.</span></li>
+              <li><strong>Not every C++ feature rewritten in Python syntax.</strong><span>Direct interop and explicit native escape hatches remain available for unusual cases.</span></li>
+            </ul>
+            <div class="why-actions">
+              <a class="button primary" href="/install.html">Install Dudu</a>
+              <a class="button" href="/docs.html">Read the language guide</a>
+              <a class="text-link" href="https://github.com/dudu-language/dudu">Inspect the compiler</a>
+            </div>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><span>Dudu Language. MIT OR Apache-2.0.</span><a href="https://github.com/dudu-language/dudu">Source on GitHub</a></div></footer>
+  </body>
+</html>

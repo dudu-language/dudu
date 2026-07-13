@@ -1,0 +1,31 @@
+from cpp import functional
+from cpp import thread
+
+
+def accumulate_worker(index: i32, n: i32, output: &list[i64]):
+    total: i64 = 0
+    for i: i32 in range(n):
+        total += i64(i) * 3
+    output[index] = total
+
+
+def threaded_accum(worker_count: i32, n: i32) -> i64:
+    output: list[i64] = []
+    output.resize(worker_count)
+    threads: list[std.thread] = []
+
+    for worker_index: i32 in range(worker_count):
+        threads.append(std.thread(
+            accumulate_worker,
+            worker_index,
+            n,
+            std.ref(output),
+        ))
+
+    for thread: &std.thread in threads:
+        thread.join()
+
+    total: i64 = 0
+    for value: i64 in output:
+        total += value
+    return total

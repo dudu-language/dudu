@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @font-face {
+      font-family: Inter;
+      src: url("../site/assets/fonts/Inter-Variable.ttf") format("truetype");
+      font-weight: 100 900;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 1200px;
+      height: 630px;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      color: #171311;
+      font-family: Inter, sans-serif;
+      background:
+        radial-gradient(circle at 82% 20%, rgba(255, 255, 255, 0.86), transparent 36%),
+        linear-gradient(120deg, #d59a72 0%, #efc59d 45%, #fbf3df 100%);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 410px 1fr;
+      gap: 64px;
+      align-items: center;
+      width: 1020px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin: 0 0 58px;
+      font-size: 90px;
+      font-weight: 570;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+
+    .brand img {
+      width: 84px;
+      height: 84px;
+    }
+
+    .tagline {
+      margin: 0 0 22px;
+      font-size: 27px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .summary {
+      width: 385px;
+      margin: 0;
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.32;
+    }
+
+    .editor {
+      overflow: hidden;
+      border: 3px solid #352722;
+      border-radius: 8px;
+      background: #111617;
+      box-shadow: 0 18px 45px rgba(66, 35, 24, 0.24);
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      height: 42px;
+      padding: 0 16px;
+      border-bottom: 1px solid #303839;
+      background: #202829;
+    }
+
+    .dots { display: flex; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot:nth-child(1) { background: #d0644d; }
+    .dot:nth-child(2) { background: #d5a44e; }
+    .dot:nth-child(3) { background: #63a06e; }
+
+    pre {
+      height: 318px;
+      margin: 0;
+      padding: 28px 30px;
+      color: #d8dddc;
+      font: 600 17px/1.56 "DejaVu Sans Mono", monospace;
+      letter-spacing: 0;
+      white-space: pre;
+    }
+
+    .kw { color: #dc85c9; }
+    .ty { color: #62d5c7; }
+    .fn { color: #d8d777; }
+    .num { color: #e4a06c; }
+    .str { color: #d5b56d; }
+    .name { color: #8ec6e6; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1 class="brand"><span>Dudu</span><img src="../site/assets/poop.svg" alt=""></h1>
+      <p class="tagline">Write like Python, run like C++.</p>
+      <p class="summary">Python syntax. Native code. Direct C and C++ libraries.</p>
+    </section>
+    <section class="editor" aria-label="Dudu code sample">
+      <div class="titlebar"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
+      <pre><span class="kw">from</span> c <span class="kw">import</span> raylib.h
+
+<span class="kw">class</span> <span class="ty">Player</span>:
+    pos: <span class="ty">Vector2</span>
+    speed: <span class="ty">f32</span>
+
+<span class="kw">def</span> <span class="fn">update</span>(player: &amp;<span class="ty">Player</span>, dt: <span class="ty">f32</span>):
+    <span class="kw">if</span> IsKeyDown(KEY_RIGHT):
+        player.pos.x += player.speed * dt
+    <span class="kw">if</span> IsKeyDown(KEY_LEFT):
+        player.pos.x -= player.speed * dt</pre>
+    </section>
+  </main>
+</body>
+</html>

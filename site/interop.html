@@ -1,19 +1,13 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Use C and C++ libraries directly from Dudu."><title>Interop | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
-<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a href="/install.html">Install</a><a href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a aria-current="page" href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
-<main><section class="page-hero"><div class="container"><h1>C and C++ are the standard library shelf.</h1><p>Dudu uses Clang-backed header awareness instead of requiring hand-written wrappers for ordinary native declarations.</p></div></section><article class="prose">
-  <h2>System headers</h2><div class="code-window"><pre><code><span class="kw">from</span> cpp <span class="kw">import</span> vector
-<span class="kw">from</span> cpp <span class="kw">import</span> algorithm
-
-values: std.vector[<span class="ty">i32</span>] = [<span class="num">4</span>, <span class="num">1</span>, <span class="num">3</span>]
-std.sort(values.begin(), values.end())</code></pre></div>
-  <h2>Library paths and aliases</h2><div class="code-window"><pre><code><span class="kw">from</span> c.path <span class="kw">import</span> SDL3/SDL.h <span class="kw">as</span> sdl
-<span class="kw">from</span> cpp.path <span class="kw">import</span> glm/glm.hpp <span class="kw">as</span> glm
-
-window = sdl.SDL_CreateWindow(<span class="str">"dudu"</span>, <span class="num">960</span>, <span class="num">540</span>, <span class="num">0</span>)
-direction = glm.normalize(glm.vec3(<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>))</code></pre></div>
-  <h2>What the compiler understands</h2><ul><li>C records, unions, typedefs, enums, functions, globals, and callable function pointers.</li><li>C++ namespaces, overloads, classes, constructors, methods, templates, aliases, and selected specializations.</li><li>Canonical Clang symbol identities for hover, navigation, references, overload selection, and diagnostics.</li><li>Pointer, reference, const, size, alignment, and native source-location metadata.</li></ul>
-  <h2>Build integration</h2><p><code>dudu build</code> generates per-module C++ and uses CMake as the native ecosystem backend. Projects can provide C/C++ sources, include paths, libraries, package-config dependencies, toolchain files, and user-owned CMake configuration.</p>
-  <div class="notice"><strong>No fake universal compatibility claim.</strong> Macro-generated declarations, unusual template metaprogramming, platform SDKs, and libraries requiring custom CMake logic may need explicit project configuration or native glue. Those boundaries are documented and tested rather than silently guessed.</div>
-  <h2>Validated library classes</h2><p>The compatibility suite covers the C and C++ standard libraries plus representative SDL3, raylib, ImGui, glm, SQLite, POSIX, OpenCL/Vulkan/GLFW/FFmpeg-style APIs when dependencies are available.</p>
-</article></main><footer class="site-footer"><div class="footer-inner"><span>Native identity comes from libclang, not name guessing.</span><a href="https://github.com/dudu-language/dudu/blob/master/docs/header-awareness-plan.md">Header architecture</a></div></footer></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="0; url=/tour.html#native-libraries">
+    <link rel="canonical" href="/tour.html#native-libraries">
+    <title>Native libraries | Dudu</title>
+  </head>
+  <body>
+    <p>Native-library documentation moved to the <a href="/tour.html#native-libraries">Dudu language tour</a>.</p>
+  </body>
+</html>

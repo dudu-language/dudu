@@ -164,7 +164,8 @@ The bootstrap script should be small and auditable. It should:
 2. resolve a tagged Dudu release
 3. download an immutable release manifest and artifact
 4. verify the artifact checksum before executing or installing it
-5. check native prerequisites and explain missing packages
+5. detect missing native prerequisites and, with explicit approval, install
+   them through a supported host package manager
 6. install without root privileges
 7. install `dudu`, `duc`, and `dudu-lsp` as one atomic toolchain
 8. report PATH changes clearly
@@ -177,6 +178,9 @@ Required installer options:
 --version VERSION
 --prefix PATH
 --source
+--install-deps
+--no-install-deps
+--print-deps
 --no-modify-path
 --help
 ```

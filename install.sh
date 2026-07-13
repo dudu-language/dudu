@@ -10,6 +10,8 @@ assume_yes=0
 check_only=0
 source_mode=1
 rollback=0
+dependency_mode="ask"
+print_dependencies=0
 
 say() {
     printf '%s\n' "$*"
@@ -29,6 +31,9 @@ Install a tagged Dudu toolchain from source.
   --version VERSION   install an exact immutable release
   --prefix PATH       install under PATH (default: ~/.local)
   --source            build the tagged source archive locally
+  --install-deps      install missing native dependencies without prompting
+  --no-install-deps   report missing dependencies without installing them
+  --print-deps        print the native dependency command and exit
   --no-modify-path    do not add PREFIX/bin to the shell PATH
   --help              show this help
 
@@ -73,6 +78,18 @@ while [ "$#" -gt 0 ]; do
             source_mode=1
             shift
             ;;
+        --install-deps)
+            dependency_mode="install"
+            shift
+            ;;
+        --no-install-deps)
+            dependency_mode="report"
+            shift
+            ;;
+        --print-deps)
+            print_dependencies=1
+            shift
+            ;;
         --no-modify-path)
             modify_path=0
             shift
@@ -95,6 +112,152 @@ done
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || die "required command '$1' is not on PATH"
+}
+
+run_logged() {
+    action=$1
+    log=$2
+    shift 2
+    if "$@" >"$log" 2>&1; then
+        return 0
+    fi
+    cat "$log" >&2
+    die "$action failed"
+}
+
+host_os() {
+    case "$(uname -s)" in
+        Linux) printf '%s\n' "linux" ;;
+        Darwin) printf '%s\n' "macos" ;;
+        *) printf '%s\n' "unsupported" ;;
+    esac
+}
+
+linux_package_manager() {
+    for manager in apt-get dnf pacman; do
+        if command -v "$manager" >/dev/null 2>&1; then
+            printf '%s\n' "$manager"
+            return
+        fi
+    done
+}
+
+dependency_command() {
+    os=$1
+    if [ "$os" = "macos" ]; then
+        printf '%s\n' "xcode-select --install"
+        printf '%s\n' "brew install cmake llvm pkg-config"
+        return
+    fi
+
+    manager=$(linux_package_manager)
+    case "$manager" in
+        apt-get) printf '%s\n' "sudo apt-get update && sudo apt-get install -y ca-certificates git cmake clang libclang-dev g++ build-essential pkg-config curl tar" ;;
+        dnf) printf '%s\n' "sudo dnf install -y ca-certificates git cmake make clang clang-devel gcc-c++ pkgconf-pkg-config curl tar" ;;
+        pacman) printf '%s\n' "sudo pacman -S --needed ca-certificates git cmake make clang gcc pkgconf curl tar" ;;
+        *) return 1 ;;
+    esac
+}
+
+have_libclang() {
+    for prefix in "${LLVM_ROOT:-}" /usr/lib/llvm-* /opt/homebrew/opt/llvm /usr/local/opt/llvm; do
+        [ -n "$prefix" ] || continue
+        [ -f "$prefix/include/clang-c/Index.h" ] || continue
+        for library in "$prefix"/lib/libclang.so* "$prefix"/lib/libclang.dylib* "$prefix"/lib/libclang.a; do
+            [ -e "$library" ] && return 0
+        done
+    done
+    return 1
+}
+
+missing_dependencies() {
+    missing=""
+    for tool in git cmake make clang++ pkg-config curl tar; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            missing="$missing $tool"
+        fi
+    done
+    if ! command -v "${CXX:-c++}" >/dev/null 2>&1; then
+        missing="$missing ${CXX:-c++}"
+    fi
+    if ! have_libclang; then
+        missing="$missing libclang-development-files"
+    fi
+    printf '%s\n' "${missing# }"
+}
+
+confirm_dependency_install() {
+    if [ "$dependency_mode" = "install" ]; then
+        return 0
+    fi
+    if [ "$dependency_mode" = "report" ] || [ ! -r /dev/tty ]; then
+        return 1
+    fi
+    printf 'Install missing native dependencies now? [Y/n] ' >/dev/tty
+    if ! IFS= read -r answer </dev/tty; then
+        return 1
+    fi
+    case "$answer" in
+        ''|y|Y|yes|YES) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+run_as_root() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+        return
+    fi
+    require_command sudo
+    sudo "$@"
+}
+
+install_linux_dependencies() {
+    manager=$(linux_package_manager)
+    case "$manager" in
+        apt-get)
+            run_as_root apt-get update
+            run_as_root apt-get install -y ca-certificates git cmake clang libclang-dev g++ build-essential pkg-config curl tar
+            ;;
+        dnf) run_as_root dnf install -y ca-certificates git cmake make clang clang-devel gcc-c++ pkgconf-pkg-config curl tar ;;
+        pacman) run_as_root pacman -S --needed ca-certificates git cmake make clang gcc pkgconf curl tar ;;
+        *) die "no supported Linux package manager found; install git, CMake, Clang, libclang development files, a C++20 compiler, pkg-config, curl, and tar" ;;
+    esac
+}
+
+install_macos_dependencies() {
+    if ! xcode-select -p >/dev/null 2>&1; then
+        xcode-select --install || true
+        die "finish installing the Xcode command-line tools, then rerun this command"
+    fi
+    command -v brew >/dev/null 2>&1 ||
+        die "Homebrew is required to install CMake, LLVM, and pkg-config: https://brew.sh"
+    brew install cmake llvm pkg-config
+}
+
+ensure_build_dependencies() {
+    os=$(host_os)
+    [ "$os" != "unsupported" ] || die "automatic dependency setup supports Linux and macOS"
+    missing=$(missing_dependencies)
+    [ -n "$missing" ] || return 0
+
+    say "missing native dependencies: $missing"
+    command=$(dependency_command "$os") || command=""
+    if [ -n "$command" ]; then
+        say "dependency command:"
+        say "$command"
+    fi
+    confirm_dependency_install ||
+        die "native dependencies are required; rerun with --install-deps or run the command above"
+
+    say "install native dependencies"
+    case "$os" in
+        linux) install_linux_dependencies ;;
+        macos) install_macos_dependencies ;;
+    esac
+
+    missing=$(missing_dependencies)
+    [ -z "$missing" ] || die "native dependencies are still missing:$missing"
 }
 
 fetch() {
@@ -262,7 +425,7 @@ ensure_path() {
 
 remove_path_entry() {
     profile=$(shell_profile)
-    [ -f "$profile" ] || return
+    [ -f "$profile" ] || return 0
     profile_temp="$profile.dudu-remove.$$"
     awk '
         $0 == "# Dudu toolchain" { skip = 1; next }
@@ -322,6 +485,14 @@ perform_uninstall() {
     say "uninstalled installer-owned Dudu"
 }
 
+if [ "$print_dependencies" -eq 1 ]; then
+    os=$(host_os)
+    [ "$os" != "unsupported" ] || die "automatic dependency setup supports Linux and macOS"
+    dependency_command "$os" ||
+        die "no supported package manager found on this host"
+    exit 0
+fi
+
 if [ "$operation" = "uninstall" ]; then
     perform_uninstall
     exit 0
@@ -348,6 +519,7 @@ else
     state_root="$prefix/share/dudu"
 fi
 
+ensure_build_dependencies
 require_command curl
 require_command tar
 require_command cmake
@@ -410,15 +582,19 @@ mkdir -p "$toolchains"
 if [ ! -x "$final_prefix/bin/dudu" ]; then
     rm -rf "$stage_prefix"
     say "configure Dudu $version"
-    cmake -S "$source_dir" -B "$work_dir/build" \
+    run_logged "configure Dudu" "$work_dir/configure.log" \
+        cmake -S "$source_dir" -B "$work_dir/build" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$stage_prefix" \
         -DDUDU_BUILD_TESTS=OFF \
         -DDUDU_STRICT=ON \
         -DDUDU_INSTALL_OWNER=installer
     say "build Dudu $version"
-    cmake --build "$work_dir/build" --parallel
-    cmake --install "$work_dir/build"
+    run_logged "build Dudu" "$work_dir/build.log" \
+        cmake --build "$work_dir/build" --parallel
+    say "install Dudu $version"
+    run_logged "install Dudu" "$work_dir/install.log" \
+        cmake --install "$work_dir/build"
     [ -x "$stage_prefix/bin/dudu" ] || die "installed dudu executable is missing"
     "$stage_prefix/bin/dudu" --version | grep -Fqx "dudu $version" ||
         die "installed dudu version smoke check failed"

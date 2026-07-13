@@ -5,28 +5,22 @@ generated ABI compatibility may change between alpha versions.
 
 ## Current Installation
 
-Install native prerequisites first.
-
-Ubuntu and Debian:
+Install the current immutable tagged source release:
 
 ```sh
-sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config
-```
-
-macOS Apple Silicon:
-
-```sh
-xcode-select --install
-brew install cmake llvm pkg-config
-```
-
-Then install the immutable tagged source release:
-
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh \
-    | sh -s -- --version 0.1.0-alpha.13
-export PATH="$HOME/.local/bin:$PATH"
+curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh | sh
 dudu --version
+```
+
+The installer detects Linux or macOS, reports missing native dependencies, and
+asks before installing them through APT, DNF, Pacman, or Homebrew. It
+also verifies the release checksum, installs atomically under `~/.local`, and
+updates the shell `PATH`. Noninteractive environments can explicitly authorize
+dependency installation:
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh |
+    sh -s -- --install-deps
 ```
 
 Create and run a project:

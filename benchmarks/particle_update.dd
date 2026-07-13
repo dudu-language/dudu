@@ -1,0 +1,26 @@
+class Particle:
+    x: f32
+    y: f32
+    vx: f32
+    vy: f32
+
+
+def particle_update(count: i32, steps: i32) -> f64:
+    particles: list[Particle] = []
+    for i: i32 in range(count):
+        particles.append(Particle(
+            x=f32(i & 1023),
+            y=f32((i * 3) & 1023),
+            vx=0.25,
+            vy=-0.125,
+        ))
+
+    for _: i32 in range(steps):
+        for particle: &Particle in particles:
+            particle.x += particle.vx
+            particle.y += particle.vy
+
+    total: f64 = 0.0
+    for particle: &const[Particle] in particles:
+        total += f64(particle.x + particle.y)
+    return total

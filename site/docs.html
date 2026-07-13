@@ -1,26 +1,677 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Dudu language and toolchain documentation."><title>Docs | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
-<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a href="/install.html">Install</a><a aria-current="page" href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
-<main><section class="page-hero"><div class="container"><h1>Documentation</h1><p>Dudu is Python-shaped, statically typed, and native. These are the canonical language, compiler, and project references.</p></div></section><article class="prose">
-  <h2>Start here</h2><div class="link-grid">
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/language.md"><strong>Language guide</strong><span>Syntax, types, functions, classes, arrays, generics, and control flow.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/developer-guide.md"><strong>Developer guide</strong><span>Projects, native libraries, builds, tests, and practical workflows.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md"><strong>Known limitations</strong><span>Current pre-alpha constraints without marketing varnish.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/project-driver-plan.md"><strong>Project driver</strong><span>How dudu, CMake, dependencies, modules, and native projects fit together.</span></a>
-  </div>
-  <h2>Language shape</h2><p>Dudu source uses <code>.dd</code>. Types are static, declarations and control flow resemble Python, and the compiler rejects unsupported dynamic Python behavior rather than hiding it behind a runtime.</p>
-  <div class="code-window"><pre><code><span class="kw">enum</span> <span class="ty">Result</span>[T, E]:
-    Ok(T)
-    Err(E)
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="The Dudu language, toolchain, native interop, and project manual.">
+  <title>Docs | Dudu</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/layout.css">
+  <link rel="stylesheet" href="/docs.css">
+  <link rel="stylesheet" href="/assets/syntax.css">
+  <script defer data-manual src="/vendor/prism/prism-core.min.js"></script>
+  <script defer src="/vendor/prism/prism-clike.min.js"></script>
+  <script defer src="/vendor/prism/prism-c.min.js"></script>
+  <script defer src="/vendor/prism/prism-cpp.min.js"></script>
+  <script defer src="/vendor/prism/prism-python.min.js"></script>
+  <script defer src="/vendor/prism/prism-rust.min.js"></script>
+  <script defer src="/vendor/prism/prism-glsl.min.js"></script>
+  <script defer src="/vendor/prism/prism-bash.min.js"></script>
+  <script defer src="/assets/syntax.js"></script>
+  <script defer src="/assets/docs.js"></script>
+</head>
+<body data-code-language="dudu">
+  <header class="site-header">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="/"><span class="brand-word">Dudu</span><img class="brand-mark" src="/assets/poop.svg" alt=""></a>
+      <div class="nav-links"><a href="/tour.html">Tour</a><a href="/install.html">Install</a><a aria-current="page" href="/docs.html">Docs</a><a href="/roadmap.html">Roadmap</a></div>
+      <div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
+    </nav>
+  </header>
 
-<span class="kw">def</span> <span class="fn">divide</span>(a: <span class="ty">i32</span>, b: <span class="ty">i32</span>) -&gt; <span class="ty">Result</span>[<span class="ty">i32</span>, <span class="ty">str</span>]:
-    <span class="kw">if</span> b == <span class="num">0</span>:
-        <span class="kw">return</span> <span class="ty">Result</span>.Err(<span class="str">"division by zero"</span>)
-    <span class="kw">return</span> <span class="ty">Result</span>.Ok(a / b)</code></pre></div>
-  <h2>Architecture references</h2><div class="link-grid">
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/le_plan.md"><strong>Implementation plan</strong><span>The broad compiler and language completion plan.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/header-awareness-plan.md"><strong>Native header awareness</strong><span>Clang-backed C and C++ declaration scanning and identity.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/language-server-plan.md"><strong>Language server</strong><span>Diagnostics, semantic tokens, hover, navigation, references, and inlay hints.</span></a>
-    <a class="link-card" href="https://github.com/dudu-language/dudu/blob/master/docs/distribution-plan.md"><strong>Distribution</strong><span>Releases, installers, package ownership, editor channels, and updates.</span></a>
-  </div>
-</article></main><footer class="site-footer"><div class="footer-inner"><span>Dudu docs track master during pre-alpha.</span><a href="https://github.com/dudu-language/dudu/tree/master/docs">All repository docs</a></div></footer></body></html>
+  <main class="docs-shell">
+    <aside class="docs-sidebar" aria-label="Documentation navigation">
+      <input class="docs-search" type="search" placeholder="Filter topics  Ctrl K" aria-label="Filter documentation topics" data-docs-search>
+      <div class="docs-nav-groups">
+        <section class="docs-nav-group">
+          <h2>Start</h2>
+          <a href="#quickstart" data-docs-link data-keywords="install hello init new first program">Quickstart</a>
+          <a href="#projects" data-docs-link data-keywords="manifest toml source layout cmake workflow">Projects and workflow</a>
+          <a href="#tools" data-docs-link data-keywords="dudu duc command cli build run check clean update">Command reference</a>
+        </section>
+        <section class="docs-nav-group">
+          <h2>Language</h2>
+          <a href="#syntax" data-docs-link data-keywords="files comments naming blocks assignment">Syntax basics</a>
+          <a href="#types" data-docs-link data-keywords="scalar inference annotation cast constants">Types and inference</a>
+          <a href="#functions" data-docs-link data-keywords="def arguments return calls callback fn">Functions</a>
+          <a href="#control-flow" data-docs-link data-keywords="if elif else for while range break continue">Control flow</a>
+          <a href="#classes" data-docs-link data-keywords="class self constructor methods fields static">Classes</a>
+          <a href="#operators" data-docs-link data-keywords="operator overload swizzle vector">Operators and swizzling</a>
+          <a href="#enums" data-docs-link data-keywords="enum sum type payload variant match case option result">Enums, match, and errors</a>
+          <a href="#containers" data-docs-link data-keywords="list dict set tuple array fixed shape index slice view tensor">Containers and arrays</a>
+          <a href="#memory" data-docs-link data-keywords="pointer reference const new delete malloc free lifetime ownership">Memory and references</a>
+          <a href="#generics" data-docs-link data-keywords="generic template constexpr static assert build flags compile time">Generics and compile time</a>
+        </section>
+        <section class="docs-nav-group">
+          <h2>Native code</h2>
+          <a href="#modules" data-docs-link data-keywords="module import alias visibility namespace">Modules and imports</a>
+          <a href="#c-interop" data-docs-link data-keywords="c header macro struct extern linkage">C interop</a>
+          <a href="#cpp-interop" data-docs-link data-keywords="c++ cpp header namespace template overload clang">C++ interop</a>
+          <a href="#build-config" data-docs-link data-keywords="cmake pkg config include source library dependency target">Build configuration</a>
+        </section>
+        <section class="docs-nav-group">
+          <h2>Tooling</h2>
+          <a href="#tests" data-docs-link data-keywords="test assert debug panic filter capture">Tests</a>
+          <a href="#editor" data-docs-link data-keywords="vscode lsp hover definition references inlay format">Editor support</a>
+          <a href="#python-differences" data-docs-link data-keywords="unsupported removed lambda comprehension generator async dynamic">Python differences</a>
+          <a href="#reference" data-docs-link data-keywords="formal specification limitations architecture source">Formal reference</a>
+        </section>
+      </div>
+      <p class="docs-nav-empty" data-docs-empty>No matching topic.</p>
+    </aside>
+
+    <article class="docs-manual">
+      <header>
+        <h1>Dudu manual</h1>
+        <p>Dudu is a statically typed systems language with Python syntax, readable C++ output, and direct C and C++ interop.</p>
+        <span class="docs-version">Manual for 0.1.0-alpha.13. Alpha syntax and generated ABI may change.</span>
+      </header>
+
+      <section class="docs-section" id="quickstart">
+        <h2>Quickstart</h2>
+        <p>Install a tagged source release on Linux or macOS:</p>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh | sh
+dudu --version</code></pre></div>
+        <p>The installer checks native build dependencies, offers to install them through the system package manager, verifies the release checksum, and installs under <code>~/.local</code>.</p>
+        <h3>Create a project</h3>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>dudu new hello
+cd hello
+dudu run</code></pre></div>
+        <p>The generated entry file is ordinary Dudu:</p>
+        <div class="code-window"><div class="code-label">src/main.dd</div><pre><code>def main() -> i32:
+    print("hello from dudu")
+    return 0</code></pre></div>
+        <p>Normal edit-loop commands are:</p>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>dudu fmt
+dudu check
+dudu run
+dudu test</code></pre></div>
+        <div class="docs-callout"><p><code>dudu</code> is the project driver. <code>duc</code> is the lower-level compiler driver, comparable to the distinction between Cargo and <code>rustc</code>.</p></div>
+      </section>
+
+      <section class="docs-section" id="projects">
+        <h2>Projects and workflow</h2>
+        <p>A normal project has a manifest, source directory, and user-owned CMake file:</p>
+        <div class="code-window" data-language="bash"><div class="code-label">Project layout</div><pre><code>hello/
+├── CMakeLists.txt
+├── dudu.toml
+└── src/
+    └── main.dd</code></pre></div>
+        <p><code>dudu.toml</code> names the Dudu entry and common native settings. CMake remains available for native details that do not belong in a language manifest.</p>
+        <div class="code-window" data-language="toml"><div class="code-label">dudu.toml</div><pre><code>name = "hello"
+entry = "src/main.dd"
+
+[cxx]
+standard = "c++20"
+
+[build]
+dir = "build"
+
+[include]
+paths = ["include"]</code></pre></div>
+        <p><code>dudu build</code>, <code>dudu run</code>, and <code>dudu test</code> use the CMake backend. Generated files live below the build directory and may be overwritten. User-owned <code>CMakeLists.txt</code> files are not rewritten after project creation.</p>
+        <h3>Named targets</h3>
+        <div class="code-window" data-language="toml"><div class="code-label">dudu.toml</div><pre><code>name = "tools"
+
+[targets.app]
+entry = "src/main.dd"
+kind = "executable"
+
+[targets.tests]
+entry = "tests/main.dd"
+kind = "executable"
+
+[targets.app.pkg]
+libs = ["raylib"]</code></pre></div>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>dudu run app
+dudu build tests</code></pre></div>
+        <p>Manifest-relative paths resolve from the directory containing <code>dudu.toml</code>. Explicit local header imports resolve from the source file containing the import.</p>
+      </section>
+
+      <section class="docs-section" id="syntax">
+        <h2>Syntax basics</h2>
+        <p>Dudu files use the <code>.dd</code> extension. Indentation defines blocks. Comments begin with <code>#</code>.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code># Bindings are snake_case. Types are PascalCase.
+MAX_PLAYERS: i32 = 64
+
+class Player:
+    name: str
+    hp: i32
+
+    def damage(self, amount: i32):
+        self.hp -= amount</code></pre></div>
+        <p>Assignments use <code>=</code>. Augmented assignments include <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, and <code>%=</code>. A binding has one static type for its lifetime.</p>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Form</th><th>Rule</th></tr></thead><tbody>
+          <tr><td><code>local_name</code></td><td>Variables, functions, methods, and modules use snake_case.</td></tr>
+          <tr><td><code>TypeName</code></td><td>Classes, enums, variants, and type aliases use PascalCase.</td></tr>
+          <tr><td><code>MAX_COUNT</code></td><td>Constants use upper snake case and cannot be rebound.</td></tr>
+          <tr><td><code>_</code></td><td>The wildcard discards a value. A named binding beginning with <code>_</code> is still an ordinary binding.</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section class="docs-section" id="types">
+        <h2>Types and inference</h2>
+        <p>Dudu uses fixed-width scalar names. It does not provide ambiguous native aliases such as <code>int</code>, <code>float</code>, or <code>double</code> in Dudu source.</p>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Group</th><th>Types</th></tr></thead><tbody>
+          <tr><td>Signed integers</td><td><code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>isize</code></td></tr>
+          <tr><td>Unsigned integers</td><td><code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>usize</code></td></tr>
+          <tr><td>Floating point</td><td><code>f32</code>, <code>f64</code></td></tr>
+          <tr><td>Other scalars</td><td><code>bool</code>, <code>char</code>, <code>void</code></td></tr>
+          <tr><td>Strings</td><td><code>str</code> owns text; <code>cstr</code> is a native C string view.</td></tr>
+        </tbody></table></div>
+        <h3>Local inference</h3>
+        <p>Initializers infer local types when the answer is unambiguous:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>count = 10
+scale = 2.0
+name = "dudu"
+player = Player("Ada", 100)</code></pre></div>
+        <p>Annotations remain required at public boundaries, for class fields, and where there is no initializer to inspect:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>window: *SDL_Window = None
+pixels: array[Color][320, 240]
+
+def update(player: &Player, dt: f32):
+    speed = 240.0
+    player.x += speed * dt</code></pre></div>
+        <h3>Conversions</h3>
+        <p>Dudu-native assignments do not silently change types. Cast with type-call syntax:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>x: i32 = 10
+y: i64 = i64(x)
+z: f32 = f32(y)</code></pre></div>
+      </section>
+
+      <section class="docs-section" id="functions">
+        <h2>Functions</h2>
+        <p>Function parameters and returned values are typed. Omit the return annotation for functions that return no value.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>def clamp(value: i32, lo: i32, hi: i32) -> i32:
+    if value < lo:
+        return lo
+    if value > hi:
+        return hi
+    return value
+
+def log_value(value: i32):
+    print(value)</code></pre></div>
+        <p>Calls and multiline calls follow Python syntax. Dudu uses explicit <code>return</code>; the last expression is not returned implicitly.</p>
+        <h3>Function values</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>def less(a: i32, b: i32) -> bool:
+    return a < b
+
+compare: fn(i32, i32) -> bool = less
+ordered = compare(3, 8)</code></pre></div>
+        <p>Dudu does not have <code>lambda</code> or anonymous <code>def</code> expressions. Capturing callables use explicit library types such as imported <code>std.function</code>.</p>
+        <h3>Multiple return values</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>def divmod_i32(a: i32, b: i32) -> tuple[i32, i32]:
+    return a / b, a % b
+
+quotient, remainder = divmod_i32(10, 3)</code></pre></div>
+      </section>
+
+      <section class="docs-section" id="control-flow">
+        <h2>Control flow</h2>
+        <p>Conditionals and loops are statement-oriented. Conditions must be <code>bool</code>.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>if health <= 0:
+    state = State.Dead
+elif health < 25:
+    state = State.Hurt
+else:
+    state = State.Ready
+
+for i in range(count):
+    total += values[i]
+
+while queue.not_empty():
+    process(queue.pop())</code></pre></div>
+        <p>Loop variable types are inferred, or may be explicit when copy/reference behavior matters:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>for player: &Player in players:
+    player.hp -= 1
+
+for player: &const[Player] in players:
+    draw_player(player)</code></pre></div>
+        <h3>Labeled loops</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>outer: for y in range(height):
+    for x in range(width):
+        if blocked(x, y):
+            break outer
+        if skip_column(x):
+            continue outer</code></pre></div>
+      </section>
+
+      <section class="docs-section" id="classes">
+        <h2>Classes</h2>
+        <p>A Dudu class is a C++ struct-like value type by default. Fields define layout; construction follows field order or named-field syntax.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>class Vec2:
+    x: f32
+    y: f32
+
+    def length_squared(self: &const[Self]) -> f32:
+        return self.x * self.x + self.y * self.y
+
+    def scale_in_place(self, scale: f32) -> &Self:
+        self.x *= scale
+        self.y *= scale
+        return self
+
+a = Vec2(3.0, 4.0)
+b = Vec2(x=8.0, y=2.0)</code></pre></div>
+        <p>Bare <code>self</code> means <code>self: &Self</code>. Spell <code>self: &const[Self]</code> for a read-only receiver. Returning <code>Self</code> returns a value; returning <code>&Self</code> returns a mutable reference; returning <code>&const[Self]</code> returns a read-only reference.</p>
+        <h3>Static members</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>class Counter:
+    count: static[i32] = 0
+    MAX_COUNT: i32 = 1024
+
+    def bump() -> i32:
+        Counter.count += 1
+        return Counter.count</code></pre></div>
+        <p>A class function without <code>self</code> is static. Mutable shared fields use <code>static[T]</code>. Upper-case class constants are static constants.</p>
+      </section>
+
+      <section class="docs-section" id="operators">
+        <h2>Operators and swizzling</h2>
+        <p>Dudu uses explicit decorators instead of Python dunder names for operator overloads.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>class Vec2:
+    x: f32
+    y: f32
+
+    @operator("+")
+    def add(self: &const[Self], other: &const[Vec2]) -> Vec2:
+        return Vec2(self.x + other.x, self.y + other.y)
+
+    @operator("+=")
+    def add_assign(self, other: &const[Vec2]) -> &Self:
+        self.x += other.x
+        self.y += other.y
+        return self</code></pre></div>
+        <p>Supported overload families include arithmetic, comparison, compound assignment, conversion to <code>bool</code>, and indexing through <code>@operator("[]")</code> and <code>@operator("[]=")</code>.</p>
+        <h3>GLSL-style swizzling</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>xy = position.xy
+rgb = color.rgb
+repeated = position.xx
+position.xy = Vec2(10.0, 20.0)</code></pre></div>
+        <p>Read swizzles may repeat components. Assignment swizzles may not, because writing the same component twice is ambiguous.</p>
+      </section>
+
+      <section class="docs-section" id="enums">
+        <h2>Enums, match, and errors</h2>
+        <h3>Plain enums</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>enum Direction: u8
+    North = 1
+    South = 2
+    East = 3
+    West = 4</code></pre></div>
+        <h3>Payload enums and match</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>enum Token:
+    Eof
+    Ident:
+        text: str
+    IntLit:
+        value: i64
+    Punct:
+        ch: u8
+
+def score(token: Token) -> i32:
+    match token:
+        case Token.Eof:
+            return 0
+        case Token.Ident(text):
+            return i32(len(text))
+        case Token.IntLit(value) if value > 40:
+            return i32(value)
+        case Token.IntLit(value):
+            return i32(value) + 1
+        case Token.Punct(ch=value):
+            return i32(value)</code></pre></div>
+        <p>Payload declarations always use named fields. Constructors and match patterns may use those fields positionally or by name. Match checking understands payload arity, guards, wildcard reachability, and exhaustiveness.</p>
+        <h3>Recursive variants</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>enum Expr:
+    Number:
+        value: f64
+    Add:
+        left: *Expr
+        right: *Expr
+
+def evaluate(expr: Expr) -> f64:
+    match expr:
+        case Expr.Number(value):
+            return value
+        case Expr.Add(left, right):
+            return evaluate(*left) + evaluate(*right)</code></pre></div>
+        <p>Recursive variants use pointer indirection because a value cannot contain itself directly. Payload fields may otherwise contain any valid Dudu type.</p>
+        <h3>Result and Option</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>enum ReadError:
+    NotFound
+    PermissionDenied
+
+def read_config(path: str) -> Result[str, ReadError]:
+    if not fs.exists(path):
+        return Err(ReadError.NotFound)
+    return Ok(fs.read_all(path))
+
+def choose(flag: bool) -> Option[i32]:
+    if flag:
+        return 42
+    return None</code></pre></div>
+        <p>Use <code>Result</code> and <code>Option</code> for normal Dudu APIs. <code>try</code>, <code>except</code>, and <code>raise</code> exist for C++ exception interop; Dudu does not add <code>finally</code>.</p>
+      </section>
+
+      <section class="docs-section" id="containers">
+        <h2>Containers and arrays</h2>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Type</th><th>Meaning</th></tr></thead><tbody>
+          <tr><td><code>list[T]</code></td><td>Dynamic owning sequence, normally lowered through <code>std::vector&lt;T&gt;</code>.</td></tr>
+          <tr><td><code>dict[K, V]</code></td><td>Dynamic key/value container.</td></tr>
+          <tr><td><code>set[T]</code></td><td>Dynamic set.</td></tr>
+          <tr><td><code>array[T][N]</code></td><td>Fixed contiguous array with compile-time extent.</td></tr>
+          <tr><td><code>array[T][M, N]</code></td><td>Fixed contiguous multidimensional array.</td></tr>
+        </tbody></table></div>
+        <h3>Container inference</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>players = []
+players.append(Player("Ada", 100))
+players.append(Player("Lin", 80))
+# inferred: list[Player]</code></pre></div>
+        <p>Conflicting element constraints are errors. Use an explicit payload enum when mixed values are intentional.</p>
+        <h3>Fixed arrays and inferred shapes</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>kernel: array[f32] = [
+    [1.0, 0.0, -1.0],
+    [1.0, 0.0, -1.0],
+    [1.0, 0.0, -1.0],
+]
+# inferred: array[f32][3, 3]
+
+scratch: array[f32][64, 64]</code></pre></div>
+        <p>The initializer supplies shape when present. An uninitialized fixed array needs explicit extents.</p>
+        <h3>Indexing and views</h3>
+        <p>Dudu parses Python/NumPy-shaped index items without hard-coding tensor policy into the compiler. Built-in arrays and library types dispatch through the same operator surface.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>pixel = image[y, x, channel]
+red = image[:, :, 0]
+patch = image[y0:y1:2, x0:x1:2, :]
+last = scores[..., -1]
+expanded = bias[None, :]
+train_x = x[mask, :]
+weights[mask, :] = 0.0
+logits[rows, cols] += 1.0</code></pre></div>
+        <p>A scalar index removes an axis, a slice preserves one, <code>None</code> adds an axis, and <code>...</code> fills remaining axes. Result shape is available to the type checker and editor when it can be proven statically; runtime-shaped libraries may retain shape in their own values.</p>
+      </section>
+
+      <section class="docs-section" id="memory">
+        <h2>Memory and references</h2>
+        <p>Dudu exposes the native memory model. It does not impose Rust ownership or lifetime syntax.</p>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Form</th><th>Meaning</th></tr></thead><tbody>
+          <tr><td><code>*T</code></td><td>Raw pointer to <code>T</code>.</td></tr>
+          <tr><td><code>&T</code></td><td>Mutable reference to <code>T</code>.</td></tr>
+          <tr><td><code>&const[T]</code></td><td>Read-only reference to <code>T</code>.</td></tr>
+          <tr><td><code>*const[T]</code></td><td>Pointer to read-only <code>T</code>.</td></tr>
+          <tr><td><code>const[*T]</code></td><td>Const-qualified pointer binding when that distinction is required.</td></tr>
+        </tbody></table></div>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>value: i32 = 42
+pointer: *i32 = &value
+*pointer = 99
+
+read_only: &const[i32] = value
+window: *SDL_Window = None</code></pre></div>
+        <h3>Allocation</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code># Value construction and RAII are the default.
+player = Player(100, "Ada")
+
+# Construct one heap object.
+heap_player: *Player = new[Player](100, "Ada")
+delete(heap_player)
+
+# Raw storage for native or allocator work.
+bytes: *u8 = malloc[u8](1024)
+free(bytes)</code></pre></div>
+        <p>Value containers own their values. Pointer containers do not own pointees. Custom arenas and allocators are ordinary libraries. Lexical scope and C++ destructors provide cleanup; Dudu does not add a general <code>defer</code> statement.</p>
+      </section>
+
+      <section class="docs-section" id="generics">
+        <h2>Generics and compile time</h2>
+        <h3>Native generics</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>def clamp[T](value: T, lo: T, hi: T) -> T:
+    if value < lo:
+        return lo
+    if value > hi:
+        return hi
+    return value
+
+class Box[T]:
+    value: T
+
+    def get(self: &const[Self]) -> &const[T]:
+        return self.value</code></pre></div>
+        <p>Generic functions and classes lower to C++ templates. Compile-time value parameters may describe fixed extents and participate in checked constant expressions.</p>
+        <h3>Constants and build values</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>WIDTH: i32 = 320
+HEIGHT: i32 = 240
+PIXELS: i32 = WIDTH * HEIGHT
+
+@constexpr
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+ROW_BYTES: usize = align_up(usize(WIDTH) * 4, 64)
+static_assert(PIXELS == 76800)
+
+if build.DEBUG:
+    enable_validation()</code></pre></div>
+        <p>Build values come from <code>dudu.toml</code> or compiler definitions. Branches depending only on <code>build.*</code> values are selected at compile time.</p>
+      </section>
+
+      <section class="docs-section" id="modules">
+        <h2>Modules and imports</h2>
+        <p>Dudu modules use Python-shaped imports:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>import camera
+import renderer.camera as render_camera
+from vec3 import Vec3
+from raytrace import shade_pixel as shade</code></pre></div>
+        <p>Imports are qualified by default. Selective imports bind names directly. Ambiguous bindings are compile errors rather than order-dependent shadowing.</p>
+        <h3>Native header forms</h3>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code># System/header-search includes: &lt;thread&gt;, &lt;math.h&gt;
+from cpp import thread
+from c import math.h
+
+# Explicit source-relative quoted includes.
+from cpp.path import vendor/math.hpp as vendor_math
+from c.path import local/device.h as device</code></pre></div>
+        <p>The <code>c</code>, <code>cxx</code>, <code>cpp</code>, and <code>path</code> portions are semantic import markers. Editor navigation can open the header target and resolve individual imported declarations.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/import_semantics.md">Exact import and collision rules</a>
+      </section>
+
+      <section class="docs-section" id="c-interop">
+        <h2>C interop</h2>
+        <p>Imported C declarations come from real headers scanned by Clang. Types, structs, enums, functions, constants, and callable macros retain their native identity.</p>
+        <div class="code-window"><div class="code-label">Dudu using SDL3</div><pre><code>from c import SDL3/SDL.h
+
+def main() -> i32:
+    if not SDL_Init(SDL_INIT_VIDEO):
+        return 1
+
+    window = SDL_CreateWindow("Dudu", 800, 450, 0)
+    if window == None:
+        SDL_Quit()
+        return 2
+
+    SDL_DestroyWindow(window)
+    SDL_Quit()
+    return 0</code></pre></div>
+        <p>C libraries often prefix their globals, so an unaliased import is readable. Alias a header when it would collide or expose an unmanageable global namespace:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>from c import sys/stat.h as stat
+
+info: stat.stat
+if stat.stat("asset.bin", &info) != 0:
+    return 1</code></pre></div>
+        <p>The compiler remembers C tag spelling internally. Normal Dudu source uses <code>SDL_Event</code> or <code>stat.stat</code>, not <code>struct SDL_Event</code>.</p>
+      </section>
+
+      <section class="docs-section" id="cpp-interop">
+        <h2>C++ interop</h2>
+        <p>C++ namespaces remain their real namespaces. Importing more than one standard header merges declarations into <code>std</code> as C++ does.</p>
+        <div class="code-window"><div class="code-label">Dudu using the C++ standard library</div><pre><code>from cpp import algorithm
+from cpp import string
+from cpp import thread
+from cpp import vector
+
+names: std.vector[std.string]
+workers: list[std.thread] = []
+std.sort(names.begin(), names.end())</code></pre></div>
+        <p>Header aliases are collision boundaries, not fake replacements for namespaces:</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>from cpp.path import vendor/math.hpp as vendor_math
+
+point: vendor_math.vendor.Vec3
+length = vendor_math.vendor.length(point)</code></pre></div>
+        <p>Header awareness handles overloads, constructors, methods, operators, templates, const/reference forms, macros that represent complete expressions, and source locations for editor navigation. If a native API cannot be represented directly, <code>cpp(...)</code> is the explicit escape hatch, not normal interop style.</p>
+        <h3>Dudu called from C++</h3>
+        <p>Top-level Dudu classes and functions generate ordinary C++ declarations. Use <code>duc --emit-header</code> for a C++ header and <code>@extern_c</code> plus <code>--emit-c-header</code> for a C ABI.</p>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>duc emit src/library.dd -o build/library.cpp
+duc src/library.dd --emit-header build/library.hpp
+duc src/library.dd --emit-c-header build/library.h</code></pre></div>
+      </section>
+
+      <section class="docs-section" id="build-config">
+        <h2>Build configuration</h2>
+        <p>Dudu uses CMake as its native ecosystem backend. Small projects can describe common settings in <code>dudu.toml</code>; large projects can keep a user-owned CMake build.</p>
+        <div class="code-window" data-language="toml"><div class="code-label">dudu.toml</div><pre><code>name = "viewer"
+entry = "src/main.dd"
+
+[pkg]
+libs = ["sdl3", "sqlite3"]
+
+[include]
+paths = ["include", "third_party/include"]
+
+[sources]
+cpp = ["src/native_backend.cpp"]
+
+[deps]
+ndad = { git = "https://github.com/dudu-language/ndad.git", tag = "v0.1.0" }
+local_math = { path = "../local_math" }
+
+[build]
+DEBUG = true
+RENDER_BACKEND = "vulkan"</code></pre></div>
+        <p>Use CMake directly for toolchain files, platform conditionals, installed native packages, generated sources, and complex target graphs. <code>dudu cmake</code> exposes generated integration when inspection is useful.</p>
+        <h3>Git and path dependencies</h3>
+        <p>Missing source dependencies are resolved before normal project commands and pinned in <code>dudu.lock</code>. Existing pins are not silently advanced to a newer remote revision.</p>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>dudu deps fetch
+dudu build</code></pre></div>
+        <div class="docs-callout warning"><p>Dudu is alpha software. Commit the manifest and dependency lock metadata used by your project, and inspect generated native build files when shipping production binaries.</p></div>
+      </section>
+
+      <section class="docs-section" id="tests">
+        <h2>Tests</h2>
+        <p>Tests are free functions marked with <code>@test</code>. They take no arguments and return no value, <code>bool</code>, or <code>i32</code>.</p>
+        <div class="code-window"><div class="code-label">Dudu</div><pre><code>@test
+def add_works():
+    assert add(20, 22) == 42
+
+@test
+def status_code() -> i32:
+    return add(2, 2) - 4
+
+@test.ignore
+def slow_case():
+    run_slow_fixture()</code></pre></div>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>dudu test
+dudu test add
+dudu test --filter add
+dudu test --no-capture</code></pre></div>
+        <p><code>assert</code> is always checked. <code>debug_assert</code> lowers to native C++ assertion behavior and may disappear when <code>NDEBUG</code> is defined.</p>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/tests.md">Complete test behavior</a>
+      </section>
+
+      <section class="docs-section" id="editor">
+        <h2>Editor support</h2>
+        <p>The Dudu VS Code extension starts <code>dudu-lsp</code> and supplies semantic highlighting, diagnostics, formatting, completion, signature help, hover, inlay hints, go to definition, references, rename, and native header navigation.</p>
+        <ul>
+          <li>Install the extension from the Visual Studio Marketplace or Open VSX.</li>
+          <li>Open the directory containing <code>dudu.toml</code>, not only an isolated source file.</li>
+          <li>Run <code>dudu fmt</code> from a project root to format every <code>.dd</code> file.</li>
+          <li>Use the extension's inlay-hint toggle to show inferred types and parameter names.</li>
+        </ul>
+        <p>Native hover and navigation depend on Clang header scanning and the same include configuration used by the build. If an imported symbol is unresolved in the editor but builds in CMake, check that the manifest and CMake compile context expose the same include paths and definitions.</p>
+      </section>
+
+      <section class="docs-section" id="tools">
+        <h2>Command reference</h2>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Command</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td><code>dudu init [path]</code></td><td>Initialize a project in an existing or specified directory.</td></tr>
+          <tr><td><code>dudu new &lt;name&gt;</code></td><td>Create a new project directory.</td></tr>
+          <tr><td><code>dudu check [input]</code></td><td>Parse and type-check without a native link step.</td></tr>
+          <tr><td><code>dudu build [target]</code></td><td>Generate modules and compile through CMake.</td></tr>
+          <tr><td><code>dudu run [target] -- [args]</code></td><td>Build and run an executable target.</td></tr>
+          <tr><td><code>dudu test [filter]</code></td><td>Build and run matching <code>@test</code> functions.</td></tr>
+          <tr><td><code>dudu fmt [path] [--check]</code></td><td>Apply or verify canonical formatting.</td></tr>
+          <tr><td><code>dudu clean</code></td><td>Remove project build outputs.</td></tr>
+          <tr><td><code>dudu clean-cache</code></td><td>Remove compiler analysis caches.</td></tr>
+          <tr><td><code>dudu deps fetch</code></td><td>Fetch declared path/Git dependencies.</td></tr>
+          <tr><td><code>dudu update</code></td><td>Update an installer-owned toolchain; supports <code>--check</code> and <code>--rollback</code>.</td></tr>
+          <tr><td><code>dudu cmake</code></td><td>Emit inspectable CMake integration.</td></tr>
+          <tr><td><code>dudu bench compiler</code></td><td>Run compiler benchmarks.</td></tr>
+        </tbody></table></div>
+        <h3>Compiler driver</h3>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>duc check src/main.dd
+duc emit src/main.dd -o build/main.cpp
+duc emit-modules src/main.dd -o build/generated
+duc fmt src/main.dd --check
+duc src/library.dd --emit-header build/library.hpp</code></pre></div>
+        <p>Add <code>--timings</code> to project commands when a build feels slow. Dudu then reports elapsed analysis, generation, CMake, compile, and run stages separately.</p>
+      </section>
+
+      <section class="docs-section" id="python-differences">
+        <h2>Differences from Python</h2>
+        <p>Dudu keeps Python's common statement and expression shapes, not Python's dynamic object model.</p>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Not in Dudu</th><th>Use instead</th></tr></thead><tbody>
+          <tr><td>Runtime type changes and monkeypatching</td><td>Static bindings, fields, and explicit variants.</td></tr>
+          <tr><td><code>lambda</code></td><td>Named functions stored as function values.</td></tr>
+          <tr><td>List/dict/set comprehensions</td><td>Explicit containers and loops.</td></tr>
+          <tr><td>Generator expressions and <code>yield</code></td><td>Containers, callbacks, or imported iterator libraries.</td></tr>
+          <tr><td>Ternary expressions</td><td>An explicit binding plus <code>if</code>/<code>else</code>.</td></tr>
+          <tr><td><code>with</code> context managers</td><td>RAII values and lexical scope.</td></tr>
+          <tr><td><code>async</code>/<code>await</code></td><td>Threads, atomics, event loops, callbacks, or native task libraries.</td></tr>
+          <tr><td>Metaclasses, descriptors, <code>eval</code>, and dynamic attributes</td><td>Compile-time declarations and ordinary functions.</td></tr>
+          <tr><td>Arbitrary-precision default integers</td><td>Explicit fixed-width integer types.</td></tr>
+        </tbody></table></div>
+        <p>See the <a href="/tour.html">language tour</a> for side-by-side Python, C, C++, Rust, GLSL, and array-programming examples.</p>
+      </section>
+
+      <section class="docs-section" id="reference">
+        <h2>Formal reference</h2>
+        <p>This manual is the public learning and working guide. Exact and implementation-facing material remains in the repository:</p>
+        <ul>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/appearance-spec.md">Appearance spec</a>: canonical source syntax and semantics.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/import_semantics.md">Import semantics</a>: Dudu modules, native headers, aliases, collisions, and editor ranges.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/developer-guide.md">Developer guide</a>: compiler builds, project backends, validation, and benchmarks.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md">Known limitations</a>: current alpha constraints.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/le_plan.md">Implementation plan</a>: compiler and language completion work.</li>
+        </ul>
+        <div class="docs-callout warning"><p>Planning documents describe intended capability and engineering work. They are not substitutes for current compiler behavior. Current behavior is defined by the accepted spec, compiler diagnostics, and passing fixtures.</p></div>
+      </section>
+    </article>
+
+    <aside class="docs-outline" aria-label="On this page">
+      <strong>On this page</strong>
+      <a href="#quickstart" data-outline-link>Quickstart</a>
+      <a href="#projects" data-outline-link>Projects</a>
+      <a href="#syntax" data-outline-link>Syntax</a>
+      <a href="#types" data-outline-link>Types</a>
+      <a href="#functions" data-outline-link>Functions</a>
+      <a href="#classes" data-outline-link>Classes</a>
+      <a href="#containers" data-outline-link>Arrays</a>
+      <a href="#memory" data-outline-link>Memory</a>
+      <a href="#modules" data-outline-link>Imports</a>
+      <a href="#cpp-interop" data-outline-link>C++ interop</a>
+      <a href="#tools" data-outline-link>Commands</a>
+    </aside>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><span>Dudu docs track master during alpha.</span><a href="https://github.com/dudu-language/dudu/tree/master/docs">Repository documentation</a></div></footer>
+</body>
+</html>

@@ -4,7 +4,8 @@ Status: implemented and deployed at <https://dudulang.org>. The source lives in
 `site/`; production deployment is an explicit manual workflow through
 Cloudflare Pages.
 
-Dudu should have a GitHub Pages site intended for `dudulang.org`.
+Dudu has a Cloudflare Pages site at `dudulang.org`, with source and release
+artifacts hosted through GitHub.
 
 The site is marketing and documentation, not the compiler itself. Its job is to
 make the project instantly understandable, memorable, and easy to try.
@@ -161,23 +162,32 @@ the joke in one second and understand the compiler in ten seconds.
 Initial pages:
 
 - Home
+- Why
 - Install
 - Docs
-- Examples
-- Interop
 - Roadmap
 - GitHub
+
+Examples and native-library interop live on the exhaustive language Tour. The old
+`/why.html`, `/examples.html`, and `/interop.html` routes redirect to the relevant Tour
+content so there are fewer shallow top-level pages and one consistent header.
 
 Home page sections:
 
 - Hero: short tagline, install command, GitHub link.
-- Why: Python-shaped syntax, C++ output, C/C++ headers and libraries, native
+- Tour: Python-shaped syntax, C++ output, C/C++ headers and libraries, native
   performance target.
 - Code examples: small Dudu snippets beside emitted C++ or command output.
 - Interop: raylib, SDL3, ImGui, glm, sqlite, C stdlib, C++ stdlib.
 - Roadmap: AST cleanup, native generics, modules, LSP, formatter, separate
   generated files.
 - Try it: clone/build/run commands.
+
+The dedicated Tour follows [`tour-page.md`](tour-page.md). It carries the
+long-form language argument, Python and C++ comparisons, measured performance
+and memory examples, deliberate omissions, portability boundaries, and the
+newer type-system ideas Dudu adopts. Keep normal tooling expectations such as
+the LSP out of the homepage language-feature list.
 
 Suggested hero copy direction:
 
@@ -192,6 +202,20 @@ Suggested small-print tone:
 ```text
 Experimental. Native. Weirdly sincere.
 ```
+
+## Public Documentation
+
+The Docs page is a real user manual, not a list of internal Markdown files. It
+starts with a runnable quickstart, then covers the language, native interop,
+projects, tests, the editor, and exact command behavior in a searchable,
+anchor-addressable page. Internal implementation plans remain available as
+deeper references and must not be presented as the normal learning path.
+
+The documentation architecture, source ownership, example policy, generated
+API direction, and completion criteria are defined in
+[`documentation-plan.md`](documentation-plan.md). The public manual must remain
+usable without JavaScript; client-side filtering and current-section tracking
+are enhancements only.
 
 ## Hosting And Deployment
 
@@ -216,14 +240,13 @@ explicit release control while still making deployment reproducible.
 
 ## Implementation Checklist
 
-- Pick a static site stack that is easy to maintain and deploy on GitHub Pages.
+- Keep the static site easy to maintain and deploy on Cloudflare Pages.
 - Build a brown/poo-themed visual identity that still leaves code readable.
 - Add a home page with install/run commands, a small language example, and a
   direct GitHub link.
-- Add docs pages or generated links for language syntax, interop, project
-  driver commands, and roadmap.
-- Add a examples page that shows real Dudu snippets and generated/native
-  behavior.
+- Add docs pages or generated links for language syntax, project driver
+  commands, and roadmap.
+- Keep examples and native interoperability on the long-form Why page.
 - Add a status badge or short status block that says the compiler is
   experimental.
 - Add manual GitHub Actions deployment to Cloudflare Pages.

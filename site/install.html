@@ -1,28 +1,157 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Install Dudu and run your first native project."><title>Install | Dudu</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/layout.css"></head>
-<body><header class="site-header"><nav class="nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/icon.svg" alt=""><span>Dudu</span></a><div class="nav-links"><a aria-current="page" href="/install.html">Install</a><a href="/docs.html">Docs</a><a href="/examples.html">Examples</a><a href="/interop.html">Interop</a><a href="/roadmap.html">Roadmap</a></div><div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div></nav></header>
-<main><section class="page-hero"><div class="container"><h1>Install Dudu</h1><p>The current pre-alpha builds from source. The tagged installer verifies an immutable release before installing the compiler, project driver, language server, and editor support.</p></div></section>
-<article class="prose">
-  <div class="notice"><strong>Pre-alpha release.</strong> Language and generated ABI compatibility may change between alpha versions.</div>
-  <h2>Prerequisites</h2>
-  <h3>Ubuntu and Debian</h3><div class="code-window"><pre><code>sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config</code></pre></div>
-  <h3>macOS Apple Silicon</h3><div class="code-window"><pre><code>xcode-select --install
-brew install cmake llvm pkg-config</code></pre></div><p>macOS currently builds the tagged source through the bootstrap installer and is best-effort pending validation on a maintained Mac.</p>
-  <h2>Install from a checkout</h2><div class="code-window"><pre><code>git clone https://github.com/dudu-language/dudu.git
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Install the Dudu compiler, project driver, language server, and VS Code extension.">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>Install | Dudu</title>
+    <link rel="icon" href="/assets/icon.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/layout.css">
+    <link rel="stylesheet" href="/install.css">
+    <link rel="stylesheet" href="/assets/syntax.css">
+    <script defer data-manual src="/vendor/prism/prism-core.min.js"></script>
+    <script defer src="/vendor/prism/prism-clike.min.js"></script>
+    <script defer src="/vendor/prism/prism-c.min.js"></script>
+    <script defer src="/vendor/prism/prism-cpp.min.js"></script>
+    <script defer src="/vendor/prism/prism-python.min.js"></script>
+    <script defer src="/vendor/prism/prism-rust.min.js"></script>
+    <script defer src="/vendor/prism/prism-glsl.min.js"></script>
+    <script defer src="/vendor/prism/prism-bash.min.js"></script>
+    <script defer src="/assets/syntax.js"></script>
+  </head>
+  <body class="install-page" data-code-language="bash">
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="/"><span class="brand-word">Dudu</span><img class="brand-mark" src="/assets/poop.svg" alt=""></a>
+        <div class="nav-links">
+          <a href="/tour.html">Tour</a>
+          <a aria-current="page" href="/install.html">Install</a>
+          <a href="/docs.html">Docs</a>
+          <a href="/roadmap.html">Roadmap</a>
+        </div>
+        <div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="install-hero">
+        <div class="install-container">
+          <p class="install-version">0.1.0-alpha.13</p>
+          <h1>Install Dudu</h1>
+          <p>The installer prepares the native toolchain, verifies an immutable tagged release, and installs the compiler, project driver, and language server under <code>~/.local</code>.</p>
+        </div>
+      </section>
+
+      <div class="install-layout">
+        <aside class="install-sidebar" aria-label="Installation sections">
+          <nav>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#first-project">First project</a>
+            <a href="#packages">Packages</a>
+            <a href="#editor">Editor</a>
+            <a href="#manage">Update and remove</a>
+            <a href="#checkout">Development checkout</a>
+          </nav>
+          <p><strong>Pre-alpha</strong><br>Language and generated ABI compatibility may change.</p>
+        </aside>
+
+        <article class="install-content">
+          <section id="quickstart">
+            <h2>Install</h2>
+            <div class="primary-install code-window"><pre><code>curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh | sh</code></pre></div>
+            <p>The installer detects the host, asks before installing missing system packages, builds the current tagged release, verifies it, and updates <code>PATH</code>. For noninteractive setup, pass <code>--install-deps</code>.</p>
+
+            <h3 class="dependency-heading">Native dependency details</h3>
+            <div class="platform-picker" role="tablist" aria-label="Operating system">
+              <button type="button" role="tab" aria-selected="true" aria-controls="install-linux" id="tab-linux" data-platform="linux">Linux</button>
+              <button type="button" role="tab" aria-selected="false" aria-controls="install-macos" id="tab-macos" data-platform="macos">macOS</button>
+            </div>
+
+            <div class="platform-panel" id="install-linux" role="tabpanel" aria-labelledby="tab-linux">
+              <p>On Ubuntu and Debian, the installer offers to run:</p>
+              <div class="code-window"><pre><code>sudo apt-get update
+sudo apt-get install -y ca-certificates git cmake clang libclang-dev g++ build-essential pkg-config curl tar</code></pre></div>
+            </div>
+
+            <div class="platform-panel" id="install-macos" role="tabpanel" aria-labelledby="tab-macos" hidden>
+              <p>On Apple Silicon, the installer checks the Xcode command-line tools and offers to run:</p>
+              <div class="code-window"><pre><code>xcode-select --install
+brew install cmake llvm pkg-config</code></pre></div>
+              <p class="support-note">The tagged source build is available on macOS, but complete Apple Silicon validation is still pending a maintained Mac.</p>
+            </div>
+          </section>
+
+          <section id="first-project">
+            <h2>First project</h2>
+            <div class="code-window"><pre><code>dudu --version
+dudu init hello
+cd hello
+dudu run</code></pre></div>
+            <p>The project driver provides <code>check</code>, <code>build</code>, <code>run</code>, <code>test</code>, <code>fmt</code>, and <code>clean</code>.</p>
+          </section>
+
+          <section id="packages">
+            <h2>Package channels</h2>
+            <p>Package-manager installations remain owned by their package manager. They do not use <code>dudu update</code>.</p>
+            <div class="channel-list">
+              <div class="channel"><div><strong>Debian / Ubuntu</strong><span>Linux x86_64 package</span></div><div class="code-window"><pre><code>curl -fLO https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.13/dudu_0.1.0-alpha.13_amd64.deb
+sudo apt install ./dudu_0.1.0-alpha.13_amd64.deb</code></pre></div></div>
+              <div class="channel"><div><strong>Homebrew</strong><span>Builds tagged source locally; Apple Silicon confirmation pending</span></div><div class="code-window"><pre><code>brew install dudu-language/dudu/dudu</code></pre></div></div>
+              <div class="channel"><div><strong>Arch Linux</strong><span>AUR publication is pending upstream account access</span></div><span class="channel-state">Not published</span></div>
+            </div>
+          </section>
+
+          <section id="editor">
+            <h2>Editor</h2>
+            <p>The Dudu extension provides syntax highlighting, semantic tokens, diagnostics, navigation, hover information, references, formatting, and inlay hints through <code>dudu-lsp</code>.</p>
+            <div class="editor-links">
+              <a class="button primary" href="https://open-vsx.org/extension/dudu/dudu">Open VSX</a>
+              <a class="button" href="https://github.com/dudu-language/dudu/releases/download/v0.1.0-alpha.13/dudu-0.1.0-alpha.13.vsix">Download VSIX</a>
+            </div>
+            <p class="support-note">Visual Studio Marketplace publication is pending manual approval for the first alpha.</p>
+          </section>
+
+          <section id="manage">
+            <h2>Update and remove</h2>
+            <p>These commands apply to toolchains installed through <code>install.sh</code>.</p>
+            <div class="code-window"><pre><code>dudu update --check
+dudu update
+dudu update --rollback
+dudu uninstall</code></pre></div>
+            <p>Updates build and smoke-test the replacement before changing the active toolchain. Rollback restores the previous installed version.</p>
+          </section>
+
+          <section id="checkout">
+            <h2>Development checkout</h2>
+            <p>Use a checkout when working on the compiler itself. Normal users should install the tagged release.</p>
+            <div class="code-window"><pre><code>git clone https://github.com/dudu-language/dudu.git
 cd dudu
 ./scripts/install-local.sh
 export PATH="$HOME/.local/bin:$PATH"
 dudu --version</code></pre></div>
-  <p>This installs <code>dudu</code>, <code>duc</code>, and <code>dudu-lsp</code> into <code>~/.local</code>. Pass <code>--prefix</code> to install elsewhere.</p>
-  <h2>Tagged installer</h2><p>The release installer builds the immutable source release locally and records installation ownership.</p><div class="code-window"><pre><code>curl --proto '=https' --tlsv1.2 -sSf \
-  https://dudulang.org/install.sh | sh -s -- --version 0.1.0-alpha.13</code></pre></div>
-  <h2>First project</h2><div class="code-window"><pre><code>dudu init hello
-cd hello
-dudu run</code></pre></div>
-  <p>Useful commands: <code>dudu check</code>, <code>dudu build</code>, <code>dudu run</code>, <code>dudu test</code>, <code>dudu fmt</code>, and <code>dudu clean</code>.</p>
-  <h2>Update and uninstall</h2><div class="code-window"><pre><code>dudu update --check
-dudu update
-dudu update --rollback
-dudu uninstall</code></pre></div><p>These commands apply only to installer-owned toolchains. Homebrew, AUR, and Debian packages remain owned by their package managers.</p>
-  <h2>Editor</h2><p>The pre-release VS Code extension is available through Open VSX and the GitHub release VSIX. Visual Studio Marketplace publication is pending. It runs <code>dudu-lsp</code> from the active toolchain.</p>
-</article></main><footer class="site-footer"><div class="footer-inner"><span>Dudu Language. MIT OR Apache-2.0.</span><a href="https://github.com/dudu-language/dudu/blob/master/docs/releasing.md">Release details</a></div></footer></body></html>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><span>Dudu Language. MIT OR Apache-2.0.</span><a href="https://github.com/dudu-language/dudu/blob/master/docs/installing.md">Installation details</a></div></footer>
+
+    <script>
+      const tabs = document.querySelectorAll('[data-platform]');
+      const panels = document.querySelectorAll('.platform-panel');
+
+      function selectPlatform(platform) {
+        tabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.platform === platform)));
+        panels.forEach((panel) => { panel.hidden = panel.id !== `install-${platform}`; });
+      }
+
+      tabs.forEach((tab) => tab.addEventListener('click', () => selectPlatform(tab.dataset.platform)));
+
+      if (/Mac/.test(navigator.platform)) {
+        selectPlatform('macos');
+      }
+    </script>
+  </body>
+</html>

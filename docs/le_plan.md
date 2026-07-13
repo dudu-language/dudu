@@ -43,6 +43,11 @@ Current direction notes:
   [Distribution Plan](distribution-plan.md). Normal development validates
   locally; remote automation is reserved for manual release-candidate checks
   and tagged artifact production rather than a push-wait-fix loop.
+- Public tutorials, the language guide, how-to material, reference structure,
+  example validation, versioned docs, and generated API documentation are
+  defined in [Public Documentation Plan](documentation-plan.md). User-facing
+  docs must summarize the accepted specs without turning implementation plans
+  into the normal learning path.
 - Concurrency stays ordinary until proven otherwise: prefer blocking functions,
   threads, queues, `select`/`poll`/platform event APIs, and explicit state
   machines over core-language `async`/`await`. See
@@ -239,12 +244,13 @@ backend are the path to clean separate-file output.
 
 Website plan: [Website Plan](website-plan.md).
 
-Dudu should have a GitHub Pages site for `dudulang.org`. The homepage should
+Dudu should have a public site for `dudulang.org`. The homepage should
 visually mimic the recognizable `mojolang.org` front page as a brown/poo-themed
 joke: same broad hero/nav/quick-link/feature-card rhythm, but Dudu branding and
 original implementation. Everything beyond that front-page gag, including
-install, docs, examples, roadmap, and technical content, must be Dudu-specific
-and technically honest.
+the language Tour, install, docs, roadmap, and technical content, must be
+Dudu-specific and technically honest. The Tour is the canonical long-form
+language introduction; old Why, Examples, and Interop routes redirect into it.
 
 ## Diagnostic And Lint Cleanup
 
