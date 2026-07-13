@@ -61,9 +61,11 @@ first public tag rather than silently creating an unsigned official tag.
 
 ## Artifact And Publication Workflows
 
-`.github/workflows/release.yml` is the only hosted release producer. It runs
-only for a pushed tag or an explicit manual invocation naming an existing tag.
-It never runs on ordinary `master` pushes.
+`.github/workflows/release.yml` is an optional Linux release producer. The
+same artifact scripts may be run and published locally after the exact clean
+release gate passes. The workflow runs only for a pushed tag or an explicit
+manual invocation naming an existing tag; it never runs on ordinary `master`
+pushes and is not a development feedback loop.
 
 The workflow:
 
@@ -73,9 +75,11 @@ The workflow:
 3. builds the source archive, checksum, manifest, VSIX, `.deb`, AUR recipe, and
    Homebrew formula
 4. runs the package and two-version installer lifecycle checks
-5. repeats source and lifecycle validation on an Apple Silicon `macos-14`
-   runner
-6. publishes a GitHub prerelease only after both hosts pass
+5. publishes a GitHub prerelease after Linux validation passes
+
+Apple Silicon validation is deliberately separate and non-blocking. macOS
+users build tagged source with the bootstrap installer until validation is run
+on a maintained Apple machine.
 
 The manual workflow has a `publish` switch. Leave it off when validating an
 existing tag without modifying GitHub Releases.

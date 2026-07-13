@@ -308,7 +308,10 @@ dudu-lsp
 - [x] Add tagged source artifacts, the source bootstrap installer, atomic
       update/rollback/uninstall, a production VSIX, AUR/Homebrew recipes, and a
       downloadable `.deb` build.
-- [ ] Validate the tag workflow on Apple Silicon and publish the first alpha.
+- [x] Publish the first Linux alpha, package recipes, website, and editor
+      extension.
+- [ ] Validate the complete tagged source lifecycle on a maintained Apple
+      Silicon machine; macOS remains a best-effort source build meanwhile.
 
 The pre-alpha release gate and distribution sequence are documented in
 [`docs/distribution-plan.md`](docs/distribution-plan.md). The exact local gate

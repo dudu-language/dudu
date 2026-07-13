@@ -22,6 +22,7 @@ concurrency:
 jobs:
   validate:
     runs-on: macos-14
+    timeout-minutes: 60
     env:
       DUDU_SKIP_OPTIONAL_NATIVE: 1
       DUDU_TEST_ARCH: arm64

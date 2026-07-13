@@ -14,8 +14,10 @@ published constraints, not promises of silent compatibility.
 
 ## Hosts And Installation
 
-- Linux x86_64 and macOS Apple Silicon are the validated release hosts for
-  `0.1.0-alpha.13`.
+- Linux x86_64 is the validated release host for `0.1.0-alpha.13`.
+- macOS Apple Silicon is a best-effort tagged source build through the
+  bootstrap installer. It requires Xcode command-line tools and Homebrew LLVM;
+  the complete release lifecycle has not been validated on a maintained Mac.
 - Windows is not supported by the first alpha.
 - Both checkout and tagged bootstrap installation build locally and require
   CMake, a C++20 compiler, and libclang development files. The bootstrap,

@@ -50,10 +50,13 @@ cmake --build "$build_dir" --parallel "${DUDU_BUILD_JOBS:-4}"
     cpack -G DEB
 )
 
-find "$build_dir" -maxdepth 1 -type f -name '*.deb' -exec cp {} "$output_dir/" \;
-deb="$(find "$output_dir" -maxdepth 1 -type f -name 'dudu_*.deb' -print | sort | tail -1)"
-[[ -n "$deb" ]] || {
+package="$(find "$build_dir" -maxdepth 1 -type f -name 'dudu_*.deb' -print | sort | tail -1)"
+[[ -n "$package" ]] || {
     echo "CPack did not produce a Dudu .deb" >&2
     exit 1
 }
+deb_name="$(basename "$package")"
+deb_name="${deb_name//\~/-}"
+deb="$output_dir/$deb_name"
+cp "$package" "$deb"
 printf 'Debian package: %s\n' "$deb"

@@ -14,12 +14,12 @@ and GitHub Actions secrets.
 | Service | Current state | Operator action |
 | --- | --- | --- |
 | GitHub | Organization `dudu-language` owns `dudu`; `wegfawefgawefg` is an active Owner | None for repository releases |
-| Release signing | No dedicated signing key exists | Optional for the first alpha; create one before signed releases |
-| Visual Studio Marketplace | Publisher `dudu` exists under the display name `Dudu Language` | Upload the release VSIX manually |
-| Open VSX | Publisher Agreement signed; namespace `dudu` claimed; `OVSX_PAT` stored in GitHub Actions | None |
+| Release signing | `v0.1.0-alpha.13` is SSH-signed with the existing workstation key; no dedicated release key exists | Create a dedicated key before stable releases |
+| Visual Studio Marketplace | Publisher `dudu` exists; the verified alpha VSIX is selected in the upload dialog | Complete Microsoft's reCAPTCHA and press Upload |
+| Open VSX | `dudu.dudu` version `0.1.0` is published as a pre-release | None |
 | AUR | Dedicated local SSH key exists; upstream registration is temporarily disabled | Register and add the public key when Arch reopens registration |
-| Homebrew | Public tap repository `dudu-language/homebrew-dudu` exists | None |
-| `.deb` download | GitHub access is sufficient | No account setup |
+| Homebrew | Tap `dudu-language/homebrew-dudu` publishes `0.1.0-alpha.13` | Confirm the formula on a real Mac |
+| `.deb` download | Alpha.13 amd64 package is attached to the GitHub prerelease | None |
 | Website domain | `dudulang.org` is owned; `dudulang.com` is occupied by an unrelated site | None |
 | Cloudflare Pages | `dudu` project deployed; `dudulang.org` and `www.dudulang.org` are active with HTTPS | None |
 

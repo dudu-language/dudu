@@ -7,7 +7,7 @@
   <h2>Prerequisites</h2>
   <h3>Ubuntu and Debian</h3><div class="code-window"><pre><code>sudo apt install git cmake clang libclang-dev g++ build-essential pkg-config</code></pre></div>
   <h3>macOS Apple Silicon</h3><div class="code-window"><pre><code>xcode-select --install
-brew install cmake llvm pkg-config</code></pre></div>
+brew install cmake llvm pkg-config</code></pre></div><p>macOS currently builds the tagged source through the bootstrap installer and is best-effort pending validation on a maintained Mac.</p>
   <h2>Install from a checkout</h2><div class="code-window"><pre><code>git clone https://github.com/dudu-language/dudu.git
 cd dudu
 ./scripts/install-local.sh
@@ -24,5 +24,5 @@ dudu run</code></pre></div>
 dudu update
 dudu update --rollback
 dudu uninstall</code></pre></div><p>These commands apply only to installer-owned toolchains. Homebrew, AUR, and Debian packages remain owned by their package managers.</p>
-  <h2>Editor</h2><p>The pre-release VS Code extension is distributed through the Visual Studio Marketplace, Open VSX, and the release VSIX. It runs <code>dudu-lsp</code> from the active toolchain.</p>
+  <h2>Editor</h2><p>The pre-release VS Code extension is available through Open VSX and the GitHub release VSIX. Visual Studio Marketplace publication is pending. It runs <code>dudu-lsp</code> from the active toolchain.</p>
 </article></main><footer class="site-footer"><div class="footer-inner"><span>Dudu Language. MIT OR Apache-2.0.</span><a href="https://github.com/dudu-language/dudu/blob/master/docs/releasing.md">Release details</a></div></footer></body></html>

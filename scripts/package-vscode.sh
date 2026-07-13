@@ -38,6 +38,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ "$output" != /* ]]; then
+    output="$PWD/$output"
+fi
+
 "$repo_root/scripts/sync_version.py"
 if [[ "$install_dependencies" -eq 1 ]]; then
     npm ci --prefix "$extension_dir"

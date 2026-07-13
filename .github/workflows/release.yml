@@ -26,6 +26,7 @@ concurrency:
 jobs:
   linux-artifacts:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     env:
       RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
@@ -81,40 +82,11 @@ jobs:
             dist/*
             !dist/recipes
           if-no-files-found: error
-  macos-apple-silicon:
-    runs-on: macos-14
-    env:
-      DUDU_SKIP_OPTIONAL_NATIVE: 1
-      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-      LLVM_ROOT: /opt/homebrew/opt/llvm
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref_name }}
-          fetch-depth: 0
-      - name: Verify Apple Silicon and immutable tag
-        run: |
-          test "$(uname -m)" = arm64
-          test "$RELEASE_TAG" = "v$(cat VERSION)"
-          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
-      - name: Install native prerequisites
-        run: brew install cmake llvm pkg-config ripgrep
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: editors/vscode/package-lock.json
-      - name: Validate source toolchain and lifecycle
-        run: |
-          ./scripts/release-check.sh
-          ./scripts/test-bootstrap-lifecycle.sh
-
   publish:
     if: github.event_name == 'push' || inputs.publish
-    needs:
-      - linux-artifacts
-      - macos-apple-silicon
+    needs: linux-artifacts
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     env:
       RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:

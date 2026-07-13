@@ -20,12 +20,11 @@ xcode-select --install
 brew install cmake llvm pkg-config
 ```
 
-Then install from the current checkout:
+Then install the immutable tagged source release:
 
 ```sh
-git clone https://github.com/dudu-language/dudu.git
-cd dudu
-./scripts/install-local.sh
+curl --proto '=https' --tlsv1.2 -sSf https://dudulang.org/install.sh \
+    | sh -s -- --version 0.1.0-alpha.13
 export PATH="$HOME/.local/bin:$PATH"
 dudu --version
 ```
@@ -48,7 +47,7 @@ release manifest. AUR publication remains pending upstream account access.
 | Bootstrap installer | `curl -sSf https://dudulang.org/install.sh | sh -s -- --version VERSION` | Dudu installer |
 | GitHub source archive | `dudu-VERSION-source.tar.gz` plus SHA-256 manifest | User/source build |
 | Debian/Ubuntu download | `dudu_VERSION_amd64.deb` attached to GitHub Releases | `dpkg`/APT |
-| Homebrew tap | `brew install dudu-language/dudu/dudu` | Homebrew |
+| Homebrew tap | `brew install dudu-language/dudu/dudu` (best-effort on macOS pending user confirmation) | Homebrew |
 | Arch AUR | Package `dudu` | pacman/AUR helper |
 | VS Code Marketplace | Extension publisher `dudu` | VS Code |
 | Open VSX | Extension namespace `dudu` | Open VSX client |
@@ -79,12 +78,13 @@ The release gate checks:
 - bootstrap install, update, rollback, and uninstall across two versions
 - `.deb`, Homebrew, and AUR recipe contents
 - VSIX packaging and isolated clean installation
-- Linux and Apple Silicon source-toolchain workflows
+- Linux x86_64 source-toolchain release validation
 
-Registry publication itself cannot be validated before a release exists.
-Visual Studio Marketplace publication is manual for the first alpha. Open VSX
-publication is wired to a scoped GitHub Actions secret. AUR publication waits
-for upstream account registration to reopen.
+The macOS bootstrap path uses the same tagged source and builds against the
+user's Xcode/Homebrew toolchain, but complete Apple Silicon release validation
+is not an alpha publication gate. Visual Studio Marketplace publication is
+manual for the first alpha. Open VSX publication uses a scoped registry secret.
+AUR publication waits for upstream account registration to reopen.
 
 See [Distribution Plan](distribution-plan.md),
 [Release Procedure](releasing.md), and

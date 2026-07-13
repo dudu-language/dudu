@@ -368,7 +368,7 @@ in `le_plan.md` or every speculative language feature.
 - [x] Centralize the Dudu toolchain version.
 - [x] Make `dudu`, `duc`, `dudu-lsp`, extension metadata, release metadata, and
       generated schema metadata agree on that version.
-- [ ] Define `0.1.0-alpha.13` and update `CHANGELOG.md` from `[Unreleased]` during
+- [x] Define `0.1.0-alpha.13` and update `CHANGELOG.md` from `[Unreleased]` during
       the release cut.
 
 ### Compiler And Project Driver
@@ -426,12 +426,14 @@ Complete this after the pre-distribution product gate passes:
 - [x] Package and clean-install a pre-release VSIX.
 - [x] Create a tag/manual-only release workflow; do not add ordinary
       push-to-master deployment or release jobs.
-- [ ] Validate macOS Apple Silicon before advertising it as supported; Intel
-      macOS may remain best-effort until tested.
+- [ ] Validate macOS Apple Silicon before advertising it as a supported host;
+      tagged source bootstrap remains best-effort until tested on a maintained
+      Mac. Intel macOS is not an alpha target.
 
-The Apple Silicon job, package builders, editor publication workflow, and
-two-version lifecycle fixture are implemented. The final unchecked item needs
-evidence from the real tagged `macos-14` hosted run, not a Linux simulation.
+Apple validation is a manual, non-blocking portability preflight. It must not
+become a hosted development loop or block Linux alpha publication. Package
+builders, editor publication, and the two-version lifecycle fixture are
+validated locally before an immutable tag is published.
 
 ## Not Alpha Blockers
 
@@ -460,8 +462,8 @@ The following should not delay the first public alpha by themselves:
    gate.
 4. Push the immutable tag.
 5. Produce the source archive, checksum, VSIX, and release notes.
-6. Run clean Linux and macOS release-environment validation without using the
-   remote job as the development loop.
+6. Validate and build Linux release artifacts locally. Apple validation is a
+   separate manual portability check and is not an alpha gate.
 7. Publish the GitHub alpha and editor pre-release.
 8. Add AUR, Homebrew tap, and `.deb` channels from the same tag after the first
    install path is proven.
