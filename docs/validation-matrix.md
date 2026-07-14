@@ -46,7 +46,9 @@ cmake --build build --target dudu_language_server_tests dudu_language_server_nav
 Dogfood latency checks should stay opt-in because they depend on local repos:
 
 ```sh
-./scripts/probe_lsp_dogfood_latency.py
+./scripts/probe_lsp_dogfood_latency.py build-release/dudu-lsp \
+    --samples 5 \
+    --csv build/bench_compiler/lsp-dogfood.csv
 ```
 
 ## Native Library Probes

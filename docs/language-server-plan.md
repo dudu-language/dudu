@@ -851,9 +851,11 @@ Native class-alias target lookup now builds one reusable native class index per
 request path instead of rebuilding it for every native type. This removed the
 header-heavy quadratic behavior that made `dudu-webserver` warm hover,
 references, completion, and semantic tokens take roughly one second each.
-`scripts/probe_lsp_dogfood_latency.py` measures cold document-symbol indexing
-and first native-aware hover separately from warm definition, hover, references,
-completion, and semantic-token latency for `raymarch-dd` and `dudu-webserver`.
+`scripts/probe_lsp_dogfood_latency.py` starts a fresh server per sample and
+measures initialization through first published diagnostics, post-diagnostics
+document symbols, first native-aware hover, warm definition, hover, references,
+completion, semantic tokens, and rename for `raymarch-dd` and
+`dudu-webserver`. It emits raw CSV with sample identity and process peak RSS.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
 completion, signature help, definition, and hover. The same optional probe now

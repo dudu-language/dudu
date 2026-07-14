@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+import argparse
+import csv
 import json
+import statistics
 import subprocess
 import sys
 import time
+from collections import defaultdict
 from pathlib import Path
 
 
@@ -44,6 +48,7 @@ def wait_response(proc, request_id):
 
 class LspSession:
     def __init__(self, lsp_bin, root):
+        self.started_at = time.perf_counter()
         self.proc = subprocess.Popen(
             [str(lsp_bin)],
             stdin=subprocess.PIPE,
@@ -53,6 +58,7 @@ class LspSession:
         self.next_id = 1
         self.root = root.resolve()
         init_id = self.request_id()
+        start = time.perf_counter()
         send_message(
             self.proc,
             {
@@ -63,6 +69,7 @@ class LspSession:
             },
         )
         wait_response(self.proc, init_id)
+        self.initialize_ms = (time.perf_counter() - start) * 1000.0
         send_message(self.proc, {"jsonrpc": "2.0", "method": "initialized", "params": {}})
 
     def request_id(self):
@@ -97,6 +104,22 @@ class LspSession:
                 },
             },
         )
+        while True:
+            message = read_message(self.proc.stdout)
+            if message.get("method") != "textDocument/publishDiagnostics":
+                continue
+            params = message.get("params", {})
+            if params.get("uri") == path.resolve().as_uri():
+                return (time.perf_counter() - self.started_at) * 1000.0
+
+    def peak_rss_kb(self):
+        status = Path(f"/proc/{self.proc.pid}/status")
+        if not status.exists():
+            return 0
+        for line in status.read_text().splitlines():
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1])
+        return 0
 
     def close(self):
         try:
@@ -159,17 +182,19 @@ def require_definition_target(response, label, expected_uri_suffix):
     )
 
 
-def probe_workspace(lsp_bin, name, root, entry, needles):
+def probe_workspace(lsp_bin, name, root, entry, needles, sample):
     entry_text = entry.read_text()
     session = LspSession(lsp_bin, root)
     rows = []
     try:
-        session.open_document(entry)
+        rows.append((name, sample, "initialize", session.initialize_ms))
+        workspace_usable_ms = session.open_document(entry)
+        rows.append((name, sample, "cold_workspace_usable", workspace_usable_ms))
         doc = {"textDocument": text_document(entry)}
 
         response, elapsed = session.request("textDocument/documentSymbol", doc)
-        require_nonempty_result(response, f"{name} cold documentSymbol")
-        rows.append((name, "cold_document_symbol", elapsed))
+        require_nonempty_result(response, f"{name} post-diagnostics documentSymbol")
+        rows.append((name, sample, "post_diagnostics_document_symbol", elapsed))
 
         definition_pos = position_of(entry_text, needles["definition"], offset=1)
         response, elapsed = session.request(
@@ -182,16 +207,16 @@ def probe_workspace(lsp_bin, name, root, entry, needles):
             f"{name} definition",
             needles.get("definition_uri_suffix", ""),
         )
-        rows.append((name, "warm_definition", elapsed))
+        rows.append((name, sample, "warm_definition", elapsed))
 
-        hover_pos = position_of(entry_text, needles["hover"], offset=1)
+        hover_pos = position_of(entry_text, needles["native_hover"], offset=1)
         response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
         require_nonempty_result(response, f"{name} cold native hover")
-        rows.append((name, "cold_native_hover", elapsed))
+        rows.append((name, sample, "cold_native_hover", elapsed))
 
         response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
         require_nonempty_result(response, f"{name} hover")
-        rows.append((name, "warm_hover", elapsed))
+        rows.append((name, sample, "warm_hover", elapsed))
 
         references_pos = position_of(entry_text, needles["references"], offset=1)
         response, elapsed = session.request(
@@ -199,7 +224,7 @@ def probe_workspace(lsp_bin, name, root, entry, needles):
             {**doc, "position": references_pos, "context": {"includeDeclaration": True}},
         )
         require_nonempty_result(response, f"{name} references")
-        rows.append((name, "warm_references", elapsed))
+        rows.append((name, sample, "warm_references", elapsed))
 
         completion_pos = position_of(
             entry_text,
@@ -211,23 +236,49 @@ def probe_workspace(lsp_bin, name, root, entry, needles):
             {**doc, "position": completion_pos},
         )
         require_nonempty_result(response, f"{name} completion")
-        rows.append((name, "warm_completion", elapsed))
+        rows.append((name, sample, "warm_completion", elapsed))
 
         response, elapsed = session.request("textDocument/semanticTokens/full", doc)
         require_nonempty_result(response, f"{name} semantic tokens")
         if not response["result"].get("data"):
             raise RuntimeError(f"{name} semantic tokens returned no data")
-        rows.append((name, "warm_semantic_tokens", elapsed))
+        rows.append((name, sample, "warm_semantic_tokens", elapsed))
+
+        rename_pos = position_of(entry_text, needles["rename"], offset=1)
+        response, elapsed = session.request(
+            "textDocument/rename",
+            {
+                **doc,
+                "position": rename_pos,
+                "newName": "dudu_latency_probe_name",
+            },
+        )
+        require_nonempty_result(response, f"{name} rename")
+        rows.append((name, sample, "warm_rename", elapsed))
+
+        peak_rss_kb = session.peak_rss_kb()
     finally:
         session.close()
-    return rows
+    return rows, peak_rss_kb
+
+
+def percentile(values, fraction):
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, int((len(ordered) - 1) * fraction + 0.999999))
+    return ordered[index]
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("lsp_bin", nargs="?", type=Path)
+    parser.add_argument("--samples", type=int, default=1)
+    parser.add_argument("--csv", type=Path)
+    args = parser.parse_args()
+    if args.samples < 1:
+        raise SystemExit("--samples must be at least 1")
+
     repo_root = Path(__file__).resolve().parents[1]
-    lsp_bin = repo_root / "build" / "dudu-lsp"
-    if len(sys.argv) > 1:
-        lsp_bin = Path(sys.argv[1])
+    lsp_bin = args.lsp_bin or repo_root / "build" / "dudu-lsp"
     if not lsp_bin.exists():
         raise SystemExit(f"missing dudu-lsp binary: {lsp_bin}")
 
@@ -239,9 +290,10 @@ def main():
             {
                 "definition": "setup_monitor_rect()",
                 "definition_uri_suffix": "/src/windowing.dd",
-                "hover": "render_w =",
+                "native_hover": "SDL_CreateWindow",
                 "references": "render_w =",
                 "completion": "SDL_",
+                "rename": "setup_monitor_rect()",
             },
         ),
         (
@@ -251,26 +303,54 @@ def main():
             {
                 "definition": "parse_request(raw)",
                 "definition_uri_suffix": "/src/request.dd",
-                "hover": "std.string",
+                "native_hover": "std.string",
                 "references": "server",
                 "completion": "sock.",
+                "rename": "parse_request(raw)",
             },
         ),
     ]
 
     all_rows = []
+    rss_rows = []
     for name, root, entry, needles in workspaces:
         if not root.exists() or not entry.exists():
             print(f"skip {name}: workspace not found", file=sys.stderr)
             continue
-        all_rows.extend(probe_workspace(lsp_bin, name, root, entry, needles))
+        for sample in range(1, args.samples + 1):
+            rows, peak_rss_kb = probe_workspace(
+                lsp_bin, name, root, entry, needles, sample
+            )
+            all_rows.extend(rows)
+            rss_rows.append((name, sample, peak_rss_kb))
 
     if not all_rows:
         raise SystemExit("no dogfood workspaces were available")
 
-    width = max(len(row[1]) for row in all_rows)
-    for workspace, phase, elapsed in all_rows:
-        print(f"{workspace:15} {phase:{width}} {elapsed:8.3f} ms")
+    if args.csv:
+        args.csv.parent.mkdir(parents=True, exist_ok=True)
+        with args.csv.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["workspace", "sample", "phase", "elapsed_ms", "peak_rss_kb"])
+            rss_by_sample = {(workspace, sample): rss for workspace, sample, rss in rss_rows}
+            for workspace, sample, phase, elapsed in all_rows:
+                writer.writerow(
+                    [workspace, sample, phase, f"{elapsed:.6f}", rss_by_sample[workspace, sample]]
+                )
+
+    grouped = defaultdict(list)
+    for workspace, _sample, phase, elapsed in all_rows:
+        grouped[(workspace, phase)].append(elapsed)
+    width = max(len(phase) for _, phase in grouped)
+    for (workspace, phase), values in sorted(grouped.items()):
+        rss = max(value for name, _sample, value in rss_rows if name == workspace)
+        print(
+            f"{workspace:15} {phase:{width}} "
+            f"median={statistics.median(values):8.3f} ms "
+            f"p95={percentile(values, 0.95):8.3f} ms rss={rss / 1024.0:7.1f} MiB"
+        )
+    if args.csv:
+        print(f"csv: {args.csv}")
 
 
 if __name__ == "__main__":

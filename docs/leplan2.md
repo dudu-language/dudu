@@ -120,11 +120,23 @@ wall-clock medians/p95, and process peak RSS. Raw CSV lives under the ignored
 | 50k indexing-heavy lines | 264.6 ms | 267.2 ms | 146.4 MiB |
 | 50k native-heavy lines | 437.6 ms | 499.0 ms | 157.9 MiB |
 
-The dogfood LSP probe measured `raymarch-dd` cold document indexing at
-308.2 ms and `dudu-webserver` at 140.8 ms. Warm definition/hover/references/
-completion/semantic-token requests ranged from 0.5 to 21.3 ms. These are
-single-run orientation numbers; completion-gate reporting still requires the
-multi-sample CSV harness.
+The dogfood LSP probe now starts a fresh server for every sample and records
+initialization through first published diagnostics, first native hover,
+definition, references, completion, semantic tokens, rename, and process peak
+RSS as CSV. Five-sample Release results are:
+
+| Workspace and operation | Median | p95 | Peak RSS |
+| --- | ---: | ---: | ---: |
+| `raymarch-dd` workspace usable | 299.6 ms | 304.7 ms | 216.2 MiB |
+| `raymarch-dd` first native hover | 13.5 ms | 14.5 ms | 216.2 MiB |
+| `raymarch-dd` slowest warm request | 20.3 ms | 20.9 ms | 216.2 MiB |
+| `dudu-webserver` workspace usable | 149.9 ms | 151.5 ms | 142.7 MiB |
+| `dudu-webserver` first native hover | 6.2 ms | 6.7 ms | 142.7 MiB |
+| `dudu-webserver` slowest warm request | 9.9 ms | 11.2 ms | 142.7 MiB |
+
+The first published diagnostics define workspace usability. Document-symbol
+timing after diagnostics is labeled post-diagnostics rather than cold, because
+the diagnostic pass has already populated the project/native view.
 
 The baseline also found 50k class-heavy lines taking 2,651.3 ms. Profiling
 showed declaration and body checking copied the complete `Symbols` graph for
