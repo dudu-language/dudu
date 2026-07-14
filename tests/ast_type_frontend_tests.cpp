@@ -465,6 +465,34 @@ void test_native_variadic_bare_pack_uses_type_ref_shape() {
     assert(dudu::signature_param_type_ref(*matched, 1).kind == dudu::TypeKind::PackExpansion);
 }
 
+void test_native_variadic_pack_keeps_leading_template_binding() {
+    dudu::Symbols symbols;
+    dudu::FunctionSignature signature;
+    signature.template_params = {"T", "Rest"};
+    signature.variadic = true;
+    signature.min_params = 1;
+    dudu::TypeRef pack =
+        dudu::pack_expansion_type_ref(dudu::parse_type_text("Rest"), {});
+    dudu::set_signature_param_types(
+        signature, {dudu::parse_type_text("T"), std::move(pack)});
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("T"));
+    symbols.native_function_signatures["fold_sum"] = {signature};
+    dudu::FunctionScope scope(symbols);
+
+    const std::vector<dudu::Expr> args = {
+        dudu::parse_expr_text("1"), dudu::parse_expr_text("2"),
+        dudu::parse_expr_text("3"), dudu::parse_expr_text("4")};
+    const std::optional<dudu::FunctionSignature> matched =
+        dudu::match_native_signature(scope, "fold_sum", {}, args, nullptr);
+
+    assert(matched.has_value());
+    assert(dudu::signature_return_type_ref(*matched).name == "i32");
+    assert(dudu::signature_param_count(*matched) == 4);
+    for (size_t index = 0; index < 4; ++index) {
+        assert(dudu::signature_param_type_ref(*matched, index).name == "i32");
+    }
+}
+
 void test_explicit_native_template_value_args_use_type_refs() {
     dudu::Symbols symbols;
     dudu::FunctionSignature signature;
@@ -527,6 +555,7 @@ int main() {
         test_bound_native_template_pack_substitution_uses_type_refs();
         test_bound_native_template_substitution_is_per_field();
         test_native_variadic_bare_pack_uses_type_ref_shape();
+        test_native_variadic_pack_keeps_leading_template_binding();
         test_explicit_native_template_value_args_use_type_refs();
         test_explicit_native_template_keeps_unbound_pack_params();
     } catch (const std::exception& error) {

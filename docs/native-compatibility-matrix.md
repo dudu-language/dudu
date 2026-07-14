@@ -52,6 +52,7 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | POSIX mmap | systems | headers, constants, pointers, file APIs, run | pass | `scripts/probe_optional.sh` / `posix_mmap_hash.dd` | no |
 | POSIX pthread | systems | pthread structs, mutex calls, function pointer callback, link flags, run | pass | `scripts/probe_optional.sh` / `posix_threads_mutex.dd` | no |
 | C++ standard library algorithms | C++ stdlib | containers, algorithms, pairs, tuples, `std.get` | pass | `scripts/probe_cpp_stdlib_algorithms.sh` | no |
+| C++20 ranges and views | C++ stdlib | constrained customization-point objects, range sort, view adaptors, pipe composition, range iteration | fixture | `tests/fixtures/cpp_ranges_algorithms.dd` | no |
 | C++ standard library interop mix | C++ stdlib | `std.optional`, `std.array`, `std.span`, `std.map`, `std.unordered_set`, `std.function`, smart pointers, mutex guard | fixture | `tests/fixtures/cpp_stdlib_interop.dd` | no |
 | C++ standard library variants | C++ stdlib | `std.variant`, `std.holds_alternative`, `std.get` | fixture | `tests/fixtures/cpp_std_variant.dd` | no |
 | glm | math | header import, constructors, functions such as `glm.dot` | pass | `scripts/probe_optional.sh` / `glm_math.dd` | no |
@@ -87,6 +88,7 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | FFmpeg libavcodec | media | direct C header import, package link, packet alloc/free smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | no |
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |
 | Native C++ templates | C++ templates | explicit template calls, method templates, dependent fields and returns, nested and namespace alias templates, dependent type/non-type defaults, omitted-argument materialization, partial and concrete class specialization selection, warm scan cache | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd`, `native_dependent_alias_metadata.dd`, `native_associated_type.dd`, `cpp_stdlib_interop.dd` | no |
+| Modern C++ template mix | C++ templates | concepts on callable templates, leading template parameters before variadic packs, defaulted function arguments, inherited constructors and methods, method templates, cv/ref parameters, move-only values | fixture | `tests/fixtures/native_modern_templates.dd` | no |
 
 ## External Dogfood Repos
 

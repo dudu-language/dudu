@@ -25,10 +25,7 @@ namespace {
 }
 
 bool native_variadic_pack_param(const TypeRef& type) {
-    if (native_template_pack_placeholder(type)) {
-        return true;
-    }
-    return type.kind == TypeKind::PackExpansion && type.children.empty();
+    return type.kind == TypeKind::PackExpansion;
 }
 
 size_t native_variadic_pack_start(const FunctionSignature& signature) {

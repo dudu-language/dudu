@@ -1,0 +1,20 @@
+from cpp import algorithm
+from cpp import ranges
+from cpp import vector
+
+
+def is_even(value: i32) -> bool:
+    return value % 2 == 0
+
+
+def main() -> i32:
+    values: std.vector[i32]
+    values.push_back(3)
+    values.push_back(1)
+    values.push_back(2)
+    std.ranges.sort(values)
+    evens = values | std.views.filter(is_even)
+    total = 0
+    for value in evens:
+        total += value
+    return values[0] + total

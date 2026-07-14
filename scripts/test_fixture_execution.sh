@@ -35,6 +35,7 @@ grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.c
 compile_and_expect cpp_exceptions 42
 compile_and_expect std_vector_map_string 42
 compile_and_expect cpp_stdlib_interop 42
+compile_and_expect cpp_ranges_algorithms 3
 compile_and_expect cpp_std_variant 42
 compile_and_expect anonymous_variant 42
 compile_and_expect value_match_string 42
@@ -42,6 +43,7 @@ compile_and_expect value_match_assign 60
 compile_and_expect native_dependent_template_return 42
 compile_and_expect native_dependent_alias_metadata 42
 compile_and_expect native_associated_type 42
+compile_and_expect native_modern_templates 47
 compile_and_expect generic_non_type_param 42
 compile_and_expect generic_value_arithmetic 42
 compile_and_expect generics_reference 42
