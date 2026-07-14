@@ -626,6 +626,10 @@ inline DuduDuduAstEnumDecl from_protocol(const protocol::EnumDecl& input) {
     if (input.identity.has_value()) {
         out.identity = from_protocol(*input.identity);
     }
+    out.methods.reserve(input.methods.size());
+    for (const auto& item : input.methods) {
+        out.methods.push_back(from_protocol(item));
+    }
     return out;
 }
 
@@ -652,6 +656,10 @@ inline protocol::EnumDecl to_protocol(const DuduDuduAstEnumDecl& input) {
     out.range = to_protocol(input.range);
     if (input.identity.has_value()) {
         out.identity = to_protocol(*input.identity);
+    }
+    out.methods.reserve(input.methods.size());
+    for (const auto& item : input.methods) {
+        out.methods.push_back(to_protocol(item));
     }
     return out;
 }

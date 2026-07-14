@@ -1,8 +1,7 @@
-#include "dudu/macro/macro_expansion_internal.hpp"
-
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/macro/macro_ast_bridge.hpp"
+#include "dudu/macro/macro_expansion_internal.hpp"
 
 #include <algorithm>
 #include <set>
@@ -18,36 +17,42 @@ namespace p = protocol;
 }
 
 std::vector<ModuleAst*> units(ModuleAst& module) {
-    if (module.module_units.empty()) return {&module};
+    if (module.module_units.empty())
+        return {&module};
     std::vector<ModuleAst*> out;
     out.reserve(module.module_units.size());
-    for (ModuleAst& unit : module.module_units) out.push_back(&unit);
+    for (ModuleAst& unit : module.module_units)
+        out.push_back(&unit);
     return out;
 }
 
 ModuleAst& target_unit(ModuleAst& module, const CollectedExpansion& source) {
     for (ModuleAst* unit : units(module)) {
-        if (unit->module_path == source.target_module) return *unit;
+        if (unit->module_path == source.target_module)
+            return *unit;
     }
     fail(source, "macro target module disappeared before expansion merge");
 }
 
 ClassDecl* target_class(ModuleAst& unit, std::string_view name) {
     for (ClassDecl& klass : unit.classes) {
-        if (klass.name == name) return &klass;
+        if (klass.name == name)
+            return &klass;
     }
     return nullptr;
 }
 
 EnumDecl* target_enum(ModuleAst& unit, std::string_view name) {
     for (EnumDecl& en : unit.enums) {
-        if (en.name == name) return &en;
+        if (en.name == name)
+            return &en;
     }
     return nullptr;
 }
 
 bool macro_decorator(const Decorator& decorator, const Plan& plan) {
-    if (decorator_matches(decorator, "derive")) return true;
+    if (decorator_matches(decorator, "derive"))
+        return true;
     const std::string name = decorator_name(decorator);
     return std::any_of(plan.definitions.begin(), plan.definitions.end(), [&](const auto& item) {
         return name == item.second.name || name == item.second.identity;
@@ -66,15 +71,47 @@ void reject_recursive_attributes(const Decl& declaration, const Plan& plan,
 
 std::set<std::string> class_member_names(const ClassDecl& klass) {
     std::set<std::string> names;
-    for (const FieldDecl& field : klass.fields) names.insert(field.name);
-    for (const ConstDecl& constant : klass.constants) names.insert(constant.name);
-    for (const ConstDecl& field : klass.static_fields) names.insert(field.name);
-    for (const FunctionDecl& method : klass.methods) names.insert(method.name);
+    for (const FieldDecl& field : klass.fields)
+        names.insert(field.name);
+    for (const ConstDecl& constant : klass.constants)
+        names.insert(constant.name);
+    for (const ConstDecl& field : klass.static_fields)
+        names.insert(field.name);
+    for (const FunctionDecl& method : klass.methods)
+        names.insert(method.name);
     return names;
 }
 
-void add_origin(ModuleAst& unit, const CollectedExpansion& source,
-                GeneratedDeclarationKind kind, std::string owner, std::string name) {
+std::set<std::string> enum_member_names(const EnumDecl& en) {
+    std::set<std::string> names;
+    for (const EnumValueDecl& value : en.values)
+        names.insert(value.name);
+    for (const FunctionDecl& method : en.methods)
+        names.insert(method.name);
+    return names;
+}
+
+void add_origin(ModuleAst& unit, const CollectedExpansion& source, GeneratedDeclarationKind kind,
+                std::string owner, std::string name);
+
+void merge_enum_member(ModuleAst& unit, EnumDecl& en, const p::Declaration& declaration,
+                       const Plan& plan, const CollectedExpansion& source,
+                       std::set<std::string>& names) {
+    if (declaration.kind != p::DeclarationKind::Function || !declaration.function_decl) {
+        fail(source, "enum macros may only generate methods");
+    }
+    FunctionDecl method = from_protocol(*declaration.function_decl, unit.module_path, en.name,
+                                        source.invocation.start);
+    reject_recursive_attributes(method, plan, source);
+    if (method.name.empty() || !names.insert(method.name).second) {
+        fail(source, "generated enum member conflicts with existing name: " + method.name);
+    }
+    add_origin(unit, source, GeneratedDeclarationKind::Function, en.name, method.name);
+    en.methods.push_back(std::move(method));
+}
+
+void add_origin(ModuleAst& unit, const CollectedExpansion& source, GeneratedDeclarationKind kind,
+                std::string owner, std::string name) {
     unit.generated_origins.push_back({.kind = kind,
                                       .module_path = unit.module_path,
                                       .owner = std::move(owner),
@@ -124,11 +161,16 @@ void merge_class_member(ModuleAst& unit, ClassDecl& klass, const p::Declaration&
 
 std::set<std::string> module_names(const ModuleAst& unit) {
     std::set<std::string> names;
-    for (const TypeAliasDecl& alias : unit.aliases) names.insert(alias.name);
-    for (const EnumDecl& en : unit.enums) names.insert(en.name);
-    for (const ClassDecl& klass : unit.classes) names.insert(klass.name);
-    for (const FunctionDecl& function : unit.functions) names.insert(function.name);
-    for (const ConstDecl& constant : unit.constants) names.insert(constant.name);
+    for (const TypeAliasDecl& alias : unit.aliases)
+        names.insert(alias.name);
+    for (const EnumDecl& en : unit.enums)
+        names.insert(en.name);
+    for (const ClassDecl& klass : unit.classes)
+        names.insert(klass.name);
+    for (const FunctionDecl& function : unit.functions)
+        names.insert(function.name);
+    for (const ConstDecl& constant : unit.constants)
+        names.insert(constant.name);
     return names;
 }
 
@@ -154,7 +196,8 @@ void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Pla
         return;
     }
     if (declaration.kind == p::DeclarationKind::Function && declaration.function_decl) {
-        FunctionDecl function = from_protocol(*declaration.function_decl, unit.module_path, {}, fallback);
+        FunctionDecl function =
+            from_protocol(*declaration.function_decl, unit.module_path, {}, fallback);
         reject_recursive_attributes(function, plan, source);
         if (function.name.empty() || !names.insert(function.name).second)
             fail(source, "generated sibling conflicts with existing name: " + function.name);
@@ -163,7 +206,8 @@ void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Pla
         return;
     }
     if (declaration.kind == p::DeclarationKind::Constant && declaration.constant_decl) {
-        ConstDecl constant = from_protocol(*declaration.constant_decl, unit.module_path, {}, fallback);
+        ConstDecl constant =
+            from_protocol(*declaration.constant_decl, unit.module_path, {}, fallback);
         reject_recursive_attributes(constant, plan, source);
         if (constant.name.empty() || !names.insert(constant.name).second)
             fail(source, "generated sibling conflicts with existing name: " + constant.name);
@@ -183,12 +227,12 @@ void merge_implementation(ModuleAst& unit, const p::Declaration& declaration, co
     const p::ImplementationDecl& implementation = *declaration.implementation_decl;
     const std::string target = implementation.target.name;
     ClassDecl* klass = target_class(unit, target);
-    if (klass == nullptr) fail(source, "generated implementation target is not a local class: " + target);
+    if (klass == nullptr)
+        fail(source, "generated implementation target is not a local class: " + target);
     const std::string contract = implementation.contract.name;
     const bool has_contract = std::any_of(
-        klass->base_class_refs.begin(), klass->base_class_refs.end(), [&](const BaseClassDecl& base) {
-            return type_ref_head_name(base.type_ref) == contract;
-        });
+        klass->base_class_refs.begin(), klass->base_class_refs.end(),
+        [&](const BaseClassDecl& base) { return type_ref_head_name(base.type_ref) == contract; });
     if (!contract.empty() && !has_contract)
         fail(source, "generated implementation target does not declare contract " + contract);
     std::set<std::string> names = class_member_names(*klass);
@@ -216,14 +260,18 @@ void merge_expansions(ModuleAst& module, const Plan& plan,
         if (!source.expansion.members.empty()) {
             if (source.target_kind == TargetKind::Class) {
                 ClassDecl* klass = target_class(unit, source.target_name);
-                if (klass == nullptr) fail(source, "macro target class disappeared before merge");
+                if (klass == nullptr)
+                    fail(source, "macro target class disappeared before merge");
                 std::set<std::string> names = class_member_names(*klass);
                 for (const p::GeneratedDeclaration& generated : source.expansion.members)
                     merge_class_member(unit, *klass, generated.declaration, plan, source, names);
             } else if (source.target_kind == TargetKind::Enum) {
-                if (target_enum(unit, source.target_name) == nullptr)
+                EnumDecl* en = target_enum(unit, source.target_name);
+                if (en == nullptr)
                     fail(source, "macro target enum disappeared before merge");
-                fail(source, "enum member generation is not representable in the compiler AST");
+                std::set<std::string> names = enum_member_names(*en);
+                for (const p::GeneratedDeclaration& generated : source.expansion.members)
+                    merge_enum_member(unit, *en, generated.declaration, plan, source, names);
             } else {
                 fail(source, "only class and enum macros may generate members");
             }

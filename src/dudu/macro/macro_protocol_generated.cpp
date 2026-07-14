@@ -764,6 +764,9 @@ void encode_into(wire::Writer& writer, const EnumDecl& value) {
     if (value.identity.has_value()) {
         writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
+    for (const auto& item : value.methods) {
+        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
 }
 
 EnumDecl decode_EnumDecl_from(wire::Reader reader) {
@@ -798,6 +801,9 @@ EnumDecl decode_EnumDecl_from(wire::Reader reader) {
             break;
         case 9:
             value.identity = decode_SymbolIdentity_from(reader.read_message(field_type));
+            break;
+        case 10:
+            value.methods.push_back(decode_FunctionDecl_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);

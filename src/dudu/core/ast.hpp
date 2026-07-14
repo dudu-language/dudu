@@ -372,12 +372,15 @@ struct EnumValueDecl {
     std::string doc_comment{};
 };
 
+struct FunctionDecl;
+
 struct EnumDecl {
     std::string name;
     std::string cpp_name;
     TypeRef underlying_type_ref;
     std::string origin_module;
     std::vector<EnumValueDecl> values;
+    std::vector<FunctionDecl> methods;
     std::vector<Decorator> decorators;
     SourceLocation location;
     SourceRange range;

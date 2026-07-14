@@ -152,6 +152,8 @@ void normalize(p::EnumDecl& en) {
     }
     for (p::Attribute& attribute : en.attributes)
         normalize(attribute);
+    for (p::FunctionDecl& method : en.methods)
+        normalize(method);
 }
 
 void normalize(p::Declaration& declaration) {

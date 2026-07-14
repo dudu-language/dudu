@@ -5,7 +5,12 @@
 namespace dudu {
 
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const TypeRef& type) {
-    const TypeRef resolved = resolve_alias_ref(symbols, type);
+    TypeRef resolved = resolve_alias_ref(symbols, type);
+    while ((resolved.kind == TypeKind::Reference || resolved.kind == TypeKind::Pointer ||
+            resolved.kind == TypeKind::Const) &&
+           resolved.children.size() == 1) {
+        resolved = resolve_alias_ref(symbols, resolved.children.front());
+    }
     const auto found = symbols.enums.find(type_ref_head_name(resolved));
     return found == symbols.enums.end() ? nullptr : found->second;
 }

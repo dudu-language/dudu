@@ -272,6 +272,7 @@ struct EnumDecl {
     Visibility visibility = Visibility::Default;
     SourceRange range = {};
     std::optional<SymbolIdentity> identity = {};
+    std::vector<FunctionDecl> methods = {};
 };
 
 struct ConstantDecl {

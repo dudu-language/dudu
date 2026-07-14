@@ -94,6 +94,10 @@ void stamp_module_origin(ModuleAst& module, const std::filesystem::path& source_
     for (EnumDecl& en : module.enums) {
         en.origin_module = module_path;
         en.cpp_name = generated_type_name(module_path, en.name);
+        for (FunctionDecl& method : en.methods) {
+            method.origin_module = module_path;
+            method.cpp_name = generated_value_name(module_path, en.name + "_" + method.name);
+        }
     }
     for (ClassDecl& klass : module.classes) {
         klass.origin_module = module_path;

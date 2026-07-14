@@ -392,6 +392,8 @@ void render_declaration(std::ostringstream& out, const p::Declaration& declarati
             for (const p::FieldDecl& field : variant.fields)
                 render_field(out, field, depth + 2);
         }
+        for (const p::FunctionDecl& method : value.methods)
+            render_function(out, method, depth + 1);
     } else if (declaration.implementation_decl) {
         const p::ImplementationDecl& value = *declaration.implementation_decl;
         out << indentation(depth) << "impl " << render_type(value.contract) << " for "

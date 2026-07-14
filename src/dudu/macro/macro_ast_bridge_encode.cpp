@@ -1,8 +1,7 @@
-#include "dudu/macro/macro_ast_bridge.hpp"
-
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
+#include "dudu/macro/macro_ast_bridge.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
 #include <stdexcept>
@@ -23,7 +22,8 @@ p::SymbolIdentity identity(const std::string& module, const std::string& path,
 std::vector<p::Attribute> attributes(const std::vector<Decorator>& decorators) {
     std::vector<p::Attribute> out;
     out.reserve(decorators.size());
-    for (const Decorator& decorator : decorators) out.push_back(to_protocol(decorator));
+    for (const Decorator& decorator : decorators)
+        out.push_back(to_protocol(decorator));
     return out;
 }
 
@@ -70,14 +70,17 @@ p::EnumVariant variant(const EnumValueDecl& value, const std::string& module,
                            .doc_comment = {}};
         out.fields.push_back(to_protocol(internal, module, owner + "." + value.name));
     }
-    if (expr_present(value.value_expr)) out.value = to_protocol(value.value_expr);
+    if (expr_present(value.value_expr))
+        out.value = to_protocol(value.value_expr);
     return out;
 }
 
 const ModuleAst& unit_named(const ModuleAst& module, const std::string& path) {
-    if (module.module_units.empty() && module.module_path == path) return module;
+    if (module.module_units.empty() && module.module_path == path)
+        return module;
     for (const ModuleAst& unit : module.module_units) {
-        if (unit.module_path == path) return unit;
+        if (unit.module_path == path)
+            return unit;
     }
     throw std::runtime_error("macro invocation target module is missing: " + path);
 }
@@ -86,7 +89,8 @@ template <typename T>
 const T& named(const std::vector<T>& declarations, const Invocation& invocation,
                std::string_view kind) {
     for (const T& declaration : declarations) {
-        if (declaration.name == invocation.target_name) return declaration;
+        if (declaration.name == invocation.target_name)
+            return declaration;
     }
     throw std::runtime_error("macro invocation target " + std::string(kind) + " is missing: " +
                              invocation.target_module + "." + invocation.target_name);
@@ -105,7 +109,8 @@ p::FieldDecl to_protocol(const FieldDecl& field, const std::string& module_path,
                      .visibility = p::Visibility::Default,
                      .range = to_protocol(field.location),
                      .identity = identity(module_path, path)};
-    if (expr_present(field.value_expr)) out.value = to_protocol(field.value_expr);
+    if (expr_present(field.value_expr))
+        out.value = to_protocol(field.value_expr);
     return out;
 }
 
@@ -127,11 +132,13 @@ p::FunctionDecl to_protocol(const FunctionDecl& function, const std::string& mod
                         .is_virtual = false,
                         .range = to_protocol(function.range),
                         .identity = identity(module_path, path, function.native_identity.usr)};
-    for (const ParamDecl& item : function.params) out.parameters.push_back(parameter(item));
+    for (const ParamDecl& item : function.params)
+        out.parameters.push_back(parameter(item));
     if (has_type_ref(function.return_type_ref)) {
         out.return_type = to_protocol(function.return_type_ref);
     }
-    for (const Stmt& statement : function.statements) out.body.push_back(to_protocol(statement));
+    for (const Stmt& statement : function.statements)
+        out.body.push_back(to_protocol(statement));
     for (const Decorator& decorator : function.decorators) {
         out.is_abstract = out.is_abstract || decorator_matches(decorator, "abstract");
         out.is_virtual = out.is_virtual || decorator_matches(decorator, "virtual");
@@ -161,12 +168,16 @@ p::EnumDecl to_protocol(const EnumDecl& value, const std::string& module_path) {
                     .documentation = value.doc_comment,
                     .visibility = p::Visibility::Default,
                     .range = to_protocol(value.range),
-                    .identity = identity(module_path, value.name)};
+                    .identity = identity(module_path, value.name),
+                    .methods = {}};
     if (has_type_ref(value.underlying_type_ref)) {
         out.underlying_type = to_protocol(value.underlying_type_ref);
     }
     for (const EnumValueDecl& item : value.values) {
         out.variants.push_back(variant(item, module_path, value.name));
+    }
+    for (const FunctionDecl& method : value.methods) {
+        out.methods.push_back(to_protocol(method, module_path, value.name));
     }
     return out;
 }
@@ -202,8 +213,7 @@ p::ClassDecl to_protocol(const ClassDecl& value, const std::string& module_path)
     return out;
 }
 
-p::Declaration declaration_for_invocation(const ModuleAst& module,
-                                          const Invocation& invocation) {
+p::Declaration declaration_for_invocation(const ModuleAst& module, const Invocation& invocation) {
     const ModuleAst& unit = unit_named(module, invocation.target_module);
     p::Declaration out;
     switch (invocation.target_kind) {

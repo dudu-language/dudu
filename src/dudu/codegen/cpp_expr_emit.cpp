@@ -12,8 +12,8 @@
 #include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_constructors.hpp"
+#include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -402,6 +402,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         if (!has_expr_template_type_args(expr)) {
             throw CompileError(expr.location,
                                "malformed template call: missing parsed type arguments");
+        }
+        if (const auto lowered =
+                lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {
+            return *lowered;
         }
         std::vector<TypeRef> template_type_args = expr_template_type_args(expr);
         const std::string callee = direct_callee_name(expr);

@@ -253,10 +253,9 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
                                 "@section requires exactly one string literal argument");
     }
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "macro" ||
-        text == "cuda.global" ||
-        text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "virtual" || text == "override" || text == "abstract" || text == "test" ||
-        text == "test.ignore" || text == "test.should_panic" ||
+        text == "cuda.global" || text == "cuda.device" || text == "cuda.host" ||
+        text == "shader.compute" || text == "virtual" || text == "override" || text == "abstract" ||
+        text == "test" || text == "test.ignore" || text == "test.should_panic" ||
         decorator_call_matches(decorator, "operator") ||
         decorator_call_matches(decorator, "test.should_panic") ||
         decorator_call_matches(decorator, "workgroup_size") ||
@@ -296,6 +295,73 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                                              value.name + "." + field.name);
                 }
             }
+        }
+        std::optional<Symbols> enum_symbol_storage = with_self_type(symbols, en.name);
+        const Symbols* enum_symbols = &*enum_symbol_storage;
+        for (const FunctionDecl& method : en.methods) {
+            check_generic_params(method.location, method.generic_params);
+            std::optional<Symbols> method_symbol_storage;
+            const Symbols* method_symbols = enum_symbols;
+            if (!method.generic_params.empty()) {
+                method_symbol_storage =
+                    with_generic_params(*enum_symbols, method.generic_params,
+                                        generic_value_params_for_function(method));
+                method_symbols = &*method_symbol_storage;
+            }
+            if (values.contains(method.name)) {
+                fail(method.location, "duplicate enum member: " + method.name);
+            }
+            const FunctionSignature signature = method_signature_without_self(method);
+            for (const FunctionDecl& previous : en.methods) {
+                if (&previous == &method)
+                    break;
+                if (previous.name == method.name &&
+                    same_signature(signature, method_signature_without_self(previous))) {
+                    fail(method.location,
+                         "duplicate method overload: " + en.name + "." + method.name);
+                }
+            }
+            const bool is_static = method.params.empty() || method.params.front().name != "self";
+            if (!is_static && !receiver_type_is_reference_to_class(
+                                  *method_symbols, method.params.front().type_ref, en.name)) {
+                fail(method.params.front().location,
+                     "self must be a receiver reference: use self, self: &Self, or "
+                     "self: &const[Self]");
+            }
+            if (method.statements.empty()) {
+                fail(method.location, "enum methods require a body: " + method.name);
+            }
+            if (is_constructor_method(method) || is_destructor_method(method)) {
+                fail(method.location, "enum methods cannot be constructors or destructors");
+            }
+            if (is_operator_method(method)) {
+                fail(method.location, "enum methods cannot overload operators");
+            }
+            for (const Decorator& decorator : method.decorators) {
+                check_function_decorator(module, decorator);
+            }
+            if (has_decorator(method, "virtual") || has_decorator(method, "override") ||
+                has_decorator(method, "abstract")) {
+                fail(method.location, "inheritance decorators are not valid on enum methods");
+            }
+            if (has_decorator(method, "extern_c") || is_test_decorator(method)) {
+                fail(method.location, "@extern_c and @test are only valid on free functions");
+            }
+            check_variadic_params(method);
+            std::set<std::string> params;
+            for (const ParamDecl& param : method.params) {
+                if (!params.insert(param.name).second) {
+                    fail(param.location, "duplicate parameter: " + param.name);
+                }
+                check_supported_type_shape(param.location, param.type_ref);
+                check_known_type_ref(*method_symbols, param.location, param.type_ref,
+                                     "unknown parameter type: ");
+            }
+            if (function_has_return_type(method)) {
+                check_supported_type_shape(method.location, method.return_type_ref);
+            }
+            check_known_type_ref(*method_symbols, method.location, method.return_type_ref,
+                                 "unknown return type: ");
         }
     }
     for (const ClassDecl& klass : module.classes) {
@@ -369,8 +435,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 }
                 if (previous.name == method.name &&
                     same_signature(method_signature, method_signature_without_self(previous))) {
-                    fail(method.location, "duplicate method overload: " + klass.name + "." +
-                                              method.name);
+                    fail(method.location,
+                         "duplicate method overload: " + klass.name + "." + method.name);
                 }
             }
             const bool is_static = method.params.empty() || method.params.front().name != "self";

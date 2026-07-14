@@ -1,7 +1,6 @@
-#include "dudu/macro/macro_ast_bridge.hpp"
-
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
+#include "dudu/macro/macro_ast_bridge.hpp"
 #include "dudu/project/module_names.hpp"
 
 #include <algorithm>
@@ -20,20 +19,18 @@ std::vector<Decorator> attributes(const std::vector<p::Attribute>& values,
                                   SourceLocation fallback) {
     std::vector<Decorator> out;
     out.reserve(values.size());
-    for (const p::Attribute& value : values) out.push_back(from_protocol(value, fallback));
+    for (const p::Attribute& value : values)
+        out.push_back(from_protocol(value, fallback));
     return out;
 }
 
-void add_marker(std::vector<Decorator>& values, std::string_view name,
-                SourceLocation location) {
+void add_marker(std::vector<Decorator>& values, std::string_view name, SourceLocation location) {
     if (std::any_of(values.begin(), values.end(),
                     [&](const Decorator& value) { return decorator_matches(value, name); })) {
         return;
     }
-    p::Attribute attribute{.name = std::string(name),
-                           .arguments = {},
-                           .range = to_protocol(location),
-                           .identity = {}};
+    p::Attribute attribute{
+        .name = std::string(name), .arguments = {}, .range = to_protocol(location), .identity = {}};
     values.push_back(from_protocol(attribute, location));
 }
 
@@ -65,7 +62,8 @@ EnumValueDecl variant(const p::EnumVariant& value, SourceLocation fallback) {
                       .decorators = attributes(value.attributes, range.start),
                       .location = range.start,
                       .doc_comment = {}};
-    if (value.value) out.value_expr = from_protocol(*value.value, range.start);
+    if (value.value)
+        out.value_expr = from_protocol(*value.value, range.start);
     for (const p::FieldDecl& field : value.fields) {
         const FieldDecl converted = from_protocol(field, range.start);
         out.payload_fields.push_back({.name = converted.name,
@@ -86,7 +84,8 @@ FieldDecl from_protocol(const p::FieldDecl& field, SourceLocation fallback) {
                   .decorators = attributes(field.attributes, range.start),
                   .location = range.start,
                   .doc_comment = field.documentation};
-    if (field.value) out.value_expr = from_protocol(*field.value, range.start);
+    if (field.value)
+        out.value_expr = from_protocol(*field.value, range.start);
     return out;
 }
 
@@ -119,11 +118,13 @@ FunctionDecl from_protocol(const p::FunctionDecl& function, const std::string& m
         out.statements.push_back(from_protocol(statement, range.start));
     }
     if (!function.is_static && !out.params.empty() && out.params.front().name == "self") {
-        out.receiver_type_ref = wrapped_type_ref(TypeKind::Reference,
-                                                named_type_ref("Self", range.start), range.start);
+        out.receiver_type_ref =
+            wrapped_type_ref(TypeKind::Reference, named_type_ref("Self", range.start), range.start);
     }
-    if (function.is_abstract) add_marker(out.decorators, "abstract", range.start);
-    if (function.is_virtual) add_marker(out.decorators, "virtual", range.start);
+    if (function.is_abstract)
+        add_marker(out.decorators, "abstract", range.start);
+    if (function.is_virtual)
+        add_marker(out.decorators, "virtual", range.start);
     return out;
 }
 
@@ -149,6 +150,7 @@ EnumDecl from_protocol(const p::EnumDecl& value, const std::string& module_path,
                  .underlying_type_ref = {},
                  .origin_module = module_path,
                  .values = {},
+                 .methods = {},
                  .decorators = attributes(value.attributes, range.start),
                  .location = range.start,
                  .range = range,
@@ -158,6 +160,9 @@ EnumDecl from_protocol(const p::EnumDecl& value, const std::string& module_path,
     }
     for (const p::EnumVariant& item : value.variants) {
         out.values.push_back(variant(item, range.start));
+    }
+    for (const p::FunctionDecl& method : value.methods) {
+        out.methods.push_back(from_protocol(method, module_path, value.name, range.start));
     }
     return out;
 }

@@ -6,6 +6,7 @@
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_index.hpp"
@@ -252,6 +253,13 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
         }
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
+        if (symbols != nullptr) {
+            FunctionScope scope{*symbols};
+            scope.local_type_refs = local_type_refs;
+            if (static_class_receiver_type_ref(scope, callee.children.front()).has_value()) {
+                return infer_expr_type_ast(scope, expr, nullptr);
+            }
+        }
         const TypeRef receiver_type = infer_emitted_local_type_ref(
             callee.children.front(), local_type_refs, function_returns, symbols);
         if (has_type_ref(receiver_type)) {
@@ -452,13 +460,12 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::ListLiteral:
     case ExprKind::DictLiteral:
     case ExprKind::SetLiteral: {
-        const CollectionLiteralInference inferred = infer_collection_literal_type(
-            symbols, expr, [&](const Expr& child) {
+        const CollectionLiteralInference inferred =
+            infer_collection_literal_type(symbols, expr, [&](const Expr& child) {
                 return infer_emitted_local_type_ref(child, local_type_refs, function_returns,
                                                     symbols);
             });
-        return inferred.status == CollectionLiteralStatus::Inferred ? inferred.type_ref
-                                                                    : TypeRef{};
+        return inferred.status == CollectionLiteralStatus::Inferred ? inferred.type_ref : TypeRef{};
     }
     case ExprKind::PackExpansion:
         if (expr.children.size() != 1) {

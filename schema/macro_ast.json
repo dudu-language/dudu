@@ -133,7 +133,8 @@
       {"name": "documentation", "type": "string", "tag": 6},
       {"name": "visibility", "type": "Visibility", "tag": 7},
       {"name": "range", "type": "SourceRange", "tag": 8},
-      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true}
+      {"name": "identity", "type": "SymbolIdentity", "tag": 9, "optional": true},
+      {"name": "methods", "type": "FunctionDecl", "tag": 10, "repeated": true}
     ]},
     {"name": "ConstantDecl", "fields": [
       {"name": "name", "type": "string", "tag": 1},

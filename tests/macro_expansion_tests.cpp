@@ -34,6 +34,17 @@ bool has_player_method(const dudu::ModuleAst& module, const std::string& name) {
                        [&](const auto& method) { return method.name == name; });
 }
 
+const dudu::EnumDecl& color_enum(const dudu::ModuleAst& module) {
+    for (const dudu::ModuleAst& unit : module.module_units) {
+        for (const dudu::EnumDecl& en : unit.enums) {
+            if (en.name == "Color")
+                return en;
+        }
+    }
+    assert(false && "Color enum is missing");
+    return module.enums.front();
+}
+
 void test_dudu_macro_expands_before_semantics_and_caches() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_macro_expansion_test";
@@ -239,6 +250,66 @@ void test_nondeterministic_macro_requires_explicit_approval() {
     assert(second.macro_report().expansion_cache_hits == 0);
 }
 
+void test_enum_derive_generates_a_callable_method() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_macro_enum_derive_test";
+    std::filesystem::remove_all(dir);
+    write_file(dir / "dudu.toml", "name = \"macro_enum_derive_fixture\"\n"
+                                  "entry = \"src/main.dd\"\n"
+                                  "build_dir = \"build\"\n");
+    write_file(
+        dir / "src/macros.dd",
+        "import dudu.ast as ast\n"
+        "\n"
+        "@macro\n"
+        "def StringEnum(item: ast.EnumDecl) -> ast.Expansion:\n"
+        "    self_type = ast.TypeRef(\n"
+        "        kind=ast.TypeKind.Reference,\n"
+        "        children=[ast.named_type(\"Self\")],\n"
+        "    )\n"
+        "    self_param = ast.Parameter(name=\"self\", type=self_type)\n"
+        "    value = ast.Expression(\n"
+        "        kind=ast.ExpressionKind.StringLiteral, value=item.name,\n"
+        "    )\n"
+        "    body = ast.Statement(kind=ast.StatementKind.Return, value=value)\n"
+        "    method = ast.FunctionDecl(\n"
+        "        name=\"enum_name\",\n"
+        "        parameters=[self_param],\n"
+        "        return_type=ast.named_type(\"str\"),\n"
+        "        body=[body],\n"
+        "    )\n"
+        "    return ast.Expansion(\n"
+        "        members=[ast.generated(ast.function_declaration(method), ast.SourceOrigin())],\n"
+        "    )\n");
+    write_file(dir / "src/main.dd", "from macros import StringEnum\n"
+                                    "\n"
+                                    "@derive(StringEnum)\n"
+                                    "enum Color:\n"
+                                    "    Red\n"
+                                    "    Green\n"
+                                    "\n"
+                                    "def color_name(color: Color) -> str:\n"
+                                    "    return color.enum_name()\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(dir / "dudu.toml");
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "src/main.dd";
+    options.config = config;
+    options.source_dir = dir / "src";
+    options.force_module_tree = true;
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.macro_report().invocations == 1);
+    const dudu::EnumDecl& color = color_enum(index.merged_module());
+    assert(color.methods.size() == 1);
+    assert(color.methods.front().name == "enum_name");
+    const std::vector<dudu::CppModuleArtifact> artifacts =
+        dudu::emit_cpp_module_artifacts(index.merged_module());
+    assert(std::any_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
+        return artifact.content.find("dudu_main_Color_enum_name") != std::string::npos &&
+               artifact.content.find("dudu_main_Color_enum_name(color)") != std::string::npos;
+    }));
+}
+
 } // namespace
 
 int main() {
@@ -246,5 +317,6 @@ int main() {
     test_capability_input_invalidates_expansion_cache();
     test_undeclared_macro_capability_is_rejected();
     test_nondeterministic_macro_requires_explicit_approval();
+    test_enum_derive_generates_a_callable_method();
     return 0;
 }

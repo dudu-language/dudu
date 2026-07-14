@@ -50,9 +50,11 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
                     check_call_args_ast(scope, scoped_callee.key, method.signature, expr.children,
                                         &location);
-                    check_instantiated_generic_method_body(
-                        scope, *method.owner, *method.method, method.receiver_type,
-                        method.receiver_args, method.method_args, location);
+                    if (method.owner != nullptr) {
+                        check_instantiated_generic_method_body(
+                            scope, *method.owner, *method.method, method.receiver_type,
+                            method.receiver_args, method.method_args, location);
+                    }
                     return;
                 }
             }
@@ -62,9 +64,11 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                 const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
                 check_call_args_ast(scope, scoped_callee.key, method->signature, expr.children,
                                     &location);
-                check_instantiated_generic_method_body(scope, *method->owner, *method->method,
-                                                       method->receiver_type, method->receiver_args,
-                                                       method->method_args, location);
+                if (method->owner != nullptr) {
+                    check_instantiated_generic_method_body(
+                        scope, *method->owner, *method->method, method->receiver_type,
+                        method->receiver_args, method->method_args, location);
+                }
                 const TypeRef signature_return = signature_return_type_ref(method->signature);
                 if (type_assignment_allowed(scope.symbols, expected_ref, signature_return) ||
                     can_assign_ast(scope, expected_ref, expr, signature_return)) {

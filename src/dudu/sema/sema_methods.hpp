@@ -12,6 +12,7 @@ namespace dudu {
 
 struct DuduMethodInstantiation {
     const ClassDecl* owner = nullptr;
+    const EnumDecl* enum_owner = nullptr;
     const FunctionDecl* method = nullptr;
     TypeRef receiver_type;
     std::vector<TypeRef> receiver_args;

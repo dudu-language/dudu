@@ -1,5 +1,6 @@
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 
+#include "dudu/codegen/cpp_emit_enum_methods.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
@@ -8,8 +9,8 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/source.hpp"
-#include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_constructors.hpp"
+#include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods.hpp"
@@ -140,6 +141,89 @@ bool expression_has_pointer_type(const Expr& expr,
     return type.kind == TypeKind::Pointer;
 }
 
+struct EnumMethodCall {
+    const EnumDecl* en = nullptr;
+    const FunctionDecl* method = nullptr;
+    const Expr* receiver = nullptr;
+    bool is_static = false;
+    TypeRef receiver_type;
+};
+
+std::optional<EnumMethodCall>
+enum_method_call(const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs,
+                 const Symbols* symbols) {
+    if (symbols == nullptr || !has_expr_callee(expr) ||
+        expr_callee(expr).front().kind != ExprKind::Member ||
+        expr_callee(expr).front().children.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& member = expr_callee(expr).front();
+    const Expr& receiver = member.children.front();
+    const EnumDecl* en = nullptr;
+    TypeRef receiver_type;
+    bool is_static = false;
+    if (receiver.kind == ExprKind::Name && !local_type_refs.contains(receiver.name)) {
+        const auto found = symbols->enums.find(receiver.name);
+        if (found != symbols->enums.end()) {
+            en = found->second;
+            is_static = true;
+            receiver_type = named_type_ref(en->name, receiver.location);
+        }
+    }
+    if (en == nullptr) {
+        receiver_type = infer_emitted_local_type_ref(receiver, local_type_refs, {}, symbols);
+        en = enum_decl_for_type(*symbols, receiver_type);
+    }
+    if (en == nullptr)
+        return std::nullopt;
+    for (const FunctionDecl& method : en->methods) {
+        const bool method_static = method.params.empty() || method.params.front().name != "self";
+        if (method.name == member.name && method_static == is_static) {
+            return EnumMethodCall{.en = en,
+                                  .method = &method,
+                                  .receiver = &receiver,
+                                  .is_static = is_static,
+                                  .receiver_type = receiver_type};
+        }
+    }
+    return std::nullopt;
+}
+
+std::string lower_resolved_enum_method_call(const Expr& expr, const EnumMethodCall& target,
+                                            const std::vector<std::string>& aliases,
+                                            const CppLocalContext& locals,
+                                            const std::map<std::string, TypeRef>& local_type_refs,
+                                            const Symbols* symbols, const CppEmitOptions& options) {
+    std::ostringstream out;
+    out << emitted_enum_method_name(*target.en, *target.method, options);
+    const std::vector<TypeRef>& type_args = expr_template_type_args(expr);
+    if (!type_args.empty()) {
+        out << '<';
+        for (size_t i = 0; i < type_args.size(); ++i) {
+            if (i > 0)
+                out << ", ";
+            out << lower_cpp_type(type_args[i], aliases, options);
+        }
+        out << '>';
+    }
+    out << '(';
+    bool emitted_arg = false;
+    if (!target.is_static) {
+        if (target.receiver_type.kind == TypeKind::Pointer)
+            out << '*';
+        out << lower_expr(*target.receiver, aliases, locals, local_type_refs, symbols, options);
+        emitted_arg = true;
+    }
+    for (const Expr& arg : expr.children) {
+        if (emitted_arg)
+            out << ", ";
+        out << lower_expr(arg, aliases, locals, local_type_refs, symbols, options);
+        emitted_arg = true;
+    }
+    out << ')';
+    return out.str();
+}
+
 std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     if (index_expr.kind == ExprKind::TupleLiteral) {
         return index_expr.children;
@@ -182,6 +266,19 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
 }
 
 } // namespace
+
+std::optional<std::string>
+lower_enum_method_call(const Expr& expr, const std::vector<std::string>& aliases,
+                       const CppLocalContext& locals,
+                       const std::map<std::string, TypeRef>& local_type_refs,
+                       const Symbols* symbols, const CppEmitOptions& options) {
+    const auto target = enum_method_call(expr, local_type_refs, symbols);
+    if (!target) {
+        return std::nullopt;
+    }
+    return lower_resolved_enum_method_call(expr, *target, aliases, locals, local_type_refs, symbols,
+                                           options);
+}
 
 bool is_builtin_template_constructor(std::string_view name) {
     static const std::vector<std::string_view> types = {"list",   "dict", "set",
@@ -536,6 +633,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals, local_type_refs, symbols, options);
+    }
+    if (const auto lowered =
+            lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {
+        return *lowered;
     }
     const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {

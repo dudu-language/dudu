@@ -237,6 +237,7 @@ class EnumDecl:
     visibility: Visibility = Visibility.Default
     range: SourceRange = SourceRange()
     identity: Option[SymbolIdentity] = None
+    methods: list[FunctionDecl] = []
 
 class ConstantDecl:
     name: str = str()

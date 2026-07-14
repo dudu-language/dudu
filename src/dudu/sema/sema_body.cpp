@@ -7,12 +7,12 @@
 #include "dudu/core/escapes.hpp"
 #include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_alloc.hpp"
 #include "dudu/sema/sema_assignment.hpp"
 #include "dudu/sema/sema_bindings.hpp"
 #include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_body_internal.hpp"
-#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
@@ -60,20 +60,18 @@ TypeRef substitute_method_self_type(const ClassDecl& klass, const TypeRef& type,
     return substitute_type_ref(type, {{"Self", generic_self_type_ref(klass, location)}});
 }
 
-TypeRef infer_binding_type(FunctionScope& scope, const Expr& expr,
-                           const SourceLocation& location) {
+TypeRef infer_binding_type(FunctionScope& scope, const Expr& expr, const SourceLocation& location) {
     if (!is_collection_literal(expr)) {
         return infer_expr_type_ast(scope, expr, &location);
     }
-    const CollectionLiteralInference inferred = infer_collection_literal_type(
-        &scope.symbols, expr, [&](const Expr& child) {
+    const CollectionLiteralInference inferred =
+        infer_collection_literal_type(&scope.symbols, expr, [&](const Expr& child) {
             const SourceLocation& child_location = diagnostic_location(location, child);
             return infer_expr_type_ast(scope, child, &child_location);
         });
     if (inferred.status != CollectionLiteralStatus::Inferred) {
-        const SourceLocation error_location = inferred.error_location.line > 0
-                                                  ? inferred.error_location
-                                                  : location;
+        const SourceLocation error_location =
+            inferred.error_location.line > 0 ? inferred.error_location : location;
         sema_fail(error_location, collection_literal_error(inferred));
     }
     return inferred.type_ref;
@@ -272,11 +270,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                               shape_display(explicit_shape) + ", got [0]");
             }
             if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
-                sema_fail(array_shape_mismatch_location(stmt.value_expr, explicit_shape,
-                                                        actual.shape),
-                          "array literal shape mismatch: expected " +
-                              shape_display(explicit_shape) + ", got " +
-                              shape_display(actual.shape));
+                sema_fail(
+                    array_shape_mismatch_location(stmt.value_expr, explicit_shape, actual.shape),
+                    "array literal shape mismatch: expected " + shape_display(explicit_shape) +
+                        ", got " + shape_display(actual.shape));
             }
         }
         const EffectiveVarType type = effective_var_type(stmt, inferred);
@@ -448,6 +445,39 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
                 const TypeRef return_type_ref = scope.return_type_ref;
                 check_block(scope, method.statements, return_type_ref, 0);
                 if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
+                    !block_guarantees_return(method.statements)) {
+                    sema_fail(method.location, "missing return in function: " + method.name);
+                }
+            });
+        }
+    }
+    for (const EnumDecl& en : module.enums) {
+        Symbols enum_symbols = with_self_type(symbols, en.name);
+        for (const FunctionDecl& method : en.methods) {
+            if (method.body_syntax_damaged)
+                continue;
+            check_body_region(diagnostics, [&] {
+                std::optional<Symbols> method_symbol_storage;
+                const Symbols* method_symbols = &enum_symbols;
+                if (!method.generic_params.empty()) {
+                    method_symbol_storage =
+                        with_generic_params(enum_symbols, method.generic_params,
+                                            generic_value_params_for_function(method));
+                    method_symbols = &*method_symbol_storage;
+                }
+                FunctionScope scope{*method_symbols};
+                copy_base_scope_state(scope, base);
+                scope.current_class = en.name;
+                const TypeRef self_type = named_type_ref(en.name, method.location);
+                const auto substitute_self = [&](const TypeRef& type) {
+                    return substitute_type_ref(type, {{"Self", self_type}});
+                };
+                scope.return_type_ref = substitute_self(function_return_type_ref(method));
+                for (const ParamDecl& param : method.params) {
+                    bind_local(scope, param.name, substitute_self(param.type_ref));
+                }
+                check_block(scope, method.statements, scope.return_type_ref, 0);
+                if (function_has_return_type(method) && !type_ref_is_void(scope.return_type_ref) &&
                     !block_guarantees_return(method.statements)) {
                     sema_fail(method.location, "missing return in function: " + method.name);
                 }

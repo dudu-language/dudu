@@ -99,6 +99,20 @@ void check_naming(const ModuleAst& module) {
                 }
             }
         }
+        for (const FunctionDecl& method : en.methods) {
+            if (is_reserved_dunder_name(method.name)) {
+                throw CompileError(method.location,
+                                   "reserved Python-style dunder method name: " + method.name);
+            }
+            if (!is_dudu_snake_case(method.name)) {
+                fail_naming(method.location, "function names must be snake_case", method.name);
+            }
+            for (const ParamDecl& param : method.params) {
+                if (!is_dudu_snake_case(param.name)) {
+                    fail_naming(param.location, "parameter names must be snake_case", param.name);
+                }
+            }
+        }
     }
     for (const ClassDecl& klass : module.classes) {
         if (!is_pascal_case(klass.name)) {

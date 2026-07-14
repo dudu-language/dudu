@@ -172,7 +172,7 @@ EnumDecl Parser::parse_enum(const Token& start, const std::vector<Decorator>& de
         fail_current("expected indented enum body");
     }
     bool can_accept_docstring = true;
-    std::vector<Decorator> value_decorators;
+    std::vector<Decorator> member_decorators;
     while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
         if (match(TokenKind::Newline)) {
             continue;
@@ -196,22 +196,32 @@ EnumDecl Parser::parse_enum(const Token& start, const std::vector<Decorator>& de
                                    "dudu.parser.misplaced_docstring");
             }
             if (match(TokenKind::At)) {
-                value_decorators.push_back(parse_decorator(previous()));
+                member_decorators.push_back(parse_decorator(previous()));
                 continue;
             }
-            en.values.push_back(parse_enum_value(value_decorators));
-            value_decorators.clear();
+            const Visibility member_visibility = parse_visibility();
+            if (match_identifier("def")) {
+                en.methods.push_back(
+                    parse_function(previous(), member_visibility, member_decorators, en.name));
+            } else {
+                if (member_visibility != Visibility::Default) {
+                    throw CompileError(current().location,
+                                       "enum variants cannot declare visibility");
+                }
+                en.values.push_back(parse_enum_value(member_decorators));
+            }
+            member_decorators.clear();
         } catch (const CompileError& error) {
             if (!recovering()) {
                 throw;
             }
             record_diagnostic(error);
-            value_decorators.clear();
+            member_decorators.clear();
             can_accept_docstring = false;
             synchronize_block_item(item_begin);
         }
     }
-    require_no_decorators(value_decorators, "enum body");
+    require_no_decorators(member_decorators, "enum body");
     consume(TokenKind::Dedent, "expected dedent after enum body");
     en.range.end = current().location;
     return en;
