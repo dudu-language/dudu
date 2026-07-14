@@ -1,6 +1,7 @@
 #include "dudu/macro/macro_worker_codegen.hpp"
 
 #include "dudu/core/source.hpp"
+#include "dudu/macro/macro_ast_bridge.hpp"
 
 #include <algorithm>
 #include <map>
@@ -22,6 +23,18 @@ std::string cpp_string_literal(std::string_view value) {
     }
     out.push_back('"');
     return out;
+}
+
+std::string byte_vector(const std::vector<std::uint8_t>& bytes) {
+    std::ostringstream out;
+    out << "std::vector<std::uint8_t>{";
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+        if (index != 0)
+            out << ", ";
+        out << static_cast<unsigned int>(bytes[index]);
+    }
+    out << "}";
+    return out.str();
 }
 
 std::string module_header(std::string module_path) {
@@ -105,11 +118,25 @@ void emit_capabilities(std::ostringstream& out, const std::vector<std::string>& 
 }
 
 void emit_catalog_entry(std::ostringstream& out, const Definition& definition) {
-    out << "    catalog.macros.push_back({.name = " << cpp_string_literal(definition.name)
+    out << "    {\n"
+        << "        MacroDescriptor descriptor{.name = " << cpp_string_literal(definition.name)
         << ", .entry_point = " << cpp_string_literal(definition.identity)
         << ", .accepted_kind = DeclarationKind::";
     const std::string kind = protocol_kind(definition.accepted_kind);
-    out << kind.substr(kind.find("::") + 2) << "});\n";
+    out << kind.substr(kind.find("::") + 2) << "};\n";
+    if (definition.attribute_schema != nullptr) {
+        const protocol::ClassDecl schema =
+            to_protocol(*definition.attribute_schema, definition.module_path);
+        out << "        descriptor.attribute_schema = decode_ClassDecl("
+            << byte_vector(protocol::encode(schema)) << ");\n";
+    }
+    out << "        descriptor.definition.file = "
+        << cpp_string_literal(definition.location.file.str()) << ";\n"
+        << "        descriptor.definition.start.line = " << definition.location.line << ";\n"
+        << "        descriptor.definition.start.column = " << definition.location.column << ";\n"
+        << "        descriptor.definition.end = descriptor.definition.start;\n"
+        << "        catalog.macros.push_back(std::move(descriptor));\n"
+        << "    }\n";
 }
 
 void emit_dispatch_entry(std::ostringstream& out, const Definition& definition, bool cacheable) {

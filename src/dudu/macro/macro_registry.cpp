@@ -77,8 +77,7 @@ std::string helper_schema_name(const Decorator& decorator) {
     for (const Expr& argument : decorator.expr.children) {
         if (argument.kind != ExprKind::NamedArg || argument.name != "attributes" ||
             argument.children.size() != 1) {
-            fail(argument.location,
-                 "@macro accepts only the named argument attributes=Schema");
+            fail(argument.location, "@macro accepts only the named argument attributes=Schema");
         }
         if (!schema.empty()) {
             fail(argument.location, "duplicate @macro attributes argument");
@@ -137,8 +136,7 @@ std::vector<const ModuleAst*> source_units(const ModuleAst& module) {
 
 std::string resolved_import_module(const ModuleAst& unit, const ImportDecl& import) {
     for (const ModuleDependency& dependency : unit.dependencies) {
-        if (dependency.kind == import.kind &&
-            dependency.import_module_path == import.module_path) {
+        if (dependency.kind == import.kind && dependency.import_module_path == import.module_path) {
             return dependency.resolved_module_path;
         }
     }
@@ -160,8 +158,8 @@ const Definition* resolve_definition(const Plan& plan, const ModuleAst& unit,
         if (import.kind == ImportKind::From) {
             const std::string exposed = import.alias.empty() ? import.imported_name : import.alias;
             if (reference == exposed) {
-                return definition_by_identity(
-                    plan, resolved_import_module(unit, import) + "." + import.imported_name);
+                return definition_by_identity(plan, resolved_import_module(unit, import) + "." +
+                                                        import.imported_name);
             }
             continue;
         }
@@ -180,10 +178,11 @@ const Definition* resolve_definition(const Plan& plan, const ModuleAst& unit,
 
 bool builtin_decorator(std::string_view name) {
     static const std::set<std::string_view> builtins = {
-        "abstract",      "align",       "constexpr",  "cuda.device", "cuda.global",
-        "cuda.host",     "extern_c",    "inline",     "operator",    "override",
-        "packed",        "section",     "shader.compute", "test",    "test.ignore",
-        "test.should_panic", "virtual", "workgroup_size"};
+        "abstract",       "align",         "constexpr",   "cuda.device",
+        "cuda.global",    "cuda.host",     "extern_c",    "inline",
+        "operator",       "override",      "packed",      "section",
+        "shader.compute", "test",          "test.ignore", "test.should_panic",
+        "virtual",        "workgroup_size"};
     return builtins.contains(name);
 }
 
@@ -199,11 +198,11 @@ std::vector<const Definition*> derive_definitions(const Plan& plan, const Module
     std::vector<const Definition*> out;
     std::set<std::string> identities;
     for (const Expr& argument : decorator.expr.children) {
-        const std::string reference = expression_path(argument, argument.location, "derive argument");
+        const std::string reference =
+            expression_path(argument, argument.location, "derive argument");
         const Definition* definition = resolve_definition(plan, unit, reference);
         if (definition == nullptr) {
-            fail(argument.location, "unknown derive macro: " + reference,
-                 "dudu.macro.unresolved");
+            fail(argument.location, "unknown derive macro: " + reference, "dudu.macro.unresolved");
         }
         if (!identities.insert(definition->identity).second) {
             fail(argument.location, "duplicate derive macro: " + reference);
@@ -241,8 +240,8 @@ bool literal_matches_type(const Expr& value, const TypeRef& type) {
 
 void validate_helper_arguments(const Definition& definition, const Decorator& decorator) {
     if (definition.attribute_schema == nullptr) {
-        fail(decorator.location, "macro '" + definition.name +
-                                     "' does not declare helper attributes");
+        fail(decorator.location,
+             "macro '" + definition.name + "' does not declare helper attributes");
     }
     if (!decorator_call_matches(decorator, definition.name) &&
         !decorator_call_matches(decorator, definition.identity)) {
@@ -257,12 +256,12 @@ void validate_helper_arguments(const Definition& definition, const Decorator& de
         }
         const FieldDecl* field = schema_field(*definition.attribute_schema, argument.name);
         if (field == nullptr) {
-            fail(argument.location, "unknown " + definition.name + " attribute option: " +
-                                        argument.name);
+            fail(argument.location,
+                 "unknown " + definition.name + " attribute option: " + argument.name);
         }
         if (!supplied.insert(argument.name).second) {
-            fail(argument.location, "duplicate " + definition.name + " attribute option: " +
-                                        argument.name);
+            fail(argument.location,
+                 "duplicate " + definition.name + " attribute option: " + argument.name);
         }
         if (!literal_matches_type(argument.children.front(), field->type_ref)) {
             fail(argument.location, "wrong value type for " + definition.name + "." + field->name);
@@ -270,8 +269,8 @@ void validate_helper_arguments(const Definition& definition, const Decorator& de
     }
     for (const FieldDecl& field : definition.attribute_schema->fields) {
         if (!expr_present(field.value_expr) && !supplied.contains(field.name)) {
-            fail(decorator.location, "missing required " + definition.name +
-                                         " attribute option: " + field.name);
+            fail(decorator.location,
+                 "missing required " + definition.name + " attribute option: " + field.name);
         }
     }
 }
@@ -311,52 +310,53 @@ Plan build_plan(const ModuleAst& module) {
         }
     }
 
-    const auto collect_decorators = [&](const ModuleAst& unit, const std::vector<Decorator>& decorators,
-                                        TargetKind kind, const std::string& name,
-                                        std::vector<Invocation>& invocations) {
-        std::vector<const Definition*> active;
-        for (const Decorator& decorator : decorators) {
-            if (decorator_matches(decorator, "derive")) {
-                for (const Definition* definition : derive_definitions(plan, unit, decorator)) {
-                    if (!target_accepts(definition->accepted_kind, kind)) {
-                        fail(decorator.location, "macro '" + definition->name + "' accepts " +
-                                                     std::string(target_kind_name(
-                                                         definition->accepted_kind)) +
-                                                     ", not " + std::string(target_kind_name(kind)));
+    const auto collect_decorators =
+        [&](const ModuleAst& unit, const std::vector<Decorator>& decorators, TargetKind kind,
+            const std::string& name, std::vector<Invocation>& invocations) {
+            std::vector<const Definition*> active;
+            for (const Decorator& decorator : decorators) {
+                if (decorator_matches(decorator, "derive")) {
+                    for (const Definition* definition : derive_definitions(plan, unit, decorator)) {
+                        if (!target_accepts(definition->accepted_kind, kind)) {
+                            fail(decorator.location,
+                                 "macro '" + definition->name + "' accepts " +
+                                     std::string(target_kind_name(definition->accepted_kind)) +
+                                     ", not " + std::string(target_kind_name(kind)));
+                        }
+                        invocations.push_back({.macro = definition,
+                                               .decorator = &decorator,
+                                               .target_module = unit.module_path,
+                                               .target_name = name,
+                                               .target_kind = kind,
+                                               .derive = true,
+                                               .helper_attributes = {}});
+                        active.push_back(definition);
                     }
-                    invocations.push_back({.macro = definition,
-                                           .decorator = &decorator,
-                                           .target_module = unit.module_path,
-                                           .target_name = name,
-                                           .target_kind = kind,
-                                           .derive = true,
-                                           .helper_attributes = {}});
-                    active.push_back(definition);
+                    continue;
                 }
-                continue;
+                const std::string reference = decorator_name(decorator);
+                if (builtin_decorator(reference) || reference == "macro") {
+                    continue;
+                }
+                const Definition* definition = resolve_definition(plan, unit, reference);
+                if (definition == nullptr) {
+                    continue;
+                }
+                if (!target_accepts(definition->accepted_kind, kind)) {
+                    continue;
+                }
+                validate_helper_arguments(*definition, decorator);
+                invocations.push_back({.macro = definition,
+                                       .decorator = &decorator,
+                                       .target_module = unit.module_path,
+                                       .target_name = name,
+                                       .target_kind = kind,
+                                       .derive = false,
+                                       .helper_attributes = {}});
+                active.push_back(definition);
             }
-            const std::string reference = decorator_name(decorator);
-            if (builtin_decorator(reference) || reference == "macro") {
-                continue;
-            }
-            const Definition* definition = resolve_definition(plan, unit, reference);
-            if (definition == nullptr) {
-                continue;
-            }
-            if (!target_accepts(definition->accepted_kind, kind)) {
-                continue;
-            }
-            invocations.push_back({.macro = definition,
-                                   .decorator = &decorator,
-                                   .target_module = unit.module_path,
-                                   .target_name = name,
-                                   .target_kind = kind,
-                                   .derive = false,
-                                   .helper_attributes = {}});
-            active.push_back(definition);
-        }
-        return active;
-    };
+            return active;
+        };
 
     const auto collect_helpers = [&](const ModuleAst& unit,
                                      const std::vector<const Definition*>& active,

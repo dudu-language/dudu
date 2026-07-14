@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from macro_ast_dudu_api import DUDU_API, DUDU_CLASS_METHODS
+
 
 PRIMITIVES = {
     "bool": "bool",
@@ -303,55 +305,13 @@ def generate_dudu(schema: dict[str, Any]) -> str:
             lines.append(
                 f"    {field['name']}: {dudu_type(field)} = {dudu_default(field, first_values)}"
             )
+        methods = DUDU_CLASS_METHODS.get(struct["name"])
+        if methods:
+            lines.append("")
+            lines.extend(methods.splitlines())
         lines.append("")
-    lines.extend(
-        [
-            "def named_type(name: str) -> TypeRef:",
-            "    return TypeRef(kind=TypeKind.Named, name=name)",
-            "",
-            "",
-            "def generic_type(name: str, arguments: list[TypeRef]) -> TypeRef:",
-            "    return TypeRef(kind=TypeKind.Template, name=name, children=arguments)",
-            "",
-            "",
-            "def name_expression(name: str) -> Expression:",
-            "    return Expression(kind=ExpressionKind.Name, name=name)",
-            "",
-            "",
-            "def string_expression(value: str) -> Expression:",
-            "    return Expression(kind=ExpressionKind.StringLiteral, value=value)",
-            "",
-            "",
-            "def call_expression(callee: Expression, arguments: list[Expression]) -> Expression:",
-            "    return Expression(kind=ExpressionKind.Call, children=arguments, callee=[callee])",
-            "",
-            "",
-            "def function_declaration(value: FunctionDecl) -> Declaration:",
-            "    return Declaration(kind=DeclarationKind.Function, function_decl=value)",
-            "",
-            "",
-            "def field_declaration(value: FieldDecl) -> Declaration:",
-            "    return Declaration(kind=DeclarationKind.Field, field_decl=value)",
-            "",
-            "",
-            "def expansion() -> Expansion:",
-            "    return Expansion()",
-            "",
-            "",
-            "def generated(declaration: Declaration, origin: SourceOrigin) -> GeneratedDeclaration:",
-            "    return GeneratedDeclaration(declaration=declaration, origin=origin)",
-            "",
-            "",
-            "def error(location: SourceRange, message: str) -> Diagnostic:",
-            "    return Diagnostic(",
-            "        severity=DiagnosticSeverity.Error,",
-            '        code="dudu.macro",',
-            "        message=message,",
-            "        range=location,",
-            "    )",
-            "",
-        ]
-    )
+    lines.extend(DUDU_API.strip().splitlines())
+    lines.append("")
     return "\n".join(lines)
 
 

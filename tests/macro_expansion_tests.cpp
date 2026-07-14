@@ -55,27 +55,30 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     write_file(dir / "src/macros.dd",
                "import dudu.ast as ast\n"
                "\n"
-               "@macro\n"
+               "class DebugOptions:\n"
+               "    score: str = \"7\"\n"
+               "\n"
+               "@macro(attributes=DebugOptions)\n"
                "def Debug(item: ast.ClassDecl) -> ast.Expansion:\n"
-               "    return_stmt = ast.Statement(\n"
-               "        kind=ast.StatementKind.Return,\n"
-               "        value=ast.Expression(kind=ast.ExpressionKind.IntLiteral, value=\"7\"),\n"
-               "    )\n"
+               "    score: str = \"7\"\n"
+               "    for field in item.fields:\n"
+               "        options = ast.find_attribute(field.attributes, \"Debug\")\n"
+               "        if options.has_value():\n"
+               "            score = ast.string_argument(options.value(), \"score\", score)\n"
+               "    return_stmt = ast.return_statement(ast.int_expression(score))\n"
                "    method = ast.FunctionDecl(\n"
                "        name=\"debug_score\",\n"
                "        return_type=ast.named_type(\"i32\"),\n"
                "        body=[return_stmt],\n"
                "    )\n"
-               "    declaration = ast.Declaration(\n"
-               "        kind=ast.DeclarationKind.Function,\n"
-               "        function_decl=method,\n"
-               "    )\n"
-               "    generated = ast.GeneratedDeclaration(declaration=declaration)\n"
-               "    return ast.Expansion(members=[generated])\n");
+               "    out = ast.expansion()\n"
+               "    out.add_method(method)\n"
+               "    return out\n");
     write_file(dir / "src/main.dd", "from macros import Debug\n"
                                     "\n"
                                     "@derive(Debug)\n"
                                     "class Player:\n"
+                                    "    @Debug(score=\"9\")\n"
                                     "    hp: i32\n"
                                     "\n"
                                     "def score(player: Player) -> i32:\n"
@@ -100,6 +103,9 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     }));
     assert(std::any_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
         return artifact.content.find("debug_score") != std::string::npos;
+    }));
+    assert(std::any_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
+        return artifact.content.find("return 9") != std::string::npos;
     }));
 
     const dudu::ProjectIndex second = dudu::ProjectIndex::load(options);
@@ -257,30 +263,29 @@ void test_enum_derive_generates_a_callable_method() {
     write_file(dir / "dudu.toml", "name = \"macro_enum_derive_fixture\"\n"
                                   "entry = \"src/main.dd\"\n"
                                   "build_dir = \"build\"\n");
-    write_file(
-        dir / "src/macros.dd",
-        "import dudu.ast as ast\n"
-        "\n"
-        "@macro\n"
-        "def StringEnum(item: ast.EnumDecl) -> ast.Expansion:\n"
-        "    self_type = ast.TypeRef(\n"
-        "        kind=ast.TypeKind.Reference,\n"
-        "        children=[ast.named_type(\"Self\")],\n"
-        "    )\n"
-        "    self_param = ast.Parameter(name=\"self\", type=self_type)\n"
-        "    value = ast.Expression(\n"
-        "        kind=ast.ExpressionKind.StringLiteral, value=item.name,\n"
-        "    )\n"
-        "    body = ast.Statement(kind=ast.StatementKind.Return, value=value)\n"
-        "    method = ast.FunctionDecl(\n"
-        "        name=\"enum_name\",\n"
-        "        parameters=[self_param],\n"
-        "        return_type=ast.named_type(\"str\"),\n"
-        "        body=[body],\n"
-        "    )\n"
-        "    return ast.Expansion(\n"
-        "        members=[ast.generated(ast.function_declaration(method), ast.SourceOrigin())],\n"
-        "    )\n");
+    write_file(dir / "src/macros.dd",
+               "import dudu.ast as ast\n"
+               "\n"
+               "@macro\n"
+               "def StringEnum(item: ast.EnumDecl) -> ast.Expansion:\n"
+               "    self_type = ast.TypeRef(\n"
+               "        kind=ast.TypeKind.Reference,\n"
+               "        children=[ast.named_type(\"Self\")],\n"
+               "    )\n"
+               "    self_param = ast.Parameter(name=\"self\", type=self_type)\n"
+               "    value = ast.Expression(\n"
+               "        kind=ast.ExpressionKind.StringLiteral, value=item.name,\n"
+               "    )\n"
+               "    body = ast.Statement(kind=ast.StatementKind.Return, value=value)\n"
+               "    method = ast.FunctionDecl(\n"
+               "        name=\"enum_name\",\n"
+               "        parameters=[self_param],\n"
+               "        return_type=ast.named_type(\"str\"),\n"
+               "        body=[body],\n"
+               "    )\n"
+               "    return ast.Expansion(\n"
+               "        members=[ast.generated(ast.function_declaration(method))],\n"
+               "    )\n");
     write_file(dir / "src/main.dd", "from macros import StringEnum\n"
                                     "\n"
                                     "@derive(StringEnum)\n"

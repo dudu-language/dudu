@@ -103,14 +103,13 @@ void test_public_sdk_resolves_from_standard_module_root() {
 }
 
 void test_macro_registry_uses_ordinary_import_resolution() {
-    const std::filesystem::path dir = make_macro_project(
-        "from macros import Json as Encode\n"
-        "from macros import Debug\n"
-        "\n"
-        "@derive(Encode, Debug)\n"
-        "class Player:\n"
-        "    @Encode(name=\"identifier\")\n"
-        "    id: u64\n");
+    const std::filesystem::path dir = make_macro_project("from macros import Json as Encode\n"
+                                                         "from macros import Debug\n"
+                                                         "\n"
+                                                         "@derive(Encode, Debug)\n"
+                                                         "class Player:\n"
+                                                         "    @Encode(name=\"identifier\")\n"
+                                                         "    id: u64\n");
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
     const dudu::macro::Plan plan = dudu::macro::build_plan(module);
     assert(plan.definitions.size() == 2);
@@ -125,13 +124,29 @@ void test_macro_registry_uses_ordinary_import_resolution() {
 }
 
 void test_macro_registry_rejects_bad_helper_attribute() {
-    const std::filesystem::path dir = make_macro_project(
-        "from macros import Json\n"
-        "\n"
-        "@derive(Json)\n"
-        "class Player:\n"
-        "    @Json(unknown=True)\n"
-        "    id: u64\n");
+    const std::filesystem::path dir = make_macro_project("from macros import Json\n"
+                                                         "\n"
+                                                         "@derive(Json)\n"
+                                                         "class Player:\n"
+                                                         "    @Json(unknown=True)\n"
+                                                         "    id: u64\n");
+    bool failed = false;
+    try {
+        const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+        (void)dudu::macro::build_plan(module);
+    } catch (const dudu::CompileError& error) {
+        failed = std::string(error.what()).find("unknown Json attribute option: unknown") !=
+                 std::string::npos;
+    }
+    assert(failed);
+}
+
+void test_macro_registry_validates_attached_macro_options() {
+    const std::filesystem::path dir = make_macro_project("from macros import Json\n"
+                                                         "\n"
+                                                         "@Json(unknown=True)\n"
+                                                         "class Player:\n"
+                                                         "    id: u64\n");
     bool failed = false;
     try {
         const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
@@ -144,19 +159,17 @@ void test_macro_registry_rejects_bad_helper_attribute() {
 }
 
 void test_macro_registry_rejects_wrong_target_kind() {
-    const std::filesystem::path dir = make_macro_project(
-        "from macros import Json\n"
-        "\n"
-        "@derive(Json)\n"
-        "def render() -> i32:\n"
-        "    return 0\n");
+    const std::filesystem::path dir = make_macro_project("from macros import Json\n"
+                                                         "\n"
+                                                         "@derive(Json)\n"
+                                                         "def render() -> i32:\n"
+                                                         "    return 0\n");
     bool failed = false;
     try {
         const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
         (void)dudu::macro::build_plan(module);
     } catch (const dudu::CompileError& error) {
-        failed = std::string(error.what()).find("accepts class, not function") !=
-                 std::string::npos;
+        failed = std::string(error.what()).find("accepts class, not function") != std::string::npos;
     }
     assert(failed);
 }
@@ -168,6 +181,7 @@ int main() {
     test_public_sdk_resolves_from_standard_module_root();
     test_macro_registry_uses_ordinary_import_resolution();
     test_macro_registry_rejects_bad_helper_attribute();
+    test_macro_registry_validates_attached_macro_options();
     test_macro_registry_rejects_wrong_target_kind();
     std::cout << "macro syntax tests passed\n";
     return 0;
