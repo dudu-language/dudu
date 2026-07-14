@@ -3,6 +3,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/macro/macro_ast_bridge.hpp"
+#include "dudu/macro/macro_diagnostic_bridge.hpp"
 #include "dudu/macro/macro_expansion_cache.hpp"
 #include "dudu/macro/macro_expansion_internal.hpp"
 #include "dudu/macro/macro_hygiene.hpp"
@@ -267,7 +268,16 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         if (response) {
             ++report.expansion_cache_hits;
         } else {
-            response = worker_sessions().expand(binary, request, options.request_timeout);
+            try {
+                response = worker_sessions().expand(binary, request, options.request_timeout);
+            } catch (const WorkerProcessError& error) {
+                throw compile_error_from_worker(error.detail(), request.invocation,
+                                                invocation.macro->name);
+            } catch (const std::exception& error) {
+                const p::WorkerError detail{
+                    .code = "dudu.macro.worker", .message = error.what(), .diagnostics = {}};
+                throw compile_error_from_worker(detail, request.invocation, invocation.macro->name);
+            }
             if (response->cacheable)
                 write_expansion_cache(cache_root / "expansions", cache_key, *response);
         }

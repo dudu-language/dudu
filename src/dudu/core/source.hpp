@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 
@@ -97,8 +98,10 @@ struct SourcePosition {
     int column = 1;
 
     SourcePosition() = default;
-    SourcePosition(int line_in, int column_in) : line(line_in), column(column_in) {}
-    SourcePosition(SourceLocation location) : line(location.line), column(location.column) {}
+    SourcePosition(int line_in, int column_in) : line(line_in), column(column_in) {
+    }
+    SourcePosition(SourceLocation location) : line(location.line), column(location.column) {
+    }
 
     SourcePosition& operator=(SourceLocation location) {
         line = location.line;
@@ -114,11 +117,18 @@ struct SourceRange {
 
 SourceLocation range_end_location(const SourceRange& range);
 
+struct CompileNote {
+    SourceLocation location;
+    std::string message;
+};
+
 class CompileError : public std::runtime_error {
   public:
     CompileError(SourceLocation location, const std::string& message);
     CompileError(SourceLocation location, const std::string& message, std::string code,
                  std::string data_name = {});
+    CompileError(SourceLocation location, const std::string& message, std::string code,
+                 std::string data_name, std::vector<CompileNote> notes);
 
     const SourceLocation& location() const {
         return location_;
@@ -132,10 +142,15 @@ class CompileError : public std::runtime_error {
         return data_name_;
     }
 
+    const std::vector<CompileNote>& notes() const {
+        return notes_;
+    }
+
   private:
     SourceLocation location_;
     std::string code_;
     std::string data_name_;
+    std::vector<CompileNote> notes_;
 };
 
 std::string format_location(const SourceLocation& location);

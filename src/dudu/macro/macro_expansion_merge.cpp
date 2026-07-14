@@ -1,6 +1,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/macro/macro_ast_bridge.hpp"
+#include "dudu/macro/macro_diagnostic_bridge.hpp"
 #include "dudu/macro/macro_expansion_internal.hpp"
 
 #include <algorithm>
@@ -251,9 +252,8 @@ void merge_expansions(ModuleAst& module, const Plan& plan,
         ModuleAst& unit = target_unit(module, source);
         for (const p::Diagnostic& diagnostic : source.expansion.diagnostics) {
             if (diagnostic.severity == p::DiagnosticSeverity::Error) {
-                const SourceRange range = from_protocol(diagnostic.range, source.invocation.start);
-                throw CompileError(range.start, diagnostic.message,
-                                   diagnostic.code.empty() ? "dudu.macro" : diagnostic.code);
+                throw compile_error_from_macro_diagnostic(diagnostic,
+                                                          to_protocol(source.invocation));
             }
         }
         std::set<std::string> siblings = module_names(unit);

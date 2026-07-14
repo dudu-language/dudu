@@ -1,6 +1,7 @@
 #include "dudu/frontend/cli_options.hpp"
 #include "dudu/lsp/language_server_diagnostics.hpp"
 #include "dudu/lsp/language_server_macro_diagnostics.hpp"
+#include "dudu/macro/macro_diagnostic_bridge.hpp"
 #include "dudu/macro/macro_expansion_render.hpp"
 
 #include <cassert>
@@ -99,11 +100,38 @@ void test_macro_diagnostics_reach_lsp_with_related_notes() {
     assert(json.find("field declared here") != std::string::npos);
 }
 
+void test_macro_errors_preserve_nested_notes() {
+    namespace p = dudu::macro::protocol;
+    p::SourceRange invocation;
+    invocation.file = "src/main.dd";
+    invocation.start.line = 3;
+    invocation.start.column = 1;
+    p::Diagnostic note;
+    note.severity = p::DiagnosticSeverity::Note;
+    note.message = "invalid field declared here";
+    note.range.file = "src/main.dd";
+    note.range.start.line = 9;
+    note.range.start.column = 5;
+    p::Diagnostic error;
+    error.severity = p::DiagnosticSeverity::Error;
+    error.code = "json.field";
+    error.message = "field cannot be serialized";
+    error.notes.push_back(note);
+
+    const dudu::CompileError compile_error =
+        dudu::macro::compile_error_from_macro_diagnostic(error, invocation);
+    assert(compile_error.code() == "json.field");
+    assert(compile_error.location().line == 3);
+    assert(compile_error.notes().size() == 1);
+    assert(compile_error.notes().front().location.line == 9);
+}
+
 } // namespace
 
 int main() {
     test_render_filter_diagnostics_and_origins();
     test_expand_cli_options();
     test_macro_diagnostics_reach_lsp_with_related_notes();
+    test_macro_errors_preserve_nested_notes();
     return 0;
 }

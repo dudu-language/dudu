@@ -3,9 +3,9 @@
 #include <array>
 #include <cstdint>
 #include <deque>
-#include <stdexcept>
 #include <mutex>
 #include <sstream>
+#include <stdexcept>
 #include <unordered_map>
 #include <utility>
 
@@ -386,6 +386,13 @@ CompileError::CompileError(SourceLocation location, const std::string& message, 
                            std::string data_name)
     : std::runtime_error(format_location(location) + ": " + message),
       location_(std::move(location)), code_(std::move(code)), data_name_(std::move(data_name)) {
+}
+
+CompileError::CompileError(SourceLocation location, const std::string& message, std::string code,
+                           std::string data_name, std::vector<CompileNote> notes)
+    : std::runtime_error(format_location(location) + ": " + message),
+      location_(std::move(location)), code_(std::move(code)), data_name_(std::move(data_name)),
+      notes_(std::move(notes)) {
 }
 
 } // namespace dudu

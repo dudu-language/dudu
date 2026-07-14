@@ -100,12 +100,11 @@ wire::Frame read_frame(int fd, Clock::time_point deadline, const wire::DecodeLim
     return wire::decode_frame(bytes, limits);
 }
 
-std::string worker_error_message(const wire::Frame& response, const wire::DecodeLimits& limits) {
-    const protocol::WorkerError error = protocol::decode_WorkerError(response.payload, limits);
-    return error.code + ": " + error.message;
-}
-
 } // namespace
+
+WorkerProcessError::WorkerProcessError(protocol::WorkerError error)
+    : std::runtime_error(error.code + ": " + error.message), detail_(std::move(error)) {
+}
 
 WorkerProcess::WorkerProcess(int child_pid, int write_fd, int read_fd, WorkerProcessOptions options)
     : child_pid_(child_pid), write_fd_(write_fd), read_fd_(read_fd), options_(options) {
@@ -208,7 +207,8 @@ wire::Frame WorkerProcess::request(protocol::MessageKind kind, std::vector<std::
     }
     if (static_cast<protocol::MessageKind>(response.message_kind) ==
         protocol::MessageKind::WorkerError) {
-        throw std::runtime_error(worker_error_message(response, options_.decode_limits));
+        throw WorkerProcessError(
+            protocol::decode_WorkerError(response.payload, options_.decode_limits));
     }
     return response;
 }

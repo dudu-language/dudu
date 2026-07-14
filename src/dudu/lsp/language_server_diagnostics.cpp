@@ -63,14 +63,18 @@ Diagnostic parser_diagnostic(const ParseDiagnostic& diagnostic) {
 }
 
 Diagnostic compile_diagnostic(const CompileError& error) {
-    return {.location = error.location(),
-            .message = error.what(),
-            .source = diagnostic_source(error.code()),
-            .severity = 1,
-            .code = error.code(),
-            .data_name = error.data_name(),
-            .fix_range = std::nullopt,
-            .related_information = {}};
+    Diagnostic diagnostic{.location = error.location(),
+                          .message = error.what(),
+                          .source = diagnostic_source(error.code()),
+                          .severity = 1,
+                          .code = error.code(),
+                          .data_name = error.data_name(),
+                          .fix_range = std::nullopt,
+                          .related_information = {}};
+    for (const CompileNote& note : error.notes())
+        diagnostic.related_information.push_back(
+            {.location = note.location, .message = note.message});
+    return diagnostic;
 }
 
 bool location_belongs_to_document(const SourceLocation& location, const Document& doc) {

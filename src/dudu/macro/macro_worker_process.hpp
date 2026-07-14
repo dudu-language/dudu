@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,18 @@ struct WorkerProcessOptions {
     std::chrono::milliseconds request_timeout{5000};
     wire::DecodeLimits decode_limits{};
     std::filesystem::path working_directory;
+};
+
+class WorkerProcessError : public std::runtime_error {
+  public:
+    explicit WorkerProcessError(protocol::WorkerError error);
+
+    const protocol::WorkerError& detail() const {
+        return detail_;
+    }
+
+  private:
+    protocol::WorkerError detail_;
 };
 
 class WorkerProcess {

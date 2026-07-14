@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -10,13 +11,14 @@ namespace {
 int run_worker() {
     using namespace dudu::macro;
     using namespace dudu::macro::protocol;
-    MacroCatalog catalog = {
-        .package = "process-test",
-        .binary_identity = "process-test-v1",
-        .macros = {{.name = "Echo",
-                    .entry_point = "fixture.Echo",
-                    .accepted_kind = DeclarationKind::Class}}};
+    MacroCatalog catalog = {.package = "process-test",
+                            .binary_identity = "process-test-v1",
+                            .macros = {{.name = "Echo",
+                                        .entry_point = "fixture.Echo",
+                                        .accepted_kind = DeclarationKind::Class}}};
     return serve_worker(catalog, [](const ExpansionRequest& request) {
+        if (request.macro_name == "fixture.Fail")
+            throw std::runtime_error("fixture failed");
         Expansion expansion;
         expansion.diagnostics.push_back({.severity = DiagnosticSeverity::Note,
                                          .code = "test.echo",
@@ -36,15 +38,23 @@ void test_persistent_worker(const std::filesystem::path& self) {
     assert(catalog.package == "process-test");
     assert(catalog.macros.size() == 1);
 
-    ExpansionRequest request = {.macro_name = "fixture.Echo",
-                                .declaration = {},
-                                .invocation = {},
-                                .compile_values = {}};
+    ExpansionRequest request = {
+        .macro_name = "fixture.Echo", .declaration = {}, .invocation = {}, .compile_values = {}};
     const ExpansionResponse first = worker.expand(request);
     const ExpansionResponse second = worker.expand(request);
     assert(first.cacheable);
     assert(first.expansion.diagnostics.front().message == "fixture.Echo");
     assert(second.expansion.diagnostics.front().message == "fixture.Echo");
+    request.macro_name = "fixture.Fail";
+    bool failed = false;
+    try {
+        (void)worker.expand(request);
+    } catch (const WorkerProcessError& error) {
+        failed = true;
+        assert(error.detail().code == "dudu.macro.worker");
+        assert(error.detail().message == "fixture failed");
+    }
+    assert(failed);
     assert(worker.process_id() == child);
     worker.shutdown();
     assert(!worker.running());
