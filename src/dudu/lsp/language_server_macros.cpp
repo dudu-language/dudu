@@ -5,10 +5,12 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/macro/macro_ast_bridge.hpp"
 #include "dudu/project/project_index.hpp"
 
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -145,6 +147,115 @@ const MacroDefinition* resolve(const ProjectIndex& index, const ModuleAst& curre
     return nullptr;
 }
 
+const MacroDefinition* definition_for_identity(const ProjectIndex& index,
+                                               std::string_view identity) {
+    return by_identity(index, identity);
+}
+
+bool same_source_file(const SourceLocation& location, const std::filesystem::path& path) {
+    if (location.file.empty())
+        return false;
+    return same_path(std::filesystem::path(location.file.str()), path);
+}
+
+bool position_on_range(const SourceRange& range, const LspPosition& position) {
+    if (range.start.line <= 0 || range.start.column <= 0 || range.end.line <= 0 ||
+        range.end.column <= 0)
+        return false;
+    const int line = position.line + 1;
+    const int column = position.character + 1;
+    if (line < range.start.line || line > range.end.line)
+        return false;
+    if (line == range.start.line && column < range.start.column)
+        return false;
+    return line != range.end.line || column <= range.end.column;
+}
+
+SourceRange source_range(const macro::protocol::SourceRange& range) {
+    return macro::from_protocol(range);
+}
+
+void add_reference(std::vector<ReferenceLocation>& out, std::set<std::pair<int, int>>& seen,
+                   const Document& document, const SourceLocation& location,
+                   std::string_view text) {
+    if (text.empty() || location.line <= 0 || location.column <= 0 ||
+        !seen.insert({location.line, location.column}).second)
+        return;
+    SourceRange range{.start = location, .end = location};
+    range.end.column += static_cast<int>(text.size());
+    out.push_back({.uri = uri_for_location(location, document),
+                   .range = range_json(range),
+                   .source_range = range});
+}
+
+template <typename Visit>
+void visit_decorator_macro_references(const Decorator& decorator, Visit&& visit) {
+    const Expr& expression = decorator.expr;
+    const Expr* callee = &expression;
+    if ((expression.kind == ExprKind::Call || expression.kind == ExprKind::TemplateCall) &&
+        has_expr_callee(expression)) {
+        callee = &expr_callee(expression).front();
+    }
+    const std::optional<ExprPath> callee_path = expr_path_from_expr(*callee);
+    if (!callee_path || callee_path->segments.empty())
+        return;
+    const std::string reference = render_expr_path(*callee_path);
+    if (reference == "derive" && expression.kind == ExprKind::Call) {
+        for (const Expr& argument : expression.children) {
+            const std::optional<ExprPath> path = expr_path_from_expr(argument);
+            if (path && !path->segments.empty())
+                visit(render_expr_path(*path), path->segments.back());
+        }
+        return;
+    }
+    visit(reference, callee_path->segments.back());
+}
+
+template <typename Declarations, typename Decorators, typename Visit>
+void visit_declaration_decorators(const Declarations& declarations, Decorators decorators,
+                                  Visit&& visit) {
+    for (const auto& declaration : declarations) {
+        for (const Decorator& decorator : decorators(declaration))
+            visit_decorator_macro_references(decorator, visit);
+    }
+}
+
+template <typename Visit> void visit_module_macro_references(const ModuleAst& module, Visit visit) {
+    const auto decorators = [&](const auto& declaration) -> const auto& {
+        return declaration.decorators;
+    };
+    visit_declaration_decorators(module.classes, decorators, visit);
+    for (const ClassDecl& klass : module.classes) {
+        visit_declaration_decorators(klass.fields, decorators, visit);
+        visit_declaration_decorators(klass.constants, decorators, visit);
+        visit_declaration_decorators(klass.static_fields, decorators, visit);
+        visit_declaration_decorators(klass.methods, decorators, visit);
+    }
+    visit_declaration_decorators(module.enums, decorators, visit);
+    for (const EnumDecl& enumeration : module.enums) {
+        visit_declaration_decorators(enumeration.values, decorators, visit);
+        visit_declaration_decorators(enumeration.methods, decorators, visit);
+    }
+    visit_declaration_decorators(module.functions, decorators, visit);
+    visit_declaration_decorators(module.constants, decorators, visit);
+}
+
+const GeneratedDeclarationOrigin* generated_origin(const ModuleAst& module,
+                                                   std::string_view reference) {
+    const size_t final_dot = reference.rfind('.');
+    const std::string_view name =
+        final_dot == std::string_view::npos ? reference : reference.substr(final_dot + 1);
+    const GeneratedDeclarationOrigin* match = nullptr;
+    for (const GeneratedDeclarationOrigin& origin : module.generated_origins) {
+        if (origin.name != name)
+            continue;
+        if (match != nullptr)
+            return nullptr;
+        match = &origin;
+    }
+    return match;
+}
+
 SourceLocation source_location(const macro::protocol::SourceRange& range) {
     return {.file = SourceFileName(range.file),
             .line = static_cast<int>(range.start.line),
@@ -264,6 +375,135 @@ std::optional<MacroEditorCall> macro_call_for_reference(const ProjectIndex& inde
     }
     call.signature += ")";
     return call;
+}
+
+std::optional<MacroReferenceTarget>
+macro_reference_target_at(const ProjectIndex& index, const ModuleAst& current, const Json* params) {
+    if (const std::optional<MacroEditorSelection> selected = macro_selection_at(current, params)) {
+        if (const MacroDefinition* definition = resolve(index, current, selected->reference))
+            return MacroReferenceTarget{.identity = definition->identity, .name = definition->name};
+    }
+    if (params == nullptr)
+        return std::nullopt;
+    const LspPosition position = lsp_position(params);
+    for (const MacroDefinition& definition : index.macro_report().definitions) {
+        const SourceRange range = source_range(definition.location);
+        if (same_source_file(range.start, current.source_path) &&
+            position_on_range(range, position))
+            return MacroReferenceTarget{.identity = definition.identity, .name = definition.name};
+    }
+    for (const ImportDecl& import : current.imports) {
+        if (import.kind != ImportKind::From)
+            continue;
+        const MacroDefinition* definition = resolve(index, current, bound_import_name(import));
+        if (definition == nullptr)
+            continue;
+        if (position_on_range(import.imported_name_range, position) ||
+            (!import.alias.empty() && position_on_range(import.alias_range, position))) {
+            return MacroReferenceTarget{.identity = definition->identity, .name = definition->name};
+        }
+    }
+    return std::nullopt;
+}
+
+std::vector<ReferenceLocation> macro_reference_locations(const ProjectIndex& index,
+                                                         const ModuleAst& current,
+                                                         const Document& document,
+                                                         std::string_view identity) {
+    std::vector<ReferenceLocation> out;
+    std::set<std::pair<int, int>> seen;
+    const MacroDefinition* target = definition_for_identity(index, identity);
+    if (target == nullptr)
+        return out;
+    const SourceRange definition_range = source_range(target->location);
+    if (same_source_file(definition_range.start, document.path))
+        add_reference(out, seen, document, definition_range.start, target->name);
+    for (const ImportDecl& import : current.imports) {
+        if (import.kind != ImportKind::From)
+            continue;
+        const MacroDefinition* imported = resolve(index, current, bound_import_name(import));
+        if (imported == nullptr || imported->identity != identity)
+            continue;
+        add_reference(out, seen, document, import.imported_name_range.start, import.imported_name);
+        if (!import.alias.empty())
+            add_reference(out, seen, document, import.alias_range.start, import.alias);
+    }
+    visit_module_macro_references(
+        current, [&](const std::string& reference, const ExprPathSegment& segment) {
+            const MacroDefinition* referenced = resolve(index, current, reference);
+            if (referenced != nullptr && referenced->identity == identity)
+                add_reference(out, seen, document, segment.location, segment.text);
+        });
+    return out;
+}
+
+Symbol with_macro_generated_origin(const ModuleAst& module, std::string_view reference,
+                                   Symbol symbol) {
+    const GeneratedDeclarationOrigin* origin = generated_origin(module, reference);
+    if (origin == nullptr)
+        return symbol;
+    if (!symbol.doc_comment.empty())
+        symbol.doc_comment += "\n\n";
+    symbol.doc_comment +=
+        "Generated by `@" + origin->macro_name + "` (`" + origin->macro_identity + "`).";
+    return symbol;
+}
+
+std::optional<Symbol> macro_generated_symbol_for_reference(const ModuleAst& module,
+                                                           std::string_view reference) {
+    const GeneratedDeclarationOrigin* origin = generated_origin(module, reference);
+    if (origin == nullptr)
+        return std::nullopt;
+    const auto function_symbol = [&](const FunctionDecl& function, int kind) {
+        return with_macro_generated_origin(module, reference,
+                                           Symbol{.name = function.name,
+                                                  .detail = function_detail(function),
+                                                  .location = function.location,
+                                                  .kind = kind,
+                                                  .native_identity_key = std::nullopt,
+                                                  .doc_comment = function.doc_comment});
+    };
+    if (origin->owner.empty()) {
+        for (const FunctionDecl& function : module.functions) {
+            if (function.name == origin->name)
+                return function_symbol(function, lsp_symbol_kind::Function);
+        }
+    }
+    for (const ClassDecl& klass : module.classes) {
+        if (klass.name != origin->owner)
+            continue;
+        for (const FunctionDecl& method : klass.methods) {
+            if (method.name == origin->name)
+                return function_symbol(method, lsp_symbol_kind::Method);
+        }
+        for (const FieldDecl& field : klass.fields) {
+            if (field.name == origin->name) {
+                return with_macro_generated_origin(
+                    module, reference,
+                    Symbol{.name = field.name,
+                           .detail = field.name + ": " + type_ref_text(field.type_ref),
+                           .location = field.location,
+                           .kind = lsp_symbol_kind::Field,
+                           .native_identity_key = std::nullopt,
+                           .doc_comment = field.doc_comment});
+            }
+        }
+    }
+    for (const EnumDecl& enumeration : module.enums) {
+        if (enumeration.name != origin->owner)
+            continue;
+        for (const FunctionDecl& method : enumeration.methods) {
+            if (method.name == origin->name)
+                return function_symbol(method, lsp_symbol_kind::Method);
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<SourceLocation> macro_generated_definition_location(const ModuleAst& module,
+                                                                  std::string_view reference) {
+    const GeneratedDeclarationOrigin* origin = generated_origin(module, reference);
+    return origin == nullptr ? std::nullopt : std::optional(origin->invocation.start);
 }
 
 } // namespace dudu

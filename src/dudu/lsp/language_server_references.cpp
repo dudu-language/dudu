@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
@@ -419,6 +420,24 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                                                    bool include_native) {
     const ProjectIndex* current_index = document_project_index(doc, include_native);
     const ModuleAst* current_unit = visible_document_unit(current_index, doc);
+    if (current_index != nullptr && current_unit != nullptr) {
+        if (const std::optional<MacroReferenceTarget> macro =
+                macro_reference_target_at(*current_index, *current_unit, params)) {
+            std::vector<ReferenceLocation> macro_locations;
+            for (const auto& [_, candidate] : workspace) {
+                const ProjectIndex* candidate_index =
+                    workspace_candidate_index(current_index, candidate, false);
+                const ModuleAst* candidate_unit =
+                    workspace_candidate_unit(current_index, candidate, false);
+                if (candidate_index == nullptr || candidate_unit == nullptr)
+                    continue;
+                std::vector<ReferenceLocation> found = macro_reference_locations(
+                    *candidate_index, *candidate_unit, candidate, macro->identity);
+                macro_locations.insert(macro_locations.end(), found.begin(), found.end());
+            }
+            return macro_locations;
+        }
+    }
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::vector<Symbol> current_symbols_with_native =
@@ -561,10 +580,45 @@ std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
     const ProjectIndex* current_index = document_project_index(doc, true);
     const ModuleAst* current_unit = visible_document_unit(current_index, doc);
-    const AstSelection selection =
-        current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
+    if (current_index != nullptr && current_unit != nullptr) {
+        if (const std::optional<MacroReferenceTarget> macro =
+                macro_reference_target_at(*current_index, *current_unit, params)) {
+            if (!valid_identifier(new_name))
+                return "null";
+            std::ostringstream macro_edit;
+            macro_edit << "{\"changes\":{";
+            bool first_document = true;
+            for (const auto& [_, candidate] : workspace) {
+                const ProjectIndex* candidate_index =
+                    workspace_candidate_index(current_index, candidate, false);
+                const ModuleAst* candidate_unit =
+                    workspace_candidate_unit(current_index, candidate, false);
+                if (candidate_index == nullptr || candidate_unit == nullptr)
+                    continue;
+                const std::vector<ReferenceLocation> locations = macro_reference_locations(
+                    *candidate_index, *candidate_unit, candidate, macro->identity);
+                if (locations.empty())
+                    continue;
+                if (!first_document)
+                    macro_edit << ",";
+                first_document = false;
+                macro_edit << "\"" << json_escape(candidate.uri) << "\":[";
+                for (size_t i = 0; i < locations.size(); ++i) {
+                    if (i > 0)
+                        macro_edit << ",";
+                    macro_edit << "{\"range\":" << locations[i].range << ",\"newText\":\""
+                               << json_escape(new_name) << "\"}";
+                }
+                macro_edit << "]";
+            }
+            macro_edit << "}}";
+            return macro_edit.str();
+        }
+    }
+    const AstSelection selection =
+        current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::vector<Symbol> current_symbols_with_native =
         current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, true);
     const std::vector<Symbol> current_symbols_without_native =
@@ -651,6 +705,34 @@ std::string prepare_rename_json(const Document& doc, const Json* params) {
     const ProjectIndex* current_index = document_project_index(doc, false);
     const ModuleAst* current_unit = visible_document_unit(current_index, doc);
     if (current_unit == nullptr) {
+        return "null";
+    }
+    if (current_index != nullptr &&
+        macro_reference_target_at(*current_index, *current_unit, params).has_value()) {
+        const AstSelection macro_selection = ast_selection_at(*current_unit, params);
+        const std::string query =
+            macro_selection.symbol.value_or(macro_selection.symbol_path.value_or(std::string{}));
+        if (const std::optional<std::string> range =
+                prepare_rename_range_json(doc, params, query)) {
+            return *range;
+        }
+        const LspPosition position = lsp_position(params);
+        const std::optional<std::string_view> line = line_at(doc.text, position.line);
+        if (line) {
+            int start = std::min(position.character, static_cast<int>(line->size()));
+            while (start > 0 && identifier_char((*line)[static_cast<size_t>(start - 1)]))
+                --start;
+            int end = std::max(0, position.character);
+            while (end < static_cast<int>(line->size()) &&
+                   identifier_char((*line)[static_cast<size_t>(end)]))
+                ++end;
+            if (end > start) {
+                const std::string placeholder = std::string(
+                    line->substr(static_cast<size_t>(start), static_cast<size_t>(end - start)));
+                return "{\"range\":" + range_json(position.line, start, position.line, end) +
+                       ",\"placeholder\":\"" + json_escape(placeholder) + "\"}";
+            }
+        }
         return "null";
     }
     const AstSelection selection = ast_selection_at(*current_unit, params);

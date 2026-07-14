@@ -489,6 +489,10 @@ std::string definition_json(const Document& doc, const Json* params,
     if (word.empty()) {
         return "null";
     }
+    if (const std::optional<SourceLocation> generated =
+            macro_generated_definition_location(current, word)) {
+        return location_json(uri_for_location(*generated, doc), range_json(*generated));
+    }
     if (const std::optional<std::string> references =
             declaration_references_json(doc, current, params, workspace)) {
         return *references;

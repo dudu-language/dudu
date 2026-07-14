@@ -433,6 +433,26 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     if (const std::optional<std::string> primitive = primitive_hover_json(query)) {
         return *primitive;
     }
+    const std::string generated_reference =
+        selected_path ? render_expr_path(*selected_path) : query;
+    if (macro_generated_definition_location(current, generated_reference).has_value()) {
+        if (const std::optional<Symbol> generated =
+                macro_generated_symbol_for_reference(current, generated_reference)) {
+            return symbol_hover_json(*generated);
+        }
+        if (selected_path) {
+            if (const std::optional<Symbol> member =
+                    class_member_symbol_for_path(current, *selected_path)) {
+                return symbol_hover_json(
+                    with_macro_generated_origin(current, generated_reference, *member));
+            }
+        }
+        if (const std::optional<Symbol> generated =
+                exact_symbol_match(symbols_for_module(current, false), query)) {
+            return symbol_hover_json(
+                with_macro_generated_origin(current, generated_reference, *generated));
+        }
+    }
     if (has_selection) {
         if (const std::optional<std::string> builtin =
                 builtin_function_hover_json(selection, query, current, doc, params)) {
@@ -460,7 +480,7 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
                 }
             }
         }
-        return symbol_hover_json(*exact);
+        return symbol_hover_json(with_macro_generated_origin(current, query, *exact));
     }
     if (const std::optional<std::string> module_hover =
             imported_module_hover_json(*index, current, query)) {
@@ -484,7 +504,8 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
         if (const std::optional<Symbol> class_member =
                 class_member_symbol_for_path(current, *selected_path)) {
-            return symbol_hover_json(*class_member);
+            return symbol_hover_json(with_macro_generated_origin(
+                current, render_expr_path(*selected_path), *class_member));
         }
     }
     try {
@@ -541,7 +562,7 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
     }
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
-        return symbol_hover_json(*suffix);
+        return symbol_hover_json(with_macro_generated_origin(current, query, *suffix));
     }
     std::string local_type =
         !query.empty() && params != nullptr
