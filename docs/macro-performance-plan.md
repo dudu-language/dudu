@@ -182,12 +182,14 @@ Macro workers use two cache layers:
    compiler, standard, toolchain identity, generated SDK contents, bridge
    contents, include directories, defines, and compiler flags.
 2. Each project stores content-addressed worker binaries and expansion results
-   under its normal build cache. Worker launch code and package sources compile
-   as separate translation units and independent units compile concurrently.
+   under its normal build cache. Generated Dudu package modules compile as one
+   translation unit; explicitly supplied C++ sources remain independent units.
 
-The launcher is compiled with `-O1`; macro package code and shared SDK objects
-use `-O2`. This keeps worker startup and protocol code fast without making each
-project repeatedly optimize generated SDK implementation code.
+The shared SDK objects use `-O2`. Its public header is cached as a GCC-compatible
+precompiled header and consumed by both GCC and Clang package builds. Generated
+Dudu package sources compile at `-O0`. This avoids reparsing the SDK and
+generated dependency headers once per Dudu module while keeping the optimized
+runtime and protocol implementation shared.
 
 The SDK cache defaults to `$XDG_CACHE_HOME/dudu/macro-sdk`, then
 `$HOME/.cache/dudu/macro-sdk`. `DUDU_MACRO_SDK_CACHE` overrides it. Publishing
@@ -198,6 +200,46 @@ The first macro use after installing a new Dudu/C++ toolchain must bootstrap
 one SDK cache entry. That one-time operation is reported separately from a cold
 project package build. Deleting a project's build directory must not force the
 shared SDK to rebuild.
+
+## 2026-07-14 Optimization Result
+
+The original Le Plan 2 fixture used 1,000 decorated two-field classes. Its
+Release median was 987.0 ms cold and 50.6 ms cached. The current three-sample
+medians are:
+
+| Case | Median | p95 |
+| --- | ---: | ---: |
+| first SDK bootstrap plus project | 2723.1 ms | 2773.6 ms |
+| cold project with shared SDK | 519.2 ms | 519.8 ms |
+| explicit 1,000-type expansion | 115.0 ms | 116.8 ms |
+| cached project | 54.2 ms | 54.6 ms |
+| unrelated edit | 51.6 ms | 52.8 ms |
+
+The cold project contains 367.7 ms p95 of package C++ compilation and 32.7 ms
+of linking. Macro execution itself is 16.2 ms. First SDK preparation is
+2215.9 ms median and is keyed by compiler, standard, toolchain, Dudu identity,
+SDK contents, include paths, defines, and flags.
+
+The following experiments were rejected or corrected rather than retained as
+special cases:
+
+- An initial precompiled-header attempt was silently invalidated because the
+  compile command force-included the capabilities header first. The package now
+  enters through the cached SDK header directly.
+- Compiling generated Dudu modules as independent native units retained about
+  593 ms of cold package compile time because each process parsed the same
+  native header surface and competed for CPU and memory bandwidth.
+- Combining only decorator-definition modules omitted transitive Dudu helpers
+  such as `dudu.macro`. The worker now embeds the complete generated dependency
+  closure; external C++ sources remain separate.
+- Large decimal byte-vector initializers made GCC parse thousands of integer
+  tokens. The catalog now uses length-delimited octal string literals and a
+  single decoder helper.
+
+The next architecture-level cold improvement is a stable prebuilt generic
+launcher/package ABI so project builds compile only macro package logic. Do not
+replace that work with compiler-daemon state or a speculative cache that hides
+the native compile.
 
 ## Tooling
 

@@ -4,6 +4,7 @@
 
 #include <set>
 #include <string>
+#include <vector>
 
 namespace dudu::macro {
 
@@ -11,6 +12,7 @@ struct WorkerSourceOptions {
     std::string package;
     std::string binary_identity;
     std::string project_root;
+    std::vector<std::string> module_sources;
     std::vector<std::string> capabilities;
     std::set<std::string> non_cacheable_macros;
 };

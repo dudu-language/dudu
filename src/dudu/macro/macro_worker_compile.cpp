@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <fstream>
 #include <optional>
 #include <stdexcept>
@@ -16,6 +17,13 @@ namespace dudu::macro {
 namespace {
 
 std::atomic<std::uint64_t> sdk_staging_counter{0};
+
+using Clock = std::chrono::steady_clock;
+
+std::uint64_t elapsed_ns(Clock::time_point start) {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start).count());
+}
 
 void write_text(const std::filesystem::path& path, const std::string& content) {
     std::filesystem::create_directories(path.parent_path());
@@ -39,7 +47,7 @@ const CppModuleArtifact& require_artifact(const std::vector<CppModuleArtifact>& 
 std::string sdk_identity(const std::vector<CppModuleArtifact>& artifacts,
                          const WorkerBuildOptions& options) {
     StableHash hash;
-    hash.add("dudu-macro-sdk-v1");
+    hash.add("dudu-macro-sdk-v3-pch");
     hash.add(options.compiler);
     hash.add(options.cpp_standard);
     hash.add(options.toolchain_identity);
@@ -54,6 +62,9 @@ std::string sdk_identity(const std::vector<CppModuleArtifact>& artifacts,
         hash.add(artifact.content);
     }
     for (const std::filesystem::path& include : options.runtime_include_dirs) {
+        hash.add(include.generic_string());
+    }
+    for (const std::filesystem::path& include : options.include_dirs) {
         hash.add(include.generic_string());
     }
     for (const std::string& define : options.defines) {
@@ -84,7 +95,6 @@ std::string compile_prefix(const WorkerBuildOptions& options,
     for (const std::string& flag : options.compiler_flags) {
         command += " " + shell_quote_arg(flag);
     }
-    command += " -include dudu/macro/macro_capabilities.hpp";
     return command;
 }
 
@@ -97,8 +107,10 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
     const std::filesystem::path entry = options.sdk_cache_dir / identity;
     const std::filesystem::path object = entry / "dudu_ast.o";
     const std::filesystem::path bridge_object = entry / "dudu_sdk_bridge.o";
+    const std::filesystem::path precompiled_header = entry / "dudu_macro_sdk.hpp.gch";
     if (std::filesystem::is_regular_file(object) &&
-        std::filesystem::is_regular_file(bridge_object)) {
+        std::filesystem::is_regular_file(bridge_object) &&
+        std::filesystem::is_regular_file(precompiled_header)) {
         return entry;
     }
     std::filesystem::create_directories(options.sdk_cache_dir);
@@ -120,25 +132,52 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
                                  options.sdk_bridge_source.string());
     }
     write_text(staging / "macro_sdk_bridge_generated.cpp", *bridge_source);
+    write_text(staging / "dudu_macro_sdk.hpp",
+               "#include \"dudu/macro/macro_capabilities.hpp\"\n"
+               "#include \"dudu/macro/macro_sdk_bridge_generated.hpp\"\n"
+               "#include \"dudu/macro/macro_worker_runtime.hpp\"\n"
+               "#include \"dudu/ast.hpp\"\n");
 
-    const std::string ast_command = compile_prefix(options, staging, "-O2") + " -c " +
-                                    shell_quote_path(staging / "dudu/ast.cpp") + " -o " +
-                                    shell_quote_path(staging / "dudu_ast.o");
-    if (run_shell_command(ast_command, staging / "ast.log") != 0) {
-        const std::optional<std::string> detail = try_read_text_file(staging / "ast.log");
-        std::filesystem::remove_all(staging);
-        throw std::runtime_error("could not compile macro SDK\ncommand: " + ast_command + "\n" +
-                                 detail.value_or("macro SDK compiler failed"));
+    struct SdkUnit {
+        std::string command;
+        std::filesystem::path log;
+        std::string description;
+    };
+    std::vector<SdkUnit> units = {
+        {.command = compile_prefix(options, staging, "-O2") +
+                    " -include dudu/macro/macro_capabilities.hpp -c " +
+                    shell_quote_path(staging / "dudu/ast.cpp") + " -o " +
+                    shell_quote_path(staging / "dudu_ast.o"),
+         .log = staging / "ast.log",
+         .description = "macro SDK"},
+        {.command = compile_prefix(options, staging, "-O2") +
+                    " -include dudu/macro/macro_capabilities.hpp -c " +
+                    shell_quote_path(staging / "macro_sdk_bridge_generated.cpp") + " -o " +
+                    shell_quote_path(staging / "dudu_sdk_bridge.o"),
+         .log = staging / "bridge.log",
+         .description = "macro SDK bridge"},
+        {.command = compile_prefix(options, staging, "-O0") + " -x c++-header " +
+                    shell_quote_path(staging / "dudu_macro_sdk.hpp") + " -o " +
+                    shell_quote_path(staging / "dudu_macro_sdk.hpp.gch"),
+         .log = staging / "pch.log",
+         .description = "macro SDK precompiled header"}};
+    std::vector<int> statuses(units.size(), 0);
+    std::vector<std::jthread> workers;
+    workers.reserve(units.size());
+    for (std::size_t index = 0; index < units.size(); ++index) {
+        workers.emplace_back(
+            [&, index] { statuses[index] = run_shell_command(units[index].command, units[index].log); });
     }
-    const std::string bridge_command =
-        compile_prefix(options, staging, "-O2") + " -c " +
-        shell_quote_path(staging / "macro_sdk_bridge_generated.cpp") + " -o " +
-        shell_quote_path(staging / "dudu_sdk_bridge.o");
-    if (run_shell_command(bridge_command, staging / "bridge.log") != 0) {
-        const std::optional<std::string> detail = try_read_text_file(staging / "bridge.log");
+    workers.clear();
+    for (std::size_t index = 0; index < units.size(); ++index) {
+        if (statuses[index] == 0) {
+            continue;
+        }
+        const std::optional<std::string> detail = try_read_text_file(units[index].log);
         std::filesystem::remove_all(staging);
-        throw std::runtime_error("could not compile macro SDK bridge\ncommand: " + bridge_command +
-                                 "\n" + detail.value_or("macro SDK bridge compiler failed"));
+        throw std::runtime_error("could not compile " + units[index].description +
+                                 "\ncommand: " + units[index].command + "\n" +
+                                 detail.value_or(units[index].description + " compiler failed"));
     }
 
     std::error_code error;
@@ -162,14 +201,8 @@ struct CompileUnit {
 };
 
 std::vector<CompileUnit> compile_units(const std::filesystem::path& dir,
-                                       const std::vector<CppModuleArtifact>& artifacts,
                                        const WorkerBuildOptions& options) {
     std::vector<std::filesystem::path> sources = {dir / "worker.cpp"};
-    for (const CppModuleArtifact& artifact : artifacts) {
-        if (artifact.kind == CppModuleArtifactKind::Source && artifact.module_path != "dudu.ast") {
-            sources.push_back(dir / artifact.path);
-        }
-    }
     sources.insert(sources.end(), options.cpp_sources.begin(), options.cpp_sources.end());
 
     const std::filesystem::path object_dir = dir / "objects";
@@ -181,12 +214,13 @@ std::vector<CompileUnit> compile_units(const std::filesystem::path& dir,
         units.push_back({.source = sources[index],
                          .object = object_dir / (stem + ".o"),
                          .log = object_dir / (stem + ".log"),
-                         .optimization = index == 0 ? "-O1" : "-O2"});
+                         .optimization = "-O0"});
     }
     return units;
 }
 
-void compile_units_parallel(const std::filesystem::path& dir, const WorkerBuildOptions& options,
+void compile_units_parallel(const std::filesystem::path& dir, const std::filesystem::path& sdk,
+                            const WorkerBuildOptions& options,
                             const std::vector<CompileUnit>& units) {
     std::vector<int> statuses(units.size(), 0);
     std::vector<std::string> commands(units.size());
@@ -203,7 +237,9 @@ void compile_units_parallel(const std::filesystem::path& dir, const WorkerBuildO
                     return;
                 }
                 const CompileUnit& unit = units[index];
-                commands[index] = compile_prefix(options, dir, unit.optimization) + " -c " +
+                commands[index] = compile_prefix(options, dir, unit.optimization) +
+                                  " -I" + shell_quote_path(sdk) + " -include " +
+                                  shell_quote_path(sdk / "dudu_macro_sdk.hpp") + " -c " +
                                   shell_quote_path(unit.source) + " -o " +
                                   shell_quote_path(unit.object);
                 statuses[index] = run_shell_command(commands[index], unit.log);
@@ -257,13 +293,21 @@ void link_worker(const std::filesystem::path& dir, const std::filesystem::path& 
 
 } // namespace
 
-void compile_worker(const std::filesystem::path& dir,
-                    const std::vector<CppModuleArtifact>& artifacts,
-                    const WorkerBuildOptions& options) {
+WorkerBinary::Timings compile_worker(const std::filesystem::path& dir,
+                                     const std::vector<CppModuleArtifact>& artifacts,
+                                     const WorkerBuildOptions& options) {
+    WorkerBinary::Timings timings;
+    const Clock::time_point sdk_start = Clock::now();
     const std::filesystem::path sdk = prepare_sdk(artifacts, options);
-    const std::vector<CompileUnit> units = compile_units(dir, artifacts, options);
-    compile_units_parallel(dir, options, units);
+    timings.sdk_prepare_ns = elapsed_ns(sdk_start);
+    const std::vector<CompileUnit> units = compile_units(dir, options);
+    const Clock::time_point compile_start = Clock::now();
+    compile_units_parallel(dir, sdk, options, units);
+    timings.compile_ns = elapsed_ns(compile_start);
+    const Clock::time_point link_start = Clock::now();
     link_worker(dir, sdk, options, units);
+    timings.link_ns = elapsed_ns(link_start);
+    return timings;
 }
 
 } // namespace dudu::macro

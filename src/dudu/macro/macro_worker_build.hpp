@@ -4,6 +4,7 @@
 #include "dudu/macro/macro_registry.hpp"
 
 #include <filesystem>
+#include <cstdint>
 #include <set>
 #include <string>
 #include <vector>
@@ -34,10 +35,17 @@ struct WorkerBuildOptions {
 };
 
 struct WorkerBinary {
+    struct Timings {
+        std::uint64_t sdk_prepare_ns = 0;
+        std::uint64_t compile_ns = 0;
+        std::uint64_t link_ns = 0;
+    };
+
     std::filesystem::path executable;
     std::filesystem::path working_directory;
     std::string identity;
     bool cache_hit = false;
+    Timings timings;
 };
 
 WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,

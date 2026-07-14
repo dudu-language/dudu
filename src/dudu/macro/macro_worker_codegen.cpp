@@ -25,21 +25,21 @@ std::string cpp_string_literal(std::string_view value) {
     return out;
 }
 
-std::string byte_vector(const std::vector<std::uint8_t>& bytes) {
+std::string byte_string(const std::vector<std::uint8_t>& bytes) {
     std::ostringstream out;
-    out << "std::vector<std::uint8_t>{";
-    for (std::size_t index = 0; index < bytes.size(); ++index) {
-        if (index != 0)
-            out << ", ";
-        out << static_cast<unsigned int>(bytes[index]);
+    out << "std::string_view{\"";
+    for (const std::uint8_t byte : bytes) {
+        out << '\\' << static_cast<char>('0' + ((byte >> 6U) & 7U))
+            << static_cast<char>('0' + ((byte >> 3U) & 7U))
+            << static_cast<char>('0' + (byte & 7U));
     }
-    out << "}";
+    out << "\", " << bytes.size() << "}";
     return out.str();
 }
 
-std::string module_header(std::string module_path) {
+std::string module_source(std::string module_path) {
     std::replace(module_path.begin(), module_path.end(), '.', '/');
-    return module_path + ".hpp";
+    return module_path + ".cpp";
 }
 
 std::string protocol_kind(TargetKind kind) {
@@ -127,8 +127,8 @@ void emit_catalog_entry(std::ostringstream& out, const Definition& definition) {
     if (definition.attribute_schema != nullptr) {
         const protocol::ClassDecl schema =
             to_protocol(*definition.attribute_schema, definition.module_path);
-        out << "        descriptor.attribute_schema = decode_ClassDecl("
-            << byte_vector(protocol::encode(schema)) << ");\n";
+        out << "        descriptor.attribute_schema = decode_class_decl("
+            << byte_string(protocol::encode(schema)) << ");\n";
     }
     out << "        descriptor.definition.file = "
         << cpp_string_literal(definition.location.file.str()) << ";\n"
@@ -171,21 +171,27 @@ std::string generate_worker_source(const Plan& plan, const WorkerSourceOptions& 
     if (plan.definitions.empty()) {
         throw std::invalid_argument("cannot generate a worker without macro definitions");
     }
-    std::set<std::string> headers;
-    for (const auto& [_, definition] : plan.definitions) {
-        headers.insert(module_header(definition.module_path));
+    std::set<std::string> sources(options.module_sources.begin(), options.module_sources.end());
+    if (sources.empty()) {
+        for (const auto& [_, definition] : plan.definitions) {
+            sources.insert(module_source(definition.module_path));
+        }
     }
 
     std::ostringstream out;
     out << "// Generated Dudu macro worker.\n"
         << "#include \"dudu/macro/macro_sdk_bridge_generated.hpp\"\n"
         << "#include \"dudu/macro/macro_worker_runtime.hpp\"\n";
-    for (const std::string& header : headers) {
-        out << "#include " << cpp_string_literal(header) << "\n";
+    for (const std::string& source : sources) {
+        out << "#include " << cpp_string_literal(source) << "\n";
     }
-    out << "\n#include <stdexcept>\n#include <utility>\n\n"
+    out << "\n#include <span>\n#include <stdexcept>\n#include <string_view>\n#include <utility>\n\n"
         << "using namespace dudu::macro;\n"
         << "using namespace dudu::macro::protocol;\n\n"
+        << "static ClassDecl decode_class_decl(std::string_view bytes) {\n"
+        << "    const auto* data = reinterpret_cast<const std::uint8_t*>(bytes.data());\n"
+        << "    return decode_ClassDecl(std::span<const std::uint8_t>{data, bytes.size()});\n"
+        << "}\n\n"
         << "int main() {\n"
         << "    MacroCatalog catalog{.package = " << cpp_string_literal(options.package)
         << ", .binary_identity = " << cpp_string_literal(options.binary_identity) << "};\n";

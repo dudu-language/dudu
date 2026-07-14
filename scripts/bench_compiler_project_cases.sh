@@ -15,8 +15,7 @@ EOF
 }
 
 touch_incremental_dep() {
-    local sample="$1"
-    if ((sample % 2 == 1)); then
+    if grep -Fq 'native.add(20, 22)' "$incremental_project/dep.dd"; then
         perl -0pi -e 's/native\.add\(20, 22\)/native.add(21, 21)/g' "$incremental_project/dep.dd"
     else
         perl -0pi -e 's/native\.add\(21, 21\)/native.add(20, 22)/g' "$incremental_project/dep.dd"

@@ -115,6 +115,8 @@ wall-clock medians/p95, and process peak RSS. Raw CSV lives under the ignored
 | cached small native metadata | 21.5 ms | 22.2 ms | 54.8 MiB |
 | generated-CMake no-op build | 72.7 ms | 74.7 ms | 53.8 MiB |
 | generated-CMake one-module edit | 331.8 ms | 340.7 ms | 109.8 MiB |
+| Dudu-only module no-op emit | 21.5 ms | 23.0 ms | 57.9 MiB |
+| Dudu-only one-module changed emit | 22.0 ms | 22.1 ms | 58.1 MiB |
 | 50k indexing-heavy lines | 264.6 ms | 267.2 ms | 146.4 MiB |
 | 50k native-heavy lines | 437.6 ms | 499.0 ms | 157.9 MiB |
 
@@ -131,6 +133,26 @@ overlay removed those whole-program copies without adding a cache. Follow-up
 three-sample medians are 84.8 ms at 50k generated lines, 155.3 ms at 100k, and
 306.9 ms at 200k. The path is now approximately linear. The fast C++ suite and
 the complete LSP smoke/recovery/synchronization/matrix suite remain green.
+
+The changed-module build aggregate was also split at the Dudu/native boundary.
+Both a no-op module emit and a guaranteed one-file Dudu edit complete in about
+22 ms. The remaining roughly 310 ms in the aggregate changed build is CMake,
+GCC compilation, and linking. Existing incremental fixtures assert that a
+no-op does not load source modules and that an edit rewrites only the affected
+generated artifacts.
+
+The initial macro baseline put a cold 1,000-type project at 987.0 ms, with a
+cached run at 50.6 ms. A content-addressed shared SDK precompiled header,
+parallel SDK bootstrap, one generated Dudu package translation unit, and a
+compact binary catalog literal reduced the cold-project median to 519.2 ms.
+The measured cold path is 367.7 ms of external C++ compilation, 32.3 ms of
+linking, 16.2 ms of macro execution, and Dudu orchestration/analysis around
+those phases. The first SDK bootstrap for a new Dudu/C++ toolchain identity is
+2.72 s; 2.22 s of that is the one-time SDK preparation. Cached projects remain
+54.2 ms. The cold result is 19 ms above the initial target because of an
+explicit external native compile, not hidden frontend work. The concrete
+follow-up is a stable prebuilt generic macro launcher/package ABI that avoids
+recompiling launcher and catalog machinery for each package.
 
 ### Work Order
 

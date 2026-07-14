@@ -8,8 +8,8 @@
 
 namespace dudu::macro {
 
-void compile_worker(const std::filesystem::path& dir,
-                    const std::vector<CppModuleArtifact>& artifacts,
-                    const WorkerBuildOptions& options);
+WorkerBinary::Timings compile_worker(const std::filesystem::path& dir,
+                                     const std::vector<CppModuleArtifact>& artifacts,
+                                     const WorkerBuildOptions& options);
 
 } // namespace dudu::macro

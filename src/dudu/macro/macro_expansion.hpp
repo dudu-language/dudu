@@ -25,6 +25,9 @@ struct ExpansionReport {
         std::uint64_t declaration_bridge_ns = 0;
         std::uint64_t request_loop_ns = 0;
         std::uint64_t package_build_ns = 0;
+        std::uint64_t package_sdk_prepare_ns = 0;
+        std::uint64_t package_compile_ns = 0;
+        std::uint64_t package_link_ns = 0;
         std::uint64_t worker_start_ns = 0;
         std::uint64_t protocol_ns = 0;
         std::uint64_t execute_ns = 0;

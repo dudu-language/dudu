@@ -77,7 +77,7 @@ std::vector<std::string> dependency_closure(const ModuleAst& module, const Plan&
 std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, const Plan& plan,
                            const WorkerBuildOptions& options) {
     StableHash hash;
-    hash.add("dudu-macro-worker-binary-v1");
+    hash.add("dudu-macro-worker-binary-v2-unified");
     hash.add(std::to_string(protocol::protocol_version));
     hash.add(std::to_string(protocol::schema_version));
     hash.add(options.package);
@@ -210,6 +210,22 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
     output << text;
 }
 
+bool is_sdk_artifact(const CppModuleArtifact& artifact) {
+    return artifact.path == "dudu_runtime.hpp" || artifact.module_path == "dudu.ast";
+}
+
+void write_worker_artifacts(const std::filesystem::path& dir,
+                            const std::vector<CppModuleArtifact>& artifacts) {
+    std::vector<CppModuleArtifact> package_artifacts;
+    package_artifacts.reserve(artifacts.size());
+    for (const CppModuleArtifact& artifact : artifacts) {
+        if (!is_sdk_artifact(artifact)) {
+            package_artifacts.push_back(artifact);
+        }
+    }
+    write_cpp_artifacts(dir, package_artifacts);
+}
+
 } // namespace
 
 WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
@@ -228,7 +244,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
                 return {.executable = executable,
                         .working_directory = options.project_root,
                         .identity = *identity,
-                        .cache_hit = true};
+                        .cache_hit = true,
+                        .timings = {}};
             }
         }
     }
@@ -245,7 +262,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         return {.executable = executable,
                 .working_directory = options.project_root,
                 .identity = identity,
-                .cache_hit = true};
+                .cache_hit = true,
+                .timings = {}};
     }
 
     std::filesystem::create_directories(options.cache_dir);
@@ -255,16 +273,24 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
          std::to_string(staging_counter.fetch_add(1, std::memory_order_relaxed)));
     std::filesystem::remove_all(staging);
     std::filesystem::create_directories(staging);
-    write_cpp_artifacts(staging, artifacts);
+    write_worker_artifacts(staging, artifacts);
+    std::vector<std::string> module_sources;
+    for (const CppModuleArtifact& artifact : artifacts) {
+        if (artifact.kind == CppModuleArtifactKind::Source && artifact.module_path != "dudu.ast") {
+            module_sources.push_back(artifact.path.generic_string());
+        }
+    }
     write_text(
         staging / "worker.cpp",
         generate_worker_source(plan, {.package = options.package,
                                       .binary_identity = identity,
                                       .project_root = options.project_root.generic_string(),
+                                      .module_sources = std::move(module_sources),
                                       .capabilities = options.capabilities,
                                       .non_cacheable_macros = options.non_cacheable_macros}));
+    WorkerBinary::Timings timings;
     try {
-        compile_worker(staging, artifacts, options);
+        timings = compile_worker(staging, artifacts, options);
         std::error_code error;
         std::filesystem::rename(staging, cache_entry, error);
         if (error && !std::filesystem::is_regular_file(executable)) {
@@ -283,7 +309,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
     return {.executable = executable,
             .working_directory = options.project_root,
             .identity = identity,
-            .cache_hit = false};
+            .cache_hit = false,
+            .timings = timings};
 }
 
 } // namespace dudu::macro

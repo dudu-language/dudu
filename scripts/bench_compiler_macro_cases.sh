@@ -131,6 +131,10 @@ prepare_macro_cold() {
     rm -rf "$macro_prepare_project/build/.dudu/macros"
 }
 
+prepare_macro_sdk_bootstrap() {
+    rm -rf "$macro_prepare_project/build/.dudu/macros" "$macro_sdk_bootstrap_cache"
+}
+
 prepare_noop_execution() {
     clear_macro_expansions "$macro_prepare_project"
 }
@@ -163,6 +167,14 @@ run_macro_scale() {
     write_handwritten_consumers "$project" "$count"
 
     macro_prepare_project="$project"
+    if [[ "$count" -eq 1000 ]]; then
+        macro_sdk_bootstrap_cache="$macro_bench_root/sdk_bootstrap"
+        run_case_prepared "macro_debug_${count}_sdk_bootstrap" "macro_sdk_bootstrap" "$project" \
+            prepare_macro_sdk_bootstrap \
+            env DUDU_MACRO_SDK_CACHE="$macro_sdk_bootstrap_cache" \
+            "$tool_build_dir/duc" expand "$project/main.dd" --timings \
+            -o "$project/expanded.dd"
+    fi
     run_case_prepared "macro_debug_${count}_cold" "macro_cold" "$project" \
         prepare_macro_cold \
         "$tool_build_dir/duc" expand "$project/main.dd" --timings -o "$project/expanded.dd"

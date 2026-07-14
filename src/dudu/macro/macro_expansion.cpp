@@ -300,6 +300,9 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         const Clock::time_point package_start = Clock::now();
         WorkerBinary binary = build_worker_binary(module, package.plan, build);
         report.timings.package_build_ns += elapsed_ns(package_start);
+        report.timings.package_sdk_prepare_ns += binary.timings.sdk_prepare_ns;
+        report.timings.package_compile_ns += binary.timings.compile_ns;
+        report.timings.package_link_ns += binary.timings.link_ns;
         if (binary.cache_hit)
             ++report.worker_cache_hits;
         report.worker_identities.push_back(binary.identity);

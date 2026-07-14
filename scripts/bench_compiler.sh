@@ -373,6 +373,16 @@ run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_bui
     "$incremental_project" touch_incremental_dep \
     "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
+incremental_generated="$incremental_project/build/cmake-backend/build/generated"
+run_case "duc_emit_modules_noop" "dudu_emit_modules_noop" "$incremental_project" \
+    "$tool_build_dir/duc" emit-modules "$incremental_entry" -o "$incremental_generated" \
+    --timings
+
+run_case_prepared "duc_emit_modules_changed" "dudu_emit_modules_one_file_changed" \
+    "$incremental_project" touch_incremental_dep \
+    "$tool_build_dir/duc" emit-modules "$incremental_entry" -o "$incremental_generated" \
+    --timings
+
 prepare_lsp_project
 run_case "dudu_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
     python3 "$lsp_probe" "$tool_build_dir/dudu-lsp" "$lsp_entry"

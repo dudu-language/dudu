@@ -73,6 +73,12 @@ void print_macro_performance(bool enabled, const macro::ExpansionReport& report)
                        milliseconds(report.timings.declaration_bridge_ns));
     print_project_step(true, "macro.request_loop", milliseconds(report.timings.request_loop_ns));
     print_project_step(true, "macro.package_build", milliseconds(report.timings.package_build_ns));
+    print_project_step(true, "macro.package_sdk_prepare",
+                       milliseconds(report.timings.package_sdk_prepare_ns));
+    print_project_step(true, "macro.package_compile",
+                       milliseconds(report.timings.package_compile_ns));
+    print_project_step(true, "macro.package_link",
+                       milliseconds(report.timings.package_link_ns));
     print_project_step(true, "macro.worker_start", milliseconds(report.timings.worker_start_ns));
     print_project_step(true, "macro.protocol", milliseconds(report.timings.protocol_ns));
     print_project_step(true, "macro.execute", milliseconds(report.timings.execute_ns));
