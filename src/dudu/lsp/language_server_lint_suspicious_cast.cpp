@@ -1,8 +1,8 @@
 #include "dudu/lsp/language_server_lint_suspicious_cast.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_lint_common.hpp"
 #include "dudu/sema/sema_common.hpp"
 
@@ -122,7 +122,8 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
                                .severity = 2,
                                .code = "dudu.lint.suspicious_cast",
                                .data_name = "",
-                               .fix_range = std::nullopt});
+                               .fix_range = std::nullopt,
+                               .related_information = {}});
             }
         }
     });

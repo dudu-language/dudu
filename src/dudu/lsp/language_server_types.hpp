@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace dudu {
 
@@ -30,6 +31,11 @@ struct Document {
     std::string text;
 };
 
+struct DiagnosticRelatedInformation {
+    SourceLocation location;
+    std::string message;
+};
+
 struct Diagnostic {
     SourceLocation location;
     std::string message;
@@ -38,6 +44,7 @@ struct Diagnostic {
     std::string code;
     std::string data_name;
     std::optional<SourceRange> fix_range;
+    std::vector<DiagnosticRelatedInformation> related_information;
 };
 
 struct Symbol {

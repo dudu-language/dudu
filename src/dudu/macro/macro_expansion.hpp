@@ -28,6 +28,8 @@ struct ExpansionReport {
         std::string target_module;
         std::string target_name;
         protocol::SourceRange invocation;
+        protocol::SourceRange definition;
+        protocol::SourceRange source_declaration;
         protocol::Expansion expansion;
     };
     std::vector<Record> expansions;

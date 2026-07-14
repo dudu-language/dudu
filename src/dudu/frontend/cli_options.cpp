@@ -162,6 +162,23 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
             options.test_filter = argv[++i];
             continue;
         }
+        if (arg == "--macro") {
+            if (!options.expand_macros) {
+                fail("--macro is only valid with expand");
+            }
+            if (i + 1 >= argc) {
+                fail("--macro requires a macro name");
+            }
+            options.macro_filter = argv[++i];
+            continue;
+        }
+        if (arg == "--show-origins") {
+            if (!options.expand_macros) {
+                fail("--show-origins is only valid with expand");
+            }
+            options.show_macro_origins = true;
+            continue;
+        }
         if (arg == "--no-capture" || arg == "--nocapture") {
             options.no_capture = true;
             continue;

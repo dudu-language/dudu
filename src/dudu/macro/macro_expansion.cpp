@@ -272,12 +272,17 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                 write_expansion_cache(cache_root / "expansions", cache_key, *response);
         }
         ++report.invocations;
-        report.expansions.push_back({.macro_name = invocation.macro->name,
-                                     .macro_identity = invocation.macro->identity,
-                                     .target_module = invocation.target_module,
-                                     .target_name = invocation.target_name,
-                                     .invocation = request.invocation,
-                                     .expansion = response->expansion});
+        report.expansions.push_back(
+            {.macro_name = invocation.macro->name,
+             .macro_identity = invocation.macro->identity,
+             .target_module = invocation.target_module,
+             .target_name = invocation.target_name,
+             .invocation = request.invocation,
+             .definition =
+                 to_protocol(SourceRange{invocation.macro->location, invocation.macro->location}),
+             .source_declaration =
+                 to_protocol(declaration_range(declaration, invocation.decorator->location)),
+             .expansion = response->expansion});
         p::Expansion merge_expansion = response->expansion;
         apply_expansion_hygiene(merge_expansion, invocation.macro->identity,
                                 invocation.target_module, invocation.target_name,

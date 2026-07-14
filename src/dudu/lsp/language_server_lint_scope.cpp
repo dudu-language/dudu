@@ -47,7 +47,8 @@ void add_scope_local(const std::string& name, const SourceLocation& location,
                                .severity = 2,
                                .code = "dudu.lint.shadow",
                                .data_name = "",
-                               .fix_range = std::nullopt});
+                               .fix_range = std::nullopt,
+                               .related_information = {}});
                 break;
             }
         }
@@ -134,7 +135,8 @@ void lint_scope_function(const FunctionDecl& fn, const Document& doc,
                            .severity = 2,
                            .code = "dudu.lint.unused",
                            .data_name = "",
-                           .fix_range = lint_delete_line_range(local.location, doc)});
+                           .fix_range = lint_delete_line_range(local.location, doc),
+                           .related_information = {}});
         }
     }
 }

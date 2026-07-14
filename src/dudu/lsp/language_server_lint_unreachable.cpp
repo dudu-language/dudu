@@ -69,7 +69,8 @@ void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, co
                            .severity = 2,
                            .code = "dudu.lint.unreachable",
                            .data_name = "",
-                           .fix_range = lint_delete_line_range(stmt.location, doc)});
+                           .fix_range = lint_delete_line_range(stmt.location, doc),
+                           .related_information = {}});
             reported_after_terminator = true;
         }
 

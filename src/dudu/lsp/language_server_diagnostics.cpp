@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/lsp/language_server_ast_lints.hpp"
 #include "dudu/lsp/language_server_json.hpp"
+#include "dudu/lsp/language_server_macro_diagnostics.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/native/native_build.hpp"
@@ -31,6 +32,9 @@ std::string diagnostic_source(std::string_view code) {
     if (code.starts_with("dudu.parser.") || code.starts_with("dudu.lexer.")) {
         return "dudu/parser";
     }
+    if (code.starts_with("dudu.macro")) {
+        return "dudu/macro";
+    }
     return "dudu/compiler";
 }
 
@@ -54,7 +58,8 @@ Diagnostic parser_diagnostic(const ParseDiagnostic& diagnostic) {
             .severity = 1,
             .code = diagnostic.code,
             .data_name = diagnostic.data_name,
-            .fix_range = std::nullopt};
+            .fix_range = std::nullopt,
+            .related_information = {}};
 }
 
 Diagnostic compile_diagnostic(const CompileError& error) {
@@ -64,7 +69,8 @@ Diagnostic compile_diagnostic(const CompileError& error) {
             .severity = 1,
             .code = error.code(),
             .data_name = error.data_name(),
-            .fix_range = std::nullopt};
+            .fix_range = std::nullopt,
+            .related_information = {}};
 }
 
 bool location_belongs_to_document(const SourceLocation& location, const Document& doc) {
@@ -139,7 +145,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .severity = 1,
                  .code = "",
                  .data_name = "",
-                 .fix_range = std::nullopt}};
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
             return {
@@ -149,7 +156,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .severity = 1,
                  .code = "",
                  .data_name = "",
-                 .fix_range = std::nullopt}};
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
         }
         const ProjectIndex& index = project_index_for_document(doc, true, false, false);
         std::vector<Diagnostic> diagnostics;
@@ -167,6 +175,10 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                 diagnostics.push_back(compile_diagnostic(error));
             }
         }
+        std::vector<Diagnostic> macro_diagnostics =
+            macro_diagnostics_for_document(index.macro_report(), doc);
+        diagnostics.insert(diagnostics.end(), std::make_move_iterator(macro_diagnostics.begin()),
+                           std::make_move_iterator(macro_diagnostics.end()));
         std::vector<Diagnostic> lints = ast_lint_diagnostics(diagnostic_module, doc);
         diagnostics.insert(diagnostics.end(), std::make_move_iterator(lints.begin()),
                            std::make_move_iterator(lints.end()));
@@ -189,7 +201,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .severity = 1,
                  .code = error.code(),
                  .data_name = error.data_name(),
-                 .fix_range = std::nullopt}};
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
     } catch (const std::exception& error) {
         return {{.location = {.file = SourceFileName(doc.path.string()), .line = 1, .column = 1},
                  .message = error.what(),
@@ -197,7 +210,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .severity = 1,
                  .code = "",
                  .data_name = "",
-                 .fix_range = std::nullopt}};
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
     }
 }
 
@@ -226,6 +240,20 @@ std::string diagnostic_json(const Diagnostic& diagnostic) {
             out << "\"fixRange\":" << range_json(*diagnostic.fix_range);
         }
         out << "}";
+    }
+    if (!diagnostic.related_information.empty()) {
+        out << ",\"relatedInformation\":[";
+        for (std::size_t index = 0; index < diagnostic.related_information.size(); ++index) {
+            if (index != 0)
+                out << ',';
+            const DiagnosticRelatedInformation& related = diagnostic.related_information[index];
+            const std::string uri = related.location.file.empty()
+                                        ? std::string{}
+                                        : file_uri(std::filesystem::path(related.location.file));
+            out << "{\"location\":" << location_json(uri, range_json(related.location))
+                << ",\"message\":\"" << json_escape(related.message) << "\"}";
+        }
+        out << ']';
     }
     out << ",\"message\":\"" << json_escape(diagnostic.message) << "\"}";
     return out.str();

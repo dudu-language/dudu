@@ -16,6 +16,7 @@ struct CliOptions {
     std::map<std::string, std::string> build_values;
     std::string target_name;
     std::vector<std::string> command_args;
+    std::string macro_filter;
     std::string test_filter;
     bool bench = false;
     bool build = false;
@@ -37,6 +38,7 @@ struct CliOptions {
     bool run = false;
     bool test = false;
     bool timings = false;
+    bool show_macro_origins = false;
     bool toolchain_update = false;
     bool uninstall = false;
     bool verbose = false;

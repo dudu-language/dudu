@@ -282,6 +282,10 @@ if(DUDU_BUILD_TESTS)
     target_link_libraries(dudu_macro_expansion_tests PRIVATE dudu_frontend)
     target_compile_features(dudu_macro_expansion_tests PRIVATE cxx_std_20)
 
+    add_executable(dudu_macro_expansion_render_tests tests/macro_expansion_render_tests.cpp)
+    target_link_libraries(dudu_macro_expansion_render_tests PRIVATE dudu_frontend)
+    target_compile_features(dudu_macro_expansion_render_tests PRIVATE cxx_std_20)
+
     add_executable(dudu_enum_method_tests tests/enum_method_tests.cpp)
     target_link_libraries(dudu_enum_method_tests PRIVATE dudu_frontend)
     target_compile_features(dudu_enum_method_tests PRIVATE cxx_std_20)

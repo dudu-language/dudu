@@ -511,7 +511,10 @@ int run_cli(int argc, char** argv) {
     };
     if (options.expand_macros) {
         const ProjectIndex& index = checked_index(options, input_source(), true);
-        write_text_output(options.output, macro::render_expansion_report(index.macro_report()));
+        write_text_output(options.output,
+                          macro::render_expansion_report(
+                              index.macro_report(), {.macro_filter = options.macro_filter,
+                                                     .show_origins = options.show_macro_origins}));
         return 0;
     }
     if (options.header_output.has_value()) {

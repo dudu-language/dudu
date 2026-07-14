@@ -6,6 +6,12 @@
 
 namespace dudu::macro {
 
-std::string render_expansion_report(const ExpansionReport& report);
+struct ExpansionRenderOptions {
+    std::string macro_filter;
+    bool show_origins = false;
+};
+
+std::string render_expansion_report(const ExpansionReport& report,
+                                    const ExpansionRenderOptions& options = {});
 
 } // namespace dudu::macro
