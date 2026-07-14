@@ -313,7 +313,9 @@ is:
 ./scripts/release-check.sh
 ```
 
-The full implementation plan lives in [`docs/le_plan.md`](docs/le_plan.md).
+The active roadmap lives in [`docs/leplan2.md`](docs/leplan2.md). The detailed
+implementation history and subsystem index remain in
+[`docs/le_plan.md`](docs/le_plan.md).
 Developer command details live in [`docs/developer-guide.md`](docs/developer-guide.md).
 
 ## License

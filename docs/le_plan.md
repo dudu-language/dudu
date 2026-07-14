@@ -2,6 +2,10 @@
 
 This is the next practical roadmap for Dudu.
 
+The short active post-alpha roadmap is now [Le Plan 2](leplan2.md). This file
+remains the detailed implementation history, design record, and index of older
+subsystem plans; do not execute it from the beginning as a current task queue.
+
 Dudu is far enough along to guide development by making real examples easier
 instead of planning the whole language in the abstract.
 
