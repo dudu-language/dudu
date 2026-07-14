@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Reduced a 1,000-expansion cold macro benchmark from 4.12 seconds to 1.04
+  seconds by caching generated SDK objects across projects and compiling
+  project macro units in parallel. Added comparable Rust, C#, Swift, and Nim
+  macro benchmarks and documented the measurements.
+- Native template scanning now accepts quoted integral spellings emitted by
+  newer Clang versions, including boolean non-type template arguments.
 - Implemented typed additive user-defined declaration macros through the
   public `dudu.ast` package, including derive and attached invocation forms,
   typed helper attributes, hygienic merge rules, generated source origins,

@@ -100,6 +100,14 @@ std::optional<TypeLayout> scanned_layout(const NativeCursorIdentityIndex& identi
 
 TypeRef normalize_native_type_ref(TypeRef type);
 
+std::string native_template_value(std::string text) {
+    text = trim_copy(std::move(text));
+    if (text.size() >= 2 && text.front() == '\'' && text.back() == '\'') {
+        return text.substr(1, text.size() - 2);
+    }
+    return text;
+}
+
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
     text = trim_copy(std::move(text));
     if (text.ends_with("...")) {
@@ -538,7 +546,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         if (std::regex_search(line, match, template_type_default)) {
             argument = dudu_type(preserve_native_type_placeholders(match[1].str()));
         } else if (std::regex_search(line, match, template_value_default)) {
-            argument = trim_copy(match[1].str());
+            argument = native_template_value(match[1].str());
         }
         if (!argument.empty()) {
             argument = qualify_scoped_type(scan, namespaces, classes, std::move(argument));
@@ -576,7 +584,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         if (std::regex_search(line, match, template_type_default)) {
             default_text = dudu_type(match[1].str());
         } else if (std::regex_search(line, match, template_value_default)) {
-            default_text = trim_copy(match[1].str());
+            default_text = native_template_value(match[1].str());
         }
         if (!default_text.empty()) {
             default_text = qualify_scoped_type(scan, namespaces, classes, default_text);

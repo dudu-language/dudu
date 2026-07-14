@@ -5,7 +5,7 @@
 #include "dudu/macro/macro_hash.hpp"
 #include "dudu/macro/macro_protocol_generated.hpp"
 #include "dudu/macro/macro_worker_codegen.hpp"
-#include "dudu/native/native_build.hpp"
+#include "dudu/macro/macro_worker_compile.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <algorithm>
@@ -109,6 +109,8 @@ std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, cons
     add_paths(options.library_dirs);
     add_paths(options.cpp_sources);
     hash.add(options.runtime_library.generic_string());
+    hash.add(options.sdk_bridge_source.generic_string());
+    hash.add(try_read_text_file(options.sdk_bridge_source).value_or(""));
     add_strings(options.defines);
     add_strings(options.compiler_flags);
     add_strings(options.libraries);
@@ -161,6 +163,8 @@ std::optional<std::string> source_identity(const ModuleAst& module,
     add_paths(options.library_dirs);
     add_paths(options.cpp_sources);
     hash.add(options.runtime_library.generic_string());
+    hash.add(options.sdk_bridge_source.generic_string());
+    hash.add(try_read_text_file(options.sdk_bridge_source).value_or(""));
     add_strings(options.defines);
     add_strings(options.compiler_flags);
     add_strings(options.libraries);
@@ -204,62 +208,6 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
         throw std::runtime_error("could not write macro worker source: " + path.string());
     }
     output << text;
-}
-
-std::string compile_command(const std::filesystem::path& dir,
-                            const std::vector<CppModuleArtifact>& artifacts,
-                            const WorkerBuildOptions& options) {
-    std::string command = shell_quote_arg(options.compiler) +
-                          " -std=" + shell_quote_arg(options.cpp_standard) + " -O2";
-    command += " -I" + shell_quote_path(dir);
-    for (const std::filesystem::path& include : options.runtime_include_dirs) {
-        command += " -I" + shell_quote_path(include);
-    }
-    for (const std::filesystem::path& include : options.include_dirs) {
-        command += " -I" + shell_quote_path(include);
-    }
-    for (const std::string& define : options.defines) {
-        command += " -D" + shell_quote_arg(define);
-    }
-    for (const std::string& flag : options.compiler_flags) {
-        command += " " + shell_quote_arg(flag);
-    }
-    command += " " + shell_quote_path(dir / "worker.cpp");
-    command += " -include dudu/macro/macro_capabilities.hpp";
-    for (const CppModuleArtifact& artifact : artifacts) {
-        if (artifact.kind == CppModuleArtifactKind::Source) {
-            command += " " + shell_quote_path(dir / artifact.path);
-        }
-    }
-    for (const std::filesystem::path& source : options.cpp_sources) {
-        command += " " + shell_quote_path(source);
-    }
-    if (!options.runtime_library.empty()) {
-        command += " " + shell_quote_path(options.runtime_library);
-    }
-    for (const std::filesystem::path& library_dir : options.library_dirs) {
-        command += " -L" + shell_quote_path(library_dir);
-    }
-    for (const std::string& library : options.libraries) {
-        command += " -l" + shell_quote_arg(library);
-    }
-    for (const std::string& flag : options.linker_flags) {
-        command += " " + shell_quote_arg(flag);
-    }
-    command += " -o " + shell_quote_path(dir / "worker");
-    return command;
-}
-
-void compile_worker(const std::filesystem::path& dir,
-                    const std::vector<CppModuleArtifact>& artifacts,
-                    const WorkerBuildOptions& options) {
-    const std::filesystem::path log = dir / "build.log";
-    const std::string command = compile_command(dir, artifacts, options);
-    if (run_shell_command(command, log) != 0) {
-        const std::optional<std::string> detail = try_read_text_file(log);
-        throw std::runtime_error("could not compile macro worker\ncommand: " + command + "\n" +
-                                 detail.value_or("macro worker compiler failed"));
-    }
 }
 
 } // namespace

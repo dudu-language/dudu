@@ -326,6 +326,9 @@ source "$repo_root/scripts/bench_compiler_core_cases.sh"
 source "$repo_root/scripts/bench_compiler_native_cases.sh"
 source "$repo_root/scripts/bench_compiler_macro_cases.sh"
 source "$repo_root/scripts/bench_macro_compare_rust.sh"
+source "$repo_root/scripts/bench_macro_compare_csharp.sh"
+source "$repo_root/scripts/bench_macro_compare_nim.sh"
+source "$repo_root/scripts/bench_macro_compare_swift.sh"
 
 if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
     run_macro_benchmarks "$macro_scales" "$macro_node_scales" "$compare"

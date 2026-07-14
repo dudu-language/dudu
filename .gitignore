@@ -16,6 +16,8 @@ Thumbs.db
 .dev.vars
 compile_commands.json
 node_modules/
+__pycache__/
+*.py[cod]
 dist/
 coverage/
 .wrangler/

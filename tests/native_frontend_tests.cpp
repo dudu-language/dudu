@@ -1135,7 +1135,10 @@ void test_native_class_partial_specialization_metadata(const std::filesystem::pa
             assert((klass.generic_params == std::vector<std::string>{"T"}));
             assert(klass.native_specialization_args.size() == 2);
             assert(dudu::type_ref_text(klass.native_specialization_args[0]) == "T");
-            assert(dudu::type_ref_text(klass.native_specialization_args[1]) == "1");
+            const std::string enabled = dudu::type_ref_text(klass.native_specialization_args[1]);
+            if (enabled != "1" && enabled != "true") {
+                throw std::runtime_error("unexpected boolean specialization value: " + enabled);
+            }
             assert(klass.type_aliases.size() == 1);
             assert(klass.type_aliases.front().name == "type");
             assert(dudu::type_ref_text(klass.type_aliases.front().type_ref) == "T");

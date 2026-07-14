@@ -83,6 +83,9 @@ set(DUDU_MACRO_RUNTIME_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_worker_runtime.cpp"
 )
 list(REMOVE_ITEM DUDU_FRONTEND_SOURCES ${DUDU_MACRO_RUNTIME_SOURCES})
+list(REMOVE_ITEM DUDU_FRONTEND_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dudu/macro/macro_sdk_bridge_generated.cpp"
+)
 
 add_library(dudu_macro_runtime STATIC ${DUDU_MACRO_RUNTIME_SOURCES})
 target_include_directories(dudu_macro_runtime PUBLIC src)
@@ -127,6 +130,10 @@ install(FILES
     src/dudu/macro/macro_wire.hpp
     src/dudu/macro/macro_worker_runtime.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dudu/macro
+)
+
+install(FILES src/dudu/macro/macro_sdk_bridge_generated.cpp
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/macro
 )
 
 install(PROGRAMS install.sh

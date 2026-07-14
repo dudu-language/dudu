@@ -20,5 +20,6 @@ int main() {
 CPP
 
 "$cxx" -std=c++20 -I"$repo_root/src" -I"$work/generated" \
-    "$work/bridge.cpp" "$work/generated/dudu/ast.cpp" -o "$work/bridge"
+    "$work/bridge.cpp" "$repo_root/src/dudu/macro/macro_sdk_bridge_generated.cpp" \
+    "$work/generated/dudu/ast.cpp" -o "$work/bridge"
 "$work/bridge"

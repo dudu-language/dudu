@@ -93,6 +93,7 @@ grep -Fqx source "$install_prefix/share/dudu/install-owner"
 test ! -e "$install_prefix/share/dudu/editors/vscode"
 test -f "$install_prefix/share/dudu/editors/vim/syntax/dudu.vim"
 test -f "$install_prefix/share/dudu/editors/nvim/queries/dudu/highlights.scm"
+test -f "$install_prefix/share/dudu/macro/macro_sdk_bridge_generated.cpp"
 test -f "$install_prefix/share/doc/dudu/README.md"
 test -f "$install_prefix/share/doc/dudu/COPYRIGHT"
 test -f "$install_prefix/share/doc/dudu/LICENSE-APACHE"
@@ -101,6 +102,13 @@ test -f "$install_prefix/share/doc/dudu/VERSION"
 installed_version="$(tr -d '\r\n' <"$install_prefix/share/doc/dudu/VERSION")"
 "$install_prefix/bin/dudu" --version | grep -Fqx "dudu $installed_version"
 "$install_prefix/bin/duc" --version | grep -Fqx "duc $installed_version"
+installed_macro_cache="$repo_root/build/install-smoke-macro-cache"
+rm -rf "$installed_macro_cache"
+rm -rf "$repo_root/tests/fixtures/macro_packages/build/.dudu/macros"
+DUDU_MACRO_SDK_CACHE="$installed_macro_cache/sdk" \
+    "$install_prefix/bin/duc" expand \
+    "$repo_root/tests/fixtures/macro_packages/showcase.dd" \
+    -o "$installed_macro_cache/showcase_expanded.dd"
 
 generated_header="$repo_root/build/cpp_library.hpp"
 echo "installed codegen assertions"

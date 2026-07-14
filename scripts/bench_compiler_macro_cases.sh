@@ -256,7 +256,9 @@ report_macro_comparisons() {
         if command -v "$tool" >/dev/null 2>&1; then
             case "$language" in
                 rust) run_rust_macro_comparison ;;
-                *) echo "macro comparison adapter unavailable: $language" ;;
+                csharp) run_csharp_macro_comparison ;;
+                nim) run_nim_macro_comparison ;;
+                swift) run_swift_macro_comparison ;;
             esac
         else
             echo "macro comparison skipped: $language ($tool not installed)"

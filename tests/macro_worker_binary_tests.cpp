@@ -34,6 +34,7 @@ void test_build_launch_and_cache() {
     dudu::analyze_module_tree(module);
     const dudu::macro::Plan plan = dudu::macro::build_plan(module);
     const dudu::macro::WorkerBuildOptions options = {.cache_dir = dir / "cache",
+                                                     .sdk_cache_dir = dir / "sdk-cache",
                                                      .project_root = dir,
                                                      .package = "fixture",
                                                      .compiler = DUDU_TEST_CXX,
@@ -43,6 +44,9 @@ void test_build_launch_and_cache() {
                                                      .runtime_include_dirs = {root / "src"},
                                                      .runtime_library =
                                                          build / "libdudu_macro_runtime.a",
+                                                     .sdk_bridge_source =
+                                                         root / "src/dudu/macro/"
+                                                                "macro_sdk_bridge_generated.cpp",
                                                      .include_dirs = {},
                                                      .library_dirs = {},
                                                      .cpp_sources = {},

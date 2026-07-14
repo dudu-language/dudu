@@ -110,31 +110,63 @@ std::string file_identity(const std::filesystem::path& path) {
            (error ? std::string("unknown-size") : std::to_string(size));
 }
 
+std::filesystem::path default_macro_sdk_cache(const std::filesystem::path& worker_cache) {
+    if (const char* configured = std::getenv("DUDU_MACRO_SDK_CACHE")) {
+        return configured;
+    }
+    if (const char* xdg = std::getenv("XDG_CACHE_HOME")) {
+        return std::filesystem::path(xdg) / "dudu/macro-sdk";
+    }
+    if (const char* home = std::getenv("HOME")) {
+        return std::filesystem::path(home) / ".cache/dudu/macro-sdk";
+    }
+    return worker_cache.parent_path() / "sdk";
+}
+
 } // namespace
 
 RuntimeLayout find_runtime_layout() {
     if (const char* include = std::getenv("DUDU_MACRO_RUNTIME_INCLUDE")) {
         const char* library = std::getenv("DUDU_MACRO_RUNTIME_LIBRARY");
-        RuntimeLayout layout{.include_dirs = {header_root(include)},
-                             .library = library == nullptr ? std::filesystem::path{}
-                                                           : regular_file(library)};
-        if (!layout.include_dirs.front().empty() && !layout.library.empty()) {
+        const char* bridge = std::getenv("DUDU_MACRO_SDK_BRIDGE_SOURCE");
+        RuntimeLayout layout{
+            .include_dirs = {header_root(include)},
+            .library = library == nullptr ? std::filesystem::path{} : regular_file(library),
+            .sdk_bridge_source = bridge == nullptr ? regular_file(std::filesystem::path(include) /
+                                                                  "dudu/macro/"
+                                                                  "macro_sdk_bridge_generated.cpp")
+                                                   : regular_file(bridge)};
+        if (!layout.include_dirs.front().empty() && !layout.library.empty() &&
+            !layout.sdk_bridge_source.empty()) {
             return layout;
         }
         throw std::runtime_error("invalid DUDU macro runtime environment paths");
     }
     if (const auto executable = executable_path()) {
         const std::filesystem::path bin = executable->parent_path();
-        const std::array<std::pair<std::filesystem::path, std::filesystem::path>, 4> candidates = {
-            std::pair{bin / "../src", bin / "libdudu_macro_runtime.a"},
-            std::pair{bin / "../include", bin / "../lib/libdudu_macro_runtime.a"},
-            std::pair{bin / "../include", bin / "../lib64/libdudu_macro_runtime.a"},
-            std::pair{bin / "../include", bin / "../lib/dudu/libdudu_macro_runtime.a"}};
-        for (const auto& [include, library] : candidates) {
+        struct Candidate {
+            std::filesystem::path include;
+            std::filesystem::path library;
+            std::filesystem::path bridge;
+        };
+        const std::array<Candidate, 4> candidates = {
+            Candidate{bin / "../src", bin / "libdudu_macro_runtime.a",
+                      bin / "../src/dudu/macro/macro_sdk_bridge_generated.cpp"},
+            Candidate{bin / "../include", bin / "../lib/libdudu_macro_runtime.a",
+                      bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"},
+            Candidate{bin / "../include", bin / "../lib64/libdudu_macro_runtime.a",
+                      bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"},
+            Candidate{bin / "../include", bin / "../lib/dudu/libdudu_macro_runtime.a",
+                      bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"}};
+        for (const auto& [include, library, bridge] : candidates) {
             const std::filesystem::path resolved_include = header_root(include.lexically_normal());
             const std::filesystem::path resolved_library = regular_file(library.lexically_normal());
-            if (!resolved_include.empty() && !resolved_library.empty()) {
-                return {.include_dirs = {resolved_include}, .library = resolved_library};
+            const std::filesystem::path resolved_bridge = regular_file(bridge.lexically_normal());
+            if (!resolved_include.empty() && !resolved_library.empty() &&
+                !resolved_bridge.empty()) {
+                return {.include_dirs = {resolved_include},
+                        .library = resolved_library,
+                        .sdk_bridge_source = resolved_bridge};
             }
         }
     }
@@ -148,6 +180,7 @@ WorkerBuildOptions worker_build_options(const ProjectConfig& config, const Runti
                                         std::vector<std::string> capabilities) {
     WorkerBuildOptions options;
     options.cache_dir = cache_dir;
+    options.sdk_cache_dir = default_macro_sdk_cache(cache_dir);
     options.project_root = config.project_dir;
     options.package = std::move(package);
     options.compiler = config.compiler.empty() ? "c++" : config.compiler;
@@ -158,6 +191,7 @@ WorkerBuildOptions worker_build_options(const ProjectConfig& config, const Runti
         dudu_executable ? file_identity(*dudu_executable) : "dudu:unresolved";
     options.runtime_include_dirs = runtime.include_dirs;
     options.runtime_library = runtime.library;
+    options.sdk_bridge_source = runtime.sdk_bridge_source;
     options.include_dirs = resolve_paths(config, config.include_dirs);
     options.library_dirs = resolve_paths(config, config.lib_dirs);
     options.cpp_sources = resolve_paths(config, config.cpp_sources);

@@ -12,6 +12,7 @@ namespace dudu::macro {
 
 struct WorkerBuildOptions {
     std::filesystem::path cache_dir;
+    std::filesystem::path sdk_cache_dir;
     std::filesystem::path project_root;
     std::string package;
     std::string compiler = "c++";
@@ -20,6 +21,7 @@ struct WorkerBuildOptions {
     std::string dudu_toolchain_identity;
     std::vector<std::filesystem::path> runtime_include_dirs;
     std::filesystem::path runtime_library;
+    std::filesystem::path sdk_bridge_source;
     std::vector<std::filesystem::path> include_dirs;
     std::vector<std::filesystem::path> library_dirs;
     std::vector<std::filesystem::path> cpp_sources;

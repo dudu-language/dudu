@@ -169,6 +169,36 @@ The Dudu release gate remains the handwritten-equivalent comparison. Beating a
 different compiler on a synthetic benchmark does not excuse avoidable overhead
 inside Dudu.
 
+The current reference measurements and exact fixture caveats are recorded in
+[Macro Performance Matrix](macro-performance-matrix.md). The comparison is
+dated evidence, not a permanent language claim.
+
+## Macro SDK Cache
+
+Macro workers use two cache layers:
+
+1. A global, content-addressed SDK cache stores optimized object files for the
+   generated macro AST and protocol bridge. Its identity includes the C++
+   compiler, standard, toolchain identity, generated SDK contents, bridge
+   contents, include directories, defines, and compiler flags.
+2. Each project stores content-addressed worker binaries and expansion results
+   under its normal build cache. Worker launch code and package sources compile
+   as separate translation units and independent units compile concurrently.
+
+The launcher is compiled with `-O1`; macro package code and shared SDK objects
+use `-O2`. This keeps worker startup and protocol code fast without making each
+project repeatedly optimize generated SDK implementation code.
+
+The SDK cache defaults to `$XDG_CACHE_HOME/dudu/macro-sdk`, then
+`$HOME/.cache/dudu/macro-sdk`. `DUDU_MACRO_SDK_CACHE` overrides it. Publishing
+uses an identity-named staging directory and atomic rename so concurrent Dudu
+processes cannot expose partial entries.
+
+The first macro use after installing a new Dudu/C++ toolchain must bootstrap
+one SDK cache entry. That one-time operation is reported separately from a cold
+project package build. Deleting a project's build directory must not force the
+shared SDK to rebuild.
+
 ## Tooling
 
 Extend the existing compiler benchmark harness with:

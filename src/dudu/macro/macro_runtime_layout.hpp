@@ -12,6 +12,7 @@ namespace dudu::macro {
 struct RuntimeLayout {
     std::vector<std::filesystem::path> include_dirs;
     std::filesystem::path library;
+    std::filesystem::path sdk_bridge_source;
 };
 
 RuntimeLayout find_runtime_layout();
