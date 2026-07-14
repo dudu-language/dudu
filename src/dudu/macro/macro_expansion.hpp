@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,10 +19,21 @@ struct ExpansionOptions {
 };
 
 struct ExpansionReport {
+    struct Definition {
+        std::string name;
+        std::string identity;
+        std::string module_path;
+        std::string accepted_kind;
+        std::string documentation;
+        protocol::SourceRange location;
+        std::optional<protocol::ClassDecl> attribute_schema;
+    };
+
     std::size_t invocations = 0;
     std::size_t worker_cache_hits = 0;
     std::size_t expansion_cache_hits = 0;
     std::vector<std::string> worker_identities;
+    std::vector<Definition> definitions;
     struct Record {
         std::string macro_name;
         std::string macro_identity;

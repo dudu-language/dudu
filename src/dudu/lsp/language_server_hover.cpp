@@ -9,6 +9,7 @@
 #include "dudu/lsp/language_server_hover_keywords.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
@@ -410,6 +411,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
         if (!selected_path.has_value()) {
             selected_path = selection.expr_path;
+        }
+    }
+    if (const std::optional<MacroEditorSelection> macro = macro_selection_at(current, params)) {
+        if (const std::optional<Symbol> symbol =
+                macro_symbol_for_reference(*index, current, *macro)) {
+            return symbol_hover_json(*symbol);
         }
     }
     if (const std::optional<DecoratorSelection> decorator =

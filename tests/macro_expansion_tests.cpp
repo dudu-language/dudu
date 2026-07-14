@@ -1,4 +1,11 @@
 #include "dudu/codegen/cpp_emit_modules.hpp"
+#include "dudu/lsp/language_server_completion.hpp"
+#include "dudu/lsp/language_server_definition.hpp"
+#include "dudu/lsp/language_server_hover.hpp"
+#include "dudu/lsp/language_server_json.hpp"
+#include "dudu/lsp/language_server_macros.hpp"
+#include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 
@@ -92,6 +99,66 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     options.force_module_tree = true;
     const dudu::ProjectIndex first = dudu::ProjectIndex::load(options);
     assert(first.macro_report().invocations == 1);
+    assert(first.macro_report().definitions.size() == 1);
+    const dudu::macro::ExpansionReport::Definition& debug =
+        first.macro_report().definitions.front();
+    assert(debug.name == "Debug");
+    assert(debug.identity == "macros.Debug");
+    assert(debug.module_path == "macros");
+    assert(debug.accepted_kind == "class");
+    assert(debug.attribute_schema.has_value());
+    assert(debug.attribute_schema->name == "DebugOptions");
+    assert(debug.attribute_schema->fields.size() == 1);
+    assert(debug.attribute_schema->fields.front().name == "score");
+    const dudu::ModuleAst& main = first.visible_unit_for_path(dir / "src/main.dd");
+    dudu::Json derive_params =
+        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":9}}").parse();
+    const std::optional<dudu::MacroEditorSelection> derive_selection =
+        dudu::macro_selection_at(main, &derive_params);
+    assert(derive_selection.has_value());
+    assert(derive_selection->reference == "Debug");
+    const std::optional<dudu::Symbol> derive_symbol =
+        dudu::macro_symbol_for_reference(first, main, *derive_selection);
+    assert(derive_symbol.has_value());
+    assert(derive_symbol->detail.find("@macro Debug(class)") != std::string::npos);
+    assert(derive_symbol->detail.find("score: str") != std::string::npos);
+
+    dudu::Json option_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":12}}").parse();
+    const std::optional<dudu::MacroEditorSelection> option_selection =
+        dudu::macro_selection_at(main, &option_params);
+    assert(option_selection.has_value());
+    assert(option_selection->kind == dudu::MacroEditorSelectionKind::HelperOption);
+    assert(option_selection->option == "score");
+    const std::optional<dudu::Symbol> option_symbol =
+        dudu::macro_symbol_for_reference(first, main, *option_selection);
+    assert(option_symbol.has_value());
+    assert(option_symbol->detail == "score: str");
+
+    const std::string main_source = "from macros import Debug\n"
+                                    "\n"
+                                    "@derive(Debug)\n"
+                                    "class Player:\n"
+                                    "    @Debug(score=\"9\")\n"
+                                    "    hp: i32\n"
+                                    "\n"
+                                    "def score(player: Player) -> i32:\n"
+                                    "    return player.debug_score()\n";
+    const dudu::Document document{.uri = dudu::file_uri(dir / "src/main.dd"),
+                                  .path = dir / "src/main.dd",
+                                  .text = main_source};
+    dudu::clear_language_server_module_cache();
+    const std::string hover = dudu::hover_json(document, "", &derive_params);
+    assert(hover.find("@macro Debug(class)") != std::string::npos);
+    const std::string definition = dudu::definition_json(document, &derive_params);
+    assert(definition.find("macros.dd") != std::string::npos);
+    const std::string option_hover = dudu::hover_json(document, "", &option_params);
+    assert(option_hover.find("score: str") != std::string::npos);
+    const std::string signature = dudu::signature_help_json(&document, &option_params);
+    assert(signature.find("@Debug(score: str = ...)") != std::string::npos);
+    const std::string completion = dudu::completion_json(&document, &option_params);
+    assert(completion.find("\"label\":\"score\"") != std::string::npos);
+    dudu::clear_language_server_module_cache();
     const dudu::ClassDecl& player = player_class(first.merged_module());
     assert(player.methods.size() == 1);
     assert(player.methods.front().name == "debug_score");
@@ -113,6 +180,35 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     assert(second.macro_report().worker_cache_hits == 1);
     assert(second.macro_report().expansion_cache_hits == 1);
     assert(player_class(second.merged_module()).methods.size() == 1);
+}
+
+void test_imported_macro_definition_is_reported_without_an_invocation() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_macro_definition_catalog_test";
+    std::filesystem::remove_all(dir);
+    write_file(dir / "dudu.toml", "name = \"macro_definition_catalog\"\n"
+                                  "entry = \"src/main.dd\"\n"
+                                  "build_dir = \"build\"\n");
+    write_file(dir / "src/macros.dd", "import dudu.ast as ast\n"
+                                      "\n"
+                                      "@macro\n"
+                                      "def Debug(item: ast.ClassDecl) -> ast.Expansion:\n"
+                                      "    return ast.expansion()\n");
+    write_file(dir / "src/main.dd", "from macros import Debug\n"
+                                    "\n"
+                                    "class Player:\n"
+                                    "    hp: i32\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(dir / "dudu.toml");
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "src/main.dd";
+    options.config = config;
+    options.source_dir = dir / "src";
+    options.force_module_tree = true;
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.macro_report().invocations == 0);
+    assert(index.macro_report().definitions.size() == 1);
+    assert(index.macro_report().definitions.front().identity == "macros.Debug");
 }
 
 void test_capability_input_invalidates_expansion_cache() {
@@ -319,6 +415,7 @@ void test_enum_derive_generates_a_callable_method() {
 
 int main() {
     test_dudu_macro_expands_before_semantics_and_caches();
+    test_imported_macro_definition_is_reported_without_an_invocation();
     test_capability_input_invalidates_expansion_cache();
     test_undeclared_macro_capability_is_rejected();
     test_nondeterministic_macro_requires_explicit_approval();

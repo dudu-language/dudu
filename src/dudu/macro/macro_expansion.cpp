@@ -181,6 +181,10 @@ void mark_resolved_decorators(ModuleAst& module, const Plan& plan) {
             if (invocation.target_module != unit.module_path || invocation.decorator == nullptr)
                 continue;
             unit.resolved_macro_decorators.insert(decorator_name(*invocation.decorator));
+            if (invocation.macro != nullptr) {
+                unit.resolved_macro_decorators.insert(invocation.macro->name);
+                unit.resolved_macro_decorators.insert(invocation.macro->identity);
+            }
             for (const HelperAttribute& helper : invocation.helper_attributes) {
                 if (helper.decorator != nullptr)
                     unit.resolved_macro_decorators.insert(decorator_name(*helper.decorator));
@@ -222,8 +226,23 @@ void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
 ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& options) {
     const Plan plan = build_plan(module);
     mark_macro_host_modules(module, plan);
+    ExpansionReport report;
+    for (const auto& [_, definition] : plan.definitions) {
+        report.definitions.push_back(
+            {.name = definition.name,
+             .identity = definition.identity,
+             .module_path = definition.module_path,
+             .accepted_kind = std::string(target_kind_name(definition.accepted_kind)),
+             .documentation =
+                 definition.function == nullptr ? "" : definition.function->doc_comment,
+             .location = to_protocol(definition.location),
+             .attribute_schema =
+                 definition.attribute_schema == nullptr
+                     ? std::optional<p::ClassDecl>{}
+                     : to_protocol(*definition.attribute_schema, definition.module_path)});
+    }
     if (plan.invocations.empty())
-        return {};
+        return report;
     mark_resolved_decorators(module, plan);
 
     const RuntimeLayout runtime = find_runtime_layout();
@@ -235,8 +254,6 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                                   : options.cache_dir;
     const auto packages = package_plans(plan, options.project);
     std::map<std::string, WorkerBinary> binaries;
-    ExpansionReport report;
-
     for (const auto& [key, package] : packages) {
         WorkerBuildOptions build =
             worker_build_options(package.config, runtime, cache_root / "workers",

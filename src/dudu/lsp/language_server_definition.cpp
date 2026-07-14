@@ -10,6 +10,7 @@
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
@@ -471,6 +472,12 @@ std::string definition_json(const Document& doc, const Json* params,
         return *header;
     }
     const AstSelection selection = ast_selection_at(current, params);
+    if (const std::optional<MacroEditorSelection> macro = macro_selection_at(current, params)) {
+        if (const std::optional<Symbol> symbol =
+                macro_symbol_for_reference(index, current, *macro)) {
+            return symbol_definition_json(*symbol, doc);
+        }
+    }
     std::string word = selection.symbol_path.value_or("");
     if (const std::optional<DecoratorSelection> decorator =
             decorator_selection_at(current, params)) {

@@ -120,15 +120,40 @@ std::optional<std::string> decorator_path_text(const Decorator& decorator) {
 
 void collect_decorator_tokens(const std::vector<Decorator>& decorators,
                               std::vector<SemanticToken>& tokens,
-                              const DuduSemanticIndex& dudu_index) {
+                              const DuduSemanticIndex& dudu_index,
+                              const std::set<std::string>& resolved_macros) {
     for (const Decorator& decorator : decorators) {
         const std::optional<std::string> name = decorator_path_text(decorator);
         if (!name) {
             continue;
         }
-        const int token_type = dudu_index.functions.contains(*name) ? token_function : token_macro;
+        const int token_type =
+            dudu_index.functions.contains(*name) && !resolved_macros.contains(*name)
+                ? token_function
+                : token_macro;
         add_semantic_token(tokens, decorator.location, "@" + *name, token_type,
                            token_type == token_macro ? mod_readonly : 0);
+        if (decorator.expr.kind != ExprKind::Call)
+            continue;
+        if (*name == "derive") {
+            for (const Expr& argument : decorator.expr.children) {
+                const std::optional<ExprPath> path = expr_path_from_expr(argument);
+                if (!path || path->segments.empty())
+                    continue;
+                for (size_t i = 0; i < path->segments.size(); ++i) {
+                    const ExprPathSegment& segment = path->segments[i];
+                    add_semantic_token(tokens, segment.location, segment.text,
+                                       i + 1 == path->segments.size() ? token_macro
+                                                                      : token_namespace,
+                                       i + 1 == path->segments.size() ? mod_readonly : 0);
+                }
+            }
+        } else if (resolved_macros.contains(*name)) {
+            for (const Expr& argument : decorator.expr.children) {
+                if (argument.kind == ExprKind::NamedArg)
+                    add_semantic_token(tokens, argument.location, argument.name, token_parameter);
+            }
+        }
     }
 }
 
@@ -509,7 +534,10 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         int import_token_type = token_namespace;
         int import_modifiers = mod_declaration;
         if (import.kind == ImportKind::From) {
-            if (dudu_index.classes.contains(bound)) {
+            if (module.resolved_macro_decorators.contains(bound)) {
+                import_token_type = token_macro;
+                import_modifiers |= mod_readonly;
+            } else if (dudu_index.classes.contains(bound)) {
                 import_token_type = token_class;
             } else if (dudu_index.enums.contains(bound)) {
                 import_token_type = token_enum;
@@ -534,9 +562,13 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         collect_type_tokens(alias.type_ref, tokens, dudu_index, native_index);
     }
     for (const EnumDecl& en : module.enums) {
+        collect_decorator_tokens(en.decorators, tokens, dudu_index,
+                                 module.resolved_macro_decorators);
         add_semantic_token(tokens, en.location, en.name, token_enum, mod_declaration);
         collect_type_tokens(en.underlying_type_ref, tokens, dudu_index, native_index);
         for (const EnumValueDecl& value : en.values) {
+            collect_decorator_tokens(value.decorators, tokens, dudu_index,
+                                     module.resolved_macro_decorators);
             add_semantic_token(tokens, value.location, value.name, token_enum_member,
                                mod_declaration);
             collect_expr_tokens(value.value_expr, tokens, dudu_index, native_index, nullptr,
@@ -544,15 +576,20 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         }
     }
     for (const ClassDecl& klass : module.classes) {
-        collect_decorator_tokens(klass.decorators, tokens, dudu_index);
+        collect_decorator_tokens(klass.decorators, tokens, dudu_index,
+                                 module.resolved_macro_decorators);
         add_semantic_token(tokens, klass.location, klass.name, token_class, mod_declaration);
         for (const FieldDecl& field : klass.fields) {
+            collect_decorator_tokens(field.decorators, tokens, dudu_index,
+                                     module.resolved_macro_decorators);
             add_semantic_token(tokens, field.location, field.name, token_property, mod_declaration);
             collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
             collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index, nullptr,
                                 nullptr);
         }
         for (const ConstDecl& constant : klass.constants) {
+            collect_decorator_tokens(constant.decorators, tokens, dudu_index,
+                                     module.resolved_macro_decorators);
             add_semantic_token(tokens, constant.location, constant.name, token_property,
                                mod_declaration | mod_readonly);
             collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
@@ -560,6 +597,8 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
                                 nullptr);
         }
         for (const ConstDecl& field : klass.static_fields) {
+            collect_decorator_tokens(field.decorators, tokens, dudu_index,
+                                     module.resolved_macro_decorators);
             add_semantic_token(tokens, field.location, field.name, token_property,
                                mod_declaration | mod_static);
             collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
@@ -567,7 +606,8 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
                                 nullptr);
         }
         for (const FunctionDecl& method : klass.methods) {
-            collect_decorator_tokens(method.decorators, tokens, dudu_index);
+            collect_decorator_tokens(method.decorators, tokens, dudu_index,
+                                     module.resolved_macro_decorators);
             add_semantic_token(tokens, method.location, method.name, token_method, mod_declaration);
             std::set<std::string> local_bindings;
             std::map<std::string, TypeRef> local_types;
@@ -590,6 +630,8 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         }
     }
     for (const ConstDecl& constant : module.constants) {
+        collect_decorator_tokens(constant.decorators, tokens, dudu_index,
+                                 module.resolved_macro_decorators);
         add_semantic_token(tokens, constant.location, constant.name, token_variable,
                            mod_declaration | mod_readonly);
         collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
@@ -601,7 +643,8 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
                             nullptr);
     }
     for (const FunctionDecl& fn : module.functions) {
-        collect_decorator_tokens(fn.decorators, tokens, dudu_index);
+        collect_decorator_tokens(fn.decorators, tokens, dudu_index,
+                                 module.resolved_macro_decorators);
         add_semantic_token(tokens, fn.location, fn.name, token_function, mod_declaration);
         std::set<std::string> local_bindings;
         std::map<std::string, TypeRef> local_types;

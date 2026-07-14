@@ -4,6 +4,7 @@
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
@@ -446,6 +447,28 @@ std::string completion_json(const Document* doc, const Json* params) {
         }
     }
     if (doc != nullptr) {
+        const CallSite call = call_site_at(*doc, params);
+        if (index != nullptr && current != nullptr && !call.name.empty()) {
+            if (const std::optional<MacroEditorCall> macro =
+                    macro_call_for_reference(*index, *current, call.name)) {
+                std::ostringstream macro_items;
+                macro_items << "[";
+                for (size_t i = 0; i < macro->options.size(); ++i) {
+                    if (i > 0)
+                        macro_items << ",";
+                    const MacroEditorOption& option = macro->options[i];
+                    macro_items << "{\"label\":\"" << json_escape(option.name)
+                                << "\",\"kind\":5,\"detail\":\""
+                                << json_escape(option.name + ": " + option.type)
+                                << "\",\"insertText\":\"" << json_escape(option.name + "=${1}")
+                                << "\",\"insertTextFormat\":2";
+                    write_documentation(macro_items, option.documentation);
+                    macro_items << "}";
+                }
+                macro_items << "]";
+                return macro_items.str();
+            }
+        }
         if (const std::optional<std::string> member_target =
                 member_completion_target(*doc, params)) {
             if (index != nullptr && current != nullptr) {
@@ -556,11 +579,17 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     std::vector<SignatureCandidate> signatures;
     if (const ProjectIndex* index = completion_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
+        const std::optional<MacroEditorCall> macro =
+            macro_call_for_reference(*index, current, call.name);
+        if (macro) {
+            signatures.push_back(
+                {.label = macro->signature, .documentation = macro->documentation});
+        }
         const Symbols semantic_symbols = collect_symbols(current);
         add_member_signature_candidates(signatures, current, call, params);
         add_constructor_signature_candidates(signatures, current, call.name);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
-            if (symbol_matches(symbol.name, call.name) &&
+            if (!macro && symbol_matches(symbol.name, call.name) &&
                 (symbol.kind == lsp_symbol_kind::Function ||
                  symbol.kind == lsp_symbol_kind::Method)) {
                 signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
