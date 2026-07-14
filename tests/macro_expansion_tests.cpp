@@ -6,12 +6,14 @@
 #include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_references.hpp"
+#include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -41,6 +43,34 @@ bool has_player_method(const dudu::ModuleAst& module, const std::string& name) {
     const dudu::ClassDecl& player = player_class(module);
     return std::any_of(player.methods.begin(), player.methods.end(),
                        [&](const auto& method) { return method.name == name; });
+}
+
+void require_semantic_token(const std::string& json, int expected_line, int expected_column,
+                            int expected_type, int expected_modifiers) {
+    std::vector<int> data;
+    for (size_t i = 0; i < json.size();) {
+        if (std::isdigit(static_cast<unsigned char>(json[i])) == 0) {
+            ++i;
+            continue;
+        }
+        int value = 0;
+        while (i < json.size() && std::isdigit(static_cast<unsigned char>(json[i])) != 0) {
+            value = value * 10 + json[i] - '0';
+            ++i;
+        }
+        data.push_back(value);
+    }
+    int line = 0;
+    int column = 0;
+    for (size_t i = 0; i + 4 < data.size(); i += 5) {
+        line += data[i];
+        column = data[i] == 0 ? column + data[i + 1] : data[i + 1];
+        if (line == expected_line && column == expected_column && data[i + 3] == expected_type &&
+            data[i + 4] == expected_modifiers) {
+            return;
+        }
+    }
+    assert(false && "expected semantic token is missing");
 }
 
 const dudu::EnumDecl& color_enum(const dudu::ModuleAst& module) {
@@ -113,6 +143,18 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     assert(debug.attribute_schema->fields.size() == 1);
     assert(debug.attribute_schema->fields.front().name == "score");
     const dudu::ModuleAst& main = first.visible_unit_for_path(dir / "src/main.dd");
+    const std::string semantic_tokens =
+        dudu::semantic_tokens_json(first, dir / "src/main.dd", first);
+    constexpr int token_parameter = 7;
+    constexpr int token_macro = 10;
+    constexpr int mod_declaration = 1;
+    constexpr int mod_readonly = 4;
+    require_semantic_token(semantic_tokens, 0, 19, token_macro,
+                           mod_declaration | mod_readonly);
+    require_semantic_token(semantic_tokens, 2, 0, token_macro, mod_readonly);
+    require_semantic_token(semantic_tokens, 2, 8, token_macro, mod_readonly);
+    require_semantic_token(semantic_tokens, 4, 4, token_macro, mod_readonly);
+    require_semantic_token(semantic_tokens, 4, 11, token_parameter, 0);
     dudu::Json derive_params =
         dudu::JsonParser("{\"position\":{\"line\":2,\"character\":9}}").parse();
     const std::optional<dudu::MacroEditorSelection> derive_selection =

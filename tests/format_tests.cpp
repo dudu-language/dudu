@@ -103,6 +103,38 @@ void test_enum_variants_are_compact() {
     assert(dudu::format_source(formatted) == formatted);
 }
 
+void test_macro_decorators_are_canonical_and_idempotent() {
+    const std::string source = "class DebugOptions:\n"
+                               "\tlabel: str = \"\"\n"
+                               "\n"
+                               "@macro(attributes = DebugOptions)\n"
+                               "def Debug(item: ast.ClassDecl) -> ast.Expansion:\n"
+                               "\treturn ast.expansion()\n"
+                               "\n"
+                               "@derive(Debug,Json)\n"
+                               "class Player:\n"
+                               "\t@Json(rename = \"displayName\")\n"
+                               "\tname: str\n"
+                               "\t@Debug(label = \"health\")\n"
+                               "\thp: i32\n";
+    const std::string expected = "class DebugOptions:\n"
+                                 "    label: str = \"\"\n"
+                                 "\n"
+                                 "@macro(attributes = DebugOptions)\n"
+                                 "def Debug(item: ast.ClassDecl) -> ast.Expansion:\n"
+                                 "    return ast.expansion()\n"
+                                 "\n"
+                                 "@derive(Debug,Json)\n"
+                                 "class Player:\n"
+                                 "    @Json(rename = \"displayName\")\n"
+                                 "    name: str\n"
+                                 "    @Debug(label = \"health\")\n"
+                                 "    hp: i32\n";
+    const std::string formatted = dudu::format_source(source);
+    assert(formatted == expected);
+    assert(dudu::format_source(formatted) == formatted);
+}
+
 } // namespace
 
 int main() {
@@ -111,6 +143,7 @@ int main() {
     test_runtime_triple_string_contents_are_preserved();
     test_unterminated_triple_string_contents_are_preserved();
     test_enum_variants_are_compact();
+    test_macro_decorators_are_canonical_and_idempotent();
     std::cout << "format tests passed\n";
     return 0;
 }
