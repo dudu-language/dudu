@@ -290,8 +290,25 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
                                     "\n"
                                     "@derive(Debug)\n"
                                     "class Player:\n"
+                                    "    @Debug(score=\"9\")\n"
+                                    "    hp: i32\n"
+                                    "    mana: i32\n"
+                                    "\n"
+                                    "def score(player: Player) -> i32:\n"
+                                    "    return player.debug_score() + 0\n");
+    const dudu::ProjectIndex declaration_changed = dudu::ProjectIndex::load(options);
+    assert(declaration_changed.macro_report().invocations == 1);
+    assert(declaration_changed.macro_report().worker_executions == 1);
+    assert(declaration_changed.macro_report().worker_starts == 0);
+    assert(declaration_changed.macro_report().expansion_cache_hits == 0);
+
+    write_file(dir / "src/main.dd", "from macros import Debug\n"
+                                    "\n"
+                                    "@derive(Debug)\n"
+                                    "class Player:\n"
                                     "    @Debug(score=\"10\")\n"
                                     "    hp: i32\n"
+                                    "    mana: i32\n"
                                     "\n"
                                     "def score(player: Player) -> i32:\n"
                                     "    return player.debug_score() + 0\n");

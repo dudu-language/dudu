@@ -64,6 +64,7 @@ class WorkerProcess {
     wire::Frame request(protocol::MessageKind kind, std::vector<std::uint8_t> payload = {});
     void negotiate();
     void close_descriptors();
+    void terminate_noexcept();
     void stop_noexcept();
 
     int child_pid_ = -1;

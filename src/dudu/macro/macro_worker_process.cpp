@@ -180,7 +180,7 @@ WorkerProcess WorkerProcess::launch(const std::filesystem::path& executable,
     try {
         process.negotiate();
     } catch (...) {
-        process.stop_noexcept();
+        process.terminate_noexcept();
         throw;
     }
     return process;
@@ -197,13 +197,19 @@ wire::Frame WorkerProcess::request(protocol::MessageKind kind, std::vector<std::
                                .request_id = request_id,
                                .payload = std::move(payload)};
     const Clock::time_point deadline = Clock::now() + options_.request_timeout;
-    write_exact(write_fd_, wire::encode_frame(frame), deadline);
-    wire::Frame response = read_frame(read_fd_, deadline, options_.decode_limits);
-    if (response.request_id != request_id) {
-        throw wire::ProtocolError("macro worker response request ID mismatch");
-    }
-    if (response.protocol_version != protocol::protocol_version) {
-        throw wire::ProtocolError("macro worker response protocol version mismatch");
+    wire::Frame response;
+    try {
+        write_exact(write_fd_, wire::encode_frame(frame), deadline);
+        response = read_frame(read_fd_, deadline, options_.decode_limits);
+        if (response.request_id != request_id) {
+            throw wire::ProtocolError("macro worker response request ID mismatch");
+        }
+        if (response.protocol_version != protocol::protocol_version) {
+            throw wire::ProtocolError("macro worker response protocol version mismatch");
+        }
+    } catch (...) {
+        terminate_noexcept();
+        throw;
     }
     if (static_cast<protocol::MessageKind>(response.message_kind) ==
         protocol::MessageKind::WorkerError) {
@@ -233,9 +239,15 @@ protocol::MacroCatalog WorkerProcess::describe() {
     const wire::Frame response = request(protocol::MessageKind::Describe);
     if (static_cast<protocol::MessageKind>(response.message_kind) !=
         protocol::MessageKind::Catalog) {
+        terminate_noexcept();
         throw wire::ProtocolError("macro worker did not reply with Catalog");
     }
-    return protocol::decode_MacroCatalog(response.payload, options_.decode_limits);
+    try {
+        return protocol::decode_MacroCatalog(response.payload, options_.decode_limits);
+    } catch (...) {
+        terminate_noexcept();
+        throw;
+    }
 }
 
 protocol::ExpansionResponse
@@ -256,11 +268,17 @@ WorkerProcess::expand_measured(const protocol::ExpansionRequest& expansion_reque
             .count());
     if (static_cast<protocol::MessageKind>(response.message_kind) !=
         protocol::MessageKind::ExpansionResult) {
+        terminate_noexcept();
         throw wire::ProtocolError("macro worker did not reply with ExpansionResult");
     }
     const Clock::time_point decode_start = Clock::now();
-    protocol::ExpansionResponse expansion =
-        protocol::decode_ExpansionResponse(response.payload, options_.decode_limits);
+    protocol::ExpansionResponse expansion;
+    try {
+        expansion = protocol::decode_ExpansionResponse(response.payload, options_.decode_limits);
+    } catch (...) {
+        terminate_noexcept();
+        throw;
+    }
     const std::uint64_t decode_ns = static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - decode_start).count());
     return {.response = std::move(expansion),
@@ -309,6 +327,19 @@ void WorkerProcess::close_descriptors() {
     }
 }
 
+void WorkerProcess::terminate_noexcept() {
+    if (child_pid_ < 0) {
+        close_descriptors();
+        return;
+    }
+    ::kill(child_pid_, SIGKILL);
+    int status = 0;
+    while (::waitpid(child_pid_, &status, 0) < 0 && errno == EINTR) {
+    }
+    child_pid_ = -1;
+    close_descriptors();
+}
+
 void WorkerProcess::stop_noexcept() {
     if (child_pid_ < 0) {
         close_descriptors();
@@ -319,12 +350,7 @@ void WorkerProcess::stop_noexcept() {
         return;
     } catch (...) {
     }
-    ::kill(child_pid_, SIGKILL);
-    int status = 0;
-    while (::waitpid(child_pid_, &status, 0) < 0 && errno == EINTR) {
-    }
-    child_pid_ = -1;
-    close_descriptors();
+    terminate_noexcept();
 }
 
 } // namespace dudu::macro
