@@ -42,7 +42,6 @@ class WorkerSessions {
         std::uint64_t start_ns = 0;
         std::uint64_t protocol_ns = 0;
         std::uint64_t validate_ns = 0;
-        std::size_t worker_rss_kb = 0;
     };
 
     Result expand(const std::string& session_key, const WorkerBinary& binary,
@@ -77,8 +76,15 @@ class WorkerSessions {
                 ? measured.transport_ns - result.response.execute_ns
                 : 0;
         result.protocol_ns = measured.request_encode_ns + worker_transport_ns;
-        result.worker_rss_kb = found->second.process.resident_set_kb().value_or(0);
         return result;
+    }
+
+    std::size_t resident_set_kb(const std::string& session_key) {
+        std::lock_guard lock(mutex_);
+        const auto found = workers_.find(session_key);
+        if (found == workers_.end() || !found->second.process.running())
+            return 0;
+        return found->second.process.resident_set_kb().value_or(0);
     }
 
   private:
@@ -193,20 +199,6 @@ SourceRange declaration_range(const p::Declaration& declaration, SourceLocation 
     return {fallback, fallback};
 }
 
-const PackagePlan& package_for(const std::map<std::string, PackagePlan>& packages,
-                               const Definition& definition) {
-    const std::filesystem::path manifest = package_manifest(definition);
-    const std::string key = manifest.empty() ? std::filesystem::path(definition.location.file.str())
-                                                   .parent_path()
-                                                   .lexically_normal()
-                                                   .string()
-                                             : manifest.lexically_normal().string();
-    const auto found = packages.find(key);
-    if (found == packages.end())
-        throw std::logic_error("macro package plan is missing");
-    return found->second;
-}
-
 std::string package_name(const PackagePlan& package) {
     if (!package.config.name.empty())
         return package.config.name;
@@ -263,9 +255,11 @@ void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
 } // namespace
 
 ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& options) {
+    const Clock::time_point plan_start = Clock::now();
     const Plan plan = build_plan(module);
     mark_macro_host_modules(module, plan);
     ExpansionReport report;
+    report.timings.plan_ns = elapsed_ns(plan_start);
     for (const auto& [_, definition] : plan.definitions) {
         report.definitions.push_back(
             {.name = definition.name,
@@ -282,6 +276,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     }
     if (plan.invocations.empty())
         return report;
+    const Clock::time_point setup_start = Clock::now();
     mark_resolved_decorators(module, plan);
 
     const RuntimeLayout runtime = find_runtime_layout();
@@ -292,8 +287,12 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         options.cache_dir.empty() ? project_path(options.project, configured_build) / ".dudu/macros"
                                   : options.cache_dir;
     const auto packages = package_plans(plan, options.project);
+    report.timings.setup_ns = elapsed_ns(setup_start);
     std::map<std::string, WorkerBinary> binaries;
+    std::map<std::string, const PackagePlan*> packages_by_macro;
     for (const auto& [key, package] : packages) {
+        for (const auto& [identity, _] : package.plan.definitions)
+            packages_by_macro.emplace(identity, &package);
         WorkerBuildOptions build =
             worker_build_options(package.config, runtime, cache_root / "workers",
                                  package_name(package), capabilities(package.config));
@@ -309,18 +308,30 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
 
     std::vector<CollectedExpansion> collected;
     collected.reserve(plan.invocations.size());
-    for (const Invocation& invocation : plan.invocations) {
+    const Clock::time_point declaration_bridge_start = Clock::now();
+    std::vector<p::Declaration> declarations =
+        declarations_for_invocations(module, plan.invocations);
+    report.timings.declaration_bridge_ns = elapsed_ns(declaration_bridge_start);
+    const Clock::time_point request_loop_start = Clock::now();
+    for (std::size_t invocation_index = 0; invocation_index < plan.invocations.size();
+         ++invocation_index) {
+        const Invocation& invocation = plan.invocations[invocation_index];
         if (invocation.macro == nullptr || invocation.decorator == nullptr)
             throw std::logic_error("incomplete macro invocation plan");
-        const PackagePlan& package = package_for(packages, *invocation.macro);
+        const auto found_package = packages_by_macro.find(invocation.macro->identity);
+        if (found_package == packages_by_macro.end())
+            throw std::logic_error("macro package plan is missing");
+        const PackagePlan& package = *found_package->second;
         const WorkerBinary& binary = binaries.at(package.key);
-        p::Declaration declaration = declaration_for_invocation(module, invocation);
+        p::Declaration& declaration = declarations[invocation_index];
         const SourceRange invocation_range = invocation.decorator->expr.range;
         p::ExpansionRequest request{.macro_name = invocation.macro->identity,
                                     .declaration = declaration,
                                     .invocation = to_protocol(invocation_range),
                                     .compile_values = compile_values(module)};
+        const Clock::time_point cache_key_start = Clock::now();
         const std::string cache_key = expansion_cache_key(binary.identity, request);
+        report.timings.cache_key_ns += elapsed_ns(cache_key_start);
         const Clock::time_point cache_start = Clock::now();
         std::optional<p::ExpansionResponse> response =
             read_expansion_cache(cache_root / "expansions", cache_key);
@@ -340,7 +351,6 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                 report.timings.execute_ns += response->execute_ns;
                 report.timings.protocol_ns += execution.protocol_ns;
                 report.timings.validate_ns += execution.validate_ns;
-                report.worker_rss_kb = std::max(report.worker_rss_kb, execution.worker_rss_kb);
             } catch (const WorkerProcessError& error) {
                 throw compile_error_from_worker(error.detail(), request.invocation,
                                                 invocation.macro->name);
@@ -349,9 +359,13 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                     .code = "dudu.macro.worker", .message = error.what(), .diagnostics = {}};
                 throw compile_error_from_worker(detail, request.invocation, invocation.macro->name);
             }
-            if (response->cacheable)
+            if (response->cacheable) {
+                const Clock::time_point cache_write_start = Clock::now();
                 write_expansion_cache(cache_root / "expansions", cache_key, *response);
+                report.timings.cache_write_ns += elapsed_ns(cache_write_start);
+            }
         }
+        const Clock::time_point collect_start = Clock::now();
         ++report.invocations;
         report.generated_nodes += p::count_nodes(response->expansion);
         report.expansions.push_back(
@@ -381,6 +395,14 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
              .definition = {invocation.macro->location, invocation.macro->location},
              .source_declaration = declaration_range(declaration, invocation.decorator->location),
              .expansion = std::move(merge_expansion)});
+        report.timings.collect_ns += elapsed_ns(collect_start);
+    }
+    report.timings.request_loop_ns = elapsed_ns(request_loop_start);
+    if (report.worker_executions != 0) {
+        for (const auto& [key, _] : packages) {
+            report.worker_rss_kb =
+                std::max(report.worker_rss_kb, worker_sessions().resident_set_kb(key));
+        }
     }
     const Clock::time_point merge_start = Clock::now();
     merge_expansions(module, plan, collected);

@@ -5,12 +5,24 @@
 #include "dudu/macro/macro_expansion_internal.hpp"
 
 #include <algorithm>
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace dudu::macro {
 namespace {
 
 namespace p = protocol;
+
+using NameSet = std::unordered_set<std::string>;
+
+struct UnitMergeState {
+    ModuleAst* unit = nullptr;
+    std::unordered_map<std::string, std::size_t> classes;
+    std::unordered_map<std::string, std::size_t> enums;
+    std::unordered_map<std::string, NameSet> class_members;
+    std::unordered_map<std::string, NameSet> enum_members;
+    NameSet module_names;
+};
 
 [[noreturn]] void fail(const CollectedExpansion& source, const std::string& message,
                        std::string code = "dudu.macro.output") {
@@ -27,28 +39,14 @@ std::vector<ModuleAst*> units(ModuleAst& module) {
     return out;
 }
 
-ModuleAst& target_unit(ModuleAst& module, const CollectedExpansion& source) {
-    for (ModuleAst* unit : units(module)) {
-        if (unit->module_path == source.target_module)
-            return *unit;
-    }
-    fail(source, "macro target module disappeared before expansion merge");
+ClassDecl* target_class(UnitMergeState& state, std::string_view name) {
+    const auto found = state.classes.find(std::string(name));
+    return found == state.classes.end() ? nullptr : &state.unit->classes[found->second];
 }
 
-ClassDecl* target_class(ModuleAst& unit, std::string_view name) {
-    for (ClassDecl& klass : unit.classes) {
-        if (klass.name == name)
-            return &klass;
-    }
-    return nullptr;
-}
-
-EnumDecl* target_enum(ModuleAst& unit, std::string_view name) {
-    for (EnumDecl& en : unit.enums) {
-        if (en.name == name)
-            return &en;
-    }
-    return nullptr;
+EnumDecl* target_enum(UnitMergeState& state, std::string_view name) {
+    const auto found = state.enums.find(std::string(name));
+    return found == state.enums.end() ? nullptr : &state.unit->enums[found->second];
 }
 
 bool macro_decorator(const Decorator& decorator, const Plan& plan) {
@@ -70,8 +68,8 @@ void reject_recursive_attributes(const Decl& declaration, const Plan& plan,
     }
 }
 
-std::set<std::string> class_member_names(const ClassDecl& klass) {
-    std::set<std::string> names;
+NameSet class_member_names(const ClassDecl& klass) {
+    NameSet names;
     for (const FieldDecl& field : klass.fields)
         names.insert(field.name);
     for (const ConstDecl& constant : klass.constants)
@@ -83,8 +81,8 @@ std::set<std::string> class_member_names(const ClassDecl& klass) {
     return names;
 }
 
-std::set<std::string> enum_member_names(const EnumDecl& en) {
-    std::set<std::string> names;
+NameSet enum_member_names(const EnumDecl& en) {
+    NameSet names;
     for (const EnumValueDecl& value : en.values)
         names.insert(value.name);
     for (const FunctionDecl& method : en.methods)
@@ -96,8 +94,7 @@ void add_origin(ModuleAst& unit, const CollectedExpansion& source, GeneratedDecl
                 std::string owner, std::string name);
 
 void merge_enum_member(ModuleAst& unit, EnumDecl& en, const p::Declaration& declaration,
-                       const Plan& plan, const CollectedExpansion& source,
-                       std::set<std::string>& names) {
+                       const Plan& plan, const CollectedExpansion& source, NameSet& names) {
     if (declaration.kind != p::DeclarationKind::Function || !declaration.function_decl) {
         fail(source, "enum macros may only generate methods");
     }
@@ -125,8 +122,7 @@ void add_origin(ModuleAst& unit, const CollectedExpansion& source, GeneratedDecl
 }
 
 void merge_class_member(ModuleAst& unit, ClassDecl& klass, const p::Declaration& declaration,
-                        const Plan& plan, const CollectedExpansion& source,
-                        std::set<std::string>& names) {
+                        const Plan& plan, const CollectedExpansion& source, NameSet& names) {
     const SourceLocation fallback = source.invocation.start;
     if (declaration.kind == p::DeclarationKind::Field && declaration.field_decl) {
         FieldDecl field = from_protocol(*declaration.field_decl, fallback);
@@ -160,8 +156,8 @@ void merge_class_member(ModuleAst& unit, ClassDecl& klass, const p::Declaration&
     fail(source, "macro generated an invalid class member declaration");
 }
 
-std::set<std::string> module_names(const ModuleAst& unit) {
-    std::set<std::string> names;
+NameSet module_names(const ModuleAst& unit) {
+    NameSet names;
     for (const TypeAliasDecl& alias : unit.aliases)
         names.insert(alias.name);
     for (const EnumDecl& en : unit.enums)
@@ -175,8 +171,10 @@ std::set<std::string> module_names(const ModuleAst& unit) {
     return names;
 }
 
-void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Plan& plan,
-                   const CollectedExpansion& source, std::set<std::string>& names) {
+void merge_sibling(UnitMergeState& state, const p::Declaration& declaration, const Plan& plan,
+                   const CollectedExpansion& source) {
+    ModuleAst& unit = *state.unit;
+    NameSet& names = state.module_names;
     const SourceLocation fallback = source.invocation.start;
     if (declaration.kind == p::DeclarationKind::Class && declaration.class_decl) {
         ClassDecl klass = from_protocol(*declaration.class_decl, unit.module_path, fallback);
@@ -184,6 +182,7 @@ void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Pla
         if (klass.name.empty() || !names.insert(klass.name).second)
             fail(source, "generated sibling conflicts with existing name: " + klass.name);
         add_origin(unit, source, GeneratedDeclarationKind::Class, {}, klass.name);
+        state.classes.emplace(klass.name, unit.classes.size());
         unit.classes.push_back(std::move(klass));
         return;
     }
@@ -193,6 +192,7 @@ void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Pla
         if (en.name.empty() || !names.insert(en.name).second)
             fail(source, "generated sibling conflicts with existing name: " + en.name);
         add_origin(unit, source, GeneratedDeclarationKind::Enum, {}, en.name);
+        state.enums.emplace(en.name, unit.enums.size());
         unit.enums.push_back(std::move(en));
         return;
     }
@@ -219,15 +219,16 @@ void merge_sibling(ModuleAst& unit, const p::Declaration& declaration, const Pla
     fail(source, "macro generated an invalid sibling declaration");
 }
 
-void merge_implementation(ModuleAst& unit, const p::Declaration& declaration, const Plan& plan,
-                          const CollectedExpansion& source) {
+void merge_implementation(UnitMergeState& state, const p::Declaration& declaration,
+                          const Plan& plan, const CollectedExpansion& source) {
+    ModuleAst& unit = *state.unit;
     if (declaration.kind != p::DeclarationKind::Implementation ||
         !declaration.implementation_decl) {
         fail(source, "macro implementation output must contain an implementation declaration");
     }
     const p::ImplementationDecl& implementation = *declaration.implementation_decl;
     const std::string target = implementation.target.name;
-    ClassDecl* klass = target_class(unit, target);
+    ClassDecl* klass = target_class(state, target);
     if (klass == nullptr)
         fail(source, "generated implementation target is not a local class: " + target);
     const std::string contract = implementation.contract.name;
@@ -236,7 +237,8 @@ void merge_implementation(ModuleAst& unit, const p::Declaration& declaration, co
         [&](const BaseClassDecl& base) { return type_ref_head_name(base.type_ref) == contract; });
     if (!contract.empty() && !has_contract)
         fail(source, "generated implementation target does not declare contract " + contract);
-    std::set<std::string> names = class_member_names(*klass);
+    NameSet& names =
+        state.class_members.try_emplace(target, class_member_names(*klass)).first->second;
     for (const p::FunctionDecl& generated : implementation.methods) {
         p::Declaration method{.kind = p::DeclarationKind::Function, .function_decl = generated};
         merge_class_member(unit, *klass, method, plan, source, names);
@@ -244,32 +246,55 @@ void merge_implementation(ModuleAst& unit, const p::Declaration& declaration, co
     add_origin(unit, source, GeneratedDeclarationKind::Implementation, target, contract);
 }
 
+std::unordered_map<std::string, UnitMergeState> index_units(ModuleAst& module) {
+    std::unordered_map<std::string, UnitMergeState> indexed;
+    for (ModuleAst* unit : units(module)) {
+        UnitMergeState state;
+        state.unit = unit;
+        state.module_names = module_names(*unit);
+        for (std::size_t i = 0; i < unit->classes.size(); ++i)
+            state.classes.emplace(unit->classes[i].name, i);
+        for (std::size_t i = 0; i < unit->enums.size(); ++i)
+            state.enums.emplace(unit->enums[i].name, i);
+        indexed.emplace(unit->module_path, std::move(state));
+    }
+    return indexed;
+}
+
 } // namespace
 
 void merge_expansions(ModuleAst& module, const Plan& plan,
                       const std::vector<CollectedExpansion>& expansions) {
+    auto indexed_units = index_units(module);
     for (const CollectedExpansion& source : expansions) {
-        ModuleAst& unit = target_unit(module, source);
+        const auto found_unit = indexed_units.find(source.target_module);
+        if (found_unit == indexed_units.end())
+            fail(source, "macro target module disappeared before expansion merge");
+        UnitMergeState& state = found_unit->second;
+        ModuleAst& unit = *state.unit;
         for (const p::Diagnostic& diagnostic : source.expansion.diagnostics) {
             if (diagnostic.severity == p::DiagnosticSeverity::Error) {
                 throw compile_error_from_macro_diagnostic(diagnostic,
                                                           to_protocol(source.invocation));
             }
         }
-        std::set<std::string> siblings = module_names(unit);
         if (!source.expansion.members.empty()) {
             if (source.target_kind == TargetKind::Class) {
-                ClassDecl* klass = target_class(unit, source.target_name);
+                ClassDecl* klass = target_class(state, source.target_name);
                 if (klass == nullptr)
                     fail(source, "macro target class disappeared before merge");
-                std::set<std::string> names = class_member_names(*klass);
+                NameSet& names =
+                    state.class_members.try_emplace(source.target_name, class_member_names(*klass))
+                        .first->second;
                 for (const p::GeneratedDeclaration& generated : source.expansion.members)
                     merge_class_member(unit, *klass, generated.declaration, plan, source, names);
             } else if (source.target_kind == TargetKind::Enum) {
-                EnumDecl* en = target_enum(unit, source.target_name);
+                EnumDecl* en = target_enum(state, source.target_name);
                 if (en == nullptr)
                     fail(source, "macro target enum disappeared before merge");
-                std::set<std::string> names = enum_member_names(*en);
+                NameSet& names =
+                    state.enum_members.try_emplace(source.target_name, enum_member_names(*en))
+                        .first->second;
                 for (const p::GeneratedDeclaration& generated : source.expansion.members)
                     merge_enum_member(unit, *en, generated.declaration, plan, source, names);
             } else {
@@ -277,9 +302,9 @@ void merge_expansions(ModuleAst& module, const Plan& plan,
             }
         }
         for (const p::GeneratedDeclaration& generated : source.expansion.siblings)
-            merge_sibling(unit, generated.declaration, plan, source, siblings);
+            merge_sibling(state, generated.declaration, plan, source);
         for (const p::GeneratedDeclaration& generated : source.expansion.implementations)
-            merge_implementation(unit, generated.declaration, plan, source);
+            merge_implementation(state, generated.declaration, plan, source);
     }
 }
 

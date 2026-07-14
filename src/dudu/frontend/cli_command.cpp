@@ -67,11 +67,19 @@ void print_macro_performance(bool enabled, const macro::ExpansionReport& report)
                        std::to_string(report.expansion_cache_hits));
     print_project_step(true, "macro.generated_nodes", std::to_string(report.generated_nodes));
     print_project_step(true, "macro.worker_rss", std::to_string(report.worker_rss_kb) + " KiB");
+    print_project_step(true, "macro.plan", milliseconds(report.timings.plan_ns));
+    print_project_step(true, "macro.setup", milliseconds(report.timings.setup_ns));
+    print_project_step(true, "macro.declaration_bridge",
+                       milliseconds(report.timings.declaration_bridge_ns));
+    print_project_step(true, "macro.request_loop", milliseconds(report.timings.request_loop_ns));
     print_project_step(true, "macro.package_build", milliseconds(report.timings.package_build_ns));
     print_project_step(true, "macro.worker_start", milliseconds(report.timings.worker_start_ns));
     print_project_step(true, "macro.protocol", milliseconds(report.timings.protocol_ns));
     print_project_step(true, "macro.execute", milliseconds(report.timings.execute_ns));
     print_project_step(true, "macro.cache_read", milliseconds(report.timings.cache_read_ns));
+    print_project_step(true, "macro.cache_key", milliseconds(report.timings.cache_key_ns));
+    print_project_step(true, "macro.cache_write", milliseconds(report.timings.cache_write_ns));
+    print_project_step(true, "macro.collect", milliseconds(report.timings.collect_ns));
     print_project_step(true, "macro.validate", milliseconds(report.timings.validate_ns));
     print_project_step(true, "macro.hygiene", milliseconds(report.timings.hygiene_ns));
     print_project_step(true, "macro.merge", milliseconds(report.timings.merge_ns));

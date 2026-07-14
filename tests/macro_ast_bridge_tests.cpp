@@ -80,6 +80,11 @@ void test_invocation_target_uses_original_declaration() {
     assert(declaration.class_decl->name == "Player");
     assert(declaration.class_decl->fields.front().name == "hp");
     assert(declaration.class_decl->identity->module == "main");
+    const auto declarations =
+        dudu::macro::declarations_for_invocations(module, plan.invocations);
+    assert(declarations.size() == 1);
+    assert(declarations.front().class_decl->name == declaration.class_decl->name);
+    assert(declarations.front().class_decl->identity->module == "main");
 }
 
 dudu::macro::protocol::GeneratedDeclaration

@@ -5,6 +5,7 @@
 #include "dudu/sema/sema_generics.hpp"
 
 #include <stdexcept>
+#include <unordered_map>
 
 namespace dudu::macro {
 namespace {
@@ -94,6 +95,75 @@ const T& named(const std::vector<T>& declarations, const Invocation& invocation,
     }
     throw std::runtime_error("macro invocation target " + std::string(kind) + " is missing: " +
                              invocation.target_module + "." + invocation.target_name);
+}
+
+struct UnitDeclarations {
+    const ModuleAst* unit = nullptr;
+    std::unordered_map<std::string, const ClassDecl*> classes;
+    std::unordered_map<std::string, const EnumDecl*> enums;
+    std::unordered_map<std::string, const FunctionDecl*> functions;
+    std::unordered_map<std::string, const ConstDecl*> constants;
+};
+
+template <typename T>
+void index_declarations(std::unordered_map<std::string, const T*>& index,
+                        const std::vector<T>& declarations) {
+    index.reserve(declarations.size());
+    for (const T& declaration : declarations)
+        index.emplace(declaration.name, &declaration);
+}
+
+UnitDeclarations index_unit(const ModuleAst& unit) {
+    UnitDeclarations indexed;
+    indexed.unit = &unit;
+    index_declarations(indexed.classes, unit.classes);
+    index_declarations(indexed.enums, unit.enums);
+    index_declarations(indexed.functions, unit.functions);
+    index_declarations(indexed.constants, unit.constants);
+    return indexed;
+}
+
+template <typename T>
+const T& indexed_declaration(const std::unordered_map<std::string, const T*>& declarations,
+                             const Invocation& invocation, std::string_view kind) {
+    const auto found = declarations.find(invocation.target_name);
+    if (found != declarations.end())
+        return *found->second;
+    throw std::runtime_error("macro invocation target " + std::string(kind) + " is missing: " +
+                             invocation.target_module + "." + invocation.target_name);
+}
+
+p::Declaration declaration_for_invocation(const UnitDeclarations& indexed,
+                                          const Invocation& invocation) {
+    const ModuleAst& unit = *indexed.unit;
+    p::Declaration out;
+    switch (invocation.target_kind) {
+    case TargetKind::Class:
+        out.kind = p::DeclarationKind::Class;
+        out.class_decl = to_protocol(indexed_declaration(indexed.classes, invocation, "class"),
+                                     unit.module_path);
+        break;
+    case TargetKind::Enum:
+        out.kind = p::DeclarationKind::Enum;
+        out.enum_decl =
+            to_protocol(indexed_declaration(indexed.enums, invocation, "enum"), unit.module_path);
+        break;
+    case TargetKind::Function:
+        out.kind = p::DeclarationKind::Function;
+        out.function_decl = to_protocol(
+            indexed_declaration(indexed.functions, invocation, "function"), unit.module_path);
+        break;
+    case TargetKind::Constant:
+        out.kind = p::DeclarationKind::Constant;
+        out.constant_decl = to_protocol(
+            indexed_declaration(indexed.constants, invocation, "constant"), unit.module_path);
+        break;
+    case TargetKind::Field:
+        throw std::runtime_error("standalone field macro target has no owner identity");
+    case TargetKind::Any:
+        throw std::runtime_error("macro invocation target kind is unresolved");
+    }
+    return out;
 }
 
 } // namespace
@@ -241,6 +311,30 @@ p::Declaration declaration_for_invocation(const ModuleAst& module, const Invocat
         throw std::runtime_error("macro invocation target kind is unresolved");
     }
     return out;
+}
+
+std::vector<p::Declaration>
+declarations_for_invocations(const ModuleAst& module, const std::vector<Invocation>& invocations) {
+    std::unordered_map<std::string, UnitDeclarations> indexed;
+    if (module.module_units.empty()) {
+        indexed.emplace(module.module_path, index_unit(module));
+    } else {
+        indexed.reserve(module.module_units.size());
+        for (const ModuleAst& unit : module.module_units)
+            indexed.emplace(unit.module_path, index_unit(unit));
+    }
+
+    std::vector<p::Declaration> declarations;
+    declarations.reserve(invocations.size());
+    for (const Invocation& invocation : invocations) {
+        const auto found = indexed.find(invocation.target_module);
+        if (found == indexed.end()) {
+            throw std::runtime_error("macro invocation target module is missing: " +
+                                     invocation.target_module);
+        }
+        declarations.push_back(declaration_for_invocation(found->second, invocation));
+    }
+    return declarations;
 }
 
 } // namespace dudu::macro

@@ -155,7 +155,8 @@ if [[ "$build_tools" -eq 1 ]]; then
         -DDUDU_BUILD_TESTS=ON \
         -DDUDU_STRICT=ON \
         -DDUDU_WARN_AS_ERROR=ON >/dev/null
-    cmake --build "$tool_build_dir" >/dev/null
+    cmake --build "$tool_build_dir" --parallel "$(nproc)" \
+        --target duc dudu dudu-lsp >/dev/null
 fi
 
 bench_dir="$repo_root/build/bench_compiler"

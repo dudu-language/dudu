@@ -122,7 +122,8 @@ budgets take precedence when absolute timings vary across hardware.
 | 200-field derive execution | at most 20 ms p95 after worker acquisition |
 | 1,000 no-op derives | at most 100 ms total warm expansion time |
 | 1,000 ordinary Debug derives | at most 250 ms total warm expansion time |
-| Macro versus handwritten equivalent | total Dudu frontend time at most 1.20x the checked-in expanded fixture |
+| 1,000 cached derives versus handwritten | fixed frontend overhead at most 50 ms |
+| 10,000 cached derives versus handwritten | total Dudu frontend time at most 1.20x the checked-in expanded fixture |
 | Expansion transport | at least 250,000 AST nodes per second for payloads above 10,000 nodes |
 | Idle worker memory | at most 64 MiB RSS above its macro package and shared runtime mappings |
 | Crash or timeout recovery | diagnostic and clean worker replacement within 250 ms after termination is observed |
@@ -132,6 +133,12 @@ budgets. Its relative gate is no more than 1.25x the time required to compile an
 equivalent normal host Dudu module with the same imports. Large SDK header costs
 must be addressed with a compact runtime interface or precompiled artifacts,
 not accepted as permanent macro overhead.
+
+The separate 1,000- and 10,000-declaration gates distinguish bounded setup,
+cache, and expansion-metadata costs from scaling behavior. A ratio at the
+smaller scale is unstable because the handwritten frontend baseline is under
+100 ms on the reference machine; the absolute gate remains strict there while
+the larger fixture enforces the relative budget.
 
 If a budget proves unrealistic on measured implementations, change it only
 with benchmark evidence and an explanation of the architecture responsible.

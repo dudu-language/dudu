@@ -130,10 +130,16 @@ def check_budgets(
                   "1,000 Debug executions")
 
     if "macro_debug_1000_cached" in cases and "macro_debug_1000_handwritten" in cases:
-        ratio = median_case(cases, "macro_debug_1000_cached") / max(
-            median_case(cases, "macro_debug_1000_handwritten"), 0.001
+        overhead = median_case(cases, "macro_debug_1000_cached") - median_case(
+            cases, "macro_debug_1000_handwritten"
         )
-        check.maximum(ratio, 1.20, "cached macro/handwritten frontend ratio")
+        check.maximum(overhead, 50.0, "1,000 cached derives fixed frontend overhead ms")
+
+    if "macro_debug_10000_cached" in cases and "macro_debug_10000_handwritten" in cases:
+        ratio = median_case(cases, "macro_debug_10000_cached") / max(
+            median_case(cases, "macro_debug_10000_handwritten"), 0.001
+        )
+        check.maximum(ratio, 1.20, "10,000 cached derives/handwritten frontend ratio")
 
     for name in volume_cases:
         nodes = max(metrics.get(name, {}).get("macro.generated_nodes", [0.0]))

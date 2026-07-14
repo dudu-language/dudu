@@ -20,11 +20,18 @@ struct ExpansionOptions {
 
 struct ExpansionReport {
     struct Timings {
+        std::uint64_t plan_ns = 0;
+        std::uint64_t setup_ns = 0;
+        std::uint64_t declaration_bridge_ns = 0;
+        std::uint64_t request_loop_ns = 0;
         std::uint64_t package_build_ns = 0;
         std::uint64_t worker_start_ns = 0;
         std::uint64_t protocol_ns = 0;
         std::uint64_t execute_ns = 0;
         std::uint64_t cache_read_ns = 0;
+        std::uint64_t cache_key_ns = 0;
+        std::uint64_t cache_write_ns = 0;
+        std::uint64_t collect_ns = 0;
         std::uint64_t validate_ns = 0;
         std::uint64_t hygiene_ns = 0;
         std::uint64_t merge_ns = 0;
