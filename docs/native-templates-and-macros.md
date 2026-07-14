@@ -1,7 +1,7 @@
 <a id="native-templates-and-macros"></a>
 # Generics, Native Templates, And Macros
 
-[Dudu manual](https://dudulang.org/docs.html#cpp-interop) | Previous: [Import semantics](import_semantics.md) | Next: [Allocation and lifetimes](allocation-and-lifetimes.md)
+[Dudu manual](https://dudulang.org/docs.html#cpp-interop) | Previous: [Import semantics](import_semantics.md) | Next: [User-defined macros](macros.md)
 
 Four separate mechanisms use square brackets or call-shaped syntax in Dudu.
 They are not interchangeable.
@@ -122,8 +122,8 @@ The wrapper stays at the native boundary and exposes a normal function, type,
 constant, or complete callable macro. This is a C/C++ preprocessor boundary,
 not a second Dudu macro language.
 
-Dudu-defined additive declaration and derive macros are specified in
-[Dudu Macro System Plan](macro-syntax-plan.md). Expression and control-flow
+Dudu-defined additive declaration and derive macros are documented in
+[User-defined macros](macros.md). Expression and control-flow
 macros are not part of that system. Compiler-known decorators such as
 `@operator` and `@constexpr` remain language features rather than user-defined
 macros.
@@ -149,7 +149,8 @@ code or invent a Dudu-specific replacement declaration.
 - Token pasting, stringizing, declaration generation, and partial-syntax
   macros require an ordinary native wrapper when they cannot be imported as a
   complete declaration or expression.
-- User-defined Dudu macros are specified but not implemented.
+- User-defined Dudu macros are a separate typed, additive declaration system;
+  they do not change the imported native preprocessor boundary described here.
 
 ## Tested Examples
 

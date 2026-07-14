@@ -49,10 +49,18 @@ See [Known Limitations](docs/known-limitations.md) before adopting it.
 
 Current language coverage includes Dudu-native generics, payload enums with
 exhaustive `match`, fixed arrays with matrix/tensor-style indexing and slices,
-operator overloads, native inheritance, generated CMake module builds, and
-initial LSP support. Project tooling includes path/Git Dudu source dependencies
-with a lockfile, so early Dudu packages can be consumed before a central package
-registry exists.
+operator overloads, native inheritance, typed additive declaration macros,
+generated CMake module builds, and initial LSP support. Project tooling includes
+path/Git Dudu source dependencies with a lockfile, so early Dudu packages can be
+consumed before a central package registry exists.
+
+User macros use a public typed declaration AST rather than source strings or
+token substitution. See [User-Defined Macros](docs/macros.md), and inspect a
+project's generated declarations with:
+
+```sh
+duc expand src/main.dd --show-origins
+```
 
 ## Install
 

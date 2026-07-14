@@ -52,6 +52,7 @@
           <a href="#containers" data-docs-link data-keywords="list dict set tuple array fixed shape index slice view tensor">Containers and arrays</a>
           <a href="#memory" data-docs-link data-keywords="pointer reference const new delete malloc free lifetime ownership">Memory and references</a>
           <a href="#generics" data-docs-link data-keywords="generic template constexpr static assert build flags compile time">Generics and compile time</a>
+          <a href="#macros" data-docs-link data-keywords="macro derive attribute ast expansion generated code capability cache worker">Macros</a>
         </section>
         <section class="docs-nav-group">
           <h2>Native code</h2>
@@ -550,6 +551,131 @@ if build.DEBUG:
         <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/compile-time-programming.md">Compile-time programming reference</a>
       </section>
 
+      <section class="docs-section" id="macros">
+        <h2>User-defined macros</h2>
+        <p>Dudu macros are typed, additive declaration generators. A macro receives an immutable public declaration AST and returns ordinary Dudu declarations. It does not receive source text, rewrite expressions or function bodies, or add grammar.</p>
+        <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>Mechanism</th><th>Example</th><th>Meaning</th></tr></thead><tbody>
+          <tr><td>Compiler decorator</td><td><code>@operator("+")</code></td><td>A fixed language feature.</td></tr>
+          <tr><td>Native macro</td><td><code>assert(value &gt; 0)</code></td><td>A macro imported from a C or C++ header.</td></tr>
+          <tr><td>User macro</td><td><code>@derive(Debug)</code></td><td>A Dudu function that returns typed declarations at compile time.</td></tr>
+        </tbody></table></div>
+
+        <h3>Runnable Debug macro</h3>
+        <p>A macro package uses the public <code>dudu.ast</code> module:</p>
+        <div class="code-window"><div class="code-label">macros.dd</div><pre><code>import dudu.ast as ast
+
+
+def count_method(name: str, count: i32) -&gt; ast.FunctionDecl:
+    self_param = ast.Parameter(
+        name="self",
+        type=ast.reference_type(ast.named_type("Self")),
+    )
+    body = ast.return_statement(ast.int_expression(str(count)))
+    return ast.FunctionDecl(
+        name=name,
+        parameters=[self_param],
+        return_type=ast.named_type("i32"),
+        body=[body],
+    )
+
+
+@macro
+def Debug(item: ast.ClassDecl) -&gt; ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        count += 1
+
+    out = ast.expansion()
+    out.add_method(count_method("debug_field_count", count))
+    return out</code></pre></div>
+        <p>Import and apply it through ordinary Dudu syntax:</p>
+        <div class="code-window"><div class="code-label">main.dd</div><pre><code>from macros import Debug
+
+
+@derive(Debug)
+class Player:
+    id: u64
+    name: str
+    hp: i32
+
+
+def main() -&gt; i32:
+    player = Player(1, "Ada", 100)
+    assert player.debug_field_count() == 3
+    return 0</code></pre></div>
+        <p><code>@derive(A, B)</code> applies class or enum macros. <code>@reflect</code>-style attached macros use the same execution model when derive wording would be misleading. Every macro sees the original declaration, not output produced by another macro.</p>
+
+        <h3>Typed helper attributes</h3>
+        <div class="comparison compact-comparison">
+          <div class="code-window"><div class="code-label">Macro option schema</div><pre><code>class JsonOptions:
+    name: str = ""
+    skip: bool = False
+
+
+@macro(attributes=JsonOptions)
+def Json(item: ast.ClassDecl) -&gt; ast.Expansion:
+    out = ast.expansion()
+    # Inspect item.fields and their typed attributes.
+    return out</code></pre></div>
+          <div class="code-window"><div class="code-label">Macro use</div><pre><code>@derive(Json)
+class Player:
+    id: u64
+
+    @Json(name="displayName")
+    name: str
+
+    @Json(skip=True)
+    cached_score: i32</code></pre></div>
+        </div>
+        <p>Unknown option names, incorrect value types, duplicate options, and invalid placements are compiler diagnostics before the macro worker runs.</p>
+
+        <h3>Signatures and output</h3>
+        <p>A macro is an ordinary Dudu function marked <code>@macro</code>. Its input selects the accepted declaration kind and its result is always <code>ast.Expansion</code>:</p>
+        <div class="code-window"><div class="code-label">Accepted signatures</div><pre><code>@macro
+def ClassMacro(item: ast.ClassDecl) -&gt; ast.Expansion:
+    return ast.expansion()
+
+
+@macro
+def EnumMacro(item: ast.EnumDecl) -&gt; ast.Expansion:
+    return ast.expansion()
+
+
+@macro
+def FunctionMacro(item: ast.FunctionDecl) -&gt; ast.Expansion:
+    return ast.expansion()</code></pre></div>
+        <p>An expansion may add methods, siblings, or structured diagnostics. It cannot mutate or delete source declarations. Generated declarations pass through the same resolver, semantic analyzer, lowering pipeline, and C++ emitter as handwritten declarations.</p>
+
+        <h3>Inspect expansion</h3>
+        <div class="code-window" data-language="bash"><div class="code-label">Shell</div><pre><code>duc expand src/main.dd
+duc expand src/main.dd --macro Json
+duc expand src/main.dd --show-origins
+duc expand src/main.dd --show-origins -o build/expanded.dd</code></pre></div>
+        <p>The output is generated Dudu with the invocation, macro definition, and source declaration origins. C++ remains available through the normal emit commands.</p>
+
+        <h3>Packages and capabilities</h3>
+        <p>Macro packages use normal modules and path or Git dependencies. They are trusted build dependencies. Deterministic macros require no host access. External access is explicit:</p>
+        <div class="comparison compact-comparison">
+          <div class="code-window" data-language="toml"><div class="code-label">dudu.toml</div><pre><code>[macro.capabilities]
+fs.read = ["schemas/**"]
+env.read = ["TARGET"]
+
+[macro]
+allow_non_cacheable = ["GenerateAssets"]</code></pre></div>
+          <div class="code-window"><div class="code-label">Host API</div><pre><code>import dudu.macro as host
+
+schema = host.read_text("schemas/messages.json")
+target = host.read_env("TARGET")</code></pre></div>
+        </div>
+        <p>Available capabilities are filesystem read/write, environment reads, processes, network, clock, and randomness. Writes, processes, network, time, and randomness make an expansion non-cacheable and require explicit permission.</p>
+
+        <h3>Caching, failures, and editor behavior</h3>
+        <p>Macro packages compile to persistent isolated host workers. Worker binaries and deterministic expansions use content-addressed caches. Unchanged declarations do not rerun their macros. A failed or timed-out worker reports a structured diagnostic, is discarded, and does not corrupt the compiler or LSP process.</p>
+        <p>Macro imports and invocations participate in semantic highlighting, hover, definition, references, rename, completion, and signature help. Generated declarations retain their invocation and definition origins and participate in normal editor operations.</p>
+        <div class="docs-callout"><p>Dudu deliberately has no expression macros, quote/splice syntax, source-string generation, custom grammar, or function-body rewriting. Use functions, generics, operators, and <code>@constexpr</code> for expression-level abstraction.</p></div>
+        <a class="docs-source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/macros.md">Complete macro authoring, packaging, diagnostics, and performance guide</a>
+      </section>
+
       <section class="docs-section" id="modules">
         <h2>Modules and imports</h2>
         <p>Dudu modules use Python-shaped imports:</p>
@@ -707,7 +833,8 @@ dudu test --no-capture</code></pre></div>
 duc emit src/main.dd -o build/main.cpp
 duc emit-modules src/main.dd -o build/generated
 duc fmt src/main.dd --check
-duc src/library.dd --emit-header build/library.hpp</code></pre></div>
+duc src/library.dd --emit-header build/library.hpp
+duc expand src/main.dd --show-origins</code></pre></div>
         <p>Add <code>--timings</code> to project commands when a build feels slow. Dudu then reports elapsed analysis, generation, CMake, compile, and run stages separately.</p>
       </section>
 
@@ -739,6 +866,7 @@ duc src/library.dd --emit-header build/library.hpp</code></pre></div>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/generics.md">Generics and value parameters</a>: type inference, value arithmetic, <code>dyn</code>, and generated C++ templates.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/import_semantics.md">Import semantics</a>: Dudu modules, native headers, aliases, collisions, and editor ranges.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/native-templates-and-macros.md">Native templates and macros</a>: imported C++ templates, callable macros, and boundary cases.</li>
+          <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/macros.md">User-defined macros</a>: typed declaration generation, helper attributes, packages, capabilities, caching, diagnostics, and editor behavior.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/allocation-and-lifetimes.md">Allocation and lifetimes</a>: values, RAII, raw storage, custom allocators, and pointer escape diagnostics.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/arrays-views-and-indexing.md">Arrays, views, and indexing</a>: arbitrary-rank slicing, views, library operators, and shape diagnostics.</li>
           <li><a href="https://github.com/dudu-language/dudu/blob/master/docs/known-limitations.md">Known limitations</a>: current alpha constraints.</li>
@@ -758,6 +886,7 @@ duc src/library.dd --emit-header build/library.hpp</code></pre></div>
       <a href="#classes" data-outline-link>Classes</a>
       <a href="#containers" data-outline-link>Arrays</a>
       <a href="#memory" data-outline-link>Memory</a>
+      <a href="#macros" data-outline-link>Macros</a>
       <a href="#modules" data-outline-link>Imports</a>
       <a href="#cpp-interop" data-outline-link>C++ interop</a>
       <a href="#tools" data-outline-link>Commands</a>

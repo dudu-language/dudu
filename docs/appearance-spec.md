@@ -1421,6 +1421,49 @@ operators are `==`, `!=`, `<`, `<=`, `>`, and `>=`. Operator methods take
 library-defined mask/expression type; conditions still require a `bool` value
 or an explicit `@operator("bool")`.
 
+## User-Defined Macros
+
+User-defined macros are typed additive declaration generators. A macro is an
+ordinary Dudu function marked `@macro`; it accepts a public declaration from
+`dudu.ast` and returns `ast.Expansion`:
+
+```python
+import dudu.ast as ast
+
+
+@macro
+def Debug(item: ast.ClassDecl) -> ast.Expansion:
+    out = ast.expansion()
+    # Inspect item and add typed methods, siblings, or diagnostics.
+    return out
+```
+
+Class and enum macros may be applied through `@derive(...)`:
+
+```python
+from model_macros import Debug
+
+
+@derive(Debug)
+class Player:
+    id: u64
+    name: str
+```
+
+Macros may also be attached directly, such as `@reflect`. A macro may publish a
+typed helper-attribute schema through `@macro(attributes=Options)`. Every macro
+attached to a declaration receives the same immutable source declaration; one
+macro does not inspect another macro's generated output.
+
+Expansions may add methods, sibling declarations, and structured diagnostics.
+They may not rewrite or delete source declarations, replace expressions or
+statements, add grammar, emit source strings, or install type-system rules.
+Generated declarations pass through normal resolution, semantic analysis,
+lowering, code generation, diagnostics, and editor indexing.
+
+The complete syntax, public AST API, capability model, cache behavior, and
+diagnostics are specified in [User-Defined Macros](macros.md).
+
 ## C Interop
 
 ```python

@@ -4,9 +4,15 @@ This document is the canonical design for user-defined Dudu macros. It replaces
 the earlier collection of candidate quote syntax, expression-macro sketches,
 and unresolved execution models.
 
-Status: specified, not implemented. Compiler-known decorators such as `@test`,
-`@operator`, `@constexpr`, and `@extern_c` already exist, but they are language
-features rather than user-defined macros.
+Status: implemented. Compiler-known decorators such as `@test`, `@operator`,
+`@constexpr`, and `@extern_c` remain language features rather than
+user-defined macros. User macros use the public `dudu.ast` API, execute in
+persistent isolated workers, and produce additive typed declarations. The
+implementation includes capability declarations, deterministic caching,
+source origins, `duc expand`, editor integration, failure isolation, and the
+performance gates defined by this plan.
+
+The public authoring and usage guide is [User-Defined Macros](macros.md).
 
 The target surface is Python-shaped. The expansion model is a typed,
 deterministic, additive source generator over Dudu declarations.

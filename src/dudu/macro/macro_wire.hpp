@@ -21,7 +21,8 @@ enum class FieldType : std::uint8_t {
 struct DecodeLimits {
     std::size_t max_frame_bytes = 64U * 1024U * 1024U;
     std::size_t max_string_bytes = 8U * 1024U * 1024U;
-    std::size_t max_nodes = 1'000'000U;
+    // Allows the one-million-public-node expansion budget plus wire envelopes.
+    std::size_t max_nodes = 1'100'000U;
     std::size_t max_depth = 256U;
 };
 

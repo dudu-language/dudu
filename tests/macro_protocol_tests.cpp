@@ -1,7 +1,9 @@
+#include "dudu/macro/macro_expansion_cache.hpp"
 #include "dudu/macro/macro_protocol_generated.hpp"
 
 #include <cassert>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -117,6 +119,58 @@ void test_truncated_payload_is_rejected() {
     assert(rejected);
 }
 
+void test_nested_message_node_limit_is_enforced() {
+    wire::Writer writer;
+    writer.write_message(1, [](wire::Writer& child) {
+        child.write_message(1,
+                            [](wire::Writer& grandchild) { grandchild.write_string(1, "leaf"); });
+    });
+
+    wire::DecodeLimits limits;
+    limits.max_nodes = 2;
+    wire::Reader root = wire::Reader::root(writer.bytes(), limits);
+    std::uint32_t tag = 0;
+    wire::FieldType type = wire::FieldType::Varint;
+    assert(root.next(tag, type));
+    wire::Reader child = root.read_message(type);
+    assert(child.next(tag, type));
+
+    bool rejected = false;
+    try {
+        (void)child.read_message(type);
+    } catch (const wire::ProtocolError&) {
+        rejected = true;
+    }
+    assert(rejected);
+    assert(wire::DecodeLimits{}.max_nodes > 1'000'000U);
+}
+
+void test_expansion_batch_cache_deduplicates_responses() {
+    const std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / "dudu_macro_batch_cache_test";
+    std::filesystem::remove_all(directory);
+    const std::vector<std::string> keys = {"first", "second", "third"};
+    std::vector<CachedExpansionResponse> responses;
+    responses.push_back(
+        std::make_shared<ExpansionResponse>(ExpansionResponse{.cacheable = true, .execute_ns = 7}));
+    responses.push_back(
+        std::make_shared<ExpansionResponse>(ExpansionResponse{.cacheable = true, .execute_ns = 7}));
+    responses.push_back(
+        std::make_shared<ExpansionResponse>(ExpansionResponse{.cacheable = true, .execute_ns = 8}));
+
+    write_expansion_cache_batch(directory, keys, responses);
+    bool batch_hit = false;
+    const std::vector<CachedExpansionResponse> loaded =
+        read_expansion_caches(directory, keys, &batch_hit);
+    assert(batch_hit);
+    assert(loaded.size() == 3);
+    assert(loaded[0] == loaded[1]);
+    assert(loaded[0] != loaded[2]);
+    assert(loaded[0]->execute_ns == 7);
+    assert(loaded[2]->execute_ns == 8);
+    std::filesystem::remove_all(directory);
+}
+
 } // namespace
 
 int main() {
@@ -124,6 +178,8 @@ int main() {
     test_unknown_fields_are_skipped();
     test_frame_round_trip_and_bounds();
     test_truncated_payload_is_rejected();
+    test_nested_message_node_limit_is_enforced();
+    test_expansion_batch_cache_deduplicates_responses();
     std::cout << "macro protocol tests passed\n";
     return 0;
 }

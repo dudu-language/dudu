@@ -312,6 +312,32 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     std::vector<p::Declaration> declarations =
         declarations_for_invocations(module, plan.invocations);
     report.timings.declaration_bridge_ns = elapsed_ns(declaration_bridge_start);
+    std::vector<p::ExpansionRequest> requests;
+    std::vector<std::string> cache_keys;
+    requests.reserve(plan.invocations.size());
+    cache_keys.reserve(plan.invocations.size());
+    for (std::size_t index = 0; index < plan.invocations.size(); ++index) {
+        const Invocation& invocation = plan.invocations[index];
+        if (invocation.macro == nullptr || invocation.decorator == nullptr)
+            throw std::logic_error("incomplete macro invocation plan");
+        const auto found_package = packages_by_macro.find(invocation.macro->identity);
+        if (found_package == packages_by_macro.end())
+            throw std::logic_error("macro package plan is missing");
+        const WorkerBinary& binary = binaries.at(found_package->second->key);
+        requests.push_back({.macro_name = invocation.macro->identity,
+                            .declaration = declarations[index],
+                            .invocation = to_protocol(invocation.decorator->expr.range),
+                            .compile_values = compile_values(module)});
+        const Clock::time_point cache_key_start = Clock::now();
+        cache_keys.push_back(expansion_cache_key(binary.identity, requests.back()));
+        report.timings.cache_key_ns += elapsed_ns(cache_key_start);
+    }
+    const std::filesystem::path expansion_cache = cache_root / "expansions";
+    const Clock::time_point cache_start = Clock::now();
+    bool batch_cache_hit = false;
+    std::vector<CachedExpansionResponse> responses =
+        read_expansion_caches(expansion_cache, cache_keys, &batch_cache_hit);
+    report.timings.cache_read_ns += elapsed_ns(cache_start);
     const Clock::time_point request_loop_start = Clock::now();
     for (std::size_t invocation_index = 0; invocation_index < plan.invocations.size();
          ++invocation_index) {
@@ -325,24 +351,15 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         const WorkerBinary& binary = binaries.at(package.key);
         p::Declaration& declaration = declarations[invocation_index];
         const SourceRange invocation_range = invocation.decorator->expr.range;
-        p::ExpansionRequest request{.macro_name = invocation.macro->identity,
-                                    .declaration = declaration,
-                                    .invocation = to_protocol(invocation_range),
-                                    .compile_values = compile_values(module)};
-        const Clock::time_point cache_key_start = Clock::now();
-        const std::string cache_key = expansion_cache_key(binary.identity, request);
-        report.timings.cache_key_ns += elapsed_ns(cache_key_start);
-        const Clock::time_point cache_start = Clock::now();
-        std::optional<p::ExpansionResponse> response =
-            read_expansion_cache(cache_root / "expansions", cache_key);
-        report.timings.cache_read_ns += elapsed_ns(cache_start);
+        p::ExpansionRequest& request = requests[invocation_index];
+        CachedExpansionResponse& response = responses[invocation_index];
         if (response) {
             ++report.expansion_cache_hits;
         } else {
             try {
                 WorkerSessions::Result execution =
                     worker_sessions().expand(package.key, binary, request, options.request_timeout);
-                response = std::move(execution.response);
+                response = std::make_shared<p::ExpansionResponse>(std::move(execution.response));
                 ++report.worker_executions;
                 if (execution.started) {
                     ++report.worker_starts;
@@ -361,7 +378,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
             }
             if (response->cacheable) {
                 const Clock::time_point cache_write_start = Clock::now();
-                write_expansion_cache(cache_root / "expansions", cache_key, *response);
+                write_expansion_cache(expansion_cache, cache_keys[invocation_index], *response);
                 report.timings.cache_write_ns += elapsed_ns(cache_write_start);
             }
         }
@@ -398,6 +415,11 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         report.timings.collect_ns += elapsed_ns(collect_start);
     }
     report.timings.request_loop_ns = elapsed_ns(request_loop_start);
+    if (!batch_cache_hit) {
+        const Clock::time_point cache_write_start = Clock::now();
+        write_expansion_cache_batch(expansion_cache, cache_keys, responses);
+        report.timings.cache_write_ns += elapsed_ns(cache_write_start);
+    }
     if (report.worker_executions != 0) {
         for (const auto& [key, _] : packages) {
             report.worker_rss_kb =

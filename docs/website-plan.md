@@ -189,7 +189,7 @@ and memory examples, deliberate omissions, portability boundaries, and the
 newer type-system ideas Dudu adopts. Keep normal tooling expectations such as
 the LSP out of the homepage language-feature list.
 
-Once user-defined macros land, the Tour also shows their practical effect with
+The Tour shows user-defined macros through their practical effect with
 side-by-side handwritten declarations, macro invocations, and generated Dudu.
 It covers Debug, Json/serde-style generation, StringEnum, reflection, CLI
 arguments, binary schemas, and native export tables without presenting macros

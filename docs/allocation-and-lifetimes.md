@@ -1,7 +1,7 @@
 <a id="allocation-and-lifetimes"></a>
 # Allocation And Lifetimes
 
-[Dudu manual](https://dudulang.org/docs.html#memory) | Previous: [Native templates and macros](native-templates-and-macros.md) | Next: [Arrays, views, and indexing](arrays-views-and-indexing.md)
+[Dudu manual](https://dudulang.org/docs.html#memory) | Previous: [User-defined macros](macros.md) | Next: [Arrays, views, and indexing](arrays-views-and-indexing.md)
 
 Dudu keeps C++'s value and RAII model while exposing raw allocation for systems
 code. It does not impose ownership checking, borrow checking, a garbage

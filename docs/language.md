@@ -31,6 +31,8 @@ Core forms:
 - result types: `Result[T, E]`
 - optional values: `Option[T]`
 - associated/nested types: `Owner[T].Item`
+- typed additive declaration macros: `@derive(Debug)`, `@reflect`, and
+  `@macro` definitions through the public `dudu.ast` package
 
 Dudu-native code uses the fixed-width scalar names above. `int`, `float`, and
 `double` are C/C++ interop spellings, not Dudu source aliases.
@@ -51,3 +53,7 @@ such as `v.xx`; writes may not repeat components.
 
 Imports are qualified by default. Direct imported names must not collide unless
 they are explicitly aliased.
+
+User-defined macros generate declarations rather than source text. See
+[User-Defined Macros](macros.md) for authoring, helper attributes, packages,
+capabilities, caching, diagnostics, editor behavior, and expansion inspection.

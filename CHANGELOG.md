@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+- Implemented typed additive user-defined declaration macros through the
+  public `dudu.ast` package, including derive and attached invocation forms,
+  typed helper attributes, hygienic merge rules, generated source origins,
+  structured diagnostics, and `duc expand` inspection.
+- Added schema-versioned persistent macro workers with process isolation,
+  explicit host capabilities, deterministic content-addressed caches, timeout
+  and resource failure handling, and recovery after failed workers.
+- Integrated generated macro declarations with semantic analysis and editor
+  operations, and added public-API fixtures for Debug, Json metadata,
+  StringEnum, reflection, CLI arguments, binary schemas, and native export
+  tables without compiler-specific implementations.
+- Added macro expansion benchmarks for executed and cached workloads,
+  handwritten baselines, high-fanout output, worker memory, and comparable Rust
+  derive workloads, with release budgets and linear merge/indexing behavior.
 - Replaced the speculative macro syntax notes with a canonical additive,
   hygienic, typed-AST macro architecture and a separate incremental expansion
   benchmark contract with explicit release budgets.

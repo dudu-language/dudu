@@ -1590,6 +1590,224 @@ corner = uv.qqqq</code></pre>
             <p>There is no special <code>Vec4</code> compiler type and no swizzle decorator. Compatible <code>xyzw</code>, <code>rgba</code>, or <code>stpq</code> fields opt a Dudu or imported native vector type into the feature. Reads can repeat components. Writes can't.</p>
           </section>
 
+          <section id="macros" class="why-section macro-section">
+            <h2>Macros generate typed declarations.</h2>
+            <p>Dudu macros remove declaration boilerplate. They receive a public typed declaration AST and return methods, sibling declarations, or diagnostics. They do not generate source strings or replace expressions.</p>
+
+            <h3>Handwritten, invoked, and expanded.</h3>
+            <div class="comparison comparison-three">
+              <div class="code-window">
+                <div class="code-label">Handwritten</div>
+                <pre><code>class Player:
+    id: u64
+    name: str
+    hp: i32
+
+    def debug_field_count(self) -&gt; i32:
+        return 3</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Macro invocation</div>
+                <pre><code>from model_macros import Debug
+
+
+@derive(Debug)
+class Player:
+    id: u64
+    name: str
+    hp: i32</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">duc expand</div>
+                <pre><code># @Debug for main.Player
+# generated members
+def debug_field_count(
+    self: &amp;Self,
+) -&gt; i32:
+    return 3</code></pre>
+              </div>
+            </div>
+            <p>The generated method is normal Dudu. It goes through the same name resolution, type checking, lowering, diagnostics, and C++ emission as the handwritten method.</p>
+
+            <h3>The macro is Dudu code.</h3>
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Build a method declaration</div>
+                <pre><code>import dudu.ast as ast
+
+
+def count_method(
+    name: str,
+    count: i32,
+) -&gt; ast.FunctionDecl:
+    self_param = ast.Parameter(
+        name="self",
+        type=ast.reference_type(
+            ast.named_type("Self"),
+        ),
+    )
+    body = ast.return_statement(
+        ast.int_expression(str(count)),
+    )
+    return ast.FunctionDecl(
+        name=name,
+        parameters=[self_param],
+        return_type=ast.named_type("i32"),
+        body=[body],
+    )</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Inspect the input and return an expansion</div>
+                <pre><code>@macro
+def Debug(
+    item: ast.ClassDecl,
+) -&gt; ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        count += 1
+
+    out = ast.expansion()
+    out.add_method(
+        count_method(
+            "debug_field_count",
+            count,
+        ),
+    )
+    return out</code></pre>
+              </div>
+            </div>
+            <p>The public <code>dudu.ast</code> package is versioned independently from compiler-internal AST classes. Macro packages cannot access compiler pointers or depend on private compiler layout.</p>
+
+            <h3>Typed field metadata.</h3>
+            <div class="comparison">
+              <div class="code-window">
+                <div class="code-label">Define accepted options</div>
+                <pre><code>class JsonOptions:
+    name: str = ""
+    skip: bool = False
+
+
+@macro(attributes=JsonOptions)
+def Json(
+    item: ast.ClassDecl,
+) -&gt; ast.Expansion:
+    for field in item.fields:
+        options = ast.find_attribute(
+            field.attributes,
+            "Json",
+        )
+        # Generate declarations from fields
+        # and checked JsonOptions values.
+
+    return ast.expansion()</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Use the options</div>
+                <pre><code>@derive(Json)
+class Player:
+    id: u64
+
+    @Json(name="displayName")
+    name: str
+
+    @Json(skip=True)
+    cached_score: i32</code></pre>
+              </div>
+            </div>
+            <p>The compiler checks helper names, argument names, value types, duplicates, and placement before running the worker. A JSON package can use the same mechanism to generate serializers and deserializers; the compiler does not contain JSON-specific behavior.</p>
+
+            <h3>The same API covers several declaration shapes.</h3>
+            <div class="comparison comparison-three">
+              <div class="code-window">
+                <div class="code-label">CLI arguments</div>
+                <pre><code>@derive(Args)
+class Options:
+    input: str
+
+    @Args(short="o")
+    output: str
+
+    @Args(default="False")
+    verbose: bool</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Binary schema</div>
+                <pre><code>@derive(BinarySchema)
+class Packet:
+    @BinarySchema(bits=16)
+    kind: u16
+
+    @BinarySchema(bits=32)
+    sequence: u32</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">String enum</div>
+                <pre><code>@derive(StringEnum)
+enum Direction:
+    North
+    South
+    East
+    West</code></pre>
+              </div>
+            </div>
+            <div class="comparison compact-comparison">
+              <div class="code-window">
+                <div class="code-label">Reflection metadata</div>
+                <pre><code>from model_macros import reflect
+
+
+@reflect
+class Transform:
+    position: Vec3
+    rotation: Quat
+    scale: Vec3</code></pre>
+              </div>
+              <div class="code-window">
+                <div class="code-label">Native export table</div>
+                <pre><code>@plugin_exports(prefix="demo")
+class PluginApi:
+    def initialize(self) -&gt; i32:
+        return 0
+
+    def tick(self, dt: f32):
+        pass
+
+# generated sibling: demo_export_count()</code></pre>
+              </div>
+            </div>
+            <p>The repository fixture implements Debug, Json metadata, StringEnum, reflection, CLI argument metadata, binary schemas, native export tables, and macro diagnostics using only public APIs. The small generated methods in that fixture test each shape; they are not compiler-built-in implementations of those libraries.</p>
+
+            <h3>Expansion and failure inspection.</h3>
+            <div class="comparison compact-comparison">
+              <div class="code-window" data-language="bash">
+                <div class="code-label">Inspect generated Dudu</div>
+                <pre><code>duc expand src/main.dd
+duc expand src/main.dd --macro Json
+duc expand src/main.dd --show-origins
+duc expand src/main.dd \
+  --show-origins \
+  -o build/expanded.dd</code></pre>
+              </div>
+              <div class="code-window" data-language="toml">
+                <div class="code-label">Declare host access</div>
+                <pre><code>[macro.capabilities]
+fs.read = ["schemas/**"]
+env.read = ["TARGET"]
+
+[macro]
+allow_non_cacheable = [
+  "GenerateAssets",
+]</code></pre>
+              </div>
+            </div>
+            <p>Macro packages run in persistent isolated host processes. Deterministic expansions are content-addressed and cached. Undeclared host access is rejected. Failed or timed-out workers produce diagnostics and are replaced without taking down the compiler or language server.</p>
+            <p>Macro definitions, invocations, helper options, and generated declarations participate in hover, completion, definition, references, rename, signature help, and source-origin reporting.</p>
+            <div class="implementation-note">
+              <strong>Boundary:</strong> macros add declarations. Dudu does not support expression macros, statement macros, quote/splice syntax, custom grammar, source-string output, or function-body rewriting. Functions, generics, operators, and <code>@constexpr</code> handle expression-level abstraction.
+            </div>
+            <p><a class="text-link" href="https://github.com/dudu-language/dudu/blob/master/docs/macros.md">Read the complete macro guide</a> for the public AST API, packages, capabilities, caching, diagnostics, performance budgets, and tested fixtures.</p>
+          </section>
+
           <section id="not" class="why-section final-section">
             <h2>Current boundaries.</h2>
             <ul class="boundary-list">

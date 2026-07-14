@@ -19,6 +19,7 @@ fixtures=(
     tests/fixtures/generics_reference.dd
     tests/fixtures/native_template_function.dd
     tests/fixtures/cpp_macro_bomb.dd
+    tests/fixtures/macro_packages/showcase.dd
     tests/fixtures/allocation_native_interop.dd
     tests/fixtures/array_indexing_tutorial.dd
 )

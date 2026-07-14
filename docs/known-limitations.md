@@ -55,6 +55,15 @@ published constraints, not promises of silent compatibility.
 
 - Dudu is a statically typed Python-shaped systems language, not a Python
   implementation. Dynamic Python behavior is outside its compatibility goal.
+- User-defined macros are additive declaration generators. They cannot replace
+  expressions or statements, rewrite function bodies, delete source
+  declarations, add grammar, return source strings, or install new type-system
+  rules. Use functions, generics, operators, and `@constexpr` for expression
+  abstraction. See [User-Defined Macros](macros.md).
+- Macro packages that request filesystem writes, environment access, process
+  execution, network access, clocks, or randomness require explicit manifest
+  capabilities. Nondeterministic macros are not cacheable unless the project
+  explicitly permits them.
 - Compiler and LSP behavior is covered by deterministic fixtures and three
   maintained dogfood projects, but alpha users should report minimized cases
   where diagnostics, hover, navigation, or recovery after invalid edits fail.

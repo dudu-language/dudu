@@ -1616,6 +1616,18 @@ push. They are not release packaging work.
    packaging, caching, and performance examples; validate and deploy the
    Cloudflare site. Do not leave those as post-implementation cleanup.
 
+   Status: implemented. The compiler exposes the versioned public `dudu.ast`
+   declaration API and schema-generated worker protocol; expands derive and
+   attached declaration macros in persistent isolated workers; enforces typed
+   additive merge and hygiene rules; records source origins; caches
+   deterministic expansions; gates non-cacheable capabilities; exposes
+   generated declarations through diagnostics and the LSP; and provides
+   `duc expand`. Debug, Json, StringEnum, reflection, CLI argument, binary
+   schema, and native export-table fixtures use only public macro APIs. Release
+   benchmarks cover cached, executed, handwritten, high-fanout, and Rust
+   comparison workloads. The public macro guide and website examples complete
+   this phase's documentation gate.
+
 9. Native Header Hardening
 
    Identity plan: [Native Identity Plan](native-identity-plan.md).

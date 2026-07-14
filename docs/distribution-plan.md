@@ -451,7 +451,8 @@ The following should not delay the first public alpha by themselves:
 - a central Dudu package registry
 - stable/beta/nightly toolchain channels
 - cross-compilation component management
-- a complete user-defined derive/serde macro system
+- a complete third-party serde ecosystem built on the shipped user-defined
+  macro system
 - complete NumPy/PyTorch-equivalent libraries
 - perfect support for every template-heavy C++ library
 - stable `1.0` compatibility guarantees
