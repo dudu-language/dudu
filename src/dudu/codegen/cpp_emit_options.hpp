@@ -99,4 +99,11 @@ inline bool cpp_reserved_identifier(std::string_view name) {
            name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq";
 }
 
+inline std::string emitted_member_name(const std::string& owner, const std::string& member,
+                                       const CppEmitOptions& options) {
+    return cpp_reserved_identifier(member)
+               ? emitted_reserved_member_name(owner, member, options)
+               : member;
+}
+
 } // namespace dudu

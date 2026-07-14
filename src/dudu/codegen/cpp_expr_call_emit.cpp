@@ -249,12 +249,23 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
                                       const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
     out << lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) << "{";
+    const std::optional<ExprPath> callee_path = call_callee_path(expr);
+    const std::string callee = callee_path.has_value() ? render_expr_path(*callee_path) : "";
+    const ClassDecl* target_class = nullptr;
+    if (symbols != nullptr) {
+        if (const auto found = symbols->classes.find(callee); found != symbols->classes.end())
+            target_class = found->second;
+    }
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
         if (expr.children[i].kind == ExprKind::NamedArg && expr.children[i].children.size() == 1) {
-            out << "." << expr.children[i].name << " = "
+            const std::string name =
+                target_class == nullptr
+                    ? expr.children[i].name
+                    : emitted_member_name(target_class->name, expr.children[i].name, options);
+            out << "." << name << " = "
                 << lower_expr(expr.children[i].children.front(), aliases, locals, local_type_refs,
                               symbols, options);
             continue;
@@ -355,7 +366,8 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
             out << ", ";
         }
         if (args[i].kind == ExprKind::NamedArg && args[i].children.size() == 1) {
-            out << "." << args[i].name << " = "
+            out << "." << emitted_member_name(en.name + "_" + value.name, args[i].name, options)
+                << " = "
                 << lower_expr(args[i].children.front(), aliases, locals, local_type_refs, symbols,
                               options);
         } else {

@@ -1,0 +1,127 @@
+import dudu.ast as ast
+
+
+class JsonOptions:
+    name: str = ""
+    skip: bool = False
+
+
+class ArgsOptions:
+    short: str = ""
+    default: str = ""
+
+
+class BinaryOptions:
+    bits: i32 = 0
+
+
+class ExportOptions:
+    prefix: str = "dudu"
+
+
+def reserved_option_names() -> str:
+    options: ArgsOptions = ArgsOptions(short="o", default="False")
+    return options.short + options.default
+
+
+def count_method(name: str, count: i32) -> ast.FunctionDecl:
+    self_param = ast.Parameter(
+        name="self",
+        type=ast.reference_type(ast.named_type("Self")),
+    )
+    body = ast.return_statement(ast.int_expression(str(count)))
+    return ast.FunctionDecl(
+        name=name,
+        parameters=[self_param],
+        return_type=ast.named_type("i32"),
+        body=[body],
+    )
+
+
+def count_function(name: str, count: i32) -> ast.FunctionDecl:
+    body = ast.return_statement(ast.int_expression(str(count)))
+    return ast.FunctionDecl(
+        name=name,
+        return_type=ast.named_type("i32"),
+        body=[body],
+    )
+
+
+@macro
+def Debug(item: ast.ClassDecl) -> ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        count += 1
+    out = ast.expansion()
+    out.add_method(count_method("debug_field_count", count))
+    return out
+
+
+@macro(attributes=JsonOptions)
+def Json(item: ast.ClassDecl) -> ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        options = ast.find_attribute(field.attributes, "Json")
+        if options.has_value() and ast.bool_argument(options.value(), "skip", False):
+            continue
+        count += 1
+    out = ast.expansion()
+    out.add_method(count_method("json_field_count", count))
+    return out
+
+
+@macro
+def StringEnum(item: ast.EnumDecl) -> ast.Expansion:
+    count: i32 = 0
+    for variant in item.variants:
+        count += 1
+    out = ast.expansion()
+    out.add_method(count_method("variant_count", count))
+    return out
+
+
+@macro
+def reflect(item: ast.ClassDecl) -> ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        count += 1
+    out = ast.expansion()
+    out.add_method(count_method("reflected_field_count", count))
+    return out
+
+
+@macro(attributes=ArgsOptions)
+def Args(item: ast.ClassDecl) -> ast.Expansion:
+    count: i32 = 0
+    for field in item.fields:
+        count += 1
+    out = ast.expansion()
+    out.add_method(count_method("argument_count", count))
+    return out
+
+
+@macro(attributes=BinaryOptions)
+def BinarySchema(item: ast.ClassDecl) -> ast.Expansion:
+    bits: i32 = 0
+    for field in item.fields:
+        options = ast.find_attribute(field.attributes, "BinarySchema")
+        if options.has_value():
+            bits += i32(ast.int_argument(options.value(), "bits", 0))
+    out = ast.expansion()
+    out.add_method(count_method("schema_bits", bits))
+    return out
+
+
+@macro(attributes=ExportOptions)
+def plugin_exports(item: ast.ClassDecl) -> ast.Expansion:
+    prefix: str = "dudu"
+    options = ast.find_attribute(item.attributes, "plugin_exports")
+    if options.has_value():
+        prefix = ast.string_argument(options.value(), "prefix", prefix)
+    count: i32 = 0
+    for method in item.methods:
+        count += 1
+    function = count_function(prefix + "_export_count", count)
+    out = ast.expansion()
+    out.add_sibling(ast.function_declaration(function))
+    return out

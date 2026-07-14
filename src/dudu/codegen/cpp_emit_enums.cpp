@@ -80,7 +80,8 @@ void emit_payload_enums(std::ostringstream& out, const ModuleAst& module,
             out << "    struct " << value.name << " {\n";
             for (const EnumPayloadField& field : value.payload_fields) {
                 out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
-                    << field.name << "{};\n";
+                    << emitted_member_name(en.name + "_" + value.name, field.name, options)
+                    << "{};\n";
             }
             out << "    };\n";
         }

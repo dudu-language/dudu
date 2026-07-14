@@ -1,0 +1,73 @@
+from showcase_macros import Args
+from showcase_macros import BinarySchema
+from showcase_macros import Debug
+from showcase_macros import Json
+from showcase_macros import StringEnum
+from showcase_macros import plugin_exports
+from showcase_macros import reflect
+
+
+@derive(Debug, Json)
+@reflect
+class Player:
+    id: u64
+
+    @Json(name="displayName")
+    name: str
+
+    @Json(skip=True)
+    cached_score: i32
+
+
+@derive(Args)
+class Options:
+    input: str
+
+    @Args(short="o")
+    output: str
+
+    @Args(default="False")
+    verbose: bool
+
+
+@derive(BinarySchema)
+class Packet:
+    @BinarySchema(bits=16)
+    kind: u16
+
+    @BinarySchema(bits=32)
+    sequence: u32
+
+
+@derive(StringEnum)
+enum Direction:
+    North
+    South
+    East
+    West
+
+
+@plugin_exports(prefix="demo")
+class PluginApi:
+    def initialize(self) -> i32:
+        return 0
+
+    def tick(self, dt: f32):
+        pass
+
+
+def generated_member_total(
+    player: &Player,
+    options: &Options,
+    packet: &Packet,
+    direction: &Direction,
+) -> i32:
+    return (
+        player.debug_field_count()
+        + player.json_field_count()
+        + player.reflected_field_count()
+        + options.argument_count()
+        + packet.schema_bits()
+        + direction.variant_count()
+        + demo_export_count()
+    )

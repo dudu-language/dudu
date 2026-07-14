@@ -240,6 +240,9 @@ bool literal_matches_type(const Expr& value, const TypeRef& type) {
 
 void validate_helper_arguments(const Definition& definition, const Decorator& decorator) {
     if (definition.attribute_schema == nullptr) {
+        if (decorator.expr.kind == ExprKind::Name) {
+            return;
+        }
         fail(decorator.location,
              "macro '" + definition.name + "' does not declare helper attributes");
     }

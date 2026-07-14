@@ -484,17 +484,19 @@ void emit_out_of_line_methods(std::ostringstream& out, const ClassDecl& klass,
     }
 }
 
-void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant,
+void emit_class_constant_decl(std::ostringstream& out, const std::string& source_class_name,
+                              const ConstDecl& constant,
                               const std::vector<std::string>& aliases,
                               const CppEmitOptions& options) {
     const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
     const bool pointer = type_ref_contains_kind(constant.type_ref, TypeKind::Pointer);
     out << "    static ";
     out << (pointer ? lowered_type + " const " : "const " + lowered_type + " ");
-    out << constant.name << ";\n";
+    out << emitted_member_name(source_class_name, constant.name, options) << ";\n";
 }
 
-void emit_class_constant_definition(std::ostringstream& out, const std::string& class_name,
+void emit_class_constant_definition(std::ostringstream& out, const std::string& source_class_name,
+                                    const std::string& class_name,
                                     const ConstDecl& constant,
                                     const std::vector<std::string>& aliases,
                                     const CppEmitOptions& options) {
@@ -503,11 +505,12 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
     const bool runtime_address =
         pointer || type_ref_contains_kind(constant.type_ref, TypeKind::Volatile);
     out << "inline ";
+    const std::string name = emitted_member_name(source_class_name, constant.name, options);
     if (runtime_address && pointer) {
-        out << lowered_type << " const " << class_name << "::" << constant.name;
+        out << lowered_type << " const " << class_name << "::" << name;
     } else {
         out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << class_name
-            << "::" << constant.name;
+            << "::" << name;
     }
     out << " = " << lower_cpp_expr_ast(constant.value_expr, aliases, CppLocalContext{}, options)
         << ";\n";
@@ -529,7 +532,8 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                              generic_cpp_value_params_for_class(klass));
         out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
-            out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;
+            out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' '
+                << emitted_member_name(klass.name, field.name, options);
             if (has_expr(field.value_expr)) {
                 out << " = ";
                 if (is_template_type(field.type_ref, "Option") &&
@@ -546,12 +550,12 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         for (const ConstDecl& field : klass.static_fields) {
             out << "    inline static " << lower_cpp_type(field.type_ref, aliases, options) << ' '
-                << field.name << " = "
+                << emitted_member_name(klass.name, field.name, options) << " = "
                 << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols, options)
                 << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_decl(out, constant, aliases, options);
+            emit_class_constant_decl(out, klass.name, constant, aliases, options);
         }
         if (class_is_polymorphic(symbols, klass) && !has_drop_method(klass)) {
             out << "    virtual ~" << class_name << "() = default;\n";
@@ -568,7 +572,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         out << "};\n\n";
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_definition(out, class_name, constant, aliases, options);
+            emit_class_constant_definition(out, klass.name, class_name, constant, aliases, options);
         }
         if (!klass.constants.empty()) {
             out << '\n';

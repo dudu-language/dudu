@@ -322,7 +322,10 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             nested.bind(binding.name);
                             nested_type_refs[binding.name] = field.type_ref;
                             out << indent(depth + 1) << "auto&& " << binding.name << " = "
-                                << payload << "." << field.name << ";\n";
+                                << payload << "."
+                                << emitted_member_name(en->name + "_" + value->name, field.name,
+                                                       options)
+                                << ";\n";
                         }
                     }
                 }

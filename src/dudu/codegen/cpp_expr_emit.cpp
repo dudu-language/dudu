@@ -95,9 +95,8 @@ std::string emitted_member_name_for_expr(const Expr& member,
     if (symbols == nullptr || member.kind != ExprKind::Member || member.children.size() != 1) {
         return member.name;
     }
-    if (!cpp_reserved_identifier(member.name)) {
+    if (!cpp_reserved_identifier(member.name))
         return member.name;
-    }
 
     const Expr& receiver = member.children.front();
     const ClassDecl* klass = nullptr;
@@ -122,7 +121,7 @@ std::string emitted_member_name_for_expr(const Expr& member,
     if (klass == nullptr) {
         return member.name;
     }
-    return emitted_reserved_member_name(klass->name, member.name, options);
+    return emitted_member_name(klass->name, member.name, options);
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
@@ -363,7 +362,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::CppEscape:
         return lower_cpp_escape_expr(expr.value, aliases, local_type_refs);
     case ExprKind::StringLiteral:
-        return lower_string_literal_value(parsed_literal_value(expr, "string"));
+        return lower_string_literal_value(expr.value);
     case ExprKind::Unary:
         if (const auto pointer_cast =
                 lower_pointer_cast_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
@@ -494,7 +493,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (is_pointer_receiver_expr(expr.children.front(), local_type_refs)) {
                 return lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
                                   options) +
-                       "->" + expr.name;
+                       "->" + emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
             }
             if (symbols != nullptr) {
                 const TypeRef receiver_type =
@@ -504,7 +503,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
                     return lower_expr(expr.children.front(), aliases, locals, local_type_refs,
                                       symbols, options) +
-                           access + expr.name;
+                           access +
+                           emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
                 }
             }
             return lower_member_expr(

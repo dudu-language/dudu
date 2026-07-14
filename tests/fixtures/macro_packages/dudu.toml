@@ -1,0 +1,3 @@
+name = "macro_packages_fixture"
+entry = "showcase.dd"
+build_dir = "build"
