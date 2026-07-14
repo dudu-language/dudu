@@ -19,6 +19,17 @@ struct ExpansionOptions {
 };
 
 struct ExpansionReport {
+    struct Timings {
+        std::uint64_t package_build_ns = 0;
+        std::uint64_t worker_start_ns = 0;
+        std::uint64_t protocol_ns = 0;
+        std::uint64_t execute_ns = 0;
+        std::uint64_t cache_read_ns = 0;
+        std::uint64_t validate_ns = 0;
+        std::uint64_t hygiene_ns = 0;
+        std::uint64_t merge_ns = 0;
+    };
+
     struct Definition {
         std::string name;
         std::string identity;
@@ -30,8 +41,11 @@ struct ExpansionReport {
     };
 
     std::size_t invocations = 0;
+    std::size_t worker_executions = 0;
+    std::size_t worker_starts = 0;
     std::size_t worker_cache_hits = 0;
     std::size_t expansion_cache_hits = 0;
+    Timings timings;
     std::vector<std::string> worker_identities;
     std::vector<Definition> definitions;
     struct Record {

@@ -17,6 +17,7 @@ struct WorkerBuildOptions {
     std::string compiler = "c++";
     std::string cpp_standard = "c++20";
     std::string toolchain_identity;
+    std::string dudu_toolchain_identity;
     std::vector<std::filesystem::path> runtime_include_dirs;
     std::filesystem::path runtime_library;
     std::vector<std::filesystem::path> include_dirs;

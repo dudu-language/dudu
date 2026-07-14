@@ -39,6 +39,7 @@ void test_build_launch_and_cache() {
                                                      .compiler = DUDU_TEST_CXX,
                                                      .cpp_standard = "c++20",
                                                      .toolchain_identity = "test-toolchain",
+                                                     .dudu_toolchain_identity = "test-dudu",
                                                      .runtime_include_dirs = {root / "src"},
                                                      .runtime_library =
                                                          build / "libdudu_macro_runtime.a",

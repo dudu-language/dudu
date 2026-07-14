@@ -1429,6 +1429,7 @@ void encode_into(wire::Writer& writer, const ExpansionResponse& value) {
     for (const auto& item : value.external_input_hashes) {
         writer.write_string(3, item);
     }
+    writer.write_varint(4, static_cast<std::uint64_t>(value.execute_ns));
 }
 
 ExpansionResponse decode_ExpansionResponse_from(wire::Reader reader) {
@@ -1445,6 +1446,9 @@ ExpansionResponse decode_ExpansionResponse_from(wire::Reader reader) {
             break;
         case 3:
             value.external_input_hashes.push_back(reader.read_string(field_type));
+            break;
+        case 4:
+            value.execute_ns = reader.read_varint(field_type);
             break;
         default:
             reader.skip(field_type);

@@ -18,6 +18,13 @@ struct WorkerProcessOptions {
     std::filesystem::path working_directory;
 };
 
+struct WorkerExpansionResult {
+    protocol::ExpansionResponse response;
+    std::uint64_t request_encode_ns = 0;
+    std::uint64_t transport_ns = 0;
+    std::uint64_t response_decode_ns = 0;
+};
+
 class WorkerProcessError : public std::runtime_error {
   public:
     explicit WorkerProcessError(protocol::WorkerError error);
@@ -45,6 +52,7 @@ class WorkerProcess {
 
     protocol::MacroCatalog describe();
     protocol::ExpansionResponse expand(const protocol::ExpansionRequest& request);
+    WorkerExpansionResult expand_measured(const protocol::ExpansionRequest& request);
     void shutdown();
 
     [[nodiscard]] bool running() const;

@@ -131,6 +131,9 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     options.force_module_tree = true;
     const dudu::ProjectIndex first = dudu::ProjectIndex::load(options);
     assert(first.macro_report().invocations == 1);
+    assert(first.macro_report().worker_executions == 1);
+    assert(first.macro_report().worker_starts == 1);
+    assert(first.macro_report().timings.execute_ns > 0);
     assert(first.macro_report().definitions.size() == 1);
     const dudu::macro::ExpansionReport::Definition& debug =
         first.macro_report().definitions.front();
@@ -149,8 +152,7 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     constexpr int token_macro = 10;
     constexpr int mod_declaration = 1;
     constexpr int mod_readonly = 4;
-    require_semantic_token(semantic_tokens, 0, 19, token_macro,
-                           mod_declaration | mod_readonly);
+    require_semantic_token(semantic_tokens, 0, 19, token_macro, mod_declaration | mod_readonly);
     require_semantic_token(semantic_tokens, 2, 0, token_macro, mod_readonly);
     require_semantic_token(semantic_tokens, 2, 8, token_macro, mod_readonly);
     require_semantic_token(semantic_tokens, 4, 4, token_macro, mod_readonly);
@@ -264,9 +266,58 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
 
     const dudu::ProjectIndex second = dudu::ProjectIndex::load(options);
     assert(second.macro_report().invocations == 1);
+    assert(second.macro_report().worker_executions == 0);
+    assert(second.macro_report().worker_starts == 0);
     assert(second.macro_report().worker_cache_hits == 1);
     assert(second.macro_report().expansion_cache_hits == 1);
     assert(player_class(second.merged_module()).methods.size() == 1);
+
+    write_file(dir / "src/main.dd", "from macros import Debug\n"
+                                    "\n"
+                                    "@derive(Debug)\n"
+                                    "class Player:\n"
+                                    "    @Debug(score=\"9\")\n"
+                                    "    hp: i32\n"
+                                    "\n"
+                                    "def score(player: Player) -> i32:\n"
+                                    "    return player.debug_score() + 0\n");
+    const dudu::ProjectIndex unrelated = dudu::ProjectIndex::load(options);
+    assert(unrelated.macro_report().invocations == 1);
+    assert(unrelated.macro_report().worker_executions == 0);
+    assert(unrelated.macro_report().expansion_cache_hits == 1);
+
+    write_file(dir / "src/main.dd", "from macros import Debug\n"
+                                    "\n"
+                                    "@derive(Debug)\n"
+                                    "class Player:\n"
+                                    "    @Debug(score=\"10\")\n"
+                                    "    hp: i32\n"
+                                    "\n"
+                                    "def score(player: Player) -> i32:\n"
+                                    "    return player.debug_score() + 0\n");
+    const dudu::ProjectIndex helper_changed = dudu::ProjectIndex::load(options);
+    assert(helper_changed.macro_report().invocations == 1);
+    assert(helper_changed.macro_report().worker_executions == 1);
+    assert(helper_changed.macro_report().expansion_cache_hits == 0);
+    const std::vector<dudu::CppModuleArtifact> changed_artifacts =
+        dudu::emit_cpp_module_artifacts(helper_changed.merged_module());
+    assert(
+        std::any_of(changed_artifacts.begin(), changed_artifacts.end(), [](const auto& artifact) {
+            return artifact.content.find("return 10") != std::string::npos;
+        }));
+
+    std::string changed_macro_source = macro_source;
+    std::string::size_type position = 0;
+    while ((position = changed_macro_source.find("\"7\"", position)) != std::string::npos) {
+        changed_macro_source.replace(position, 3, "\"8\"");
+        position += 3;
+    }
+    write_file(dir / "src/macros.dd", changed_macro_source);
+    const dudu::ProjectIndex macro_changed = dudu::ProjectIndex::load(options);
+    assert(macro_changed.macro_report().worker_cache_hits == 0);
+    assert(macro_changed.macro_report().worker_executions == 1);
+    assert(macro_changed.macro_report().worker_starts == 1);
+    assert(macro_changed.macro_report().expansion_cache_hits == 0);
 }
 
 void test_imported_macro_definition_is_reported_without_an_invocation() {
@@ -345,15 +396,18 @@ void test_capability_input_invalidates_expansion_cache() {
 
     const dudu::ProjectIndex first = dudu::ProjectIndex::load(options);
     assert(first.macro_report().expansion_cache_hits == 0);
+    assert(first.macro_report().worker_executions == 1);
     assert(has_player_method(first.merged_module(), "first_score"));
 
     const dudu::ProjectIndex second = dudu::ProjectIndex::load(options);
     assert(second.macro_report().expansion_cache_hits == 1);
+    assert(second.macro_report().worker_executions == 0);
     assert(has_player_method(second.merged_module(), "first_score"));
 
     write_file(dir / "generated_name.txt", "second_score");
     const dudu::ProjectIndex changed = dudu::ProjectIndex::load(options);
     assert(changed.macro_report().expansion_cache_hits == 0);
+    assert(changed.macro_report().worker_executions == 1);
     assert(has_player_method(changed.merged_module(), "second_score"));
 }
 

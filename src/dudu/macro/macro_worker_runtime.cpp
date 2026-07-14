@@ -3,6 +3,7 @@
 #include "dudu/macro/macro_capabilities.hpp"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -121,7 +122,12 @@ int serve_worker(std::istream& input, std::ostream& output, const protocol::Macr
                 begin_capability_scope(catalog.capabilities, project_root);
                 protocol::ExpansionResponse response;
                 try {
+                    const auto execute_start = std::chrono::steady_clock::now();
                     response = dispatch(expansion_request);
+                    response.execute_ns = static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(
+                            std::chrono::steady_clock::now() - execute_start)
+                            .count());
                     CapabilityOutcome outcome = finish_capability_scope();
                     if (!outcome.deterministic && response.cacheable) {
                         throw std::runtime_error(

@@ -21,6 +21,13 @@ namespace {
 
 namespace p = protocol;
 
+using Clock = std::chrono::steady_clock;
+
+std::uint64_t elapsed_ns(Clock::time_point start) {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start).count());
+}
+
 struct PackagePlan {
     std::string key;
     ProjectConfig config;
@@ -29,12 +36,22 @@ struct PackagePlan {
 
 class WorkerSessions {
   public:
-    p::ExpansionResponse expand(const WorkerBinary& binary, const p::ExpansionRequest& request,
-                                std::chrono::milliseconds timeout) {
+    struct Result {
+        p::ExpansionResponse response;
+        bool started = false;
+        std::uint64_t start_ns = 0;
+        std::uint64_t protocol_ns = 0;
+        std::uint64_t validate_ns = 0;
+    };
+
+    Result expand(const std::string& session_key, const WorkerBinary& binary,
+                  const p::ExpansionRequest& request, std::chrono::milliseconds timeout) {
         std::lock_guard lock(mutex_);
-        const std::string key = binary.executable.string();
-        auto found = workers_.find(key);
-        if (found == workers_.end() || !found->second.running()) {
+        Result result;
+        auto found = workers_.find(session_key);
+        if (found == workers_.end() || found->second.identity != binary.identity ||
+            !found->second.process.running()) {
+            const Clock::time_point start = Clock::now();
             WorkerProcess process = WorkerProcess::launch(
                 binary.executable, {},
                 {.request_timeout = timeout, .working_directory = binary.working_directory});
@@ -42,14 +59,34 @@ class WorkerSessions {
             if (catalog.binary_identity != binary.identity) {
                 throw std::runtime_error("macro worker binary identity mismatch");
             }
-            found = workers_.emplace(key, std::move(process)).first;
+            Session session{.identity = binary.identity, .process = std::move(process)};
+            if (found == workers_.end()) {
+                found = workers_.emplace(session_key, std::move(session)).first;
+            } else {
+                found->second = std::move(session);
+            }
+            result.started = true;
+            result.start_ns = elapsed_ns(start);
         }
-        return found->second.expand(request);
+        WorkerExpansionResult measured = found->second.process.expand_measured(request);
+        result.response = std::move(measured.response);
+        result.validate_ns = measured.response_decode_ns;
+        const std::uint64_t worker_transport_ns =
+            measured.transport_ns > result.response.execute_ns
+                ? measured.transport_ns - result.response.execute_ns
+                : 0;
+        result.protocol_ns = measured.request_encode_ns + worker_transport_ns;
+        return result;
     }
 
   private:
+    struct Session {
+        std::string identity;
+        WorkerProcess process;
+    };
+
     std::mutex mutex_;
-    std::map<std::string, WorkerProcess> workers_;
+    std::map<std::string, Session> workers_;
 };
 
 WorkerSessions& worker_sessions() {
@@ -259,7 +296,9 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
             worker_build_options(package.config, runtime, cache_root / "workers",
                                  package_name(package), capabilities(package.config));
         normalize_non_cacheable_names(build, package.plan);
+        const Clock::time_point package_start = Clock::now();
         WorkerBinary binary = build_worker_binary(module, package.plan, build);
+        report.timings.package_build_ns += elapsed_ns(package_start);
         if (binary.cache_hit)
             ++report.worker_cache_hits;
         report.worker_identities.push_back(binary.identity);
@@ -280,13 +319,25 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                                     .invocation = to_protocol(invocation_range),
                                     .compile_values = compile_values(module)};
         const std::string cache_key = expansion_cache_key(binary.identity, request);
+        const Clock::time_point cache_start = Clock::now();
         std::optional<p::ExpansionResponse> response =
             read_expansion_cache(cache_root / "expansions", cache_key);
+        report.timings.cache_read_ns += elapsed_ns(cache_start);
         if (response) {
             ++report.expansion_cache_hits;
         } else {
             try {
-                response = worker_sessions().expand(binary, request, options.request_timeout);
+                WorkerSessions::Result execution =
+                    worker_sessions().expand(package.key, binary, request, options.request_timeout);
+                response = std::move(execution.response);
+                ++report.worker_executions;
+                if (execution.started) {
+                    ++report.worker_starts;
+                    report.timings.worker_start_ns += execution.start_ns;
+                }
+                report.timings.execute_ns += response->execute_ns;
+                report.timings.protocol_ns += execution.protocol_ns;
+                report.timings.validate_ns += execution.validate_ns;
             } catch (const WorkerProcessError& error) {
                 throw compile_error_from_worker(error.detail(), request.invocation,
                                                 invocation.macro->name);
@@ -311,9 +362,11 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                  to_protocol(declaration_range(declaration, invocation.decorator->location)),
              .expansion = response->expansion});
         p::Expansion merge_expansion = response->expansion;
+        const Clock::time_point hygiene_start = Clock::now();
         apply_expansion_hygiene(merge_expansion, invocation.macro->identity,
                                 invocation.target_module, invocation.target_name,
                                 request.invocation);
+        report.timings.hygiene_ns += elapsed_ns(hygiene_start);
         collected.push_back(
             {.macro_name = invocation.macro->name,
              .macro_identity = invocation.macro->identity,
@@ -325,7 +378,9 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
              .source_declaration = declaration_range(declaration, invocation.decorator->location),
              .expansion = std::move(merge_expansion)});
     }
+    const Clock::time_point merge_start = Clock::now();
     merge_expansions(module, plan, collected);
+    report.timings.merge_ns += elapsed_ns(merge_start);
     return report;
 }
 

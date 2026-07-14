@@ -85,6 +85,7 @@ std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, cons
     hash.add(options.compiler);
     hash.add(options.cpp_standard);
     hash.add(options.toolchain_identity);
+    hash.add(options.dudu_toolchain_identity);
     for (const auto& [identity, definition] : plan.definitions) {
         hash.add(identity);
         hash.add(std::to_string(static_cast<int>(definition.accepted_kind)));
@@ -115,6 +116,85 @@ std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, cons
     add_strings(options.capabilities);
     add_strings(options.non_cacheable_macros);
     return hash.finish();
+}
+
+std::optional<std::string> source_identity(const ModuleAst& module,
+                                           const std::vector<std::string>& selected,
+                                           const Plan& plan, const WorkerBuildOptions& options) {
+    const auto modules = unit_map(module);
+    StableHash hash;
+    hash.add("dudu-macro-worker-source-v1");
+    hash.add(std::to_string(protocol::protocol_version));
+    hash.add(std::to_string(protocol::schema_version));
+    hash.add(options.package);
+    hash.add(options.project_root.generic_string());
+    hash.add(options.compiler);
+    hash.add(options.cpp_standard);
+    hash.add(options.toolchain_identity);
+    hash.add(options.dudu_toolchain_identity);
+    for (const std::string& module_path : selected) {
+        const ModuleAst& unit = *modules.at(module_path);
+        if (unit.source_digest.empty())
+            return std::nullopt;
+        hash.add(module_path);
+        hash.add(unit.source_path.generic_string());
+        hash.add(unit.source_digest);
+        for (const auto& [name, value] : unit.build_values) {
+            hash.add(name);
+            hash.add(value);
+        }
+    }
+    for (const auto& [identity, definition] : plan.definitions) {
+        hash.add(identity);
+        hash.add(std::to_string(static_cast<int>(definition.accepted_kind)));
+    }
+    const auto add_paths = [&](const auto& values) {
+        for (const auto& value : values)
+            hash.add(std::filesystem::path(value).generic_string());
+    };
+    const auto add_strings = [&](const auto& values) {
+        for (const auto& value : values)
+            hash.add(value);
+    };
+    add_paths(options.runtime_include_dirs);
+    add_paths(options.include_dirs);
+    add_paths(options.library_dirs);
+    add_paths(options.cpp_sources);
+    hash.add(options.runtime_library.generic_string());
+    add_strings(options.defines);
+    add_strings(options.compiler_flags);
+    add_strings(options.libraries);
+    add_strings(options.linker_flags);
+    add_strings(options.capabilities);
+    add_strings(options.non_cacheable_macros);
+    return hash.finish();
+}
+
+std::optional<std::string> read_worker_lookup(const std::filesystem::path& path) {
+    const std::optional<std::string> value = try_read_text_file(path);
+    if (!value || value->empty())
+        return std::nullopt;
+    std::string identity = *value;
+    while (!identity.empty() && (identity.back() == '\n' || identity.back() == '\r'))
+        identity.pop_back();
+    return identity.empty() ? std::nullopt : std::optional<std::string>{std::move(identity)};
+}
+
+void write_text(const std::filesystem::path& path, const std::string& text);
+
+void write_worker_lookup(const std::filesystem::path& path, const std::string& identity) {
+    std::filesystem::create_directories(path.parent_path());
+    const std::filesystem::path temporary =
+        path.string() + ".tmp." + std::to_string(::getpid()) + "." +
+        std::to_string(staging_counter.fetch_add(1, std::memory_order_relaxed));
+    write_text(temporary, identity + "\n");
+    std::error_code error;
+    std::filesystem::rename(temporary, path, error);
+    if (error) {
+        std::filesystem::remove(temporary);
+        if (!std::filesystem::is_regular_file(path))
+            throw std::runtime_error("could not publish macro worker lookup: " + error.message());
+    }
 }
 
 void write_text(const std::filesystem::path& path, const std::string& text) {
@@ -190,6 +270,20 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         throw std::invalid_argument("macro worker cache directory is required");
     }
     const std::vector<std::string> selected = dependency_closure(module, plan);
+    const std::optional<std::string> source_key = source_identity(module, selected, plan, options);
+    const std::filesystem::path lookup =
+        source_key ? options.cache_dir / "lookup" / *source_key : std::filesystem::path{};
+    if (source_key) {
+        if (const std::optional<std::string> identity = read_worker_lookup(lookup)) {
+            const std::filesystem::path executable = options.cache_dir / *identity / "worker";
+            if (std::filesystem::is_regular_file(executable)) {
+                return {.executable = executable,
+                        .working_directory = options.project_root,
+                        .identity = *identity,
+                        .cache_hit = true};
+            }
+        }
+    }
     analyze_module_tree(module, selected,
                         {.check_bodies = true, .include_macro_host_modules = true});
     const std::vector<CppModuleArtifact> artifacts =
@@ -198,6 +292,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
     const std::filesystem::path cache_entry = options.cache_dir / identity;
     const std::filesystem::path executable = cache_entry / "worker";
     if (std::filesystem::is_regular_file(executable)) {
+        if (source_key)
+            write_worker_lookup(lookup, identity);
         return {.executable = executable,
                 .working_directory = options.project_root,
                 .identity = identity,
@@ -234,6 +330,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         std::filesystem::remove_all(staging);
         throw;
     }
+    if (source_key)
+        write_worker_lookup(lookup, identity);
     return {.executable = executable,
             .working_directory = options.project_root,
             .identity = identity,

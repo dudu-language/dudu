@@ -20,6 +20,7 @@
 #include "dudu/testing/test_driver.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -37,8 +38,41 @@ namespace {
 
 ProjectIndexCache cli_project_index_cache;
 
+using Clock = std::chrono::steady_clock;
+
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
+}
+
+std::string milliseconds(std::uint64_t nanoseconds) {
+    std::ostringstream out;
+    out.setf(std::ios::fixed);
+    out.precision(3);
+    out << static_cast<double>(nanoseconds) / 1'000'000.0 << " ms";
+    return out.str();
+}
+
+std::uint64_t elapsed_ns(Clock::time_point start) {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start).count());
+}
+
+void print_macro_performance(bool enabled, const macro::ExpansionReport& report) {
+    if (!enabled || (report.invocations == 0 && report.definitions.empty()))
+        return;
+    print_project_step(true, "macro.requests", std::to_string(report.invocations));
+    print_project_step(true, "macro.executions", std::to_string(report.worker_executions));
+    print_project_step(true, "macro.worker_starts", std::to_string(report.worker_starts));
+    print_project_step(true, "macro.expansion_cache_hits",
+                       std::to_string(report.expansion_cache_hits));
+    print_project_step(true, "macro.package_build", milliseconds(report.timings.package_build_ns));
+    print_project_step(true, "macro.worker_start", milliseconds(report.timings.worker_start_ns));
+    print_project_step(true, "macro.protocol", milliseconds(report.timings.protocol_ns));
+    print_project_step(true, "macro.execute", milliseconds(report.timings.execute_ns));
+    print_project_step(true, "macro.cache_read", milliseconds(report.timings.cache_read_ns));
+    print_project_step(true, "macro.validate", milliseconds(report.timings.validate_ns));
+    print_project_step(true, "macro.hygiene", milliseconds(report.timings.hygiene_ns));
+    print_project_step(true, "macro.merge", milliseconds(report.timings.merge_ns));
 }
 
 std::optional<std::filesystem::path> find_executable_on_path(const std::filesystem::path& name) {
@@ -511,6 +545,7 @@ int run_cli(int argc, char** argv) {
     };
     if (options.expand_macros) {
         const ProjectIndex& index = checked_index(options, input_source(), true);
+        print_macro_performance(!options.quiet && options.timings, index.macro_report());
         write_text_output(options.output,
                           macro::render_expansion_report(
                               index.macro_report(), {.macro_filter = options.macro_filter,
@@ -546,6 +581,7 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "load", options.input);
         const std::string& source = input_source();
         const ProjectIndex& index = indexed_module_graph(options, source, false, false);
+        print_macro_performance(project_output && options.timings, index.macro_report());
         const std::vector<std::filesystem::path> changed_sources =
             index.changed_sources_since_stamp_file(stamp_file);
         std::vector<std::string> affected_modules =
@@ -559,10 +595,19 @@ int run_cli(int argc, char** argv) {
                            std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "analyze",
                            std::to_string(affected_modules.size()) + " modules");
+        const Clock::time_point sema_start = Clock::now();
         analyze_module_tree(index.merged_module(), affected_modules, {.check_bodies = true});
+        if (project_output && options.timings && index.macro_report().invocations != 0) {
+            print_project_step(true, "macro.generated_sema", milliseconds(elapsed_ns(sema_start)));
+        }
         print_project_step(project_output, "emit", *options.output);
+        const Clock::time_point codegen_start = Clock::now();
         write_cpp_artifacts(*options.output,
                             emit_cpp_module_artifacts(index.merged_module(), affected_modules));
+        if (project_output && options.timings && index.macro_report().invocations != 0) {
+            print_project_step(true, "macro.generated_codegen",
+                               milliseconds(elapsed_ns(codegen_start)));
+        }
         index.write_source_stamp_file(stamp_file);
         write_artifact_manifest(artifact_manifest, stamp_file, compiler_path,
                                 cpp_module_artifact_paths(index.merged_module()));

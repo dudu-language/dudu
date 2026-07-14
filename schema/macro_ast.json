@@ -1,6 +1,6 @@
 {
   "schema": "dudu.macro.ast",
-  "version": 1,
+  "version": 2,
   "enums": [
     {"name": "Visibility", "values": ["Default", "Private"]},
     {"name": "DeclarationKind", "values": ["Unknown", "Class", "Enum", "Function", "Field", "Constant", "Implementation"]},
@@ -238,7 +238,8 @@
     {"name": "ExpansionResponse", "fields": [
       {"name": "expansion", "type": "Expansion", "tag": 1},
       {"name": "cacheable", "type": "bool", "tag": 2},
-      {"name": "external_input_hashes", "type": "string", "tag": 3, "repeated": true}
+      {"name": "external_input_hashes", "type": "string", "tag": 3, "repeated": true},
+      {"name": "execute_ns", "type": "u64", "tag": 4}
     ]},
     {"name": "WorkerError", "fields": [
       {"name": "code", "type": "string", "tag": 1},

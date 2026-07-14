@@ -14,6 +14,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -27,6 +28,17 @@ std::string read_text_file(const std::filesystem::path& path) {
     }
     throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
                        "could not open module");
+}
+
+std::string source_digest(std::string_view source) {
+    std::uint64_t hash = 14695981039346656037ULL;
+    for (const unsigned char byte : source) {
+        hash ^= byte;
+        hash *= 1099511628211ULL;
+    }
+    std::ostringstream out;
+    out << std::hex << hash;
+    return out.str();
 }
 
 std::filesystem::path canonical_source_path(const std::filesystem::path& path) {
@@ -375,6 +387,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
     stamp_module_origin(
         parsed, canonical,
         module_name_from_file(module_root_for_source(root, canonical, module_roots), canonical));
+    parsed.source_digest = source_digest(source);
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;

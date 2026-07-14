@@ -6,8 +6,7 @@
 
 namespace {
 
-dudu::macro::wire::Frame frame(dudu::macro::protocol::MessageKind kind,
-                               std::uint64_t request_id,
+dudu::macro::wire::Frame frame(dudu::macro::protocol::MessageKind kind, std::uint64_t request_id,
                                std::vector<std::uint8_t> payload = {}) {
     return {.protocol_version = dudu::macro::protocol::protocol_version,
             .message_kind = static_cast<std::uint16_t>(kind),
@@ -31,14 +30,12 @@ void test_persistent_worker_session() {
         input, frame(macro::protocol::MessageKind::Expand, 3, macro::protocol::encode(request)));
     macro::write_worker_frame(input, frame(macro::protocol::MessageKind::Shutdown, 4));
 
-    macro::protocol::MacroCatalog catalog{.package = "demo",
-                                          .binary_identity = "worker-test"};
+    macro::protocol::MacroCatalog catalog{.package = "demo", .binary_identity = "worker-test"};
     catalog.macros.push_back({.name = "Debug", .entry_point = "demo.Debug"});
     int calls = 0;
     std::stringstream output;
     const int status = macro::serve_worker(
-        input, output, catalog,
-        [&](const macro::protocol::ExpansionRequest& decoded) {
+        input, output, catalog, [&](const macro::protocol::ExpansionRequest& decoded) {
             ++calls;
             assert(decoded.macro_name == "demo.Debug");
             return macro::protocol::ExpansionResponse{.cacheable = true};
@@ -57,7 +54,10 @@ void test_persistent_worker_session() {
            macro::protocol::MessageKind::HelloAck);
     assert(macro::protocol::decode_HelloAck(hello_frame->payload).accepted);
     assert(macro::protocol::decode_MacroCatalog(catalog_frame->payload).package == "demo");
-    assert(macro::protocol::decode_ExpansionResponse(expansion_frame->payload).cacheable);
+    const macro::protocol::ExpansionResponse response =
+        macro::protocol::decode_ExpansionResponse(expansion_frame->payload);
+    assert(response.cacheable);
+    assert(response.execute_ns > 0);
 }
 
 void test_handshake_rejects_schema_mismatch() {
@@ -70,7 +70,9 @@ void test_handshake_rejects_schema_mismatch() {
     macro::write_worker_frame(
         input, frame(macro::protocol::MessageKind::Hello, 1, macro::protocol::encode(hello)));
     std::stringstream output;
-    assert(macro::serve_worker(input, output, {}, [](const auto&) { return macro::protocol::ExpansionResponse{}; }) == 1);
+    assert(macro::serve_worker(input, output, {}, [](const auto&) {
+               return macro::protocol::ExpansionResponse{};
+           }) == 1);
     const auto response = macro::read_worker_frame(output);
     assert(response.has_value());
     const auto ack = macro::protocol::decode_HelloAck(response->payload);

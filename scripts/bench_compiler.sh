@@ -8,10 +8,13 @@ build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
 shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,mixed"
+suite="default"
+macro_scales="1,100,1000"
+compare=""
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--no-build]
+usage: scripts/bench_compiler.sh [--suite default|macros|all] [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--macro-scales list] [--compare list] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
@@ -31,11 +34,20 @@ run into a libstdc++ scan benchmark.
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
+
+--suite macros runs the explicit macro expansion and cache benchmark. Its
+default scales are 1,100,1000; use --macro-scales 1,100,1000,10000 for the
+complete release workload. --compare accepts an informational comma-separated
+list of rust,csharp,swift,nim when those toolchains are installed.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --suite)
+            suite="${2:?--suite requires default, macros, or all}"
+            shift 2
+            ;;
         --samples)
             samples="${2:?--samples requires a count}"
             shift 2
@@ -54,6 +66,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --shapes)
             shapes="${2:?--shapes requires a comma-separated list}"
+            shift 2
+            ;;
+        --macro-scales)
+            macro_scales="${2:?--macro-scales requires a comma-separated list}"
+            shift 2
+            ;;
+        --compare)
+            compare="${2:?--compare requires a comma-separated list}"
             shift 2
             ;;
         --no-build)
@@ -86,6 +106,15 @@ case "$build_type" in
         ;;
 esac
 
+case "$suite" in
+    default|macros|all)
+        ;;
+    *)
+        echo "--suite must be default, macros, or all" >&2
+        exit 1
+        ;;
+esac
+
 tool_build_dir="$repo_root/build"
 if [[ "$build_type" != "Debug" ]]; then
     tool_build_dir="$repo_root/build-${build_type,,}"
@@ -104,6 +133,8 @@ fi
 bench_dir="$repo_root/build/bench_compiler"
 mkdir -p "$bench_dir" "$(dirname "$csv_path")"
 printf 'case,phase,sample,elapsed_ms,peak_rss_kb,lines,files,status\n' >"$csv_path"
+macro_metrics_path="${csv_path%.csv}_macro_metrics.csv"
+printf 'case,sample,metric,value,unit\n' >"$macro_metrics_path"
 runner="$bench_dir/bench_runner.py"
 cat >"$runner" <<'PY'
 import resource
@@ -185,6 +216,17 @@ run_case_prepared() {
         fi
         printf '%s,%s,%s,%s,%s,%s,%s,%s\n' "$name" "$phase" "$sample" "$ms" "$peak_rss" \
             "$lines" "$files" "$status" >>"$csv_path"
+        awk -v case_name="$name" -v sample="$sample" '
+            match($0, /macro\.[a-z_]+/) {
+                metric = substr($0, RSTART, RLENGTH)
+                rest = substr($0, RSTART + RLENGTH)
+                sub(/^[[:space:]]+/, "", rest)
+                split(rest, parts, /[[:space:]]+/)
+                unit = parts[2]
+                if (unit == "") unit = "count"
+                printf "%s,%s,%s,%s,%s\n", case_name, sample, metric, parts[1], unit
+            }
+        ' "$stderr" >>"$macro_metrics_path"
         printf '%-32s sample %d/%d %10sms %10sKB status=%s\n' "$name" "$sample" "$samples" \
             "$ms" "$peak_rss" "$status"
         if [[ "$status" -ne 0 ]]; then
@@ -253,7 +295,13 @@ validate_shapes
 source "$repo_root/scripts/bench_compiler_project_cases.sh"
 source "$repo_root/scripts/bench_compiler_core_cases.sh"
 source "$repo_root/scripts/bench_compiler_native_cases.sh"
+source "$repo_root/scripts/bench_compiler_macro_cases.sh"
 
+if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
+    run_macro_benchmarks "$macro_scales" "$compare"
+fi
+
+if [[ "$suite" != "macros" ]]; then
 run_case "duc_check_simple" "frontend_check" "$simple" \
     "$tool_build_dir/duc" check "$simple"
 
@@ -377,6 +425,7 @@ for requested_lines in "${requested_line_scales[@]}"; do
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
 done
+fi
 
 echo
 echo "summary:"
@@ -402,3 +451,6 @@ END {
 
 echo
 echo "csv: $csv_path"
+if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
+    echo "macro metrics: $macro_metrics_path"
+fi

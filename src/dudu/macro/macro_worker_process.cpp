@@ -240,13 +240,33 @@ protocol::MacroCatalog WorkerProcess::describe() {
 
 protocol::ExpansionResponse
 WorkerProcess::expand(const protocol::ExpansionRequest& expansion_request) {
-    const wire::Frame response =
-        request(protocol::MessageKind::Expand, protocol::encode(expansion_request));
+    return expand_measured(expansion_request).response;
+}
+
+WorkerExpansionResult
+WorkerProcess::expand_measured(const protocol::ExpansionRequest& expansion_request) {
+    const Clock::time_point encode_start = Clock::now();
+    std::vector<std::uint8_t> payload = protocol::encode(expansion_request);
+    const std::uint64_t encode_ns = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - encode_start).count());
+    const Clock::time_point transport_start = Clock::now();
+    const wire::Frame response = request(protocol::MessageKind::Expand, std::move(payload));
+    const std::uint64_t transport_ns = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - transport_start)
+            .count());
     if (static_cast<protocol::MessageKind>(response.message_kind) !=
         protocol::MessageKind::ExpansionResult) {
         throw wire::ProtocolError("macro worker did not reply with ExpansionResult");
     }
-    return protocol::decode_ExpansionResponse(response.payload, options_.decode_limits);
+    const Clock::time_point decode_start = Clock::now();
+    protocol::ExpansionResponse expansion =
+        protocol::decode_ExpansionResponse(response.payload, options_.decode_limits);
+    const std::uint64_t decode_ns = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - decode_start).count());
+    return {.response = std::move(expansion),
+            .request_encode_ns = encode_ns,
+            .transport_ns = transport_ns,
+            .response_decode_ns = decode_ns};
 }
 
 void WorkerProcess::shutdown() {

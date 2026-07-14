@@ -475,6 +475,7 @@ struct GeneratedDeclarationOrigin {
 struct ModuleAst {
     std::filesystem::path source_path;
     std::string module_path;
+    std::string source_digest;
     std::string doc_comment{};
     CompilationDomain compilation_domain = CompilationDomain::Target;
     std::map<std::string, std::string> build_values;

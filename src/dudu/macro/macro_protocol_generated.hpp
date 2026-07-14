@@ -11,7 +11,7 @@
 
 namespace dudu::macro::protocol {
 
-inline constexpr std::uint32_t schema_version = 1;
+inline constexpr std::uint32_t schema_version = 2;
 inline constexpr std::uint32_t protocol_version = 1;
 
 enum class Visibility : std::uint32_t {
@@ -392,6 +392,7 @@ struct ExpansionResponse {
     Expansion expansion = {};
     bool cacheable = false;
     std::vector<std::string> external_input_hashes = {};
+    std::uint64_t execute_ns = 0;
 };
 
 struct WorkerError {

@@ -1106,6 +1106,7 @@ inline DuduDuduAstExpansionResponse from_protocol(const protocol::ExpansionRespo
     for (const auto& item : input.external_input_hashes) {
         out.external_input_hashes.push_back(item);
     }
+    out.execute_ns = input.execute_ns;
     return out;
 }
 
@@ -1117,6 +1118,7 @@ inline protocol::ExpansionResponse to_protocol(const DuduDuduAstExpansionRespons
     for (const auto& item : input.external_input_hashes) {
         out.external_input_hashes.push_back(item);
     }
+    out.execute_ns = input.execute_ns;
     return out;
 }
 

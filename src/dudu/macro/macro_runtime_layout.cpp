@@ -97,6 +97,19 @@ std::string compiler_identity(const ProjectConfig& config) {
            (error ? std::string("unknown-size") : std::to_string(size));
 }
 
+std::string file_identity(const std::filesystem::path& path) {
+    std::error_code error;
+    const std::filesystem::path resolved = std::filesystem::weakly_canonical(path, error);
+    const std::filesystem::path effective = error ? path : resolved;
+    const auto timestamp = std::filesystem::last_write_time(effective, error);
+    if (error)
+        return effective.lexically_normal().string() + ":unresolved";
+    const std::uintmax_t size = std::filesystem::file_size(effective, error);
+    return effective.lexically_normal().string() + ":" +
+           std::to_string(timestamp.time_since_epoch().count()) + ":" +
+           (error ? std::string("unknown-size") : std::to_string(size));
+}
+
 } // namespace
 
 RuntimeLayout find_runtime_layout() {
@@ -140,6 +153,9 @@ WorkerBuildOptions worker_build_options(const ProjectConfig& config, const Runti
     options.compiler = config.compiler.empty() ? "c++" : config.compiler;
     options.cpp_standard = config.cpp_std;
     options.toolchain_identity = compiler_identity(config);
+    const std::optional<std::filesystem::path> dudu_executable = executable_path();
+    options.dudu_toolchain_identity =
+        dudu_executable ? file_identity(*dudu_executable) : "dudu:unresolved";
     options.runtime_include_dirs = runtime.include_dirs;
     options.runtime_library = runtime.library;
     options.include_dirs = resolve_paths(config, config.include_dirs);
