@@ -52,8 +52,17 @@ void test_public_macro_packages_expand_through_codegen() {
     options.force_module_tree = true;
 
     const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
-    assert(index.macro_report().definitions.size() == 7);
-    assert(index.macro_report().invocations == 7);
+    assert(index.macro_report().definitions.size() == 8);
+    assert(index.macro_report().invocations == 8);
+    const auto warning = std::find_if(
+        index.macro_report().expansions.begin(), index.macro_report().expansions.end(),
+        [](const auto& expansion) { return expansion.macro_name == "Warn"; });
+    assert(warning != index.macro_report().expansions.end());
+    assert(warning->expansion.diagnostics.size() == 1);
+    assert(warning->expansion.diagnostics.front().severity ==
+           dudu::macro::protocol::DiagnosticSeverity::Warning);
+    assert(warning->expansion.diagnostics.front().message ==
+           "showcase warning from public macro API");
 
     const dudu::ModuleAst& merged = index.merged_module();
     const dudu::ClassDecl& player = find_class(merged, "Player");

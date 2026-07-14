@@ -254,7 +254,10 @@ report_macro_comparisons() {
                 ;;
         esac
         if command -v "$tool" >/dev/null 2>&1; then
-            echo "macro comparison adapter available: $language ($tool)"
+            case "$language" in
+                rust) run_rust_macro_comparison ;;
+                *) echo "macro comparison adapter unavailable: $language" ;;
+            esac
         else
             echo "macro comparison skipped: $language ($tool not installed)"
         fi

@@ -3,11 +3,12 @@ from showcase_macros import BinarySchema
 from showcase_macros import Debug
 from showcase_macros import Json
 from showcase_macros import StringEnum
+from showcase_macros import Warn
 from showcase_macros import plugin_exports
 from showcase_macros import reflect
 
 
-@derive(Debug, Json)
+@derive(Debug, Json, Warn)
 @reflect
 class Player:
     id: u64

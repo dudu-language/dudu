@@ -57,6 +57,13 @@ def Debug(item: ast.ClassDecl) -> ast.Expansion:
     return out
 
 
+@macro
+def Warn(item: ast.ClassDecl) -> ast.Expansion:
+    out = ast.expansion()
+    out.add_diagnostic(ast.warning(item.range, "showcase warning from public macro API"))
+    return out
+
+
 @macro(attributes=JsonOptions)
 def Json(item: ast.ClassDecl) -> ast.Expansion:
     count: i32 = 0

@@ -324,6 +324,7 @@ source "$repo_root/scripts/bench_compiler_project_cases.sh"
 source "$repo_root/scripts/bench_compiler_core_cases.sh"
 source "$repo_root/scripts/bench_compiler_native_cases.sh"
 source "$repo_root/scripts/bench_compiler_macro_cases.sh"
+source "$repo_root/scripts/bench_macro_compare_rust.sh"
 
 if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
     run_macro_benchmarks "$macro_scales" "$macro_node_scales" "$compare"
