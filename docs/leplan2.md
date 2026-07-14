@@ -238,6 +238,14 @@ without starting an unbounded rewrite.
   design and measured prototype; do not add a compatibility wrapper around the
   current recursive AST
 
+The first cleanup milestone separated the former 752-line LSP references file
+along actual ownership boundaries. Reference collection, rename edits, and the
+shared project/symbol/native-identity query policy now live in separate modules
+of 275, 296, and 220 lines. Native call identity matching remains structured on
+`AstSelection`, `TypeRef`, and native symbol identity; the split does not copy
+policy or introduce source-text lookup. The focused frontend, references,
+rename, navigation, and text-synchronization tests remain green.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 
