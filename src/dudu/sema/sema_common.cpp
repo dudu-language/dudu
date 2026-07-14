@@ -52,6 +52,55 @@ bool explicit_generic_arg_known(const Symbols& symbols, const TypeRef& type_arg)
     return !unknown_type_ref(symbols, type_arg).has_value();
 }
 
+ScopedSymbolOverlay::ScopedSymbolOverlay(Symbols& symbols) : symbols_(symbols) {
+}
+
+ScopedSymbolOverlay::~ScopedSymbolOverlay() {
+    for (const std::string& name : inserted_generic_params_) {
+        symbols_.generic_params.erase(name);
+    }
+    for (const std::string& name : inserted_types_) {
+        symbols_.types.erase(name);
+    }
+    if (changed_self_alias_) {
+        if (previous_self_alias_) {
+            symbols_.alias_type_refs["Self"] = *previous_self_alias_;
+        } else {
+            symbols_.alias_type_refs.erase("Self");
+        }
+    }
+}
+
+void ScopedSymbolOverlay::add_generic_params(const std::vector<std::string>& params,
+                                             const std::set<std::string>& value_params) {
+    for (const std::string& param : params) {
+        const std::string name = generic_param_base_name(param);
+        if (!value_params.contains(name) && symbols_.types.insert(name).second) {
+            inserted_types_.push_back(name);
+        }
+        if (symbols_.generic_params.insert(name).second) {
+            inserted_generic_params_.push_back(name);
+        }
+    }
+}
+
+void ScopedSymbolOverlay::set_self_type(const std::string& class_name) {
+    if (class_name.empty()) {
+        return;
+    }
+    if (symbols_.types.insert("Self").second) {
+        inserted_types_.push_back("Self");
+    }
+    if (!changed_self_alias_) {
+        const auto previous = symbols_.alias_type_refs.find("Self");
+        if (previous != symbols_.alias_type_refs.end()) {
+            previous_self_alias_ = previous->second;
+        }
+        changed_self_alias_ = true;
+    }
+    symbols_.alias_type_refs["Self"] = named_type_ref(class_name);
+}
+
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
     return with_generic_params(std::move(symbols), params, {});
 }

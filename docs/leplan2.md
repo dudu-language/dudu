@@ -56,10 +56,12 @@ This is the immediate priority.
 
 Pure Dudu frontend throughput is no longer uniformly slow. Recent results in
 [Le Plan: Compiler Throughput](le_plan.md#11-compiler-throughput-and-build-performance)
-put 50,000 expression-heavy lines near 200 ms and most other 50,000-line
-generated shapes near 40-130 ms. The remaining bad latency is concentrated in
-cold editor indexing, native-header work, process/build orchestration, and
-native macro-package compilation.
+put most 50,000-line generated shapes near 90-300 ms. The remaining bad latency
+is concentrated in cold editor indexing, native-header work, process/build
+orchestration, and native macro-package compilation. Generated-shape scaling
+must still be measured because the first Le Plan 2 baseline caught a class
+semantic-analysis path that looked acceptable at 10,000 lines but became
+quadratic by 50,000 lines.
 
 ### Baseline
 
@@ -98,6 +100,37 @@ These are engineering targets, not language guarantees:
 
 Hardware, toolchain, corpus, sample count, median, p95, and RSS must accompany
 every published comparison.
+
+### 2026-07-14 Baseline
+
+Host: AMD Ryzen 9 9950X, 16 cores/32 threads, Ubuntu 24.04, GCC 13.3,
+Clang 18.1.3. Compiler measurements use a Release Dudu build, five samples,
+wall-clock medians/p95, and process peak RSS. Raw CSV lives under the ignored
+`build/bench_compiler` directory; rerun commands are in `scripts/bench_compiler.sh`.
+
+| Case | Median | p95 | Peak RSS |
+| --- | ---: | ---: | ---: |
+| tiny `duc check` | 20.9 ms | 22.2 ms | 54.4 MiB |
+| cold small native scan | 47.4 ms | 50.9 ms | 78.1 MiB |
+| cached small native metadata | 21.5 ms | 22.2 ms | 54.8 MiB |
+| generated-CMake no-op build | 72.7 ms | 74.7 ms | 53.8 MiB |
+| generated-CMake one-module edit | 331.8 ms | 340.7 ms | 109.8 MiB |
+| 50k indexing-heavy lines | 264.6 ms | 267.2 ms | 146.4 MiB |
+| 50k native-heavy lines | 437.6 ms | 499.0 ms | 157.9 MiB |
+
+The dogfood LSP probe measured `raymarch-dd` cold document indexing at
+308.2 ms and `dudu-webserver` at 140.8 ms. Warm definition/hover/references/
+completion/semantic-token requests ranged from 0.5 to 21.3 ms. These are
+single-run orientation numbers; completion-gate reporting still requires the
+multi-sample CSV harness.
+
+The baseline also found 50k class-heavy lines taking 2,651.3 ms. Profiling
+showed declaration and body checking copied the complete `Symbols` graph for
+every class merely to add `Self` and generic names. A scoped reversible symbol
+overlay removed those whole-program copies without adding a cache. Follow-up
+three-sample medians are 84.8 ms at 50k generated lines, 155.3 ms at 100k, and
+306.9 ms at 200k. The path is now approximately linear. The fast C++ suite and
+the complete LSP smoke/recovery/synchronization/matrix suite remain green.
 
 ### Work Order
 

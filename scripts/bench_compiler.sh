@@ -278,6 +278,14 @@ run_case() {
     run_case_prepared "$name" "$phase" "$source_path" bench_noop "$@"
 }
 
+prepare_native_cold_sample() {
+    "$tool_build_dir/duc" clean-cache "$native_header" --quiet >/dev/null 2>&1
+}
+
+prepare_native_cached_sample() {
+    "$tool_build_dir/duc" check "$native_header" >/dev/null 2>&1
+}
+
 simple="$repo_root/tests/fixtures/simple_program.dd"
 native_header="$repo_root/tests/fixtures/array_c_handoff.dd"
 multi_project="$repo_root/tests/fixtures/project_backend_auto_modules_native"
@@ -341,11 +349,12 @@ run_case "duc_check_simple" "frontend_check" "$simple" \
 run_case "duc_emit_simple" "cpp_emit" "$simple" \
     "$tool_build_dir/duc" emit "$simple" -o "$bench_dir/simple_program.cpp"
 
-"$tool_build_dir/duc" clean-cache "$native_header" >/dev/null 2>&1
-run_case "duc_check_native_cold" "native_scan_cold" "$native_header" \
+run_case_prepared "duc_check_native_cold" "native_scan_cold" "$native_header" \
+    prepare_native_cold_sample \
     "$tool_build_dir/duc" check "$native_header"
 
-run_case "duc_check_native_cached" "native_scan_cached" "$native_header" \
+run_case_prepared "duc_check_native_cached" "native_scan_cached" "$native_header" \
+    prepare_native_cached_sample \
     "$tool_build_dir/duc" check "$native_header"
 
 run_case "duc_build_file" "compiler_driver_build" "$simple" \

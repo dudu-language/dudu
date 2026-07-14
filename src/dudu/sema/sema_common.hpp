@@ -18,6 +18,27 @@ const SourceLocation& diagnostic_location(const SourceLocation& context, const E
 const SourceLocation& diagnostic_location(const SourceLocation& context, const TypeRef& type);
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref);
 bool explicit_generic_arg_known(const Symbols& symbols, const TypeRef& type_arg);
+
+class ScopedSymbolOverlay {
+  public:
+    explicit ScopedSymbolOverlay(Symbols& symbols);
+    ~ScopedSymbolOverlay();
+
+    ScopedSymbolOverlay(const ScopedSymbolOverlay&) = delete;
+    ScopedSymbolOverlay& operator=(const ScopedSymbolOverlay&) = delete;
+
+    void add_generic_params(const std::vector<std::string>& params,
+                            const std::set<std::string>& value_params = {});
+    void set_self_type(const std::string& class_name);
+
+  private:
+    Symbols& symbols_;
+    std::vector<std::string> inserted_types_;
+    std::vector<std::string> inserted_generic_params_;
+    std::optional<TypeRef> previous_self_alias_;
+    bool changed_self_alias_ = false;
+};
+
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params);
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params,
                             const std::set<std::string>& value_params);

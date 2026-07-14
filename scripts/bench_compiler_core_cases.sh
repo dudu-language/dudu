@@ -331,7 +331,7 @@ class Color4:
     a: i32
 
 
-def sum_span(values: strided_span[i32]) -> i32:
+def sum_view(values: array_view[i32]) -> i32:
     total: i32 = 0
     for value: i32 in values:
         total += value
@@ -350,13 +350,13 @@ def indexing_func_$i(seed: i32) -> i32:
         [[seed + 4, seed + 5], [seed + 6, seed + 7]],
     ]
     row: array[i32][3] = matrix[1]
-    column: strided_span[i32] = matrix[:, 1]
-    channel: strided_span[i32] = image[:, :, 0]
+    column: array_view[i32][2] = matrix[:, 1]
+    channel: array_view[i32][2, 2] = image[:, :, 0]
     pos: Vec2 = Vec2(seed, seed + 1)
     pos.yx = Vec2(seed + 2, seed + 3)
     color: Color4 = Color4(seed, seed + 1, seed + 2, seed + 3)
     color.bgra = Color4(seed + 6, seed + 5, seed + 4, seed + 7)
-    return row[0] + row[2] + sum_span(column) + sum_span(channel) + pos.x + pos.y + color.r + color.a + $i
+    return row[0] + row[2] + sum_view(column) + sum_view(channel) + pos.x + pos.y + color.r + color.a + $i
 
 EOF
     done
@@ -374,4 +374,3 @@ EOF
     } >>"$entry"
     printf '%s\n' "$entry"
 }
-

@@ -376,6 +376,7 @@ void check_body_region(std::vector<CompileError>* diagnostics, Action&& action) 
 void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
                        std::vector<CompileError>* diagnostics) {
     FunctionScope base{symbols};
+    Symbols scoped_symbols = symbols;
     const auto mode = module.build_values.find("TARGET_MODE");
     if (mode != module.build_values.end()) {
         base.target_mode = trim(mode->second);
@@ -411,29 +412,19 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
         });
     }
     for (const ClassDecl& klass : module.classes) {
-        std::optional<Symbols> class_symbol_storage;
-        const Symbols* class_symbols = &symbols;
-        if (!klass.generic_params.empty()) {
-            class_symbol_storage = with_generic_params(symbols, klass.generic_params,
-                                                       generic_value_params_for_class(klass));
-            class_symbols = &*class_symbol_storage;
-        }
-        class_symbol_storage = with_self_type(*class_symbols, klass.name);
-        class_symbols = &*class_symbol_storage;
+        ScopedSymbolOverlay class_symbols(scoped_symbols);
+        class_symbols.add_generic_params(klass.generic_params,
+                                         generic_value_params_for_class(klass));
+        class_symbols.set_self_type(klass.name);
         for (const FunctionDecl& method : klass.methods) {
             if (method.body_syntax_damaged || function_has_decorator(method, "abstract")) {
                 continue;
             }
             check_body_region(diagnostics, [&] {
-                std::optional<Symbols> method_symbol_storage;
-                const Symbols* method_symbols = class_symbols;
-                if (!method.generic_params.empty()) {
-                    method_symbol_storage =
-                        with_generic_params(*class_symbols, method.generic_params,
-                                            generic_value_params_for_function(method));
-                    method_symbols = &*method_symbol_storage;
-                }
-                FunctionScope scope{*method_symbols};
+                ScopedSymbolOverlay method_symbols(scoped_symbols);
+                method_symbols.add_generic_params(method.generic_params,
+                                                  generic_value_params_for_function(method));
+                FunctionScope scope{scoped_symbols};
                 copy_base_scope_state(scope, base);
                 scope.current_class = klass.name;
                 scope.allow_super_init = method.name == "init";
@@ -452,20 +443,16 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
         }
     }
     for (const EnumDecl& en : module.enums) {
-        Symbols enum_symbols = with_self_type(symbols, en.name);
+        ScopedSymbolOverlay enum_symbols(scoped_symbols);
+        enum_symbols.set_self_type(en.name);
         for (const FunctionDecl& method : en.methods) {
             if (method.body_syntax_damaged)
                 continue;
             check_body_region(diagnostics, [&] {
-                std::optional<Symbols> method_symbol_storage;
-                const Symbols* method_symbols = &enum_symbols;
-                if (!method.generic_params.empty()) {
-                    method_symbol_storage =
-                        with_generic_params(enum_symbols, method.generic_params,
-                                            generic_value_params_for_function(method));
-                    method_symbols = &*method_symbol_storage;
-                }
-                FunctionScope scope{*method_symbols};
+                ScopedSymbolOverlay method_symbols(scoped_symbols);
+                method_symbols.add_generic_params(method.generic_params,
+                                                  generic_value_params_for_function(method));
+                FunctionScope scope{scoped_symbols};
                 copy_base_scope_state(scope, base);
                 scope.current_class = en.name;
                 const TypeRef self_type = named_type_ref(en.name, method.location);
@@ -489,14 +476,10 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
             continue;
         }
         check_body_region(diagnostics, [&] {
-            std::optional<Symbols> function_symbol_storage;
-            const Symbols* function_symbols = &symbols;
-            if (!fn.generic_params.empty()) {
-                function_symbol_storage = with_generic_params(
-                    symbols, fn.generic_params, generic_value_params_for_function(fn));
-                function_symbols = &*function_symbol_storage;
-            }
-            FunctionScope scope{*function_symbols};
+            ScopedSymbolOverlay function_symbols(scoped_symbols);
+            function_symbols.add_generic_params(fn.generic_params,
+                                                generic_value_params_for_function(fn));
+            FunctionScope scope{scoped_symbols};
             copy_base_scope_state(scope, base);
             scope.return_type_ref = function_return_type_ref(fn);
             for (const ParamDecl& param : fn.params) {

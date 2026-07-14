@@ -269,6 +269,7 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
 } // namespace
 
 void check_declarations(const ModuleAst& module, const Symbols& symbols) {
+    Symbols scoped_symbols = symbols;
     for (const TypeAliasDecl& alias : module.aliases) {
         check_supported_type_shape(alias.location, alias.type_ref);
         check_known_type_ref(symbols, alias.location, alias.type_ref,
@@ -296,18 +297,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 }
             }
         }
-        std::optional<Symbols> enum_symbol_storage = with_self_type(symbols, en.name);
-        const Symbols* enum_symbols = &*enum_symbol_storage;
+        ScopedSymbolOverlay enum_symbols(scoped_symbols);
+        enum_symbols.set_self_type(en.name);
         for (const FunctionDecl& method : en.methods) {
             check_generic_params(method.location, method.generic_params);
-            std::optional<Symbols> method_symbol_storage;
-            const Symbols* method_symbols = enum_symbols;
-            if (!method.generic_params.empty()) {
-                method_symbol_storage =
-                    with_generic_params(*enum_symbols, method.generic_params,
-                                        generic_value_params_for_function(method));
-                method_symbols = &*method_symbol_storage;
-            }
+            ScopedSymbolOverlay method_symbols(scoped_symbols);
+            method_symbols.add_generic_params(method.generic_params,
+                                              generic_value_params_for_function(method));
             if (values.contains(method.name)) {
                 fail(method.location, "duplicate enum member: " + method.name);
             }
@@ -323,7 +319,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             }
             const bool is_static = method.params.empty() || method.params.front().name != "self";
             if (!is_static && !receiver_type_is_reference_to_class(
-                                  *method_symbols, method.params.front().type_ref, en.name)) {
+                                  scoped_symbols, method.params.front().type_ref, en.name)) {
                 fail(method.params.front().location,
                      "self must be a receiver reference: use self, self: &Self, or "
                      "self: &const[Self]");
@@ -354,36 +350,31 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
                 check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(*method_symbols, param.location, param.type_ref,
+                check_known_type_ref(scoped_symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
             if (function_has_return_type(method)) {
                 check_supported_type_shape(method.location, method.return_type_ref);
             }
-            check_known_type_ref(*method_symbols, method.location, method.return_type_ref,
+            check_known_type_ref(scoped_symbols, method.location, method.return_type_ref,
                                  "unknown return type: ");
         }
     }
     for (const ClassDecl& klass : module.classes) {
         check_generic_params(klass.location, klass.generic_params);
-        std::optional<Symbols> class_symbol_storage;
-        const Symbols* class_symbols = &symbols;
-        if (!klass.generic_params.empty()) {
-            class_symbol_storage = with_generic_params(symbols, klass.generic_params,
-                                                       generic_value_params_for_class(klass));
-            class_symbols = &*class_symbol_storage;
-        }
-        class_symbol_storage = with_self_type(*class_symbols, klass.name);
-        class_symbols = &*class_symbol_storage;
+        ScopedSymbolOverlay class_symbols(scoped_symbols);
+        class_symbols.add_generic_params(klass.generic_params,
+                                         generic_value_params_for_class(klass));
+        class_symbols.set_self_type(klass.name);
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(module, decorator);
         }
         std::vector<TypeRef> bases;
         for (const BaseClassDecl& base : klass.base_class_refs) {
             check_supported_type_shape(base.location, base.type_ref);
-            check_known_type_ref(*class_symbols, base.location, base.type_ref,
+            check_known_type_ref(scoped_symbols, base.location, base.type_ref,
                                  "unknown base class: ");
-            const TypeRef resolved_base = resolve_alias_ref(*class_symbols, base.type_ref);
+            const TypeRef resolved_base = resolve_alias_ref(scoped_symbols, base.type_ref);
             if (has_equivalent_base(bases, resolved_base)) {
                 fail(base.location, "duplicate base class: " + type_ref_text(base.type_ref));
             }
@@ -396,7 +387,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate field: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(*class_symbols, field.location, field.type_ref,
+            check_known_type_ref(scoped_symbols, field.location, field.type_ref,
                                  "unknown field type: ");
         }
         for (const ConstDecl& constant : klass.constants) {
@@ -404,7 +395,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(constant.location, "duplicate class member: " + constant.name);
             }
             check_supported_type_shape(constant.location, constant.type_ref);
-            check_known_type_ref(*class_symbols, constant.location, constant.type_ref,
+            check_known_type_ref(scoped_symbols, constant.location, constant.type_ref,
                                  "unknown class constant type: ");
         }
         for (const ConstDecl& field : klass.static_fields) {
@@ -412,19 +403,14 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate class member: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(*class_symbols, field.location, field.type_ref,
+            check_known_type_ref(scoped_symbols, field.location, field.type_ref,
                                  "unknown static field type: ");
         }
         for (const FunctionDecl& method : klass.methods) {
             check_generic_params(method.location, method.generic_params);
-            std::optional<Symbols> method_symbol_storage;
-            const Symbols* method_symbols = class_symbols;
-            if (!method.generic_params.empty()) {
-                method_symbol_storage =
-                    with_generic_params(*class_symbols, method.generic_params,
-                                        generic_value_params_for_function(method));
-                method_symbols = &*method_symbol_storage;
-            }
+            ScopedSymbolOverlay method_symbols(scoped_symbols);
+            method_symbols.add_generic_params(method.generic_params,
+                                              generic_value_params_for_function(method));
             if (fields.contains(method.name)) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
@@ -447,7 +433,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(method.location, "inheritance method decorators require self");
             }
             if (!is_static && !receiver_type_is_reference_to_class(
-                                  *method_symbols, method.params.front().type_ref, klass.name)) {
+                                  scoped_symbols, method.params.front().type_ref, klass.name)) {
                 fail(method.params.front().location,
                      "self must be a receiver reference: use self, self: &Self, or "
                      "self: &const[Self]");
@@ -547,25 +533,21 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
                 check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(*method_symbols, param.location, param.type_ref,
+                check_known_type_ref(scoped_symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
             if (function_has_return_type(method)) {
                 check_supported_type_shape(method.location, method.return_type_ref);
             }
-            check_known_type_ref(*method_symbols, method.location, method.return_type_ref,
+            check_known_type_ref(scoped_symbols, method.location, method.return_type_ref,
                                  "unknown return type: ");
         }
     }
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
-        std::optional<Symbols> function_symbol_storage;
-        const Symbols* function_symbols = &symbols;
-        if (!fn.generic_params.empty()) {
-            function_symbol_storage = with_generic_params(symbols, fn.generic_params,
-                                                          generic_value_params_for_function(fn));
-            function_symbols = &*function_symbol_storage;
-        }
+        ScopedSymbolOverlay function_symbols(scoped_symbols);
+        function_symbols.add_generic_params(fn.generic_params,
+                                            generic_value_params_for_function(fn));
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }
@@ -593,13 +575,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
             check_supported_type_shape(param.location, param.type_ref);
-            check_known_type_ref(*function_symbols, param.location, param.type_ref,
+            check_known_type_ref(scoped_symbols, param.location, param.type_ref,
                                  "unknown parameter type: ");
         }
         if (function_has_return_type(fn)) {
             check_supported_type_shape(fn.location, fn.return_type_ref);
         }
-        check_known_type_ref(*function_symbols, fn.location, fn.return_type_ref,
+        check_known_type_ref(scoped_symbols, fn.location, fn.return_type_ref,
                              "unknown return type: ");
     }
 }
