@@ -4,6 +4,7 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 #include <poll.h>
 #include <signal.h>
 #include <span>
@@ -314,6 +315,24 @@ bool WorkerProcess::running() const {
 
 int WorkerProcess::process_id() const {
     return child_pid_;
+}
+
+std::optional<std::size_t> WorkerProcess::resident_set_kb() const {
+#if defined(__linux__)
+    if (!running())
+        return std::nullopt;
+    std::ifstream status("/proc/" + std::to_string(child_pid_) + "/statm");
+    std::size_t total_pages = 0;
+    std::size_t resident_pages = 0;
+    if (!(status >> total_pages >> resident_pages))
+        return std::nullopt;
+    const long page_bytes = ::sysconf(_SC_PAGESIZE);
+    if (page_bytes <= 0)
+        return std::nullopt;
+    return resident_pages * static_cast<std::size_t>(page_bytes) / 1024U;
+#else
+    return std::nullopt;
+#endif
 }
 
 void WorkerProcess::close_descriptors() {

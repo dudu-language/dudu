@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -57,6 +58,7 @@ class WorkerProcess {
 
     [[nodiscard]] bool running() const;
     [[nodiscard]] int process_id() const;
+    [[nodiscard]] std::optional<std::size_t> resident_set_kb() const;
 
   private:
     WorkerProcess(int child_pid, int write_fd, int read_fd, WorkerProcessOptions options);

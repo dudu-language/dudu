@@ -45,6 +45,8 @@ struct ExpansionReport {
     std::size_t worker_starts = 0;
     std::size_t worker_cache_hits = 0;
     std::size_t expansion_cache_hits = 0;
+    std::size_t generated_nodes = 0;
+    std::size_t worker_rss_kb = 0;
     Timings timings;
     std::vector<std::string> worker_identities;
     std::vector<Definition> definitions;

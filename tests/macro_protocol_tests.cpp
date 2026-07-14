@@ -46,6 +46,7 @@ void test_complex_expansion_round_trip() {
                                      .message = "generated to_json",
                                      .range = range("src/player.dd", 4, 0)});
 
+    const std::size_t original_node_count = count_nodes(expansion);
     const std::vector<std::uint8_t> bytes = encode(expansion);
     const Expansion decoded = decode_Expansion(bytes);
     assert(decoded.members.size() == 1);
@@ -56,6 +57,8 @@ void test_complex_expansion_round_trip() {
     assert(decoded.members[0].origin.macro_name == "Json");
     assert(decoded.diagnostics.size() == 1);
     assert(decoded.diagnostics[0].message == "generated to_json");
+    assert(original_node_count > 10);
+    assert(count_nodes(decoded) == original_node_count);
 }
 
 void test_unknown_fields_are_skipped() {

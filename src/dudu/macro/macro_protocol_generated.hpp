@@ -3,6 +3,7 @@
 
 #include "dudu/macro/macro_wire.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -402,64 +403,122 @@ struct WorkerError {
 };
 
 std::vector<std::uint8_t> encode(const SourcePosition& value);
-SourcePosition decode_SourcePosition(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+SourcePosition decode_SourcePosition(std::span<const std::uint8_t> bytes,
+                                     const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const SourcePosition& value);
 std::vector<std::uint8_t> encode(const SourceRange& value);
-SourceRange decode_SourceRange(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+SourceRange decode_SourceRange(std::span<const std::uint8_t> bytes,
+                               const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const SourceRange& value);
 std::vector<std::uint8_t> encode(const SymbolIdentity& value);
-SymbolIdentity decode_SymbolIdentity(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+SymbolIdentity decode_SymbolIdentity(std::span<const std::uint8_t> bytes,
+                                     const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const SymbolIdentity& value);
 std::vector<std::uint8_t> encode(const TypeRef& value);
 TypeRef decode_TypeRef(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const TypeRef& value);
 std::vector<std::uint8_t> encode(const Expression& value);
-Expression decode_Expression(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Expression decode_Expression(std::span<const std::uint8_t> bytes,
+                             const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Expression& value);
 std::vector<std::uint8_t> encode(const Statement& value);
-Statement decode_Statement(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Statement decode_Statement(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Statement& value);
 std::vector<std::uint8_t> encode(const AttributeArgument& value);
-AttributeArgument decode_AttributeArgument(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+AttributeArgument decode_AttributeArgument(std::span<const std::uint8_t> bytes,
+                                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const AttributeArgument& value);
 std::vector<std::uint8_t> encode(const Attribute& value);
-Attribute decode_Attribute(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Attribute decode_Attribute(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Attribute& value);
 std::vector<std::uint8_t> encode(const GenericParameter& value);
-GenericParameter decode_GenericParameter(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+GenericParameter decode_GenericParameter(std::span<const std::uint8_t> bytes,
+                                         const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const GenericParameter& value);
 std::vector<std::uint8_t> encode(const Parameter& value);
-Parameter decode_Parameter(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Parameter decode_Parameter(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Parameter& value);
 std::vector<std::uint8_t> encode(const FieldDecl& value);
-FieldDecl decode_FieldDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+FieldDecl decode_FieldDecl(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const FieldDecl& value);
 std::vector<std::uint8_t> encode(const FunctionDecl& value);
-FunctionDecl decode_FunctionDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+FunctionDecl decode_FunctionDecl(std::span<const std::uint8_t> bytes,
+                                 const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const FunctionDecl& value);
 std::vector<std::uint8_t> encode(const EnumVariant& value);
-EnumVariant decode_EnumVariant(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+EnumVariant decode_EnumVariant(std::span<const std::uint8_t> bytes,
+                               const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const EnumVariant& value);
 std::vector<std::uint8_t> encode(const EnumDecl& value);
-EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes,
+                         const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const EnumDecl& value);
 std::vector<std::uint8_t> encode(const ConstantDecl& value);
-ConstantDecl decode_ConstantDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+ConstantDecl decode_ConstantDecl(std::span<const std::uint8_t> bytes,
+                                 const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const ConstantDecl& value);
 std::vector<std::uint8_t> encode(const ClassDecl& value);
-ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const ClassDecl& value);
 std::vector<std::uint8_t> encode(const ImplementationDecl& value);
-ImplementationDecl decode_ImplementationDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+ImplementationDecl decode_ImplementationDecl(std::span<const std::uint8_t> bytes,
+                                             const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const ImplementationDecl& value);
 std::vector<std::uint8_t> encode(const Declaration& value);
-Declaration decode_Declaration(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Declaration decode_Declaration(std::span<const std::uint8_t> bytes,
+                               const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Declaration& value);
 std::vector<std::uint8_t> encode(const SourceOrigin& value);
-SourceOrigin decode_SourceOrigin(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+SourceOrigin decode_SourceOrigin(std::span<const std::uint8_t> bytes,
+                                 const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const SourceOrigin& value);
 std::vector<std::uint8_t> encode(const GeneratedDeclaration& value);
-GeneratedDeclaration decode_GeneratedDeclaration(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+GeneratedDeclaration decode_GeneratedDeclaration(std::span<const std::uint8_t> bytes,
+                                                 const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const GeneratedDeclaration& value);
 std::vector<std::uint8_t> encode(const Diagnostic& value);
-Diagnostic decode_Diagnostic(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Diagnostic decode_Diagnostic(std::span<const std::uint8_t> bytes,
+                             const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Diagnostic& value);
 std::vector<std::uint8_t> encode(const Expansion& value);
-Expansion decode_Expansion(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Expansion decode_Expansion(std::span<const std::uint8_t> bytes,
+                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Expansion& value);
 std::vector<std::uint8_t> encode(const Capability& value);
-Capability decode_Capability(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+Capability decode_Capability(std::span<const std::uint8_t> bytes,
+                             const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Capability& value);
 std::vector<std::uint8_t> encode(const MacroDescriptor& value);
-MacroDescriptor decode_MacroDescriptor(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+MacroDescriptor decode_MacroDescriptor(std::span<const std::uint8_t> bytes,
+                                       const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const MacroDescriptor& value);
 std::vector<std::uint8_t> encode(const MacroCatalog& value);
-MacroCatalog decode_MacroCatalog(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+MacroCatalog decode_MacroCatalog(std::span<const std::uint8_t> bytes,
+                                 const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const MacroCatalog& value);
 std::vector<std::uint8_t> encode(const Hello& value);
 Hello decode_Hello(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const Hello& value);
 std::vector<std::uint8_t> encode(const HelloAck& value);
-HelloAck decode_HelloAck(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+HelloAck decode_HelloAck(std::span<const std::uint8_t> bytes,
+                         const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const HelloAck& value);
 std::vector<std::uint8_t> encode(const ExpansionRequest& value);
-ExpansionRequest decode_ExpansionRequest(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+ExpansionRequest decode_ExpansionRequest(std::span<const std::uint8_t> bytes,
+                                         const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const ExpansionRequest& value);
 std::vector<std::uint8_t> encode(const ExpansionResponse& value);
-ExpansionResponse decode_ExpansionResponse(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+ExpansionResponse decode_ExpansionResponse(std::span<const std::uint8_t> bytes,
+                                           const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const ExpansionResponse& value);
 std::vector<std::uint8_t> encode(const WorkerError& value);
-WorkerError decode_WorkerError(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits = {});
+WorkerError decode_WorkerError(std::span<const std::uint8_t> bytes,
+                               const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const WorkerError& value);
 
 } // namespace dudu::macro::protocol

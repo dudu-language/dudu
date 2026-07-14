@@ -129,6 +129,7 @@ def generate_header(schema: dict[str, Any]) -> str:
         "",
         "#include \"dudu/macro/macro_wire.hpp\"",
         "",
+        "#include <cstddef>",
         "#include <cstdint>",
         "#include <optional>",
         "#include <span>",
@@ -161,6 +162,7 @@ def generate_header(schema: dict[str, Any]) -> str:
             f"{name} decode_{name}(std::span<const std::uint8_t> bytes, "
             "const wire::DecodeLimits& limits = {});"
         )
+        lines.append(f"std::size_t count_nodes(const {name}& value);")
     lines.extend(["", "} // namespace dudu::macro::protocol", ""])
     return "\n".join(lines)
 
@@ -283,6 +285,23 @@ def generate_cpp(schema: dict[str, Any]) -> str:
             "}",
             "",
         ])
+        lines.append(f"std::size_t count_nodes(const {name}& value) {{")
+        lines.append("    std::size_t count = 1;")
+        for field in struct["fields"]:
+            if field["type"] in PRIMITIVES or field["type"] in enum_names:
+                continue
+            access = f"value.{field['name']}"
+            if field.get("repeated"):
+                lines.append(f"    for (const auto& item : {access}) {{")
+                lines.append("        count += count_nodes(item);")
+                lines.append("    }")
+            elif field.get("optional"):
+                lines.append(f"    if ({access}.has_value()) {{")
+                lines.append(f"        count += count_nodes(*{access});")
+                lines.append("    }")
+            else:
+                lines.append(f"    count += count_nodes({access});")
+        lines.extend(["    return count;", "}", ""])
     lines.extend(["} // namespace dudu::macro::protocol", ""])
     return "\n".join(lines)
 

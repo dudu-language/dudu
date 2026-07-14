@@ -179,7 +179,8 @@ void encode_into(wire::Writer& writer, const TypeRef& value) {
     }
     writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(6,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
 }
 
@@ -234,10 +235,12 @@ void encode_into(wire::Writer& writer, const Expression& value) {
     }
     writer.write_message(7, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.resolved_type.has_value()) {
-        writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, *value.resolved_type); });
+        writer.write_message(
+            8, [&](wire::Writer& nested) { encode_into(nested, *value.resolved_type); });
     }
     if (value.identity.has_value()) {
-        writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(9,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
     for (const auto& item : value.callee) {
         writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -284,7 +287,8 @@ Expression decode_Expression_from(wire::Reader reader) {
             value.callee.push_back(decode_Expression_from(reader.read_message(field_type)));
             break;
         case 11:
-            value.template_arguments.push_back(decode_Expression_from(reader.read_message(field_type)));
+            value.template_arguments.push_back(
+                decode_Expression_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);
@@ -303,7 +307,8 @@ void encode_into(wire::Writer& writer, const Statement& value) {
         writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, *value.type); });
     }
     if (value.expression.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.expression); });
+        writer.write_message(4,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.expression); });
     }
     if (value.value.has_value()) {
         writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, *value.value); });
@@ -312,20 +317,24 @@ void encode_into(wire::Writer& writer, const Statement& value) {
         writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, *value.target); });
     }
     if (value.condition.has_value()) {
-        writer.write_message(7, [&](wire::Writer& nested) { encode_into(nested, *value.condition); });
+        writer.write_message(7,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.condition); });
     }
     for (const auto& item : value.children) {
         writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, item); });
     }
     writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.message.has_value()) {
-        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, *value.message); });
+        writer.write_message(10,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.message); });
     }
     if (value.iterable.has_value()) {
-        writer.write_message(11, [&](wire::Writer& nested) { encode_into(nested, *value.iterable); });
+        writer.write_message(11,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.iterable); });
     }
     if (value.pattern.has_value()) {
-        writer.write_message(12, [&](wire::Writer& nested) { encode_into(nested, *value.pattern); });
+        writer.write_message(12,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.pattern); });
     }
     if (value.guard.has_value()) {
         writer.write_message(13, [&](wire::Writer& nested) { encode_into(nested, *value.guard); });
@@ -431,7 +440,8 @@ void encode_into(wire::Writer& writer, const Attribute& value) {
     }
     writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(4,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
 }
 
@@ -445,7 +455,8 @@ Attribute decode_Attribute_from(wire::Reader reader) {
             value.name = reader.read_string(field_type);
             break;
         case 2:
-            value.arguments.push_back(decode_AttributeArgument_from(reader.read_message(field_type)));
+            value.arguments.push_back(
+                decode_AttributeArgument_from(reader.read_message(field_type)));
             break;
         case 3:
             value.range = decode_SourceRange_from(reader.read_message(field_type));
@@ -469,10 +480,12 @@ void encode_into(wire::Writer& writer, const GenericParameter& value) {
         writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, *value.type); });
     }
     if (value.default_type.has_value()) {
-        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, *value.default_type); });
+        writer.write_message(
+            3, [&](wire::Writer& nested) { encode_into(nested, *value.default_type); });
     }
     if (value.default_value.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.default_value); });
+        writer.write_message(
+            4, [&](wire::Writer& nested) { encode_into(nested, *value.default_value); });
     }
     writer.write_varint(5, static_cast<std::uint64_t>(value.variadic));
     writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, value.range); });
@@ -516,7 +529,8 @@ void encode_into(wire::Writer& writer, const Parameter& value) {
     }
     writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, value.type); });
     if (value.default_value.has_value()) {
-        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, *value.default_value); });
+        writer.write_message(
+            3, [&](wire::Writer& nested) { encode_into(nested, *value.default_value); });
     }
     writer.write_varint(4, static_cast<std::uint64_t>(value.variadic));
     writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, value.range); });
@@ -568,7 +582,8 @@ void encode_into(wire::Writer& writer, const FieldDecl& value) {
     writer.write_varint(6, static_cast<std::uint64_t>(value.visibility));
     writer.write_message(7, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(8,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
 }
 
@@ -621,7 +636,8 @@ void encode_into(wire::Writer& writer, const FunctionDecl& value) {
         writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, item); });
     }
     if (value.return_type.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.return_type); });
+        writer.write_message(
+            4, [&](wire::Writer& nested) { encode_into(nested, *value.return_type); });
     }
     for (const auto& item : value.body) {
         writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -638,7 +654,8 @@ void encode_into(wire::Writer& writer, const FunctionDecl& value) {
     writer.write_varint(11, static_cast<std::uint64_t>(value.is_virtual));
     writer.write_message(12, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(13, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(13,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
 }
 
@@ -652,7 +669,8 @@ FunctionDecl decode_FunctionDecl_from(wire::Reader reader) {
             value.name = reader.read_string(field_type);
             break;
         case 2:
-            value.generic_parameters.push_back(decode_GenericParameter_from(reader.read_message(field_type)));
+            value.generic_parameters.push_back(
+                decode_GenericParameter_from(reader.read_message(field_type)));
             break;
         case 3:
             value.parameters.push_back(decode_Parameter_from(reader.read_message(field_type)));
@@ -748,7 +766,8 @@ void encode_into(wire::Writer& writer, const EnumDecl& value) {
         writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, item); });
     }
     if (value.underlying_type.has_value()) {
-        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, *value.underlying_type); });
+        writer.write_message(
+            3, [&](wire::Writer& nested) { encode_into(nested, *value.underlying_type); });
     }
     for (const auto& item : value.variants) {
         writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -762,7 +781,8 @@ void encode_into(wire::Writer& writer, const EnumDecl& value) {
     writer.write_varint(7, static_cast<std::uint64_t>(value.visibility));
     writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(9,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
     for (const auto& item : value.methods) {
         writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -779,7 +799,8 @@ EnumDecl decode_EnumDecl_from(wire::Reader reader) {
             value.name = reader.read_string(field_type);
             break;
         case 2:
-            value.generic_parameters.push_back(decode_GenericParameter_from(reader.read_message(field_type)));
+            value.generic_parameters.push_back(
+                decode_GenericParameter_from(reader.read_message(field_type)));
             break;
         case 3:
             value.underlying_type = decode_TypeRef_from(reader.read_message(field_type));
@@ -828,7 +849,8 @@ void encode_into(wire::Writer& writer, const ConstantDecl& value) {
     writer.write_varint(6, static_cast<std::uint64_t>(value.visibility));
     writer.write_message(7, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(8, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(8,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
 }
 
@@ -895,7 +917,8 @@ void encode_into(wire::Writer& writer, const ClassDecl& value) {
     writer.write_varint(8, static_cast<std::uint64_t>(value.visibility));
     writer.write_message(9, [&](wire::Writer& nested) { encode_into(nested, value.range); });
     if (value.identity.has_value()) {
-        writer.write_message(10, [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
+        writer.write_message(10,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.identity); });
     }
     for (const auto& item : value.constants) {
         writer.write_message(11, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -915,7 +938,8 @@ ClassDecl decode_ClassDecl_from(wire::Reader reader) {
             value.name = reader.read_string(field_type);
             break;
         case 2:
-            value.generic_parameters.push_back(decode_GenericParameter_from(reader.read_message(field_type)));
+            value.generic_parameters.push_back(
+                decode_GenericParameter_from(reader.read_message(field_type)));
             break;
         case 3:
             value.bases.push_back(decode_TypeRef_from(reader.read_message(field_type)));
@@ -945,7 +969,8 @@ ClassDecl decode_ClassDecl_from(wire::Reader reader) {
             value.constants.push_back(decode_ConstantDecl_from(reader.read_message(field_type)));
             break;
         case 12:
-            value.static_fields.push_back(decode_ConstantDecl_from(reader.read_message(field_type)));
+            value.static_fields.push_back(
+                decode_ConstantDecl_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);
@@ -993,22 +1018,28 @@ ImplementationDecl decode_ImplementationDecl_from(wire::Reader reader) {
 void encode_into(wire::Writer& writer, const Declaration& value) {
     writer.write_varint(1, static_cast<std::uint64_t>(value.kind));
     if (value.class_decl.has_value()) {
-        writer.write_message(2, [&](wire::Writer& nested) { encode_into(nested, *value.class_decl); });
+        writer.write_message(2,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.class_decl); });
     }
     if (value.enum_decl.has_value()) {
-        writer.write_message(3, [&](wire::Writer& nested) { encode_into(nested, *value.enum_decl); });
+        writer.write_message(3,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.enum_decl); });
     }
     if (value.function_decl.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.function_decl); });
+        writer.write_message(
+            4, [&](wire::Writer& nested) { encode_into(nested, *value.function_decl); });
     }
     if (value.field_decl.has_value()) {
-        writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, *value.field_decl); });
+        writer.write_message(5,
+                             [&](wire::Writer& nested) { encode_into(nested, *value.field_decl); });
     }
     if (value.constant_decl.has_value()) {
-        writer.write_message(6, [&](wire::Writer& nested) { encode_into(nested, *value.constant_decl); });
+        writer.write_message(
+            6, [&](wire::Writer& nested) { encode_into(nested, *value.constant_decl); });
     }
     if (value.implementation_decl.has_value()) {
-        writer.write_message(7, [&](wire::Writer& nested) { encode_into(nested, *value.implementation_decl); });
+        writer.write_message(
+            7, [&](wire::Writer& nested) { encode_into(nested, *value.implementation_decl); });
     }
 }
 
@@ -1037,7 +1068,8 @@ Declaration decode_Declaration_from(wire::Reader reader) {
             value.constant_decl = decode_ConstantDecl_from(reader.read_message(field_type));
             break;
         case 7:
-            value.implementation_decl = decode_ImplementationDecl_from(reader.read_message(field_type));
+            value.implementation_decl =
+                decode_ImplementationDecl_from(reader.read_message(field_type));
             break;
         default:
             reader.skip(field_type);
@@ -1054,7 +1086,8 @@ void encode_into(wire::Writer& writer, const SourceOrigin& value) {
         writer.write_string(3, value.macro_name);
     }
     if (value.macro_identity.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.macro_identity); });
+        writer.write_message(
+            4, [&](wire::Writer& nested) { encode_into(nested, *value.macro_identity); });
     }
     if (value.parent.has_value()) {
         writer.write_varint(5, static_cast<std::uint64_t>(*value.parent));
@@ -1180,13 +1213,16 @@ Expansion decode_Expansion_from(wire::Reader reader) {
     while (reader.next(tag, field_type)) {
         switch (tag) {
         case 1:
-            value.members.push_back(decode_GeneratedDeclaration_from(reader.read_message(field_type)));
+            value.members.push_back(
+                decode_GeneratedDeclaration_from(reader.read_message(field_type)));
             break;
         case 2:
-            value.siblings.push_back(decode_GeneratedDeclaration_from(reader.read_message(field_type)));
+            value.siblings.push_back(
+                decode_GeneratedDeclaration_from(reader.read_message(field_type)));
             break;
         case 3:
-            value.implementations.push_back(decode_GeneratedDeclaration_from(reader.read_message(field_type)));
+            value.implementations.push_back(
+                decode_GeneratedDeclaration_from(reader.read_message(field_type)));
             break;
         case 4:
             value.diagnostics.push_back(decode_Diagnostic_from(reader.read_message(field_type)));
@@ -1235,7 +1271,8 @@ void encode_into(wire::Writer& writer, const MacroDescriptor& value) {
     }
     writer.write_varint(3, static_cast<std::uint64_t>(value.accepted_kind));
     if (value.attribute_schema.has_value()) {
-        writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, *value.attribute_schema); });
+        writer.write_message(
+            4, [&](wire::Writer& nested) { encode_into(nested, *value.attribute_schema); });
     }
     writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, value.definition); });
 }
@@ -1413,7 +1450,8 @@ ExpansionRequest decode_ExpansionRequest_from(wire::Reader reader) {
             value.invocation = decode_SourceRange_from(reader.read_message(field_type));
             break;
         case 4:
-            value.compile_values.push_back(decode_AttributeArgument_from(reader.read_message(field_type)));
+            value.compile_values.push_back(
+                decode_AttributeArgument_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);
@@ -1502,8 +1540,13 @@ std::vector<std::uint8_t> encode(const SourcePosition& value) {
 }
 
 SourcePosition decode_SourcePosition(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                     const wire::DecodeLimits& limits) {
     return decode_SourcePosition_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const SourcePosition& value) {
+    std::size_t count = 1;
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const SourceRange& value) {
@@ -1513,8 +1556,15 @@ std::vector<std::uint8_t> encode(const SourceRange& value) {
 }
 
 SourceRange decode_SourceRange(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                               const wire::DecodeLimits& limits) {
     return decode_SourceRange_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const SourceRange& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.start);
+    count += count_nodes(value.end);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const SymbolIdentity& value) {
@@ -1524,8 +1574,13 @@ std::vector<std::uint8_t> encode(const SymbolIdentity& value) {
 }
 
 SymbolIdentity decode_SymbolIdentity(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                     const wire::DecodeLimits& limits) {
     return decode_SymbolIdentity_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const SymbolIdentity& value) {
+    std::size_t count = 1;
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const TypeRef& value) {
@@ -1534,9 +1589,20 @@ std::vector<std::uint8_t> encode(const TypeRef& value) {
     return writer.take();
 }
 
-TypeRef decode_TypeRef(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+TypeRef decode_TypeRef(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_TypeRef_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const TypeRef& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.children) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Expression& value) {
@@ -1546,8 +1612,32 @@ std::vector<std::uint8_t> encode(const Expression& value) {
 }
 
 Expression decode_Expression(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                             const wire::DecodeLimits& limits) {
     return decode_Expression_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Expression& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.children) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.type_arguments) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.resolved_type.has_value()) {
+        count += count_nodes(*value.resolved_type);
+    }
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    for (const auto& item : value.callee) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.template_arguments) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Statement& value) {
@@ -1556,9 +1646,44 @@ std::vector<std::uint8_t> encode(const Statement& value) {
     return writer.take();
 }
 
-Statement decode_Statement(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+Statement decode_Statement(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_Statement_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Statement& value) {
+    std::size_t count = 1;
+    if (value.type.has_value()) {
+        count += count_nodes(*value.type);
+    }
+    if (value.expression.has_value()) {
+        count += count_nodes(*value.expression);
+    }
+    if (value.value.has_value()) {
+        count += count_nodes(*value.value);
+    }
+    if (value.target.has_value()) {
+        count += count_nodes(*value.target);
+    }
+    if (value.condition.has_value()) {
+        count += count_nodes(*value.condition);
+    }
+    for (const auto& item : value.children) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.message.has_value()) {
+        count += count_nodes(*value.message);
+    }
+    if (value.iterable.has_value()) {
+        count += count_nodes(*value.iterable);
+    }
+    if (value.pattern.has_value()) {
+        count += count_nodes(*value.pattern);
+    }
+    if (value.guard.has_value()) {
+        count += count_nodes(*value.guard);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const AttributeArgument& value) {
@@ -1568,8 +1693,15 @@ std::vector<std::uint8_t> encode(const AttributeArgument& value) {
 }
 
 AttributeArgument decode_AttributeArgument(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                           const wire::DecodeLimits& limits) {
     return decode_AttributeArgument_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const AttributeArgument& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.value);
+    count += count_nodes(value.range);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Attribute& value) {
@@ -1578,9 +1710,20 @@ std::vector<std::uint8_t> encode(const Attribute& value) {
     return writer.take();
 }
 
-Attribute decode_Attribute(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+Attribute decode_Attribute(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_Attribute_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Attribute& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.arguments) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const GenericParameter& value) {
@@ -1590,8 +1733,23 @@ std::vector<std::uint8_t> encode(const GenericParameter& value) {
 }
 
 GenericParameter decode_GenericParameter(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                         const wire::DecodeLimits& limits) {
     return decode_GenericParameter_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const GenericParameter& value) {
+    std::size_t count = 1;
+    if (value.type.has_value()) {
+        count += count_nodes(*value.type);
+    }
+    if (value.default_type.has_value()) {
+        count += count_nodes(*value.default_type);
+    }
+    if (value.default_value.has_value()) {
+        count += count_nodes(*value.default_value);
+    }
+    count += count_nodes(value.range);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Parameter& value) {
@@ -1600,9 +1758,18 @@ std::vector<std::uint8_t> encode(const Parameter& value) {
     return writer.take();
 }
 
-Parameter decode_Parameter(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+Parameter decode_Parameter(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_Parameter_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Parameter& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.type);
+    if (value.default_value.has_value()) {
+        count += count_nodes(*value.default_value);
+    }
+    count += count_nodes(value.range);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const FieldDecl& value) {
@@ -1611,9 +1778,24 @@ std::vector<std::uint8_t> encode(const FieldDecl& value) {
     return writer.take();
 }
 
-FieldDecl decode_FieldDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+FieldDecl decode_FieldDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_FieldDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const FieldDecl& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.type);
+    if (value.value.has_value()) {
+        count += count_nodes(*value.value);
+    }
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const FunctionDecl& value) {
@@ -1623,8 +1805,32 @@ std::vector<std::uint8_t> encode(const FunctionDecl& value) {
 }
 
 FunctionDecl decode_FunctionDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                 const wire::DecodeLimits& limits) {
     return decode_FunctionDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const FunctionDecl& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.generic_parameters) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.parameters) {
+        count += count_nodes(item);
+    }
+    if (value.return_type.has_value()) {
+        count += count_nodes(*value.return_type);
+    }
+    for (const auto& item : value.body) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const EnumVariant& value) {
@@ -1634,8 +1840,23 @@ std::vector<std::uint8_t> encode(const EnumVariant& value) {
 }
 
 EnumVariant decode_EnumVariant(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                               const wire::DecodeLimits& limits) {
     return decode_EnumVariant_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const EnumVariant& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.fields) {
+        count += count_nodes(item);
+    }
+    if (value.value.has_value()) {
+        count += count_nodes(*value.value);
+    }
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const EnumDecl& value) {
@@ -1644,9 +1865,32 @@ std::vector<std::uint8_t> encode(const EnumDecl& value) {
     return writer.take();
 }
 
-EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+EnumDecl decode_EnumDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_EnumDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const EnumDecl& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.generic_parameters) {
+        count += count_nodes(item);
+    }
+    if (value.underlying_type.has_value()) {
+        count += count_nodes(*value.underlying_type);
+    }
+    for (const auto& item : value.variants) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    for (const auto& item : value.methods) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const ConstantDecl& value) {
@@ -1656,8 +1900,22 @@ std::vector<std::uint8_t> encode(const ConstantDecl& value) {
 }
 
 ConstantDecl decode_ConstantDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                 const wire::DecodeLimits& limits) {
     return decode_ConstantDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const ConstantDecl& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.type);
+    count += count_nodes(value.value);
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const ClassDecl& value) {
@@ -1666,9 +1924,38 @@ std::vector<std::uint8_t> encode(const ClassDecl& value) {
     return writer.take();
 }
 
-ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+ClassDecl decode_ClassDecl(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_ClassDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const ClassDecl& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.generic_parameters) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.bases) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.fields) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.methods) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.attributes) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    if (value.identity.has_value()) {
+        count += count_nodes(*value.identity);
+    }
+    for (const auto& item : value.constants) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.static_fields) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const ImplementationDecl& value) {
@@ -1678,8 +1965,19 @@ std::vector<std::uint8_t> encode(const ImplementationDecl& value) {
 }
 
 ImplementationDecl decode_ImplementationDecl(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                             const wire::DecodeLimits& limits) {
     return decode_ImplementationDecl_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const ImplementationDecl& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.contract);
+    count += count_nodes(value.target);
+    for (const auto& item : value.methods) {
+        count += count_nodes(item);
+    }
+    count += count_nodes(value.range);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Declaration& value) {
@@ -1689,8 +1987,31 @@ std::vector<std::uint8_t> encode(const Declaration& value) {
 }
 
 Declaration decode_Declaration(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                               const wire::DecodeLimits& limits) {
     return decode_Declaration_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Declaration& value) {
+    std::size_t count = 1;
+    if (value.class_decl.has_value()) {
+        count += count_nodes(*value.class_decl);
+    }
+    if (value.enum_decl.has_value()) {
+        count += count_nodes(*value.enum_decl);
+    }
+    if (value.function_decl.has_value()) {
+        count += count_nodes(*value.function_decl);
+    }
+    if (value.field_decl.has_value()) {
+        count += count_nodes(*value.field_decl);
+    }
+    if (value.constant_decl.has_value()) {
+        count += count_nodes(*value.constant_decl);
+    }
+    if (value.implementation_decl.has_value()) {
+        count += count_nodes(*value.implementation_decl);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const SourceOrigin& value) {
@@ -1700,8 +2021,17 @@ std::vector<std::uint8_t> encode(const SourceOrigin& value) {
 }
 
 SourceOrigin decode_SourceOrigin(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                 const wire::DecodeLimits& limits) {
     return decode_SourceOrigin_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const SourceOrigin& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.range);
+    if (value.macro_identity.has_value()) {
+        count += count_nodes(*value.macro_identity);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const GeneratedDeclaration& value) {
@@ -1711,8 +2041,15 @@ std::vector<std::uint8_t> encode(const GeneratedDeclaration& value) {
 }
 
 GeneratedDeclaration decode_GeneratedDeclaration(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                                 const wire::DecodeLimits& limits) {
     return decode_GeneratedDeclaration_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const GeneratedDeclaration& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.declaration);
+    count += count_nodes(value.origin);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Diagnostic& value) {
@@ -1722,8 +2059,17 @@ std::vector<std::uint8_t> encode(const Diagnostic& value) {
 }
 
 Diagnostic decode_Diagnostic(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                             const wire::DecodeLimits& limits) {
     return decode_Diagnostic_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Diagnostic& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.range);
+    for (const auto& item : value.notes) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Expansion& value) {
@@ -1732,9 +2078,25 @@ std::vector<std::uint8_t> encode(const Expansion& value) {
     return writer.take();
 }
 
-Expansion decode_Expansion(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+Expansion decode_Expansion(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_Expansion_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Expansion& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.members) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.siblings) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.implementations) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.diagnostics) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Capability& value) {
@@ -1744,8 +2106,13 @@ std::vector<std::uint8_t> encode(const Capability& value) {
 }
 
 Capability decode_Capability(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                             const wire::DecodeLimits& limits) {
     return decode_Capability_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Capability& value) {
+    std::size_t count = 1;
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const MacroDescriptor& value) {
@@ -1755,8 +2122,17 @@ std::vector<std::uint8_t> encode(const MacroDescriptor& value) {
 }
 
 MacroDescriptor decode_MacroDescriptor(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                       const wire::DecodeLimits& limits) {
     return decode_MacroDescriptor_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const MacroDescriptor& value) {
+    std::size_t count = 1;
+    if (value.attribute_schema.has_value()) {
+        count += count_nodes(*value.attribute_schema);
+    }
+    count += count_nodes(value.definition);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const MacroCatalog& value) {
@@ -1766,8 +2142,19 @@ std::vector<std::uint8_t> encode(const MacroCatalog& value) {
 }
 
 MacroCatalog decode_MacroCatalog(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                 const wire::DecodeLimits& limits) {
     return decode_MacroCatalog_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const MacroCatalog& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.macros) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.capabilities) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const Hello& value) {
@@ -1776,9 +2163,13 @@ std::vector<std::uint8_t> encode(const Hello& value) {
     return writer.take();
 }
 
-Hello decode_Hello(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+Hello decode_Hello(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_Hello_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const Hello& value) {
+    std::size_t count = 1;
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const HelloAck& value) {
@@ -1787,9 +2178,13 @@ std::vector<std::uint8_t> encode(const HelloAck& value) {
     return writer.take();
 }
 
-HelloAck decode_HelloAck(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+HelloAck decode_HelloAck(std::span<const std::uint8_t> bytes, const wire::DecodeLimits& limits) {
     return decode_HelloAck_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const HelloAck& value) {
+    std::size_t count = 1;
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const ExpansionRequest& value) {
@@ -1799,8 +2194,18 @@ std::vector<std::uint8_t> encode(const ExpansionRequest& value) {
 }
 
 ExpansionRequest decode_ExpansionRequest(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                         const wire::DecodeLimits& limits) {
     return decode_ExpansionRequest_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const ExpansionRequest& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.declaration);
+    count += count_nodes(value.invocation);
+    for (const auto& item : value.compile_values) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const ExpansionResponse& value) {
@@ -1810,8 +2215,14 @@ std::vector<std::uint8_t> encode(const ExpansionResponse& value) {
 }
 
 ExpansionResponse decode_ExpansionResponse(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                                           const wire::DecodeLimits& limits) {
     return decode_ExpansionResponse_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const ExpansionResponse& value) {
+    std::size_t count = 1;
+    count += count_nodes(value.expansion);
+    return count;
 }
 
 std::vector<std::uint8_t> encode(const WorkerError& value) {
@@ -1821,8 +2232,16 @@ std::vector<std::uint8_t> encode(const WorkerError& value) {
 }
 
 WorkerError decode_WorkerError(std::span<const std::uint8_t> bytes,
-                       const wire::DecodeLimits& limits) {
+                               const wire::DecodeLimits& limits) {
     return decode_WorkerError_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const WorkerError& value) {
+    std::size_t count = 1;
+    for (const auto& item : value.diagnostics) {
+        count += count_nodes(item);
+    }
+    return count;
 }
 
 } // namespace dudu::macro::protocol

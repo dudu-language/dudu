@@ -65,6 +65,8 @@ void print_macro_performance(bool enabled, const macro::ExpansionReport& report)
     print_project_step(true, "macro.worker_starts", std::to_string(report.worker_starts));
     print_project_step(true, "macro.expansion_cache_hits",
                        std::to_string(report.expansion_cache_hits));
+    print_project_step(true, "macro.generated_nodes", std::to_string(report.generated_nodes));
+    print_project_step(true, "macro.worker_rss", std::to_string(report.worker_rss_kb) + " KiB");
     print_project_step(true, "macro.package_build", milliseconds(report.timings.package_build_ns));
     print_project_step(true, "macro.worker_start", milliseconds(report.timings.worker_start_ns));
     print_project_step(true, "macro.protocol", milliseconds(report.timings.protocol_ns));

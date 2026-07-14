@@ -10,11 +10,13 @@ line_scales="1000,5000,10000"
 shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,mixed"
 suite="default"
 macro_scales="1,100,1000"
+macro_node_scales="1000,10000"
 compare=""
+check_macro_budgets=0
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--suite default|macros|all] [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--macro-scales list] [--compare list] [--no-build]
+usage: scripts/bench_compiler.sh [--suite default|macros|all] [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--macro-scales list] [--macro-node-scales list] [--compare list] [--check-budgets] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
@@ -36,9 +38,12 @@ run into a libstdc++ scan benchmark.
 matches the normal dev loop. Release measures shipped-tool speed.
 
 --suite macros runs the explicit macro expansion and cache benchmark. Its
-default scales are 1,100,1000; use --macro-scales 1,100,1000,10000 for the
-complete release workload. --compare accepts an informational comma-separated
-list of rust,csharp,swift,nim when those toolchains are installed.
+    default declaration scales are 1,100,1000 and generated-node scales are
+    1000,10000. The complete release workload adds 10000 declarations and
+    100000,1000000 generated nodes. --check-budgets enforces the release matrix
+    and requires Release mode with at least five samples. --compare accepts an
+    informational comma-separated list of rust,csharp,swift,nim when those
+    toolchains are installed.
 EOF
 }
 
@@ -72,9 +77,17 @@ while [[ $# -gt 0 ]]; do
             macro_scales="${2:?--macro-scales requires a comma-separated list}"
             shift 2
             ;;
+        --macro-node-scales)
+            macro_node_scales="${2:?--macro-node-scales requires a comma-separated list}"
+            shift 2
+            ;;
         --compare)
             compare="${2:?--compare requires a comma-separated list}"
             shift 2
+            ;;
+        --check-budgets)
+            check_macro_budgets=1
+            shift
             ;;
         --no-build)
             build_tools=0
@@ -95,6 +108,21 @@ done
 if [[ "$samples" -lt 1 ]]; then
     echo "--samples must be at least 1" >&2
     exit 1
+fi
+
+if [[ "$check_macro_budgets" -eq 1 ]]; then
+    if [[ "$suite" != "macros" && "$suite" != "all" ]]; then
+        echo "--check-budgets requires --suite macros or --suite all" >&2
+        exit 1
+    fi
+    if [[ "$build_type" != "Release" ]]; then
+        echo "--check-budgets requires --build-type Release" >&2
+        exit 1
+    fi
+    if [[ "$samples" -lt 5 ]]; then
+        echo "--check-budgets requires at least five samples" >&2
+        exit 1
+    fi
 fi
 
 case "$build_type" in
@@ -298,7 +326,7 @@ source "$repo_root/scripts/bench_compiler_native_cases.sh"
 source "$repo_root/scripts/bench_compiler_macro_cases.sh"
 
 if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
-    run_macro_benchmarks "$macro_scales" "$compare"
+    run_macro_benchmarks "$macro_scales" "$macro_node_scales" "$compare"
 fi
 
 if [[ "$suite" != "macros" ]]; then
@@ -453,4 +481,9 @@ echo
 echo "csv: $csv_path"
 if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
     echo "macro metrics: $macro_metrics_path"
+    report_args=("$csv_path" "$macro_metrics_path")
+    if [[ "$check_macro_budgets" -eq 1 ]]; then
+        report_args+=(--check)
+    fi
+    python3 "$repo_root/scripts/report_macro_benchmarks.py" "${report_args[@]}"
 fi

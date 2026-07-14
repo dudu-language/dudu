@@ -42,6 +42,7 @@ class WorkerSessions {
         std::uint64_t start_ns = 0;
         std::uint64_t protocol_ns = 0;
         std::uint64_t validate_ns = 0;
+        std::size_t worker_rss_kb = 0;
     };
 
     Result expand(const std::string& session_key, const WorkerBinary& binary,
@@ -76,6 +77,7 @@ class WorkerSessions {
                 ? measured.transport_ns - result.response.execute_ns
                 : 0;
         result.protocol_ns = measured.request_encode_ns + worker_transport_ns;
+        result.worker_rss_kb = found->second.process.resident_set_kb().value_or(0);
         return result;
     }
 
@@ -338,6 +340,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                 report.timings.execute_ns += response->execute_ns;
                 report.timings.protocol_ns += execution.protocol_ns;
                 report.timings.validate_ns += execution.validate_ns;
+                report.worker_rss_kb = std::max(report.worker_rss_kb, execution.worker_rss_kb);
             } catch (const WorkerProcessError& error) {
                 throw compile_error_from_worker(error.detail(), request.invocation,
                                                 invocation.macro->name);
@@ -350,6 +353,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                 write_expansion_cache(cache_root / "expansions", cache_key, *response);
         }
         ++report.invocations;
+        report.generated_nodes += p::count_nodes(response->expansion);
         report.expansions.push_back(
             {.macro_name = invocation.macro->name,
              .macro_identity = invocation.macro->identity,

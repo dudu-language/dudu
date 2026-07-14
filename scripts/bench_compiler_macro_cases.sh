@@ -18,6 +18,10 @@ class DebugOptions:
     label: str = ""
 
 
+class VolumeOptions:
+    count: i32 = 0
+
+
 @macro
 def NoOp(item: ast.ClassDecl) -> ast.Expansion:
     return ast.expansion()
@@ -41,6 +45,25 @@ def Debug(item: ast.ClassDecl) -> ast.Expansion:
     out = ast.expansion()
     out.add_method(method)
     return out
+
+
+@macro(attributes=VolumeOptions)
+def Volume(item: ast.ClassDecl) -> ast.Expansion:
+    options = ast.find_attribute(item.attributes, "Volume")
+    count: i32 = 0
+    if options.has_value():
+        count = i32(ast.int_argument(options.value(), "count", 0))
+    out = ast.expansion()
+    i: i32 = 0
+    while i < count:
+        value = ast.ConstantDecl(
+            name="GENERATED_" + str(i),
+            type=ast.named_type("i32"),
+            value=ast.int_expression(str(i)),
+        )
+        out.add_sibling(ast.constant_declaration(value))
+        i += 1
+    return out
 EOF
 }
 
@@ -48,6 +71,7 @@ write_macro_consumers() {
     local project="$1"
     local count="$2"
     local macro_name="$3"
+    local field_count="${4:-2}"
     {
         printf 'from macros import %s\n\n' "$macro_name"
         for ((index = 0; index < count; ++index)); do
@@ -56,12 +80,30 @@ write_macro_consumers() {
             if [[ "$macro_name" == "Debug" && "$index" -eq 0 ]]; then
                 printf '    @Debug(label="base")\n'
             fi
-            printf '    value: i32\n'
-            printf '    weight: f32\n\n'
+            for ((field = 0; field < field_count; ++field)); do
+                printf '    field_%d: i32\n' "$field"
+            done
+            printf '\n'
         done
         printf 'def unrelated(value: i32) -> i32:\n'
         printf '    return value + 1\n'
     } >"$project/main.dd"
+}
+
+write_volume_consumer() {
+    local project="$1"
+    local target_nodes="$2"
+    # A generated constant currently occupies 18 public protocol nodes. Round
+    # up so the measured report reaches the requested structured-node scale.
+    local declaration_count=$(((target_nodes + 17) / 18))
+    cat >"$project/main.dd" <<EOF
+from macros import Volume
+
+
+@Volume(count=$declaration_count)
+class VolumeRoot:
+    value: i32
+EOF
 }
 
 write_handwritten_consumers() {
@@ -145,6 +187,42 @@ run_macro_scale() {
         "$tool_build_dir/duc" check "$project/handwritten.dd"
 }
 
+run_debug_field_scale() {
+    local field_count="$1"
+    local project="$macro_bench_root/debug_fields_$field_count"
+    rm -rf "$project"
+    write_macro_package "$project"
+    write_macro_consumers "$project" 1 "Debug" "$field_count"
+    macro_prepare_project="$project"
+    "$tool_build_dir/duc" expand "$project/main.dd" -o "$project/expanded.dd" >/dev/null
+    run_case_prepared "macro_debug_fields_${field_count}_execute" "macro_execute_fields" \
+        "$project" prepare_debug_execution \
+        "$tool_build_dir/duc" expand "$project/main.dd" --timings -o "$project/expanded.dd"
+}
+
+run_json_fixture() {
+    local project="$repo_root/tests/fixtures/macro_packages"
+    macro_prepare_project="$project"
+    "$tool_build_dir/duc" expand "$project/showcase.dd" -o "$macro_bench_root/showcase_expanded.dd" \
+        >/dev/null
+    run_case "macro_json_showcase_cached" "macro_json_fixture" "$project" \
+        "$tool_build_dir/duc" expand "$project/showcase.dd" --timings \
+        -o "$macro_bench_root/showcase_expanded.dd"
+}
+
+run_volume_scale() {
+    local node_count="$1"
+    local project="$macro_bench_root/volume_$node_count"
+    rm -rf "$project"
+    write_macro_package "$project"
+    write_volume_consumer "$project" "$node_count"
+    macro_prepare_project="$project"
+    "$tool_build_dir/duc" expand "$project/main.dd" -o "$project/expanded.dd" >/dev/null
+    run_case_prepared "macro_volume_${node_count}_execute" "macro_expansion_volume" "$project" \
+        prepare_debug_execution \
+        "$tool_build_dir/duc" expand "$project/main.dd" --timings -o "$project/expanded.dd"
+}
+
 run_noop_scale() {
     local count="$1"
     local project="$macro_bench_root/noop_$count"
@@ -185,7 +263,8 @@ report_macro_comparisons() {
 
 run_macro_benchmarks() {
     local scales="$1"
-    local comparisons="$2"
+    local node_scales="$2"
+    local comparisons="$3"
     rm -rf "$macro_bench_root"
     mkdir -p "$macro_bench_root"
     IFS=',' read -r -a requested_macro_scales <<<"$scales"
@@ -204,6 +283,25 @@ run_macro_benchmarks() {
         fi
         run_noop_scale "$count"
         run_macro_scale "$count"
+    done
+    for field_count in 10 50 200; do
+        run_debug_field_scale "$field_count"
+    done
+    run_json_fixture
+    IFS=',' read -r -a requested_node_scales <<<"$node_scales"
+    for count in "${requested_node_scales[@]}"; do
+        count="$(printf '%s' "$count" | tr -d '[:space:]')"
+        case "$count" in
+            ''|*[!0-9]*)
+                echo "invalid --macro-node-scales entry: $count" >&2
+                return 1
+                ;;
+        esac
+        if [[ "$count" -lt 1 ]]; then
+            echo "macro node scales must be positive" >&2
+            return 1
+        fi
+        run_volume_scale "$count"
     done
     report_macro_comparisons "$comparisons"
 }
