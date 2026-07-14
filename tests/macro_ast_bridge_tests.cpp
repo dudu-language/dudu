@@ -1,5 +1,6 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/macro/macro_ast_bridge.hpp"
+#include "dudu/macro/macro_hygiene.hpp"
 #include "dudu/macro/macro_registry.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/project/module_loader.hpp"
@@ -19,18 +20,18 @@ void write_file(const std::filesystem::path& path, const std::string& source) {
 }
 
 void test_class_roundtrip_preserves_structured_bodies() {
-    const dudu::ModuleAst module = dudu::parse_source(
-        "@packed\n"
-        "class Player[T]:\n"
-        "    hp: i32 = 10\n"
-        "    LIMIT: i32 = 100\n"
-        "    count: static[i32] = 0\n"
-        "\n"
-        "    def heal(self, amount: i32) -> i32:\n"
-        "        if amount > 0:\n"
-        "            self.hp += amount\n"
-        "        return clamp[i32](self.hp, 0, Player.LIMIT)\n",
-        "player.dd");
+    const dudu::ModuleAst module =
+        dudu::parse_source("@packed\n"
+                           "class Player[T]:\n"
+                           "    hp: i32 = 10\n"
+                           "    LIMIT: i32 = 100\n"
+                           "    count: static[i32] = 0\n"
+                           "\n"
+                           "    def heal(self, amount: i32) -> i32:\n"
+                           "        if amount > 0:\n"
+                           "            self.hp += amount\n"
+                           "        return clamp[i32](self.hp, 0, Player.LIMIT)\n",
+                           "player.dd");
     const dudu::ClassDecl& source = module.classes.front();
     const auto public_value = dudu::macro::to_protocol(source, "player");
     assert(public_value.fields.size() == 1);
@@ -81,10 +82,97 @@ void test_invocation_target_uses_original_declaration() {
     assert(declaration.class_decl->identity->module == "main");
 }
 
+dudu::macro::protocol::GeneratedDeclaration
+generated_function(const std::string& name, dudu::macro::protocol::Visibility visibility,
+                   const std::string& referenced_name = {},
+                   const std::string& parameter_name = {}) {
+    namespace p = dudu::macro::protocol;
+    p::FunctionDecl function;
+    function.name = name;
+    function.visibility = visibility;
+    if (!parameter_name.empty()) {
+        p::Parameter parameter;
+        parameter.name = parameter_name;
+        parameter.type.kind = p::TypeKind::Named;
+        parameter.type.name = "i32";
+        function.parameters.push_back(parameter);
+    }
+    if (!referenced_name.empty()) {
+        p::Expression reference;
+        reference.kind = p::ExpressionKind::Name;
+        reference.name = referenced_name;
+        p::Statement statement;
+        statement.kind = p::StatementKind::Return;
+        statement.value = reference;
+        function.body.push_back(statement);
+    }
+    p::Declaration declaration;
+    declaration.kind = p::DeclarationKind::Function;
+    declaration.function_decl = function;
+    p::GeneratedDeclaration generated;
+    generated.declaration = declaration;
+    return generated;
+}
+
+void test_hygiene_renames_private_helpers_deterministically() {
+    namespace p = dudu::macro::protocol;
+    p::Expansion first;
+    first.members.push_back(generated_function("generated", p::Visibility::Default, "helper"));
+    first.siblings.push_back(generated_function("helper", p::Visibility::Private));
+    p::SourceRange invocation;
+    invocation.file = "main.dd";
+    invocation.start.line = 7;
+    invocation.start.column = 4;
+
+    p::Expansion same = first;
+    dudu::macro::apply_expansion_hygiene(first, "macros.Debug", "main", "Player", invocation);
+    dudu::macro::apply_expansion_hygiene(same, "macros.Debug", "main", "Player", invocation);
+    const std::string renamed = first.siblings.front().declaration.function_decl->name;
+    assert(renamed.starts_with("__dudu_macro_"));
+    assert(renamed == same.siblings.front().declaration.function_decl->name);
+    assert(first.members.front().declaration.function_decl->body.front().value->name == renamed);
+
+    p::Expansion other;
+    other.siblings.push_back(generated_function("helper", p::Visibility::Private));
+    ++invocation.start.line;
+    dudu::macro::apply_expansion_hygiene(other, "macros.Debug", "main", "Player", invocation);
+    assert(other.siblings.front().declaration.function_decl->name != renamed);
+}
+
+void test_hygiene_preserves_public_names_and_lexical_shadowing() {
+    namespace p = dudu::macro::protocol;
+    p::Expansion expansion;
+    expansion.members.push_back(
+        generated_function("shadow", p::Visibility::Default, "helper", "helper"));
+    auto local_shadow = generated_function("local_shadow", p::Visibility::Default, "helper");
+    p::Statement local;
+    local.kind = p::StatementKind::Variable;
+    local.name = "helper";
+    p::Expression initial_value;
+    initial_value.kind = p::ExpressionKind::IntLiteral;
+    initial_value.value = "1";
+    local.value = initial_value;
+    local_shadow.declaration.function_decl->body.insert(
+        local_shadow.declaration.function_decl->body.begin(), local);
+    expansion.members.push_back(local_shadow);
+    expansion.siblings.push_back(generated_function("helper", p::Visibility::Private));
+    expansion.siblings.push_back(generated_function("PublicHelper", p::Visibility::Default));
+
+    dudu::macro::apply_expansion_hygiene(expansion, "macros.Debug", "main", "Player", {});
+    const auto& shadow = *expansion.members.front().declaration.function_decl;
+    assert(shadow.parameters.front().name == "helper");
+    assert(shadow.body.front().value->name == "helper");
+    const auto& local_function = *expansion.members.back().declaration.function_decl;
+    assert(local_function.body.back().value->name == "helper");
+    assert(expansion.siblings.back().declaration.function_decl->name == "PublicHelper");
+}
+
 } // namespace
 
 int main() {
     test_class_roundtrip_preserves_structured_bodies();
     test_invocation_target_uses_original_declaration();
+    test_hygiene_renames_private_helpers_deterministically();
+    test_hygiene_preserves_public_names_and_lexical_shadowing();
     return 0;
 }

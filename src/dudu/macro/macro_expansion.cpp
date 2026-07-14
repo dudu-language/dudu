@@ -5,6 +5,7 @@
 #include "dudu/macro/macro_ast_bridge.hpp"
 #include "dudu/macro/macro_expansion_cache.hpp"
 #include "dudu/macro/macro_expansion_internal.hpp"
+#include "dudu/macro/macro_hygiene.hpp"
 #include "dudu/macro/macro_registry.hpp"
 #include "dudu/macro/macro_runtime_layout.hpp"
 #include "dudu/macro/macro_worker_process.hpp"
@@ -277,6 +278,10 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
                                      .target_name = invocation.target_name,
                                      .invocation = request.invocation,
                                      .expansion = response->expansion});
+        p::Expansion merge_expansion = response->expansion;
+        apply_expansion_hygiene(merge_expansion, invocation.macro->identity,
+                                invocation.target_module, invocation.target_name,
+                                request.invocation);
         collected.push_back(
             {.macro_name = invocation.macro->name,
              .macro_identity = invocation.macro->identity,
@@ -286,7 +291,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
              .invocation = invocation_range,
              .definition = {invocation.macro->location, invocation.macro->location},
              .source_declaration = declaration_range(declaration, invocation.decorator->location),
-             .expansion = std::move(response->expansion)});
+             .expansion = std::move(merge_expansion)});
     }
     merge_expansions(module, plan, collected);
     return report;
