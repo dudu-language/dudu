@@ -37,21 +37,21 @@ Measured July 15, 2026 on the reference machine documented in
 
 | Language | Operation | Median | p95 | Peak RSS |
 | --- | --- | ---: | ---: | ---: |
-| Dudu | frontend | 128.1 ms | 131.7 ms | 63.8 MiB |
-| Dudu | C++ emission | 820.8 ms | 824.5 ms | 66.0 MiB |
-| C++ backend for Dudu output | executable | 434.1 ms | 441.2 ms | 156.7 MiB |
-| **Dudu self-contained toolchain** | **executable** | **1,258.5 ms** | **1,261.6 ms** | **156.7 MiB** |
-| C++ | frontend | 21.4 ms | 21.7 ms | 27.5 MiB |
-| C++ | executable | 240.0 ms | 244.6 ms | 67.3 MiB |
-| Rust | frontend | 99.3 ms | 105.3 ms | 101.5 MiB |
-| Rust | executable | 122.8 ms | 127.3 ms | 124.1 MiB |
-| Swift | frontend | 322.2 ms | 326.6 ms | 115.5 MiB |
-| Swift | executable | 1,050.8 ms | 1,063.8 ms | 195.7 MiB |
-| Nim | frontend | 216.2 ms | 217.2 ms | 36.1 MiB |
-| Nim | executable | 356.8 ms | 359.8 ms | 40.0 MiB |
-| C# / MSBuild | executable | 791.9 ms | 1,358.5 ms | 149.6 MiB |
-| Go | frontend | 153.3 ms | 157.0 ms | 210.9 MiB |
-| Go | executable | 205.0 ms | 224.1 ms | 81.1 MiB |
+| Dudu | frontend | 136.1 ms | 136.4 ms | 64.0 MiB |
+| Dudu | C++ emission | 230.1 ms | 240.9 ms | 66.2 MiB |
+| C++ backend for Dudu output | executable | 487.7 ms | 488.9 ms | 156.6 MiB |
+| **Dudu self-contained toolchain** | **executable** | **716.2 ms** | **729.0 ms** | **156.6 MiB** |
+| C++ | frontend | 21.7 ms | 23.3 ms | 27.5 MiB |
+| C++ | executable | 264.8 ms | 269.8 ms | 66.5 MiB |
+| Rust | frontend | 112.5 ms | 118.1 ms | 101.6 MiB |
+| Rust | executable | 141.1 ms | 142.1 ms | 124.2 MiB |
+| Swift | frontend | 342.9 ms | 347.1 ms | 115.1 MiB |
+| Swift | executable | 1,191.1 ms | 1,268.7 ms | 194.6 MiB |
+| Nim | frontend | 233.9 ms | 237.4 ms | 35.6 MiB |
+| Nim | executable | 383.5 ms | 392.6 ms | 39.9 MiB |
+| C# / MSBuild | executable | 865.5 ms | 1,459.9 ms | 149.0 MiB |
+| Go | frontend | 176.9 ms | 182.9 ms | 210.6 MiB |
+| Go | executable | 231.1 ms | 251.2 ms | 81.1 MiB |
 
 The generated inputs are similar in bytes but not in lines because each
 language expresses the workload differently:
@@ -65,7 +65,7 @@ language expresses the workload differently:
 | Swift | 7,007 | 147,813 |
 | Nim | 6,003 | 150,649 |
 | C# | 9,006 | 221,656 |
-| Go | 4,004 | 163,644 |
+| Go | 4,004 | 163,663 |
 
 Toolchains:
 
@@ -88,15 +88,21 @@ and generated Markdown under `build/compiler_compare`.
 
 ## Current Finding
 
-The Dudu frontend is competitive on this workload: it is 1.29 times the Rust
-frontend time, 0.84 times Go, 0.59 times Nim, and 0.40 times Swift. GCC remains
+The Dudu frontend is competitive on this workload: it is 1.21 times the Rust
+frontend time, 0.77 times Go, 0.58 times Nim, and 0.40 times Swift. GCC remains
 substantially faster for its equivalent C++ input.
 
-Dudu's complete self-contained path is not yet competitive. C++ emission takes
-821 ms after the 128 ms frontend and dominates the result. The external GCC
-backend then compiles Dudu's larger self-contained output in 434 ms. Emission
-throughput is therefore a concrete compiler optimization target, separate from
-parser and semantic-analysis performance.
+Dudu's complete self-contained path remains slower than the direct native
+toolchains. The external GCC backend takes 487.7 ms to compile Dudu's larger
+self-contained output. Dudu emission itself is now 230.1 ms after replacing two
+quadratic whole-program scans with indexed dependency and symbol lookup. The
+same emission workload previously took 820.8 ms.
+
+The fixed emission curve is 0.06, 0.11, 0.23, and 0.45 seconds at 250, 500,
+1,000, and 2,000 units respectively. It is approximately linear over this
+range. Further work should reduce generated support volume and ordinary
+type/expression lowering costs rather than masking another known quadratic
+curve.
 
 ## Interpreting Results
 

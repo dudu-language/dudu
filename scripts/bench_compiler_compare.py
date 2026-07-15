@@ -211,7 +211,7 @@ def write_go(path: Path, units: int) -> None:
 def prepare_go_build(path: Path, units: int, sample: int) -> None:
     write_go(path, units)
     with path.open("a") as handle:
-        handle.write(f"// benchmark sample {sample}\n")
+        handle.write(f"func benchmarkNonce() int32 {{ return {sample} }}\n")
 
 
 def run_timed(command: list[str], output_dir: Path, label: str) -> tuple[float, int]:

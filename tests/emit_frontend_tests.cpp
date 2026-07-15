@@ -476,8 +476,18 @@ void test_class_construction_distinguishes_aggregates_and_constructors() {
 void test_class_emit_order_uses_type_ast_fields() {
     const dudu::ModuleAst module = dudu::parse_source("class Holder:\n"
                                                       "    items: list[Node]\n"
+                                                      "    late: *Late\n"
+                                                      "\n"
+                                                      "class Late:\n"
+                                                      "    value: i32\n"
                                                       "\n"
                                                       "class Node:\n"
+                                                      "    value: i32\n"
+                                                      "\n"
+                                                      "class Derived(Base):\n"
+                                                      "    value: i32\n"
+                                                      "\n"
+                                                      "class Base:\n"
                                                       "    value: i32\n",
                                                       "class_emit_order_type_ast.dd");
     dudu::analyze_module(module, {.check_bodies = true});
@@ -485,6 +495,8 @@ void test_class_emit_order_uses_type_ast_fields() {
     assert(cpp.find("\nstruct Node {") != std::string::npos);
     assert(cpp.find("\nstruct Holder {") != std::string::npos);
     assert(cpp.find("\nstruct Node {") < cpp.find("\nstruct Holder {"));
+    assert(cpp.find("\nstruct Holder {") < cpp.find("\nstruct Late {"));
+    assert(cpp.find("\nstruct Base {") < cpp.find("\nstruct Derived : public Base {"));
 }
 
 void test_class_defaults_use_complete_enums_and_optional_values() {

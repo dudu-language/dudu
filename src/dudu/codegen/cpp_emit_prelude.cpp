@@ -135,9 +135,6 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
             }
         }
     }
-    for (const ClassDecl& klass : module.classes) {
-        aliases.push_back(klass.name);
-    }
     return aliases;
 }
 

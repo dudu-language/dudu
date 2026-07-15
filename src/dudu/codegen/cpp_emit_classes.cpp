@@ -14,38 +14,40 @@
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
 
-#include <set>
+#include <algorithm>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 
 namespace dudu {
 namespace {
 
-bool type_ref_mentions_class(const TypeRef& type, const std::string& name) {
-    if (type_ref_head_name(type) == name) {
-        return true;
+using ClassIndex = std::unordered_map<std::string_view, size_t>;
+
+std::string_view named_type_head(const TypeRef& type) {
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Template:
+    case TypeKind::Associated:
+        return type.name.str();
+    default:
+        return {};
     }
-    for (const TypeRef& child : type.children) {
-        if (type_ref_mentions_class(child, name)) {
-            return true;
-        }
-    }
-    return false;
 }
 
-bool type_ref_requires_complete_class(const TypeRef& type, const std::string& name) {
-    if (type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference) {
-        return false;
+void collect_class_dependencies(const TypeRef& type, const ClassIndex& class_index,
+                                bool require_complete_type, std::vector<size_t>& out) {
+    if (require_complete_type &&
+        (type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference)) {
+        return;
     }
-    if (type_ref_head_name(type) == name) {
-        return true;
+    if (const auto found = class_index.find(named_type_head(type)); found != class_index.end()) {
+        out.push_back(found->second);
     }
     for (const TypeRef& child : type.children) {
-        if (type_ref_requires_complete_class(child, name)) {
-            return true;
-        }
+        collect_class_dependencies(child, class_index, require_complete_type, out);
     }
-    return false;
 }
 
 std::string class_lookup_name(const Symbols& symbols, TypeRef type) {
@@ -53,41 +55,50 @@ std::string class_lookup_name(const Symbols& symbols, TypeRef type) {
     return type_ref_head_name(type);
 }
 
-void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<size_t>& visiting,
-                 std::set<size_t>& emitted, std::vector<size_t>& order) {
-    if (emitted.contains(index) || visiting.contains(index)) {
+enum class ClassVisitState : unsigned char { Unvisited, Visiting, Emitted };
+
+void visit_class(const std::vector<std::vector<size_t>>& dependencies, size_t index,
+                 std::vector<ClassVisitState>& states, std::vector<size_t>& order) {
+    if (states[index] != ClassVisitState::Unvisited) {
         return;
     }
-    visiting.insert(index);
-
-    for (const BaseClassDecl& base_decl : classes[index].base_class_refs) {
-        for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index && type_ref_mentions_class(base_decl.type_ref, classes[dep].name)) {
-                visit_class(classes, dep, visiting, emitted, order);
-            }
+    states[index] = ClassVisitState::Visiting;
+    for (const size_t dependency : dependencies[index]) {
+        if (dependency != index) {
+            visit_class(dependencies, dependency, states, order);
         }
     }
-
-    for (const FieldDecl& field : classes[index].fields) {
-        for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index &&
-                type_ref_requires_complete_class(field.type_ref, classes[dep].name)) {
-                visit_class(classes, dep, visiting, emitted, order);
-            }
-        }
-    }
-
-    visiting.erase(index);
-    emitted.insert(index);
+    states[index] = ClassVisitState::Emitted;
     order.push_back(index);
 }
 
 std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
-    std::set<size_t> visiting;
-    std::set<size_t> emitted;
+    ClassIndex class_index;
+    class_index.reserve(classes.size());
+    for (size_t index = 0; index < classes.size(); ++index) {
+        class_index.emplace(classes[index].name, index);
+    }
+
+    std::vector<std::vector<size_t>> dependencies(classes.size());
+    for (size_t index = 0; index < classes.size(); ++index) {
+        std::vector<size_t>& class_dependencies = dependencies[index];
+        for (const BaseClassDecl& base : classes[index].base_class_refs) {
+            collect_class_dependencies(base.type_ref, class_index, false, class_dependencies);
+        }
+        for (const FieldDecl& field : classes[index].fields) {
+            collect_class_dependencies(field.type_ref, class_index, true, class_dependencies);
+        }
+        std::ranges::sort(class_dependencies);
+        class_dependencies.erase(
+            std::unique(class_dependencies.begin(), class_dependencies.end()),
+            class_dependencies.end());
+    }
+
+    std::vector<ClassVisitState> states(classes.size(), ClassVisitState::Unvisited);
     std::vector<size_t> order;
+    order.reserve(classes.size());
     for (size_t i = 0; i < classes.size(); ++i) {
-        visit_class(classes, i, visiting, emitted, order);
+        visit_class(dependencies, i, states, order);
     }
     return order;
 }
@@ -522,7 +533,8 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
                   const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
                   bool header_only, const CppEmitOptions& options) {
-    for (const size_t index : class_emit_order(module.classes)) {
+    const std::vector<size_t> emit_order = class_emit_order(module.classes);
+    for (const size_t index : emit_order) {
         const ClassDecl& klass = module.classes[index];
         const std::string& class_name = emitted_name(klass, options);
         if (header_only && !visible_in_header(klass.visibility)) {
@@ -579,7 +591,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
     }
     if (!header_only) {
-        for (const size_t index : class_emit_order(module.classes)) {
+        for (const size_t index : emit_order) {
             const ClassDecl& klass = module.classes[index];
             emit_out_of_line_methods(out, klass, emitted_name(klass, options), aliases,
                                      function_returns, symbols, options);
