@@ -180,7 +180,11 @@ recompiling launcher and catalog machinery for each package.
    self-contained files and make generated-CMake targets compile the shared
    `dudu_runtime.hpp` once as a precompiled header. Keep runtime support shared
    across module translation units rather than copying or reparsing it per
-   module. Validate cold, changed-module, and no-op builds separately.
+   module. Correct the generated public/private dependency boundaries and
+   runtime-header contamination described in
+   [Generated C++ Boundary Plan](generated-cpp-boundary-plan.md) before treating
+   the PCH as stable. Validate cold, changed-module, native-header edit, and
+   no-op builds separately.
 5. Reduce macro package compilation. Build the macro SDK during toolchain
    installation where toolchain compatibility permits, parallelize independent
    bootstrap units, and profile generated package/launcher C++ separately.
