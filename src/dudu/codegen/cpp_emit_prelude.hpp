@@ -10,10 +10,7 @@ namespace dudu {
 
 std::vector<std::string> namespace_aliases(const ModuleAst& module);
 void emit_generated_banner(std::ostringstream& out);
-void emit_standard_includes(std::ostringstream& out, const ModuleAst& module);
 void emit_native_includes(std::ostringstream& out, const ModuleAst& module);
-void emit_target_macros(std::ostringstream& out);
-void emit_includes(std::ostringstream& out, const ModuleAst& module);
-void emit_result_prelude(std::ostringstream& out, const ModuleAst& module);
+void emit_prelude(std::ostringstream& out, const ModuleAst& module, bool include_native_imports);
 
 } // namespace dudu

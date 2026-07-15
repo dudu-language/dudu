@@ -166,6 +166,15 @@ explicit external native compile, not hidden frontend work. The concrete
 follow-up is a stable prebuilt generic macro launcher/package ABI that avoids
 recompiling launcher and catalog machinery for each package.
 
+The generated C++ boundary milestone is complete. Application-native imports
+are owned by generated module headers or sources instead of
+`dudu_runtime.hpp`; every generated source includes its own header; runtime
+support is selected by one structured feature scan; and generated-CMake builds
+precompile the stable runtime header. On the 1,000-unit comparison workload the
+external GCC phase fell from 487.7 ms and 156.6 MiB to 256.4 ms and 90.7 MiB.
+Clean builds of all four dogfood projects pass. Details and boundary fixtures
+are recorded in [Generated C++ Boundary Plan](generated-cpp-boundary-plan.md).
+
 ### Work Order
 
 1. Fix cold LSP indexing. The server must build indexes in the background,
@@ -176,15 +185,10 @@ recompiling launcher and catalog machinery for each package.
 3. Profile no-op and one-file generated-CMake builds. Avoid invoking or
    configuring native tools when source stamps prove nothing changed; when a
    native tool must run, preserve its normal output.
-4. Reduce native backend fixed cost. Emit feature-sensitive support for
-   self-contained files and make generated-CMake targets compile the shared
-   `dudu_runtime.hpp` once as a precompiled header. Keep runtime support shared
-   across module translation units rather than copying or reparsing it per
-   module. Correct the generated public/private dependency boundaries and
-   runtime-header contamination described in
-   [Generated C++ Boundary Plan](generated-cpp-boundary-plan.md) before treating
-   the PCH as stable. Validate cold, changed-module, native-header edit, and
-   no-op builds separately.
+4. Continue measuring native backend fixed cost after the completed generated
+   C++ boundary and feature-runtime work. Preserve the stable runtime PCH,
+   public/private dependency fixtures, and separate cold, changed-module,
+   native-header-edit, and no-op measurements.
 5. Reduce macro package compilation. Build the macro SDK during toolchain
    installation where toolchain compatibility permits, parallelize independent
    bootstrap units, and profile generated package/launcher C++ separately.

@@ -98,6 +98,28 @@ drift between headers and sources.
 8. Make self-contained emission compose the same feature and dependency plan
    into one file rather than using a separate blanket-import path.
 
+## Implemented State
+
+Implemented July 15, 2026:
+
+- `dudu_runtime.hpp` contains Dudu runtime support and required standard
+  headers, never application C or C++ imports.
+- generated module sources include their own generated headers first
+- structured public-surface analysis places signature and inline-body
+  dependencies in module headers and body-only dependencies in module sources
+- a `cpp(...)` escape in a header-owned body conservatively makes that module's
+  native imports header dependencies; Dudu does not parse opaque C++ text to
+  guess a narrower dependency
+- runtime support and standard headers are feature-gated from one AST scan per
+  emitted prelude
+- generated-CMake projects precompile the stable runtime header
+- self-contained and module emission share the same feature analysis
+
+Regression fixtures cover minimal, Result, collection, inferred fixed-array,
+indexing, print, assert, shader, source-only native, public native type, and
+opaque inline-native cases. Clean generated-CMake builds pass for
+`raymarch-dd`, `dudu-webserver`, `dudu-datascience`, and `duduplayground`.
+
 ## Validation Matrix
 
 1. Two independent Dudu modules import different native headers. Each generated
@@ -131,3 +153,8 @@ drift between headers and sources.
 - Cold, one-module edit, native-header edit, and no-op timings are recorded
   before and after the migration.
 
+The compiler comparison after feature gating reduced the 1,000-unit external
+C++ backend median from 487.7 ms and 156.6 MiB to 256.4 ms and 90.7 MiB. The
+complete self-contained path fell from 716.2 ms to 477.4 ms. Incremental project
+measurements remain tracked separately in
+[Compiler Performance Matrix](compiler-performance-matrix.md).

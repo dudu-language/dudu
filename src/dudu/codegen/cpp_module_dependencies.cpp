@@ -13,6 +13,11 @@ namespace {
 
 using Names = std::set<std::string>;
 
+struct PublicSurface {
+    Names names;
+    bool opaque_native_use = false;
+};
+
 void collect_type_names(const TypeRef& type, Names& names) {
     if (!type.name.empty()) {
         names.insert(type.name.str());
@@ -22,7 +27,8 @@ void collect_type_names(const TypeRef& type, Names& names) {
     }
 }
 
-void collect_expr_names(const Expr& expr, Names& names) {
+bool collect_expr_names(const Expr& expr, Names& names) {
+    bool opaque_native_use = expr.kind == ExprKind::CppEscape;
     if (!expr.name.empty()) {
         names.insert(expr.name.str());
     }
@@ -31,12 +37,12 @@ void collect_expr_names(const Expr& expr, Names& names) {
     }
     if (expr.callee) {
         for (const Expr& child : *expr.callee) {
-            collect_expr_names(child, names);
+            opaque_native_use |= collect_expr_names(child, names);
         }
     }
     if (expr.template_args) {
         for (const Expr& child : *expr.template_args) {
-            collect_expr_names(child, names);
+            opaque_native_use |= collect_expr_names(child, names);
         }
     }
     if (expr.template_type_args) {
@@ -45,46 +51,51 @@ void collect_expr_names(const Expr& expr, Names& names) {
         }
     }
     for (const Expr& child : expr.children) {
-        collect_expr_names(child, names);
+        opaque_native_use |= collect_expr_names(child, names);
     }
+    return opaque_native_use;
 }
 
-void collect_stmt_names(const Stmt& stmt, Names& names) {
+bool collect_stmt_names(const Stmt& stmt, Names& names) {
+    bool opaque_native_use = stmt.kind == StmtKind::CppEscape;
     if (!stmt.name.empty()) {
         names.insert(stmt.name);
     }
     if (stmt.type_ref) {
         collect_type_names(*stmt.type_ref, names);
     }
-    collect_expr_names(stmt.expr, names);
-    collect_expr_names(stmt.value_expr, names);
+    opaque_native_use |= collect_expr_names(stmt.expr, names);
+    opaque_native_use |= collect_expr_names(stmt.value_expr, names);
     if (stmt.target_expr) {
-        collect_expr_names(*stmt.target_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.target_expr, names);
     }
     if (stmt.condition_expr) {
-        collect_expr_names(*stmt.condition_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.condition_expr, names);
     }
     if (stmt.message_expr) {
-        collect_expr_names(*stmt.message_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.message_expr, names);
     }
     if (stmt.iterable_expr) {
-        collect_expr_names(*stmt.iterable_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.iterable_expr, names);
     }
     if (stmt.pattern_expr) {
-        collect_expr_names(*stmt.pattern_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.pattern_expr, names);
     }
     if (stmt.guard_expr) {
-        collect_expr_names(*stmt.guard_expr, names);
+        opaque_native_use |= collect_expr_names(*stmt.guard_expr, names);
     }
     for (const Stmt& child : stmt.children) {
-        collect_stmt_names(child, names);
+        opaque_native_use |= collect_stmt_names(child, names);
     }
+    return opaque_native_use;
 }
 
-void collect_body_names(const FunctionDecl& fn, Names& names) {
+bool collect_body_names(const FunctionDecl& fn, Names& names) {
+    bool opaque_native_use = false;
     for (const Stmt& stmt : fn.statements) {
-        collect_stmt_names(stmt, names);
+        opaque_native_use |= collect_stmt_names(stmt, names);
     }
+    return opaque_native_use;
 }
 
 void collect_signature_names(const FunctionDecl& fn, Names& names) {
@@ -99,23 +110,26 @@ bool header_owned_body(const FunctionDecl& fn) {
            !generic_cpp_params_for_function(fn).empty();
 }
 
-void collect_decorator_names(const std::vector<Decorator>& decorators, Names& names) {
+bool collect_decorator_names(const std::vector<Decorator>& decorators, Names& names) {
+    bool opaque_native_use = false;
     for (const Decorator& decorator : decorators) {
-        collect_expr_names(decorator.expr, names);
+        opaque_native_use |= collect_expr_names(decorator.expr, names);
     }
+    return opaque_native_use;
 }
 
-Names public_surface_names(const ModuleAst& module) {
-    Names names;
+PublicSurface public_surface(const ModuleAst& module) {
+    PublicSurface surface;
+    Names& names = surface.names;
     for (const TypeAliasDecl& alias : module.aliases) {
         collect_type_names(alias.type_ref, names);
     }
     for (const EnumDecl& en : module.enums) {
         collect_type_names(en.underlying_type_ref, names);
-        collect_decorator_names(en.decorators, names);
+        surface.opaque_native_use |= collect_decorator_names(en.decorators, names);
         for (const EnumValueDecl& value : en.values) {
-            collect_expr_names(value.value_expr, names);
-            collect_decorator_names(value.decorators, names);
+            surface.opaque_native_use |= collect_expr_names(value.value_expr, names);
+            surface.opaque_native_use |= collect_decorator_names(value.decorators, names);
             for (const EnumPayloadField& field : value.payload_fields) {
                 collect_type_names(field.type_ref, names);
             }
@@ -126,7 +140,7 @@ Names public_surface_names(const ModuleAst& module) {
             }
             collect_signature_names(method, names);
             if (header_owned_body(method)) {
-                collect_body_names(method, names);
+                surface.opaque_native_use |= collect_body_names(method, names);
             }
         }
     }
@@ -134,7 +148,7 @@ Names public_surface_names(const ModuleAst& module) {
         if (klass.visibility == Visibility::Private) {
             continue;
         }
-        collect_decorator_names(klass.decorators, names);
+        surface.opaque_native_use |= collect_decorator_names(klass.decorators, names);
         for (const BaseClassDecl& base : klass.base_class_refs) {
             collect_type_names(base.type_ref, names);
         }
@@ -143,27 +157,27 @@ Names public_surface_names(const ModuleAst& module) {
         }
         for (const FieldDecl& field : klass.fields) {
             collect_type_names(field.type_ref, names);
-            collect_expr_names(field.value_expr, names);
+            surface.opaque_native_use |= collect_expr_names(field.value_expr, names);
         }
         for (const ConstDecl& constant : klass.constants) {
             collect_type_names(constant.type_ref, names);
-            collect_expr_names(constant.value_expr, names);
+            surface.opaque_native_use |= collect_expr_names(constant.value_expr, names);
         }
         for (const ConstDecl& field : klass.static_fields) {
             collect_type_names(field.type_ref, names);
-            collect_expr_names(field.value_expr, names);
+            surface.opaque_native_use |= collect_expr_names(field.value_expr, names);
         }
         const bool generic_class = !generic_cpp_params_for_class(klass).empty();
         for (const FunctionDecl& method : klass.methods) {
             collect_signature_names(method, names);
             if (generic_class || header_owned_body(method)) {
-                collect_body_names(method, names);
+                surface.opaque_native_use |= collect_body_names(method, names);
             }
         }
     }
     for (const ConstDecl& constant : module.constants) {
         collect_type_names(constant.type_ref, names);
-        collect_expr_names(constant.value_expr, names);
+        surface.opaque_native_use |= collect_expr_names(constant.value_expr, names);
     }
     for (const FunctionDecl& fn : module.functions) {
         if (fn.visibility == Visibility::Private || cpp_emit_function_is_test(fn)) {
@@ -171,13 +185,13 @@ Names public_surface_names(const ModuleAst& module) {
         }
         collect_signature_names(fn, names);
         if (header_owned_body(fn)) {
-            collect_body_names(fn, names);
+            surface.opaque_native_use |= collect_body_names(fn, names);
         }
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        collect_expr_names(assertion.expression_expr, names);
+        surface.opaque_native_use |= collect_expr_names(assertion.expression_expr, names);
     }
-    return names;
+    return surface;
 }
 
 bool name_uses_prefix(const Names& names, const std::string& prefix) {
@@ -198,13 +212,14 @@ bool any_native_name_used(const ModuleAst& module, const Names& names) {
         }
         return false;
     };
-    return used(module.native_types) || used(module.native_classes) ||
-           used(module.native_values) || used(module.native_functions) ||
-           used(module.native_macros) || used(module.native_namespaces);
+    return used(module.native_types) || used(module.native_classes) || used(module.native_values) ||
+           used(module.native_functions) || used(module.native_macros) ||
+           used(module.native_namespaces);
 }
 
 bool import_required_by_public_surface(const ModuleAst& module, const ImportDecl& import,
-                                       const Names& names) {
+                                       const PublicSurface& surface) {
+    const Names& names = surface.names;
     if (import.kind == ImportKind::From) {
         const std::string exposed = import.alias.empty() ? import.imported_name : import.alias;
         return name_uses_prefix(names, exposed);
@@ -214,19 +229,19 @@ bool import_required_by_public_surface(const ModuleAst& module, const ImportDecl
         return name_uses_prefix(names, exposed);
     }
     if (!import.alias.empty()) {
-        return name_uses_prefix(names, import.alias);
+        return surface.opaque_native_use || name_uses_prefix(names, import.alias);
     }
-    return any_native_name_used(module, names);
+    return surface.opaque_native_use || any_native_name_used(module, names);
 }
 
 } // namespace
 
 std::vector<bool> cpp_public_import_mask(const ModuleAst& module) {
-    const Names names = public_surface_names(module);
+    const PublicSurface surface = public_surface(module);
     std::vector<bool> mask;
     mask.reserve(module.imports.size());
     for (const ImportDecl& import : module.imports) {
-        mask.push_back(import_required_by_public_surface(module, import, names));
+        mask.push_back(import_required_by_public_surface(module, import, surface));
     }
     return mask;
 }

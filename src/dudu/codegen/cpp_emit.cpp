@@ -332,8 +332,7 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
 }
 
 void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& module,
-                                     const CppEmitOptions& options = {},
-                                     bool header_only = false) {
+                                     const CppEmitOptions& options = {}, bool header_only = false) {
     if (module.classes.empty()) {
         return;
     }
@@ -388,8 +387,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     emit_generated_banner(out);
     out << "#pragma once\n\n";
     if (options.emit_prelude) {
-        emit_includes(out, module);
-        emit_result_prelude(out, module);
+        emit_prelude(out, module, true);
     }
 
     emit_aliases(out, module, emit_options);
@@ -456,8 +454,7 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     const Symbols symbols = collect_symbols(module);
     emit_generated_banner(out);
     if (emit_options.emit_prelude) {
-        emit_includes(out, module);
-        emit_result_prelude(out, module);
+        emit_prelude(out, module, true);
     }
 
     emit_aliases(out, module, emit_options);
@@ -488,8 +485,7 @@ std::string emit_cpp_source(const ModuleAst& module) {
     return emit_cpp_source(module, {});
 }
 
-std::string emit_cpp_module_implementation(const ModuleAst& module,
-                                           const CppEmitOptions& options) {
+std::string emit_cpp_module_implementation(const ModuleAst& module, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
@@ -522,9 +518,8 @@ std::string emit_cpp_module_implementation(const ModuleAst& module,
         if (!should_emit_function(fn, emit_options.test_source)) {
             continue;
         }
-        const bool body_owned_by_header =
-            visible_function_in_header(fn, emit_options) &&
-            (emit_before_constants(fn) || generic_function(fn));
+        const bool body_owned_by_header = visible_function_in_header(fn, emit_options) &&
+                                          (emit_before_constants(fn) || generic_function(fn));
         if (!body_owned_by_header) {
             emit_function_body(out, fn, aliases, function_returns, symbols, emit_options);
         }
@@ -540,8 +535,7 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
     emit_generated_banner(out);
-    emit_includes(out, module);
-    emit_result_prelude(out, module);
+    emit_prelude(out, module, true);
 
     emit_aliases(out, module, options);
     emit_enum_forward_declarations(out, module, options);

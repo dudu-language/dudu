@@ -1,5 +1,7 @@
 #include "dudu/codegen/cpp_emit_prelude.hpp"
 
+#include "dudu/codegen/cpp_emit_runtime_support.hpp"
+#include "dudu/codegen/cpp_runtime_features.hpp"
 #include "dudu/core/version.hpp"
 
 #include <algorithm>
@@ -138,45 +140,40 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     return aliases;
 }
 
-void emit_standard_includes(std::ostringstream& out, const ModuleAst& module) {
-    if (freestanding_like(module)) {
-        out << "#include <algorithm>\n"
-               "#include <array>\n"
-               "#include <atomic>\n"
-               "#include <cassert>\n"
-               "#include <cstddef>\n"
-               "#include <cstdint>\n"
-               "#include <cstdlib>\n"
-               "#include <initializer_list>\n"
-               "#include <span>\n"
-               "#include <type_traits>\n"
-               "#include <utility>\n";
-    } else {
-        out << "#include <algorithm>\n"
-               "#include <array>\n"
-               "#include <atomic>\n"
-               "#include <cassert>\n"
-               "#include <cstddef>\n"
-               "#include <cstdint>\n"
-               "#include <cstdlib>\n"
-               "#include <functional>\n"
-               "#include <initializer_list>\n"
-               "#include <iostream>\n"
-               "#include <optional>\n"
-               "#include <span>\n"
-               "#include <stdexcept>\n"
-               "#include <string>\n"
-               "#include <sstream>\n"
-               "#include <string_view>\n"
-               "#include <type_traits>\n"
-               "#include <unordered_map>\n"
-               "#include <unordered_set>\n"
-               "#include <utility>\n"
-               "#include <variant>\n"
-               "#include <vector>\n";
-    }
+namespace {
 
+void emit_standard_includes(std::ostringstream& out, const ModuleAst& module,
+                            const CppRuntimeFeatures& features) {
+    out << "#include <cstddef>\n"
+           "#include <cstdint>\n"
+           "#include <type_traits>\n"
+           "#include <utility>\n";
+    auto include = [&](bool enabled, std::string_view header) {
+        if (enabled) {
+            out << "#include <" << header << ">\n";
+        }
+    };
+    include(features.algorithm, "algorithm");
+    include(features.fixed_array, "array");
+    include(features.atomic, "atomic");
+    include(features.assertions, "cassert");
+    include(features.cstdlib, "cstdlib");
+    include(features.function, "functional");
+    include(features.array_view, "initializer_list");
+    include(features.hosted_print && !freestanding_like(module), "iostream");
+    include(features.optional, "optional");
+    include(features.span, "span");
+    include(features.exceptions, "stdexcept");
+    include(features.string, "string");
+    include(features.string_stream, "sstream");
+    include(features.string_view, "string_view");
+    include(features.unordered_map, "unordered_map");
+    include(features.unordered_set, "unordered_set");
+    include(features.variant, "variant");
+    include(features.vector || features.array_view, "vector");
 }
+
+} // namespace
 
 void emit_native_includes(std::ostringstream& out, const ModuleAst& module) {
     bool emitted = false;
@@ -196,7 +193,12 @@ void emit_native_includes(std::ostringstream& out, const ModuleAst& module) {
     }
 }
 
-void emit_target_macros(std::ostringstream& out) {
+namespace {
+
+void emit_target_macros(std::ostringstream& out, const CppRuntimeFeatures& features) {
+    if (!features.shader) {
+        return;
+    }
     out << "#ifndef DUDU_CUDA_GLOBAL\n"
            "#define DUDU_CUDA_GLOBAL\n"
            "#endif\n"
@@ -215,249 +217,56 @@ void emit_target_macros(std::ostringstream& out) {
     out << '\n';
 }
 
-void emit_includes(std::ostringstream& out, const ModuleAst& module) {
-    emit_standard_includes(out, module);
-    emit_native_includes(out, module);
-    emit_target_macros(out);
-}
-
-void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
+void emit_runtime_support(std::ostringstream& out, const ModuleAst& module,
+                          const CppRuntimeFeatures& features) {
     const bool freestanding = freestanding_like(module);
-    out << "namespace dudu {\n"
-           "template <typename T> struct OkValue { T value; };\n"
-           "template <typename E> struct ErrValue { E err; };\n"
-           "template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }\n"
-           "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n";
-    if (!freestanding) {
-        out << "template <typename T> void print(const T& value) { std::cout << value << '\\n'; "
-               "}\n";
+    const bool has_namespace_support = features.result || features.hosted_print ||
+                                       features.tuples || features.indexing ||
+                                       features.array_view || features.strided_span;
+    if (has_namespace_support) {
+        out << "namespace dudu {\n";
+        if (features.result) {
+            emit_result_runtime_support(out);
+        }
+        if (features.hosted_print && !freestanding) {
+            emit_print_runtime_support(out);
+        }
+        if (features.tuples) {
+            emit_tuple_runtime_support(out);
+        }
+        if (features.indexing) {
+            emit_index_runtime_support(out);
+        }
+        if (features.array_view && !freestanding) {
+            emit_array_view_runtime_support(out);
+        }
+        if (features.strided_span) {
+            emit_strided_span_runtime_support(out);
+        }
+        out << "} // namespace dudu\n";
     }
-    out << "template <typename T, typename E> struct Result {\n"
-           "    bool ok{};\n"
-           "    T value{};\n"
-           "    E err{};\n"
-           "    Result() = default;\n"
-           "    Result(OkValue<T> ok_value) : ok(true), value(std::move(ok_value.value)), err{} "
-           "{}\n"
-           "    Result(ErrValue<E> err_value) : ok(false), value{}, err(std::move(err_value.err)) "
-           "{}\n"
-           "};\n"
-           "template <typename T0> struct Tuple1 { T0 _0{}; };\n"
-           "template <typename T0, typename T1> struct Tuple2 { T0 _0{}; T1 _1{}; };\n"
-           "template <typename T0, typename T1, typename T2> struct Tuple3 { T0 _0{}; T1 _1{}; "
-           "T2 _2{}; };\n"
-           "template <typename T0, typename T1, typename T2, typename T3> struct Tuple4 { T0 _0{}; "
-           "T1 _1{}; T2 _2{}; T3 _3{}; };\n"
-           "template <typename T0, typename T1, typename T2, typename T3, typename T4> struct "
-           "Tuple5 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; T4 _4{}; };\n"
-           "template <typename T0, typename T1, typename T2, typename T3, typename T4, typename "
-           "T5> struct Tuple6 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; T4 _4{}; T5 _5{}; };\n"
-           "template <typename T0, typename T1, typename T2, typename T3, typename T4, typename "
-           "T5, typename T6> struct Tuple7 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; T4 _4{}; T5 "
-           "_5{}; T6 _6{}; };\n"
-           "template <typename T0, typename T1, typename T2, typename T3, typename T4, typename "
-           "T5, typename T6, typename T7> struct Tuple8 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; "
-           "T4 _4{}; T5 _5{}; T6 _6{}; T7 _7{}; };\n"
-           "struct Slice {\n"
-           "    bool has_start{};\n"
-           "    bool has_end{};\n"
-           "    bool has_step{};\n"
-           "    int64_t start{};\n"
-           "    int64_t end{};\n"
-           "    int64_t step{1};\n"
-           "};\n"
-           "struct Ellipsis {};\n"
-           "struct NewAxis {};\n"
-           "#ifndef DUDU_INDEX_CATEGORY_TYPES\n"
-           "#define DUDU_INDEX_CATEGORY_TYPES\n"
-           "struct ScalarIndex {\n"
-           "    int64_t value{};\n"
-           "    template <typename T, typename = std::enable_if_t<std::is_integral_v<std::decay_t<T>>>>\n"
-           "    ScalarIndex(T v) : value(static_cast<int64_t>(v)) {}\n"
-           "};\n"
-           "enum class BasicIndexKind { Scalar, Slice, Ellipsis, NewAxis };\n"
-           "struct BasicIndex {\n"
-           "    BasicIndexKind kind{BasicIndexKind::Scalar};\n"
-           "    int64_t scalar{};\n"
-           "    Slice slice{};\n"
-           "    BasicIndex(ScalarIndex value) : kind(BasicIndexKind::Scalar), scalar(value.value) {}\n"
-           "    template <typename T, typename = std::enable_if_t<std::is_integral_v<std::decay_t<T>>>>\n"
-           "    BasicIndex(T value) : kind(BasicIndexKind::Scalar), scalar(static_cast<int64_t>(value)) {}\n"
-           "    BasicIndex(Slice value) : kind(BasicIndexKind::Slice), slice(value) {}\n"
-           "    BasicIndex(Ellipsis) : kind(BasicIndexKind::Ellipsis) {}\n"
-           "    BasicIndex(NewAxis) : kind(BasicIndexKind::NewAxis) {}\n"
-           "};\n"
-           "#endif\n"
-           "enum class SliceSpecKind { Index, Range, Ellipsis, NewAxis };\n"
-           "struct SliceSpec {\n"
-           "    SliceSpecKind kind{SliceSpecKind::Index};\n"
-           "    int64_t index{};\n"
-           "    Slice slice{};\n"
-           "    static SliceSpec at(int64_t value) { return {SliceSpecKind::Index, value, {}}; }\n"
-           "    static SliceSpec range(Slice value) { return {SliceSpecKind::Range, 0, value}; }\n"
-           "    static SliceSpec ellipsis() { return {SliceSpecKind::Ellipsis, 0, {}}; }\n"
-           "    static SliceSpec new_axis() { return {SliceSpecKind::NewAxis, 0, {}}; }\n"
-           "};\n";
-    if (!freestanding) {
-        out << "template <typename T> struct ArrayView {\n"
-           "    T* data{};\n"
-           "    std::vector<std::size_t> shape{};\n"
-           "    std::vector<std::size_t> strides{};\n"
-           "    std::size_t offset{};\n"
-           "    std::size_t size() const {\n"
-           "        std::size_t total = 1;\n"
-           "        for (std::size_t dim : shape) { total *= dim; }\n"
-           "        return shape.empty() ? 0 : total;\n"
-           "    }\n"
-           "    T& operator[](std::size_t flat) const {\n"
-           "        std::size_t source = offset;\n"
-           "        for (std::size_t dim = shape.size(); dim > 0; --dim) {\n"
-           "            const std::size_t axis = dim - 1;\n"
-           "            const std::size_t extent = shape[axis];\n"
-           "            const std::size_t coord = extent == 0 ? 0 : flat % extent;\n"
-           "            flat = extent == 0 ? 0 : flat / extent;\n"
-           "            source += coord * strides[axis];\n"
-           "        }\n"
-           "        return data[source];\n"
-           "    }\n"
-           "    T& at(std::initializer_list<std::size_t> coords) const {\n"
-           "        std::size_t source = offset;\n"
-           "        std::size_t axis = 0;\n"
-           "        for (std::size_t coord : coords) {\n"
-           "            source += coord * strides[axis];\n"
-           "            ++axis;\n"
-           "        }\n"
-           "        return data[source];\n"
-           "    }\n"
-           "    struct Iterator {\n"
-           "        const ArrayView* view{};\n"
-           "        std::size_t index{};\n"
-           "        T& operator*() const { return (*view)[index]; }\n"
-           "        Iterator& operator++() { ++index; return *this; }\n"
-           "        bool operator!=(const Iterator& other) const { return index != other.index; }\n"
-           "    };\n"
-           "    Iterator begin() const { return {this, 0}; }\n"
-           "    Iterator end() const { return {this, size()}; }\n"
-           "};\n"
-           "template <typename T> struct ArrayTraits {\n"
-           "    using Element = T;\n"
-           "    static void shape(std::vector<std::size_t>&) {}\n"
-           "};\n"
-           "template <typename T, std::size_t N> struct ArrayTraits<std::array<T, N>> {\n"
-           "    using Element = typename ArrayTraits<T>::Element;\n"
-           "    static void shape(std::vector<std::size_t>& out) {\n"
-           "        out.push_back(N);\n"
-           "        ArrayTraits<T>::shape(out);\n"
-           "    }\n"
-           "};\n"
-           "template <typename T> T* array_data(T& value) { return &value; }\n"
-           "template <typename T, std::size_t N> auto array_data(std::array<T, N>& value) {\n"
-           "    return array_data(value[0]);\n"
-           "}\n"
-           "inline std::vector<std::size_t> contiguous_strides(const std::vector<std::size_t>& "
-           "shape) {\n"
-           "    std::vector<std::size_t> strides(shape.size(), 1);\n"
-           "    for (std::size_t dim = shape.size(); dim > 1; --dim) {\n"
-           "        strides[dim - 2] = strides[dim - 1] * shape[dim - 1];\n"
-           "    }\n"
-           "    return strides;\n"
-           "}\n"
-           "template <typename Array> auto make_array_view(Array& value) {\n"
-           "    using Element = typename ArrayTraits<Array>::Element;\n"
-           "    std::vector<std::size_t> shape;\n"
-           "    ArrayTraits<Array>::shape(shape);\n"
-           "    return ArrayView<Element>{array_data(value), shape, contiguous_strides(shape), "
-           "0};\n"
-           "}\n"
-           "inline void append_full_axis(auto& out, const auto& view, std::size_t& axis) {\n"
-           "    out.shape.push_back(view.shape[axis]);\n"
-           "    out.strides.push_back(view.strides[axis]);\n"
-           "    ++axis;\n"
-           "}\n"
-           "template <typename T> ArrayView<T> array_view_slice(ArrayView<T> view, "
-           "std::initializer_list<SliceSpec> specs) {\n"
-           "    ArrayView<T> out{view.data, {}, {}, view.offset};\n"
-           "    std::size_t consumed = 0;\n"
-           "    for (const SliceSpec& spec : specs) {\n"
-           "        if (spec.kind != SliceSpecKind::Ellipsis && spec.kind != SliceSpecKind::NewAxis) "
-           "{ ++consumed; }\n"
-           "    }\n"
-           "    const std::size_t ellipsis_fill = view.shape.size() > consumed ? "
-           "view.shape.size() - consumed : 0;\n"
-           "    std::size_t axis = 0;\n"
-           "    for (const SliceSpec& spec : specs) {\n"
-           "        if (spec.kind == SliceSpecKind::NewAxis) {\n"
-           "            out.shape.push_back(1);\n"
-           "            out.strides.push_back(0);\n"
-           "            continue;\n"
-           "        }\n"
-           "        if (spec.kind == SliceSpecKind::Ellipsis) {\n"
-           "            for (std::size_t i = 0; i < ellipsis_fill && axis < view.shape.size(); ++i) {\n"
-           "                append_full_axis(out, view, axis);\n"
-           "            }\n"
-           "            continue;\n"
-           "        }\n"
-           "        if (axis >= view.shape.size()) { break; }\n"
-           "        if (spec.kind == SliceSpecKind::Index) {\n"
-           "            out.offset += static_cast<std::size_t>(spec.index) * view.strides[axis];\n"
-           "        } else {\n"
-           "            const std::int64_t extent = static_cast<std::int64_t>(view.shape[axis]);\n"
-           "            const auto bound = [extent](std::int64_t value) {\n"
-           "                if (value < 0) { value += extent; }\n"
-           "                return std::clamp<std::int64_t>(value, 0, extent);\n"
-           "            };\n"
-           "            const std::int64_t raw_step = spec.slice.has_step ? spec.slice.step : 1;\n"
-           "            if (raw_step <= 0) { throw std::invalid_argument(\"array slice step must be positive\"); }\n"
-           "            const std::size_t start = static_cast<std::size_t>(spec.slice.has_start ? "
-           "bound(spec.slice.start) : 0);\n"
-           "            const std::size_t end = static_cast<std::size_t>(spec.slice.has_end ? "
-           "bound(spec.slice.end) : extent);\n"
-           "            const std::size_t step = static_cast<std::size_t>(raw_step);\n"
-           "            out.offset += start * view.strides[axis];\n"
-           "            out.shape.push_back(end <= start ? 0 : ((end - start) + step - 1) / "
-           "step);\n"
-           "            out.strides.push_back(view.strides[axis] * step);\n"
-           "        }\n"
-           "        ++axis;\n"
-           "    }\n"
-           "    while (axis < view.shape.size()) {\n"
-           "        append_full_axis(out, view, axis);\n"
-           "    }\n"
-           "    return out;\n"
-           "}\n"
-           "template <typename Array> auto array_view_slice(Array& value, "
-           "std::initializer_list<SliceSpec> specs) {\n"
-           "    return array_view_slice(make_array_view(value), specs);\n"
-           "}\n";
-    }
-    out << "template <typename T> struct StridedSpan {\n"
-           "    T* data{};\n"
-           "    std::size_t count{};\n"
-           "    std::size_t stride{};\n"
-           "    T& operator[](std::size_t index) const { return data[index * stride]; }\n"
-           "    std::size_t size() const { return count; }\n"
-           "    struct Iterator {\n"
-           "        T* current{};\n"
-           "        std::size_t stride{};\n"
-           "        T& operator*() const { return *current; }\n"
-           "        Iterator& operator++() { current += stride; return *this; }\n"
-           "        bool operator!=(const Iterator& other) const { return current != "
-           "other.current; }\n"
-           "    };\n"
-           "    Iterator begin() const { return {data, stride}; }\n"
-           "    Iterator end() const { return {data + count * stride, stride}; }\n"
-           "};\n"
-           "} // namespace dudu\n";
-    if (!freestanding) {
+    if (features.hosted_print && !freestanding) {
         out << "using dudu::print;\n";
     }
-    out << "using std::max;\n"
-           "using std::min;\n"
-           "namespace shader {\n"
-           "struct GlobalId { int32_t x{}; int32_t y{}; int32_t z{}; };\n"
-           "inline GlobalId global_id{};\n"
-           "} // namespace shader\n";
+    if (features.min_max) {
+        out << "using std::max;\nusing std::min;\n";
+    }
+    if (features.shader) {
+        emit_shader_runtime_support(out);
+    }
     emit_build_namespace(out, module);
+}
+
+} // namespace
+
+void emit_prelude(std::ostringstream& out, const ModuleAst& module, bool include_native_imports) {
+    const CppRuntimeFeatures features = cpp_runtime_features(module);
+    emit_standard_includes(out, module, features);
+    if (include_native_imports) {
+        emit_native_includes(out, module);
+    }
+    emit_target_macros(out, features);
+    emit_runtime_support(out, module, features);
 }
 
 } // namespace dudu

@@ -141,10 +141,10 @@ matrix uses generated equivalent programs and reports:
 See [Compiler Performance Matrix](compiler-performance-matrix.md). The harness is
 `scripts/bench_compiler_compare.py`.
 
-On the current 1,000-unit workload, Dudu's frontend takes 136.1 ms, compared
+On the current 1,000-unit workload, Dudu's frontend takes 127.7 ms, compared
 with Rust at 112.5 ms, Go at 176.9 ms, Nim at 233.9 ms, and Swift at 342.9 ms.
-Dudu C++ emission takes 230.1 ms and the external GCC backend takes 487.7 ms,
-for a 716.2 ms self-contained executable path. The matrix keeps those phases
+Dudu C++ emission takes 219.4 ms and the external GCC backend takes 256.4 ms,
+for a 477.4 ms self-contained executable path. The matrix keeps those phases
 separate.
 
 Emission previously took 820.8 ms because class dependency ordering compared
@@ -152,6 +152,11 @@ every field type with every class name twice, while member lowering compared
 every member receiver with every class name. Direct dependency indexing and
 semantic receiver classification reduced emission by 3.6 times. Measurements
 from 250 through 2,000 units now scale approximately linearly.
+
+Feature-sensitive runtime emission then removed unconditional parsing of 22
+standard headers and unused Result, tuple, indexing, collection, hosted-I/O,
+and shader support. That reduced the external C++ backend from 487.7 ms and
+156.6 MiB to 256.4 ms and 90.7 MiB on the same workload.
 
 ## Current Assessment
 

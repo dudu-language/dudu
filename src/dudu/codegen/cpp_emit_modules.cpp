@@ -2,8 +2,8 @@
 
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
-#include "dudu/codegen/cpp_module_dependencies.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
+#include "dudu/codegen/cpp_module_dependencies.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/file_io.hpp"
 
@@ -282,8 +282,7 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
 }
 
 std::vector<std::string>
-module_include_paths(const ModuleAst& unit,
-                     const std::map<std::string, const ModuleAst*>& modules,
+module_include_paths(const ModuleAst& unit, const std::map<std::string, const ModuleAst*>& modules,
                      bool include_macro_host_modules, bool public_dependencies,
                      const std::vector<bool>& public_imports) {
     std::set<std::string> paths;
@@ -325,9 +324,8 @@ void emit_dependency_includes(std::ostringstream& out, const ModuleAst& unit,
                               bool include_macro_host_modules, bool public_dependencies) {
     const std::vector<bool> public_imports = cpp_public_import_mask(unit);
     emit_native_includes(out, import_subset(unit, public_dependencies, public_imports));
-    const std::vector<std::string> includes =
-        module_include_paths(unit, modules, include_macro_host_modules, public_dependencies,
-                             public_imports);
+    const std::vector<std::string> includes = module_include_paths(
+        unit, modules, include_macro_host_modules, public_dependencies, public_imports);
     for (const std::string& path : includes) {
         out << "#include \"" << path << "\"\n";
     }
@@ -348,9 +346,7 @@ std::string runtime_header(const ModuleAst& module) {
     std::ostringstream out;
     emit_generated_banner(out);
     out << "#pragma once\n\n";
-    emit_standard_includes(out, module);
-    emit_target_macros(out);
-    emit_result_prelude(out, module);
+    emit_prelude(out, module, false);
     return out.str();
 }
 
@@ -379,9 +375,8 @@ std::string header_with_module_includes(const ModuleAst& unit,
                                         bool include_macro_host_modules = false) {
     std::ostringstream out;
     emit_module_header_includes(out, unit, modules, include_macro_host_modules);
-    out << emit_cpp_header(
-        unit, module_emit_options(unit, modules, test_source, public_abi,
-                                  include_macro_host_modules));
+    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source, public_abi,
+                                                     include_macro_host_modules));
     return out.str();
 }
 
@@ -390,8 +385,8 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
                                          bool test_source = false, bool public_abi = false,
                                          bool include_macro_host_modules = false) {
     std::ostringstream out;
-    const CppEmitOptions options = module_emit_options(
-        unit, modules, test_source, public_abi, include_macro_host_modules);
+    const CppEmitOptions options =
+        module_emit_options(unit, modules, test_source, public_abi, include_macro_host_modules);
     emit_generated_banner(out);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n"
         << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n";
@@ -411,14 +406,13 @@ void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(
-                       unit, modules, test_source, public_abi, include_macro_host_modules)});
-    out.push_back(
-        {.path = base.string() + ".cpp",
-         .module_path = unit.module_path,
-         .kind = CppModuleArtifactKind::Source,
-         .content = source_with_boundary_comment(
-             unit, modules, test_source, public_abi, include_macro_host_modules)});
+                   .content = header_with_module_includes(unit, modules, test_source, public_abi,
+                                                          include_macro_host_modules)});
+    out.push_back({.path = base.string() + ".cpp",
+                   .module_path = unit.module_path,
+                   .kind = CppModuleArtifactKind::Source,
+                   .content = source_with_boundary_comment(unit, modules, test_source, public_abi,
+                                                           include_macro_host_modules)});
 }
 
 std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
@@ -457,7 +451,13 @@ ModuleAst test_harness_module(const ModuleAst& module) {
 std::string test_harness_source(const ModuleAst& module, const std::string& filter,
                                 bool capture_output) {
     std::ostringstream out;
-    out << "#include \"dudu_runtime.hpp\"\n";
+    out << "#include <exception>\n"
+           "#include <iostream>\n"
+           "#include <sstream>\n"
+           "#include <string>\n"
+           "#include <string_view>\n"
+           "#include <type_traits>\n"
+           "#include \"dudu_runtime.hpp\"\n";
     const std::vector<ModuleAst>& units =
         module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
     for (const ModuleAst& unit : units) {

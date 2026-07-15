@@ -49,6 +49,21 @@ void write_file(const std::filesystem::path& path, const std::string& text) {
     file << text;
 }
 
+std::string emitted_runtime_for_source(const std::string& case_name, const std::string& source) {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / ("dudu_runtime_features_" + case_name);
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "main.dd", source);
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    for (const dudu::CppModuleArtifact& artifact : dudu::emit_cpp_module_artifacts(module)) {
+        if (artifact.path == "dudu_runtime.hpp") {
+            return artifact.content;
+        }
+    }
+    throw std::runtime_error("Dudu runtime artifact was not emitted");
+}
+
 void test_module_loader_canonicalizes_physical_modules() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_identity_test";
@@ -180,12 +195,12 @@ void test_imported_classes_keep_distinct_symbol_identities() {
                                   "class Other:\n"
                                   "    value: i32\n");
     write_file(dir / "main.dd", "from models import Box\n"
-                                 "from models import Other\n"
-                                 "\n"
-                                 "def main() -> i32:\n"
-                                 "    box = Box[i32](42)\n"
-                                 "    other = Other(1)\n"
-                                 "    return box.value + other.value\n");
+                                "from models import Other\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    box = Box[i32](42)\n"
+                                "    other = Other(1)\n"
+                                "    return box.value + other.value\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
     std::map<std::string, std::string> identities;
@@ -551,7 +566,7 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.contains("dudu_runtime.hpp"));
     assert(by_path.contains("main.hpp"));
     assert(by_path.contains("main.cpp"));
-    assert(by_path.at("dudu_runtime.hpp").find("template <typename T, typename E> struct Result") !=
+    assert(by_path.at("dudu_runtime.hpp").find("template <typename T, typename E> struct Result") ==
            std::string::npos);
     assert(by_path.at("camera.hpp").find("#include \"dudu_runtime.hpp\"") != std::string::npos);
     assert(by_path.at("main.cpp").find("#include \"main.hpp\"") != std::string::npos);
@@ -586,15 +601,13 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("return DuduRendererCameraCamera{.x = x};") != std::string::npos);
     assert(by_path.at("main.cpp").find("dudu_camera_make_camera(1)") != std::string::npos);
-    assert(by_path.at("main.hpp").find(
-               "DuduCameraCamera dudu_main_relay(DuduCameraCamera value);") !=
-           std::string::npos);
-    assert(by_path.at("main.cpp").find(
-               "DuduCameraCamera dudu_main_relay(DuduCameraCamera value)") !=
-           std::string::npos);
-    assert(by_path.at("main.cpp")
-               .find("dudu_renderer_camera_make_camera(2)") !=
-           std::string::npos);
+    assert(
+        by_path.at("main.hpp").find("DuduCameraCamera dudu_main_relay(DuduCameraCamera value);") !=
+        std::string::npos);
+    assert(
+        by_path.at("main.cpp").find("DuduCameraCamera dudu_main_relay(DuduCameraCamera value)") !=
+        std::string::npos);
+    assert(by_path.at("main.cpp").find("dudu_renderer_camera_make_camera(2)") != std::string::npos);
     assert(by_path.at("main.cpp").find("cam.make_camera") == std::string::npos);
     assert(by_path.at("main.cpp").find("render_camera.make_camera") == std::string::npos);
     assert(by_path.at("main.cpp").find("int main()") != std::string::npos);
@@ -626,6 +639,59 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(dudu::emit_cpp_module_artifacts(module, {}).empty());
 }
 
+void test_cpp_runtime_support_is_feature_gated() {
+    const std::string minimal = emitted_runtime_for_source("minimal", "def main() -> i32:\n"
+                                                                      "    return 0\n");
+    assert(minimal.find("#include <iostream>") == std::string::npos);
+    assert(minimal.find("#include <vector>") == std::string::npos);
+    assert(minimal.find("#include <optional>") == std::string::npos);
+    assert(minimal.find("#include <variant>") == std::string::npos);
+    assert(minimal.find("struct Result") == std::string::npos);
+    assert(minimal.find("struct Slice") == std::string::npos);
+    assert(minimal.find("namespace shader") == std::string::npos);
+
+    const std::string result =
+        emitted_runtime_for_source("result", "def choose() -> Result[i32, i32]:\n"
+                                             "    return Ok(1)\n");
+    assert(result.find("template <typename T, typename E> struct Result") != std::string::npos);
+    assert(result.find("struct Slice") == std::string::npos);
+    assert(result.find("#include <vector>") == std::string::npos);
+
+    const std::string collections =
+        emitted_runtime_for_source("collections", "def values() -> list[i32]:\n"
+                                                  "    return [1, 2, 3]\n");
+    assert(collections.find("#include <vector>") != std::string::npos);
+    assert(collections.find("struct Result") == std::string::npos);
+
+    const std::string inferred_array =
+        emitted_runtime_for_source("inferred_array", "VALUES: array[i32] = [1, 2, 3]\n");
+    assert(inferred_array.find("#include <array>") != std::string::npos);
+
+    const std::string indexing = emitted_runtime_for_source(
+        "indexing", "def column(values: &array[i32][2, 2]) -> array_view[i32]:\n"
+                    "    return values[:, 0]\n");
+    assert(indexing.find("struct Slice") != std::string::npos);
+    assert(indexing.find("struct ArrayView") != std::string::npos);
+    assert(indexing.find("#include <algorithm>") != std::string::npos);
+
+    const std::string print = emitted_runtime_for_source("print", "def main() -> i32:\n"
+                                                                  "    print(1)\n"
+                                                                  "    return 0\n");
+    assert(print.find("#include <iostream>") != std::string::npos);
+    assert(print.find("void print") != std::string::npos);
+
+    const std::string assertions = emitted_runtime_for_source("assert", "def verify() -> void:\n"
+                                                                        "    assert 1 == 1\n");
+    assert(assertions.find("#include <stdexcept>") != std::string::npos);
+
+    const std::string shader =
+        emitted_runtime_for_source("shader", "@shader.compute\n"
+                                             "def fill() -> i32:\n"
+                                             "    return shader.global_id.x\n");
+    assert(shader.find("#define DUDU_SHADER_COMPUTE") != std::string::npos);
+    assert(shader.find("namespace shader") != std::string::npos);
+}
+
 void test_cpp_module_native_imports_stay_local() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_native_import_boundary_test";
@@ -634,6 +700,8 @@ void test_cpp_module_native_imports_stay_local() {
     write_file(dir / "vendor" / "public.hpp", "struct PublicPixel { int value; };\n");
     write_file(dir / "vendor" / "graphics.hpp", "inline int draw_native() { return 1; }\n");
     write_file(dir / "vendor" / "audio.h", "static inline int play_native(void) { return 2; }\n");
+    write_file(dir / "vendor" / "inline.hpp",
+               "namespace native_api { inline int value() { return 3; } }\n");
     write_file(dir / "graphics.dd", "from cpp.path import vendor/graphics.hpp\n"
                                     "\n"
                                     "def draw() -> i32:\n"
@@ -646,9 +714,15 @@ void test_cpp_module_native_imports_stay_local() {
                                          "\n"
                                          "def inspect(pixel: &const[PublicPixel]) -> i32:\n"
                                          "    return 0\n");
+    write_file(dir / "inline_native.dd", "from cpp.path import vendor/inline.hpp\n"
+                                         "\n"
+                                         "class Box[T]:\n"
+                                         "    def value(self) -> i32:\n"
+                                         "        return cpp(\"native_api::value()\")\n");
     write_file(dir / "main.dd", "from graphics import draw\n"
                                 "from audio import play\n"
                                 "from public_native import inspect\n"
+                                "from inline_native import Box\n"
                                 "\n"
                                 "def main() -> i32:\n"
                                 "    return draw() + play() - 3\n");
@@ -679,6 +753,10 @@ void test_cpp_module_native_imports_stay_local() {
     assert(by_path.at("public_native.hpp").find("#include \"vendor/public.hpp\"") !=
            std::string::npos);
     assert(by_path.at("public_native.cpp").find("#include \"vendor/public.hpp\"") ==
+           std::string::npos);
+    assert(by_path.at("inline_native.hpp").find("#include \"vendor/inline.hpp\"") !=
+           std::string::npos);
+    assert(by_path.at("inline_native.cpp").find("#include \"vendor/inline.hpp\"") ==
            std::string::npos);
 }
 
@@ -732,6 +810,7 @@ int main() {
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
         test_cpp_module_artifacts_preserve_module_boundaries();
+        test_cpp_runtime_support_is_feature_gated();
         test_cpp_module_native_imports_stay_local();
         test_cpp_module_artifacts_use_resolved_dependency_paths();
     } catch (const std::exception& error) {
