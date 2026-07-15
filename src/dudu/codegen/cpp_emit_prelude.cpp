@@ -138,7 +138,7 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     return aliases;
 }
 
-void emit_includes(std::ostringstream& out, const ModuleAst& module) {
+void emit_standard_includes(std::ostringstream& out, const ModuleAst& module) {
     if (freestanding_like(module)) {
         out << "#include <algorithm>\n"
                "#include <array>\n"
@@ -176,15 +176,27 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
                "#include <vector>\n";
     }
 
+}
+
+void emit_native_includes(std::ostringstream& out, const ModuleAst& module) {
+    bool emitted = false;
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignC) {
             out << "extern \"C\" {\n"
                 << "#include " << include_path(import) << '\n'
                 << "}\n";
+            emitted = true;
         } else if (import.kind == ImportKind::ForeignCxx || import.kind == ImportKind::ForeignCpp) {
             out << "#include " << include_path(import) << '\n';
+            emitted = true;
         }
     }
+    if (emitted) {
+        out << '\n';
+    }
+}
+
+void emit_target_macros(std::ostringstream& out) {
     out << "#ifndef DUDU_CUDA_GLOBAL\n"
            "#define DUDU_CUDA_GLOBAL\n"
            "#endif\n"
@@ -201,6 +213,12 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
            "#define DUDU_WORKGROUP_SIZE(x, y, z)\n"
            "#endif\n";
     out << '\n';
+}
+
+void emit_includes(std::ostringstream& out, const ModuleAst& module) {
+    emit_standard_includes(out, module);
+    emit_native_includes(out, module);
+    emit_target_macros(out);
 }
 
 void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {

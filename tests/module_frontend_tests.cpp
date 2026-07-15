@@ -602,6 +602,44 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(dudu::emit_cpp_module_artifacts(module, {}).empty());
 }
 
+void test_cpp_module_native_imports_stay_local() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_native_import_boundary_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "graphics.dd", "from cpp.path import vendor/graphics.hpp\n"
+                                    "\n"
+                                    "def draw() -> i32:\n"
+                                    "    return 1\n");
+    write_file(dir / "audio.dd", "from c.path import vendor/audio.h\n"
+                                 "\n"
+                                 "def play() -> i32:\n"
+                                 "    return 2\n");
+    write_file(dir / "main.dd", "from graphics import draw\n"
+                                "from audio import play\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return draw() + play() - 3\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(module);
+    std::map<std::filesystem::path, std::string> by_path;
+    for (const dudu::CppModuleArtifact& artifact : artifacts) {
+        by_path[artifact.path] = artifact.content;
+    }
+
+    const std::string& runtime = by_path.at("dudu_runtime.hpp");
+    assert(runtime.find("vendor/graphics.hpp") == std::string::npos);
+    assert(runtime.find("vendor/audio.h") == std::string::npos);
+    assert(by_path.at("graphics.hpp").find("#include \"vendor/graphics.hpp\"") !=
+           std::string::npos);
+    assert(by_path.at("graphics.hpp").find("vendor/audio.h") == std::string::npos);
+    assert(by_path.at("audio.hpp").find("#include \"vendor/audio.h\"") != std::string::npos);
+    assert(by_path.at("audio.hpp").find("vendor/graphics.hpp") == std::string::npos);
+    assert(by_path.at("main.hpp").find("vendor/graphics.hpp") == std::string::npos);
+    assert(by_path.at("main.hpp").find("vendor/audio.h") == std::string::npos);
+}
+
 void test_cpp_module_artifacts_use_resolved_dependency_paths() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_resolved_dependency_test";
@@ -652,6 +690,7 @@ int main() {
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
         test_cpp_module_artifacts_preserve_module_boundaries();
+        test_cpp_module_native_imports_stay_local();
         test_cpp_module_artifacts_use_resolved_dependency_paths();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";

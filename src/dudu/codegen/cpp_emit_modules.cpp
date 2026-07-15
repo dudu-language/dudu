@@ -307,6 +307,7 @@ void emit_module_includes(std::ostringstream& out, const ModuleAst& unit,
                           const std::map<std::string, const ModuleAst*>& modules,
                           bool include_macro_host_modules) {
     out << "#include \"dudu_runtime.hpp\"\n";
+    emit_native_includes(out, unit);
     const std::vector<std::string> includes =
         module_include_paths(unit, modules, include_macro_host_modules);
     for (const std::string& path : includes) {
@@ -319,7 +320,8 @@ std::string runtime_header(const ModuleAst& module) {
     std::ostringstream out;
     emit_generated_banner(out);
     out << "#pragma once\n\n";
-    emit_includes(out, module);
+    emit_standard_includes(out, module);
+    emit_target_macros(out);
     emit_result_prelude(out, module);
     return out.str();
 }
