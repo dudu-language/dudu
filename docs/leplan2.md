@@ -176,10 +176,15 @@ recompiling launcher and catalog machinery for each package.
 3. Profile no-op and one-file generated-CMake builds. Avoid invoking or
    configuring native tools when source stamps prove nothing changed; when a
    native tool must run, preserve its normal output.
-4. Reduce macro package compilation. Build the macro SDK during toolchain
+4. Reduce native backend fixed cost. Emit feature-sensitive support for
+   self-contained files and make generated-CMake targets compile the shared
+   `dudu_runtime.hpp` once as a precompiled header. Keep runtime support shared
+   across module translation units rather than copying or reparsing it per
+   module. Validate cold, changed-module, and no-op builds separately.
+5. Reduce macro package compilation. Build the macro SDK during toolchain
    installation where toolchain compatibility permits, parallelize independent
    bootstrap units, and profile generated package/launcher C++ separately.
-5. Profile compiler startup and allocation only after the end-to-end cases
+6. Profile compiler startup and allocation only after the end-to-end cases
    identify frontend cost as material. Continue the compact/arena AST work only
    with broad benchmark proof.
 

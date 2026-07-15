@@ -94,15 +94,72 @@ substantially faster for its equivalent C++ input.
 
 Dudu's complete self-contained path remains slower than the direct native
 toolchains. The external GCC backend takes 487.7 ms to compile Dudu's larger
-self-contained output. Dudu emission itself is now 230.1 ms after replacing two
-quadratic whole-program scans with indexed dependency and symbol lookup. The
-same emission workload previously took 820.8 ms.
+self-contained output. The complete `duc emit` command, including frontend
+analysis and C++ emission, is now 230.1 ms after replacing two quadratic
+whole-program scans with indexed dependency and symbol lookup. The same command
+previously took 820.8 ms.
 
 The fixed emission curve is 0.06, 0.11, 0.23, and 0.45 seconds at 250, 500,
 1,000, and 2,000 units respectively. It is approximately linear over this
 range. Further work should reduce generated support volume and ordinary
 type/expression lowering costs rather than masking another known quadratic
 curve.
+
+## Generated C++ Anatomy
+
+The 1,000-unit Dudu fixture emits 20,263 lines and 478,647 bytes of
+self-contained C++, compared with 7,003 lines and 171,740 bytes for the compact
+handwritten C++ fixture. This is not a threefold expansion in program semantics.
+The generated file contains:
+
+| Section | Lines | Bytes |
+| --- | ---: | ---: |
+| Runtime, standard includes, and build prelude | 253 | 10,342 |
+| Class forward declarations | 1,000 | 15,890 |
+| Free-function declarations | 1,002 | 31,797 |
+| Class declarations | 6,000 | 75,890 |
+| Out-of-line method definitions | 7,000 | 191,779 |
+| Free-function definitions | 5,000 | 152,669 |
+| `main` | 8 | 280 |
+
+Of the whole file, 2,002 source-location comments occupy 185,962 bytes and
+4,005 lines are blank. Removing comments and blank lines leaves 14,256 lines
+and 288,680 bytes. The remaining difference primarily comes from conservative
+forward declarations, function prototypes, and out-of-line method bodies. That
+structure preserves arbitrary declaration order and module boundaries; it is
+not runtime abstraction.
+
+Five repeated local GCC builds isolated the compile-time cost:
+
+| Input | Median wall time | Peak RSS |
+| --- | ---: | ---: |
+| Full generated Dudu C++ | 430 ms | 160 MiB |
+| Generated body with only `<cstdint>` | 210 ms | 74 MiB |
+| Handwritten C++ | 230 ms | 69 MiB |
+| Handwritten C++ plus Dudu's full prelude | 460 ms | 158 MiB |
+| Generated body with a prepared Dudu precompiled header | 250 ms | 133 MiB |
+
+The verbose generated body is therefore not the cause of the current GCC
+slowdown: without the prelude, it compiles as fast as the handwritten fixture.
+The fixed cost comes from unconditionally parsing 22 standard headers and all
+Result, tuple, indexing, array-view, hosted-I/O, and shader support for a program
+that only uses `i32`. The source comments inflate inspectable output size but
+have negligible compile-time cost. Unused runtime templates also do not produce
+corresponding executable code; the unoptimized binaries in this experiment were
+241 KiB for Dudu and 234 KiB for handwritten C++.
+
+The concrete backend work is:
+
+1. Make self-contained emission include only the standard headers and runtime
+   components required by the analyzed program.
+2. Build the shared `dudu_runtime.hpp` once as a project precompiled header in
+   generated-CMake builds so every module does not parse the same standard
+   library surface again.
+3. Keep source mapping available, but shorten paths or make inspectable comments
+   configurable independently of semantic emission.
+4. Reduce declarations only where dependency analysis proves they are
+   unnecessary; do not trade correct recursion, arbitrary declaration order, or
+   separate-module compilation for a smaller generated file.
 
 ## Interpreting Results
 
