@@ -1,7 +1,8 @@
 # dudu
 
 [Website](https://dudulang.org) | [Install](docs/installing.md) |
-[Language Guide](docs/language.md) | [Known Limitations](docs/known-limitations.md)
+[Language Guide](docs/language.md) | [Performance](docs/performance.md) |
+[Known Limitations](docs/known-limitations.md)
 
 Dudu is a statically typed Python-shaped systems language that compiles to
 readable C++20.
@@ -39,7 +40,7 @@ def main() -> i32:
 
 ## Status
 
-Dudu is usable as a pre-alpha compiler. It can parse and check the core typed
+Dudu is usable as an alpha compiler. It can parse and check the core typed
 subset, format source, compile multi-file projects, import native C/C++
 headers, emit readable C++20, and drive CMake-backed builds through `dudu`.
 
