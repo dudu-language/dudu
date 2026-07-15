@@ -109,6 +109,26 @@ void emit_enum_method_declarations(std::ostringstream& out, const ModuleAst& mod
         out << '\n';
 }
 
+void emit_private_enum_method_declarations(std::ostringstream& out, const ModuleAst& module,
+                                           const std::vector<std::string>& aliases,
+                                           const CppEmitOptions& options) {
+    bool emitted = false;
+    for (const EnumDecl& en : module.enums) {
+        for (const FunctionDecl& method : en.methods) {
+            if (visible_in_header(method)) {
+                continue;
+            }
+            emit_template_params(out, method);
+            emit_signature(out, en, method, aliases, options);
+            out << ";\n";
+            emitted = true;
+        }
+    }
+    if (emitted) {
+        out << '\n';
+    }
+}
+
 void emit_enum_method_definitions(std::ostringstream& out, const ModuleAst& module,
                                   const std::vector<std::string>& aliases,
                                   const std::map<std::string, TypeRef>& function_returns,
@@ -116,8 +136,8 @@ void emit_enum_method_definitions(std::ostringstream& out, const ModuleAst& modu
                                   const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
         for (const FunctionDecl& method : en.methods) {
-            if (header_only != generic_method(method) ||
-                (header_only && !visible_in_header(method))) {
+            const bool emit_in_header = generic_method(method) && visible_in_header(method);
+            if (header_only != emit_in_header) {
                 continue;
             }
             emit_body(out, en, method, aliases, function_returns, symbols, options);

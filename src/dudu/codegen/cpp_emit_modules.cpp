@@ -364,9 +364,10 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
     std::ostringstream out;
     const CppEmitOptions options = module_emit_options(
         unit, modules, test_source, public_abi, include_macro_host_modules);
-    out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
-    emit_module_includes(out, unit, modules, include_macro_host_modules);
-    out << emit_cpp_source(unit, options);
+    emit_generated_banner(out);
+    out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n"
+        << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n"
+        << emit_cpp_module_implementation(unit, options);
     if (!test_source) {
         emit_entry_point(out, unit, options);
     }

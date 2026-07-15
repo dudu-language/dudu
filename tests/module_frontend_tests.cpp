@@ -502,8 +502,14 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     write_file(dir / "camera.dd", "class Camera:\n"
                                   "    x: i32\n"
                                   "\n"
+                                  "    def value(self) -> i32:\n"
+                                  "        return self.x\n"
+                                  "\n"
+                                  "def _hidden_value(x: i32) -> i32:\n"
+                                  "    return x + 1\n"
+                                  "\n"
                                   "def make_camera(x: i32) -> Camera:\n"
-                                  "    return Camera(x=x)\n");
+                                  "    return Camera(x=_hidden_value(x) - 1)\n");
     write_file(dir / "renderer" / "camera.dd", "class Camera:\n"
                                                "    x: i32\n"
                                                "\n"
@@ -521,6 +527,18 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
                                 "    return first.x + second.x\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    std::string hidden_function_cpp_name;
+    for (const dudu::ModuleAst& unit : module.module_units) {
+        if (unit.module_path != "camera") {
+            continue;
+        }
+        for (const dudu::FunctionDecl& fn : unit.functions) {
+            if (fn.name == "_hidden_value") {
+                hidden_function_cpp_name = fn.cpp_name.empty() ? fn.name : fn.cpp_name;
+            }
+        }
+    }
+    assert(!hidden_function_cpp_name.empty());
     const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(module);
     std::map<std::filesystem::path, std::string> by_path;
     for (const dudu::CppModuleArtifact& artifact : artifacts) {
@@ -536,7 +554,7 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("dudu_runtime.hpp").find("template <typename T, typename E> struct Result") !=
            std::string::npos);
     assert(by_path.at("camera.hpp").find("#include \"dudu_runtime.hpp\"") != std::string::npos);
-    assert(by_path.at("main.cpp").find("#include \"dudu_runtime.hpp\"") != std::string::npos);
+    assert(by_path.at("main.cpp").find("#include \"main.hpp\"") != std::string::npos);
     assert(by_path.at("camera.hpp").find("template <typename T, typename E> struct Result") ==
            std::string::npos);
     assert(by_path.at("camera.cpp").find("// dudu module: camera") != std::string::npos);
@@ -544,17 +562,23 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
                .find("// dudu module: renderer.camera") != std::string::npos);
     assert(by_path.at("main.hpp").find("#include \"camera.hpp\"") != std::string::npos);
     assert(by_path.at("main.hpp").find("#include \"renderer/camera.hpp\"") != std::string::npos);
-    assert(by_path.at("main.cpp").find("#include \"camera.hpp\"") != std::string::npos);
-    assert(by_path.at("main.cpp").find("#include \"renderer/camera.hpp\"") != std::string::npos);
-    assert(by_path.at("camera.cpp").find("struct DuduCameraCamera") != std::string::npos);
+    assert(by_path.at("main.cpp").find("#include \"camera.hpp\"") == std::string::npos);
+    assert(by_path.at("main.cpp").find("#include \"renderer/camera.hpp\"") == std::string::npos);
+    assert(by_path.at("camera.cpp").find("#include \"camera.hpp\"") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
-               .find("struct DuduRendererCameraCamera") != std::string::npos);
+               .find("#include \"renderer/camera.hpp\"") != std::string::npos);
+    assert(by_path.at("camera.cpp").find("struct DuduCameraCamera") == std::string::npos);
+    assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
+               .find("struct DuduRendererCameraCamera") == std::string::npos);
     assert(by_path.at("camera.hpp").find("struct DuduCameraCamera") != std::string::npos);
+    assert(by_path.at("camera.hpp").find(hidden_function_cpp_name) == std::string::npos);
+    assert(by_path.at("camera.cpp").find(hidden_function_cpp_name) != std::string::npos);
+    assert(by_path.at("camera.cpp").find("DuduCameraCamera::value()") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.hpp")
                .find("struct DuduRendererCameraCamera") != std::string::npos);
     assert(by_path.at("camera.cpp").find("DuduCameraCamera dudu_camera_make_camera") !=
            std::string::npos);
-    assert(by_path.at("camera.cpp").find("return DuduCameraCamera{.x = x};") != std::string::npos);
+    assert(by_path.at("camera.cpp").find("return DuduCameraCamera{.x = ") != std::string::npos);
     assert(by_path.at("camera.cpp").find("return Camera{.x = x};") == std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("DuduRendererCameraCamera dudu_renderer_camera_make_camera") !=

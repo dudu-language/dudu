@@ -18,4 +18,10 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const Symbols& symbols, bool header_only = false,
                   const CppEmitOptions& options = {});
 
+void emit_public_class_method_definitions(
+    std::ostringstream& out, const ModuleAst& module,
+    const std::vector<std::string>& aliases,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
+    const CppEmitOptions& options = {});
+
 } // namespace dudu

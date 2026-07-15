@@ -599,4 +599,20 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
     }
 }
 
+void emit_public_class_method_definitions(
+    std::ostringstream& out, const ModuleAst& module,
+    const std::vector<std::string>& aliases,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
+    const CppEmitOptions& options) {
+    const std::vector<size_t> emit_order = class_emit_order(module.classes);
+    for (const size_t index : emit_order) {
+        const ClassDecl& klass = module.classes[index];
+        if (!visible_in_header(klass.visibility)) {
+            continue;
+        }
+        emit_out_of_line_methods(out, klass, emitted_name(klass, options), aliases,
+                                 function_returns, symbols, options);
+    }
+}
+
 } // namespace dudu

@@ -12,6 +12,8 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
 std::string emit_c_header(const ModuleAst& module);
 std::string emit_cpp_source(const ModuleAst& module);
 std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& options);
+std::string emit_cpp_module_implementation(const ModuleAst& module,
+                                           const CppEmitOptions& options);
 std::string emit_cpp_test_source(const ModuleAst& module, const std::string& filter = {},
                                  bool capture_output = true);
 
