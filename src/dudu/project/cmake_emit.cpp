@@ -114,6 +114,12 @@ std::vector<std::filesystem::path> generated_module_sources(const ModuleAst& mod
     return test_source ? cpp_test_module_source_paths(module) : cpp_module_source_paths(module);
 }
 
+std::vector<std::filesystem::path> generated_module_artifacts(const ModuleAst& module,
+                                                              bool test_source = false) {
+    return test_source ? cpp_test_module_artifact_paths(module)
+                       : cpp_module_artifact_paths(module);
+}
+
 std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& config,
                                                           const ProjectIndex& index) {
     std::vector<std::filesystem::path> files = index.source_files();
@@ -189,6 +195,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     const ProjectIndex index = load_cmake_project_index(config, input);
     const ModuleAst& module = index.merged_module();
     const std::vector<std::filesystem::path> generated_sources = generated_module_sources(module);
+    const std::vector<std::filesystem::path> generated_artifacts =
+        generated_module_artifacts(module);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
         << "project(" << target << " LANGUAGES C CXX)\n\n"
@@ -205,8 +213,11 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "    set(DUDU_TIMING_ARGS --timings)\n"
         << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
+    emit_generated_module_list(out, "DUDU_GENERATED_ARTIFACTS", "${DUDU_GENERATED_DIR}",
+                               generated_artifacts);
     out << "add_custom_target(" << target << "_dudu_generate\n"
-        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED_ARTIFACTS} "
+           "${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
@@ -223,6 +234,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
+    out << "target_precompile_headers(" << target
+        << " PRIVATE \"$<$<COMPILE_LANGUAGE:CXX>:${DUDU_GENERATED_DIR}/dudu_runtime.hpp>\")\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
                            config.include_dirs, &project_dir);
     emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
@@ -251,6 +264,8 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     const ModuleAst& module = index.merged_module();
     const std::vector<std::filesystem::path> generated_sources =
         generated_module_sources(module, true);
+    const std::vector<std::filesystem::path> generated_artifacts =
+        generated_module_artifacts(module, true);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
         << "project(" << target << " LANGUAGES C CXX)\n\n"
@@ -267,8 +282,11 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "    set(DUDU_TIMING_ARGS --timings)\n"
         << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
+    emit_generated_module_list(out, "DUDU_GENERATED_ARTIFACTS", "${DUDU_GENERATED_DIR}",
+                               generated_artifacts);
     out << "add_custom_target(" << target << "_dudu_generate\n"
-        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED} ${DUDU_SOURCE_STAMP}\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED_ARTIFACTS} "
+           "${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
@@ -295,6 +313,8 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
+    out << "target_precompile_headers(" << target
+        << " PRIVATE \"$<$<COMPILE_LANGUAGE:CXX>:${DUDU_GENERATED_DIR}/dudu_runtime.hpp>\")\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
                            config.include_dirs, &project_dir);
     emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",

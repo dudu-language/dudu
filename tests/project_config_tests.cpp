@@ -164,10 +164,15 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     assert(cmake.find((project / "dudu.toml").string()) != std::string::npos);
     assert(cmake.find("DEPENDS ${DUDU_EXECUTABLE}") != std::string::npos);
     assert(cmake.find("CONTENT \"$<TARGET_FILE:manifest_dep_probe>\"") != std::string::npos);
+    assert(cmake.find("DUDU_GENERATED_ARTIFACTS") != std::string::npos);
+    assert(cmake.find("target_precompile_headers(manifest_dep_probe PRIVATE") !=
+           std::string::npos);
 
     const std::string test_cmake = dudu::emit_cmake_test_project(
         config, project / "src" / "main.dd", "manifest_dep_probe_tests", "", true);
     assert(test_cmake.find("CONTENT \"$<TARGET_FILE:manifest_dep_probe_tests>\"") !=
+           std::string::npos);
+    assert(test_cmake.find("target_precompile_headers(manifest_dep_probe_tests PRIVATE") !=
            std::string::npos);
 }
 
