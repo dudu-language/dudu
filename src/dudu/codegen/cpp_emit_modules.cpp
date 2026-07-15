@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
+#include "dudu/codegen/cpp_module_dependencies.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/file_io.hpp"
@@ -283,13 +284,18 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
 std::vector<std::string>
 module_include_paths(const ModuleAst& unit,
                      const std::map<std::string, const ModuleAst*>& modules,
-                     bool include_macro_host_modules) {
+                     bool include_macro_host_modules, bool public_dependencies,
+                     const std::vector<bool>& public_imports) {
     std::set<std::string> paths;
-    for (const ImportDecl& import : unit.imports) {
+    for (size_t i = 0; i < unit.imports.size(); ++i) {
+        const ImportDecl& import = unit.imports[i];
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
         if (import.module_path.empty() || import.module_path == unit.module_path) {
+            continue;
+        }
+        if (public_imports[i] != public_dependencies) {
             continue;
         }
         const std::string resolved = resolved_module_path_for_import(unit, import);
@@ -303,16 +309,38 @@ module_include_paths(const ModuleAst& unit,
     return {paths.begin(), paths.end()};
 }
 
-void emit_module_includes(std::ostringstream& out, const ModuleAst& unit,
-                          const std::map<std::string, const ModuleAst*>& modules,
-                          bool include_macro_host_modules) {
-    out << "#include \"dudu_runtime.hpp\"\n";
-    emit_native_includes(out, unit);
+ModuleAst import_subset(const ModuleAst& unit, bool public_dependencies,
+                        const std::vector<bool>& public_imports) {
+    ModuleAst subset;
+    for (size_t i = 0; i < unit.imports.size(); ++i) {
+        if (public_imports[i] == public_dependencies) {
+            subset.imports.push_back(unit.imports[i]);
+        }
+    }
+    return subset;
+}
+
+void emit_dependency_includes(std::ostringstream& out, const ModuleAst& unit,
+                              const std::map<std::string, const ModuleAst*>& modules,
+                              bool include_macro_host_modules, bool public_dependencies) {
+    const std::vector<bool> public_imports = cpp_public_import_mask(unit);
+    emit_native_includes(out, import_subset(unit, public_dependencies, public_imports));
     const std::vector<std::string> includes =
-        module_include_paths(unit, modules, include_macro_host_modules);
+        module_include_paths(unit, modules, include_macro_host_modules, public_dependencies,
+                             public_imports);
     for (const std::string& path : includes) {
         out << "#include \"" << path << "\"\n";
     }
+    if (!includes.empty()) {
+        out << '\n';
+    }
+}
+
+void emit_module_header_includes(std::ostringstream& out, const ModuleAst& unit,
+                                 const std::map<std::string, const ModuleAst*>& modules,
+                                 bool include_macro_host_modules) {
+    out << "#include \"dudu_runtime.hpp\"\n";
+    emit_dependency_includes(out, unit, modules, include_macro_host_modules, true);
     out << '\n';
 }
 
@@ -350,7 +378,7 @@ std::string header_with_module_includes(const ModuleAst& unit,
                                         bool test_source = false, bool public_abi = false,
                                         bool include_macro_host_modules = false) {
     std::ostringstream out;
-    emit_module_includes(out, unit, modules, include_macro_host_modules);
+    emit_module_header_includes(out, unit, modules, include_macro_host_modules);
     out << emit_cpp_header(
         unit, module_emit_options(unit, modules, test_source, public_abi,
                                   include_macro_host_modules));
@@ -366,8 +394,9 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
         unit, modules, test_source, public_abi, include_macro_host_modules);
     emit_generated_banner(out);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n"
-        << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n"
-        << emit_cpp_module_implementation(unit, options);
+        << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n";
+    emit_dependency_includes(out, unit, modules, include_macro_host_modules, false);
+    out << emit_cpp_module_implementation(unit, options);
     if (!test_source) {
         emit_entry_point(out, unit, options);
     }
