@@ -251,8 +251,11 @@ if(DUDU_BUILD_TESTS)
     dudu_add_test(dudu_language_server_workspace_tests
         tests/language_server_workspace_tests.cpp dudu_frontend)
     dudu_add_test(dudu_member_type_frontend_tests tests/member_type_frontend_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_module_frontend_tests tests/module_frontend_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_module_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_module_loader_tests tests/module_loader_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_project_index_module_tests tests/project_index_module_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_cpp_module_artifact_tests tests/cpp_module_artifact_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_project_index_module_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_type_inference_tests tests/type_inference_tests.cpp dudu_frontend)
     dudu_add_test(dudu_native_scan_basics_tests tests/native_scan_basics_tests.cpp dudu_frontend)
