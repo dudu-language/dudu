@@ -142,10 +142,10 @@ std::string normalize_cpp_primitive_type(std::string type) {
     return type;
 }
 
-TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
+TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type, bool collapse_string_alias) {
     TypeRef out = type;
     for (TypeRef& child : out.children) {
-        child = normalize_cpp_primitive_type_ref(child);
+        child = normalize_cpp_primitive_type_ref(child, collapse_string_alias);
     }
 
     if (out.kind == TypeKind::Named || out.kind == TypeKind::Qualified) {
@@ -162,7 +162,8 @@ TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
             wrapper.has_value() && out.children.size() == 1) {
             return wrapped_type_ref(*wrapper, out.children.front(), out.location);
         }
-        if ((out.name == "basic_string" || out.name == "std.basic_string" ||
+        if (collapse_string_alias &&
+            (out.name == "basic_string" || out.name == "std.basic_string" ||
              out.name == "std::basic_string") &&
             !out.children.empty() && type_ref_is_native_char(out.children.front())) {
             return named_type_ref("std.string", out.location);
@@ -203,9 +204,14 @@ TypeRef collapse_cpp_references(TypeRef type) {
 
 } // namespace
 
+TypeRef normalize_cpp_type_structure_ref(const TypeRef& type) {
+    return collapse_cpp_references(
+        normalize_cpp_primitive_type_ref(normalize_tuple_element(type), false));
+}
+
 TypeRef normalize_cpp_type_artifacts_ref(const TypeRef& type) {
     return collapse_cpp_references(
-        normalize_cpp_primitive_type_ref(normalize_tuple_element(type)));
+        normalize_cpp_primitive_type_ref(normalize_tuple_element(type), true));
 }
 
 bool native_associated_type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {

@@ -760,6 +760,40 @@ void test_cpp_module_native_imports_stay_local() {
            std::string::npos);
 }
 
+void test_imported_dudu_api_carries_native_type_support() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_imported_native_type_support_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "vendor");
+    write_file(dir / "vendor" / "worker.hpp", "namespace worker_api {\n"
+                                              "class Worker {\n"
+                                              "public:\n"
+                                              "    void join() {}\n"
+                                              "};\n"
+                                              "inline int unrelated() { return 1; }\n"
+                                              "} // namespace worker_api\n");
+    write_file(dir / "workers.dd", "from cpp.path import vendor/worker.hpp\n"
+                                   "\n"
+                                   "def make_workers() -> list[worker_api.Worker]:\n"
+                                   "    return []\n");
+    write_file(dir / "main.dd", "from workers import make_workers\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    workers = make_workers()\n"
+                                "    workers[0].join()\n"
+                                "    return 0\n");
+
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "main.dd";
+    options.source_dir = dir;
+    options.force_module_tree = true;
+    options.include_native_headers = true;
+    options.check_semantics = true;
+    options.semantic_options = {.check_bodies = true};
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.modules().size() == 2);
+}
+
 void test_cpp_module_artifacts_use_resolved_dependency_paths() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_resolved_dependency_test";
@@ -812,6 +846,7 @@ int main() {
         test_cpp_module_artifacts_preserve_module_boundaries();
         test_cpp_runtime_support_is_feature_gated();
         test_cpp_module_native_imports_stay_local();
+        test_imported_dudu_api_carries_native_type_support();
         test_cpp_module_artifacts_use_resolved_dependency_paths();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";

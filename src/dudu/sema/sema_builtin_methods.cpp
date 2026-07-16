@@ -76,12 +76,12 @@ void set_param_types(FunctionSignature& signature, std::initializer_list<TypeRef
 
 TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
-    type = normalize_cpp_type_artifacts_ref(type);
+    type = normalize_cpp_type_structure_ref(type);
     while (true) {
         if (type.kind == TypeKind::Shaped && !type.children.empty()) {
             type = type.children.front();
             type = resolve_alias_ref(symbols, std::move(type));
-            type = normalize_cpp_type_artifacts_ref(type);
+            type = normalize_cpp_type_structure_ref(type);
             continue;
         }
         if (const auto inner = unary_type_child_ref(
@@ -89,7 +89,7 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
                        TypeKind::Storage, TypeKind::Shared, TypeKind::Device})) {
             type = *inner;
             type = resolve_alias_ref(symbols, std::move(type));
-            type = normalize_cpp_type_artifacts_ref(type);
+            type = normalize_cpp_type_structure_ref(type);
             continue;
         }
         break;

@@ -61,6 +61,8 @@ def main() -> i32:
 
     bob: std.string = std.string("bob")
     ada: std.string = std.string("ada")
+    if bob.size() != 3:
+        return 20
     scores: std.map[std.string, i32]
     scores[bob] = 20
     scores[ada] = 22

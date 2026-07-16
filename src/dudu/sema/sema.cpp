@@ -6,6 +6,7 @@
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_constexpr.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_native_type_support.hpp"
 #include "dudu/sema/sema_scan.hpp"
 #include "dudu/sema/unsupported.hpp"
 
@@ -20,6 +21,9 @@ void analyze_module_in_tree(const ModuleAst& module, const ModuleAst* module_tre
                             SemanticOptions options) {
     Symbols symbols = collect_symbols(module);
     symbols.module_tree = module_tree;
+    if (module_tree != nullptr) {
+        add_imported_native_type_support(symbols, module, *module_tree);
+    }
     check_build_flags(module);
     check_naming(module);
     check_unsupported_python(module);
@@ -35,6 +39,9 @@ std::vector<CompileError> analyze_module_in_tree_collecting(const ModuleAst& mod
                                                             SemanticOptions options) {
     Symbols symbols = collect_symbols(module);
     symbols.module_tree = module_tree;
+    if (module_tree != nullptr) {
+        add_imported_native_type_support(symbols, module, *module_tree);
+    }
     try {
         check_build_flags(module);
         check_naming(module);
