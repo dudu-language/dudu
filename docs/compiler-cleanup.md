@@ -437,15 +437,19 @@ Outcome:
   project-index graph/invalidation, and generated-module-artifact executables
   between 255 and 392 lines; only the project-index owner retains the
   repository-root fixture definition
-- the default CTest inventory is now 46 targets, and adding a normal C++ test
+- split the remaining 647- to 702-line mixed type drivers into core type
+  compatibility, native template matching, member substitution, member lookup,
+  expression/decorator shape, and type/array-shape executables between 236 and
+  482 lines
+- the default CTest inventory is now 49 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 46 fast test executables,
+The latest ownership-cleanup milestone passes all 49 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 51.55 seconds with 622,488 KiB peak RSS. Representative frontend and
+matrix in 52.97 seconds with 623,216 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.

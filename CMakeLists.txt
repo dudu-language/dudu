@@ -210,8 +210,10 @@ if(DUDU_BUILD_TESTS)
     dudu_add_test(dudu_ast_statement_tests tests/ast_statement_tests.cpp dudu_frontend)
     dudu_add_test(dudu_ast_declaration_query_tests
         tests/ast_declaration_query_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_ast_type_frontend_tests tests/ast_type_frontend_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_ast_shape_frontend_tests tests/ast_shape_frontend_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_ast_type_core_tests tests/ast_type_core_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_template_type_tests tests/native_template_type_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_ast_expression_shape_tests tests/ast_expression_shape_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_ast_type_shape_tests tests/ast_type_shape_tests.cpp dudu_frontend)
     dudu_add_test(dudu_language_server_diagnostics_tests
         tests/language_server_diagnostics_tests.cpp dudu_frontend)
     dudu_add_test(dudu_language_server_completion_inlay_tests
@@ -250,7 +252,9 @@ if(DUDU_BUILD_TESTS)
         tests/language_server_text_sync_tests.cpp dudu_frontend)
     dudu_add_test(dudu_language_server_workspace_tests
         tests/language_server_workspace_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_member_type_frontend_tests tests/member_type_frontend_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_member_type_substitution_tests
+        tests/member_type_substitution_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_member_type_lookup_tests tests/member_type_lookup_tests.cpp dudu_frontend)
     dudu_add_test(dudu_module_loader_tests tests/module_loader_tests.cpp dudu_frontend)
     dudu_add_test(dudu_project_index_module_tests tests/project_index_module_tests.cpp dudu_frontend)
     dudu_add_test(dudu_cpp_module_artifact_tests tests/cpp_module_artifact_tests.cpp dudu_frontend)

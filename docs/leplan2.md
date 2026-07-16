@@ -391,8 +391,10 @@ statement-syntax, and declaration/query ownership. The default fast CTest
 frontend driver is now syntax/fixture, diagnostics/formatting, and
 semantics/codegen ownership, with manifest behavior consolidated into the
 project-config suite. Module loading/import identity, project indexing, and
-generated module artifacts also have independent test owners. The default
-fast CTest inventory is 46 ownership-specific targets.
+generated module artifacts also have independent test owners. Core type
+compatibility, native templates, member substitution/lookup, expression shape,
+and type/array shape now have bounded independent fixtures as well. The
+default fast CTest inventory is 49 ownership-specific targets.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
