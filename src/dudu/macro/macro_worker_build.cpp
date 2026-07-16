@@ -10,7 +10,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <fstream>
 #include <map>
 #include <optional>
 #include <set>
@@ -74,35 +73,30 @@ std::vector<std::string> dependency_closure(const ModuleAst& module, const Plan&
     return {selected.begin(), selected.end()};
 }
 
-std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, const Plan& plan,
-                           const WorkerBuildOptions& options) {
-    StableHash hash;
-    hash.add("dudu-macro-worker-binary-v3-separate-modules");
-    hash.add(std::to_string(protocol::protocol_version));
-    hash.add(std::to_string(protocol::schema_version));
+void hash_plan(StableHash& hash, const Plan& plan) {
+    for (const auto& [identity, definition] : plan.definitions) {
+        hash.add(identity);
+        hash.add(std::to_string(static_cast<int>(definition.accepted_kind)));
+    }
+}
+
+void hash_worker_toolchain(StableHash& hash, const WorkerBuildOptions& options) {
     hash.add(options.package);
     hash.add(options.project_root.generic_string());
     hash.add(options.compiler);
     hash.add(options.cpp_standard);
     hash.add(options.toolchain_identity);
     hash.add(options.dudu_toolchain_identity);
-    for (const auto& [identity, definition] : plan.definitions) {
-        hash.add(identity);
-        hash.add(std::to_string(static_cast<int>(definition.accepted_kind)));
-    }
-    for (const CppModuleArtifact& artifact : artifacts) {
-        hash.add(artifact.path.generic_string());
-        hash.add(artifact.content);
-    }
+}
+
+void hash_worker_inputs(StableHash& hash, const WorkerBuildOptions& options) {
     const auto add_paths = [&](const auto& values) {
-        for (const auto& value : values) {
+        for (const auto& value : values)
             hash.add(std::filesystem::path(value).generic_string());
-        }
     };
     const auto add_strings = [&](const auto& values) {
-        for (const auto& value : values) {
+        for (const auto& value : values)
             hash.add(value);
-        }
     };
     add_paths(options.runtime_include_dirs);
     add_paths(options.include_dirs);
@@ -117,6 +111,21 @@ std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, cons
     add_strings(options.linker_flags);
     add_strings(options.capabilities);
     add_strings(options.non_cacheable_macros);
+}
+
+std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, const Plan& plan,
+                           const WorkerBuildOptions& options) {
+    StableHash hash;
+    hash.add("dudu-macro-worker-binary-v3-separate-modules");
+    hash.add(std::to_string(protocol::protocol_version));
+    hash.add(std::to_string(protocol::schema_version));
+    hash_worker_toolchain(hash, options);
+    hash_plan(hash, plan);
+    for (const CppModuleArtifact& artifact : artifacts) {
+        hash.add(artifact.path.generic_string());
+        hash.add(artifact.content);
+    }
+    hash_worker_inputs(hash, options);
     return hash.finish();
 }
 
@@ -128,12 +137,7 @@ std::optional<std::string> source_identity(const ModuleAst& module,
     hash.add("dudu-macro-worker-source-v2-separate-modules");
     hash.add(std::to_string(protocol::protocol_version));
     hash.add(std::to_string(protocol::schema_version));
-    hash.add(options.package);
-    hash.add(options.project_root.generic_string());
-    hash.add(options.compiler);
-    hash.add(options.cpp_standard);
-    hash.add(options.toolchain_identity);
-    hash.add(options.dudu_toolchain_identity);
+    hash_worker_toolchain(hash, options);
     for (const std::string& module_path : selected) {
         const ModuleAst& unit = *modules.at(module_path);
         if (unit.source_digest.empty())
@@ -146,31 +150,8 @@ std::optional<std::string> source_identity(const ModuleAst& module,
             hash.add(value);
         }
     }
-    for (const auto& [identity, definition] : plan.definitions) {
-        hash.add(identity);
-        hash.add(std::to_string(static_cast<int>(definition.accepted_kind)));
-    }
-    const auto add_paths = [&](const auto& values) {
-        for (const auto& value : values)
-            hash.add(std::filesystem::path(value).generic_string());
-    };
-    const auto add_strings = [&](const auto& values) {
-        for (const auto& value : values)
-            hash.add(value);
-    };
-    add_paths(options.runtime_include_dirs);
-    add_paths(options.include_dirs);
-    add_paths(options.library_dirs);
-    add_paths(options.cpp_sources);
-    hash.add(options.runtime_library.generic_string());
-    hash.add(options.sdk_bridge_source.generic_string());
-    hash.add(try_read_text_file(options.sdk_bridge_source).value_or(""));
-    add_strings(options.defines);
-    add_strings(options.compiler_flags);
-    add_strings(options.libraries);
-    add_strings(options.linker_flags);
-    add_strings(options.capabilities);
-    add_strings(options.non_cacheable_macros);
+    hash_plan(hash, plan);
+    hash_worker_inputs(hash, options);
     return hash.finish();
 }
 
@@ -184,14 +165,12 @@ std::optional<std::string> read_worker_lookup(const std::filesystem::path& path)
     return identity.empty() ? std::nullopt : std::optional<std::string>{std::move(identity)};
 }
 
-void write_text(const std::filesystem::path& path, const std::string& text);
-
 void write_worker_lookup(const std::filesystem::path& path, const std::string& identity) {
     std::filesystem::create_directories(path.parent_path());
     const std::filesystem::path temporary =
         path.string() + ".tmp." + std::to_string(::getpid()) + "." +
         std::to_string(staging_counter.fetch_add(1, std::memory_order_relaxed));
-    write_text(temporary, identity + "\n");
+    write_required_text_file(temporary, identity + "\n");
     std::error_code error;
     std::filesystem::rename(temporary, path, error);
     if (error) {
@@ -199,15 +178,6 @@ void write_worker_lookup(const std::filesystem::path& path, const std::string& i
         if (!std::filesystem::is_regular_file(path))
             throw std::runtime_error("could not publish macro worker lookup: " + error.message());
     }
-}
-
-void write_text(const std::filesystem::path& path, const std::string& text) {
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream output(path);
-    if (!output) {
-        throw std::runtime_error("could not write macro worker source: " + path.string());
-    }
-    output << text;
 }
 
 bool is_sdk_artifact(const CppModuleArtifact& artifact) {
@@ -281,7 +251,7 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
             module_headers.push_back(artifact.path.generic_string());
         }
     }
-    write_text(
+    write_required_text_file(
         staging / "worker.cpp",
         generate_worker_source(plan, {.package = options.package,
                                       .binary_identity = identity,

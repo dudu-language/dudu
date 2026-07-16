@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 namespace dudu {
@@ -39,6 +40,20 @@ std::string read_required_text_file(const std::filesystem::path& path) {
         return std::move(*text);
     }
     throw std::runtime_error("could not open " + path.string());
+}
+
+void write_required_text_file(const std::filesystem::path& path, std::string_view text) {
+    if (!path.parent_path().empty()) {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file) {
+        throw std::runtime_error("could not write " + path.string());
+    }
+    file.write(text.data(), static_cast<std::streamsize>(text.size()));
+    if (!file) {
+        throw std::runtime_error("failed writing " + path.string());
+    }
 }
 
 std::string file_time_stamp(std::filesystem::file_time_type time) {

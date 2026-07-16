@@ -319,6 +319,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     std::vector<std::string> cache_keys;
     requests.reserve(plan.invocations.size());
     cache_keys.reserve(plan.invocations.size());
+    const std::vector<p::AttributeArgument> module_compile_values = compile_values(module);
     for (std::size_t index = 0; index < plan.invocations.size(); ++index) {
         const Invocation& invocation = plan.invocations[index];
         if (invocation.macro == nullptr || invocation.decorator == nullptr)
@@ -330,7 +331,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
         requests.push_back({.macro_name = invocation.macro->identity,
                             .declaration = declarations[index],
                             .invocation = to_protocol(invocation.decorator->expr.range),
-                            .compile_values = compile_values(module)});
+                            .compile_values = module_compile_values});
         const Clock::time_point cache_key_start = Clock::now();
         cache_keys.push_back(expansion_cache_key(binary.identity, requests.back()));
         report.timings.cache_key_ns += elapsed_ns(cache_key_start);

@@ -369,6 +369,23 @@ RSS.
 - keep source fallback locations limited to diagnostics for declarations
   generated without their own source range
 
+Outcome:
+
+- kept generated protocol and SDK conversion code as the sole wire-format
+  boundary; no handwritten shadow conversion path was introduced
+- consolidated worker source and SDK artifact writes onto shared
+  compiler-internal file I/O while keeping capability-checked macro file access
+  separate
+- made source and binary worker identities share canonical plan, toolchain, and
+  build-input hashing without changing the existing hash order or cache keys
+- replaced independent SDK and worker compilation thread loops with one bounded
+  command runner that owns status collection, compiler logs, and failures
+- computes module compile values once per expansion batch instead of reparsing
+  the same build values for every macro invocation
+- retained atomic temporary-and-rename publication independently for worker
+  lookups, worker binaries, SDK entries, and expansion caches because those are
+  distinct cache policies rather than duplicate file-writing helpers
+
 Validation: protocol, syntax, worker, AST bridge, package, expansion, and SDK
 compile tests.
 

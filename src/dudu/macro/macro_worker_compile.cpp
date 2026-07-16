@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <fstream>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -25,13 +24,39 @@ std::uint64_t elapsed_ns(Clock::time_point start) {
         std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start).count());
 }
 
-void write_text(const std::filesystem::path& path, const std::string& content) {
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream output(path, std::ios::binary);
-    if (!output) {
-        throw std::runtime_error("could not write macro SDK source: " + path.string());
+struct CommandUnit {
+    std::string command;
+    std::filesystem::path log;
+    std::string failure;
+};
+
+void run_commands_parallel(const std::vector<CommandUnit>& units) {
+    std::vector<int> statuses(units.size(), 0);
+    std::atomic<std::size_t> next{0};
+    const std::size_t worker_count =
+        std::min<std::size_t>(std::max(1U, std::thread::hardware_concurrency()), units.size());
+    std::vector<std::thread> workers;
+    workers.reserve(worker_count);
+    for (std::size_t worker = 0; worker < worker_count; ++worker) {
+        workers.emplace_back([&] {
+            while (true) {
+                const std::size_t index = next.fetch_add(1, std::memory_order_relaxed);
+                if (index >= units.size())
+                    return;
+                statuses[index] = run_shell_command(units[index].command, units[index].log);
+            }
+        });
     }
-    output << content;
+    for (std::thread& worker : workers)
+        worker.join();
+
+    for (std::size_t index = 0; index < units.size(); ++index) {
+        if (statuses[index] == 0)
+            continue;
+        const std::optional<std::string> detail = try_read_text_file(units[index].log);
+        throw std::runtime_error(units[index].failure + "\ncommand: " + units[index].command +
+                                 "\n" + detail.value_or("native compiler failed"));
+    }
 }
 
 const CppModuleArtifact& require_artifact(const std::vector<CppModuleArtifact>& artifacts,
@@ -123,7 +148,7 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
          {std::filesystem::path("dudu_runtime.hpp"), std::filesystem::path("dudu/ast.hpp"),
           std::filesystem::path("dudu/ast.cpp")}) {
         const CppModuleArtifact& artifact = require_artifact(artifacts, path);
-        write_text(staging / path, artifact.content);
+        write_required_text_file(staging / path, artifact.content);
     }
     const std::optional<std::string> bridge_source = try_read_text_file(options.sdk_bridge_source);
     if (!bridge_source) {
@@ -131,50 +156,31 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
         throw std::runtime_error("could not read macro SDK bridge source: " +
                                  options.sdk_bridge_source.string());
     }
-    write_text(staging / "macro_sdk_bridge_generated.cpp", *bridge_source);
-    write_text(staging / "dudu_macro_sdk.hpp",
-               "#include \"dudu/macro/macro_capabilities.hpp\"\n"
-               "#include \"dudu/macro/macro_sdk_bridge_generated.hpp\"\n"
-               "#include \"dudu/macro/macro_worker_runtime.hpp\"\n"
-               "#include \"dudu/ast.hpp\"\n");
+    write_required_text_file(staging / "macro_sdk_bridge_generated.cpp", *bridge_source);
+    write_required_text_file(staging / "dudu_macro_sdk.hpp",
+                             "#include \"dudu/macro/macro_capabilities.hpp\"\n"
+                             "#include \"dudu/macro/macro_sdk_bridge_generated.hpp\"\n"
+                             "#include \"dudu/macro/macro_worker_runtime.hpp\"\n"
+                             "#include \"dudu/ast.hpp\"\n");
 
-    struct SdkUnit {
-        std::string command;
-        std::filesystem::path log;
-        std::string description;
-    };
-    std::vector<SdkUnit> units = {
+    const std::vector<CommandUnit> units = {
         {.command = compile_prefix(options, staging, "-O2") +
                     " -include dudu/macro/macro_capabilities.hpp -c " +
                     shell_quote_path(staging / "dudu/ast.cpp") + " -o " +
                     shell_quote_path(staging / "dudu_ast.o"),
          .log = staging / "ast.log",
-         .description = "macro SDK"},
+         .failure = "could not compile macro SDK"},
         {.command = compile_prefix(options, staging, "-O2") +
                     " -include dudu/macro/macro_capabilities.hpp -c " +
                     shell_quote_path(staging / "macro_sdk_bridge_generated.cpp") + " -o " +
                     shell_quote_path(staging / "dudu_sdk_bridge.o"),
          .log = staging / "bridge.log",
-         .description = "macro SDK bridge"}};
-    std::vector<int> statuses(units.size(), 0);
-    std::vector<std::thread> workers;
-    workers.reserve(units.size());
-    for (std::size_t index = 0; index < units.size(); ++index) {
-        workers.emplace_back(
-            [&, index] { statuses[index] = run_shell_command(units[index].command, units[index].log); });
-    }
-    for (std::thread& worker : workers) {
-        worker.join();
-    }
-    for (std::size_t index = 0; index < units.size(); ++index) {
-        if (statuses[index] == 0) {
-            continue;
-        }
-        const std::optional<std::string> detail = try_read_text_file(units[index].log);
+         .failure = "could not compile macro SDK bridge"}};
+    try {
+        run_commands_parallel(units);
+    } catch (...) {
         std::filesystem::remove_all(staging);
-        throw std::runtime_error("could not compile " + units[index].description +
-                                 "\ncommand: " + units[index].command + "\n" +
-                                 detail.value_or(units[index].description + " compiler failed"));
+        throw;
     }
 
     std::error_code error;
@@ -254,43 +260,18 @@ std::vector<CompileUnit> compile_units(const std::filesystem::path& dir,
 void compile_units_parallel(const std::filesystem::path& dir, const std::filesystem::path& sdk,
                             const WorkerBuildOptions& options,
                             const std::vector<CompileUnit>& units) {
-    std::vector<int> statuses(units.size(), 0);
-    std::vector<std::string> commands(units.size());
-    std::atomic<std::size_t> next{0};
-    const unsigned available = std::max(1U, std::thread::hardware_concurrency());
-    const std::size_t worker_count = std::min<std::size_t>(available, units.size());
-    std::vector<std::thread> workers;
-    workers.reserve(worker_count);
-    for (std::size_t worker = 0; worker < worker_count; ++worker) {
-        workers.emplace_back([&] {
-            while (true) {
-                const std::size_t index = next.fetch_add(1, std::memory_order_relaxed);
-                if (index >= units.size()) {
-                    return;
-                }
-                const CompileUnit& unit = units[index];
-                commands[index] = compile_prefix(options, dir, unit.optimization) +
-                                  " -I" + shell_quote_path(sdk) + " -include " +
-                                  shell_quote_path(sdk / "dudu_macro_sdk.hpp") + " -c " +
-                                  shell_quote_path(unit.source) + " -o " +
-                                  shell_quote_path(unit.object);
-                statuses[index] = run_shell_command(commands[index], unit.log);
-            }
-        });
+    std::vector<CommandUnit> commands;
+    commands.reserve(units.size());
+    for (const CompileUnit& unit : units) {
+        commands.push_back(
+            {.command = compile_prefix(options, dir, unit.optimization) +
+                        " -I" + shell_quote_path(sdk) + " -include " +
+                        shell_quote_path(sdk / "dudu_macro_sdk.hpp") + " -c " +
+                        shell_quote_path(unit.source) + " -o " + shell_quote_path(unit.object),
+             .log = unit.log,
+             .failure = "could not compile macro worker source"});
     }
-    for (std::thread& worker : workers) {
-        worker.join();
-    }
-
-    for (std::size_t index = 0; index < units.size(); ++index) {
-        if (statuses[index] == 0) {
-            continue;
-        }
-        const std::optional<std::string> detail = try_read_text_file(units[index].log);
-        throw std::runtime_error(
-            "could not compile macro worker source\ncommand: " + commands[index] + "\n" +
-            detail.value_or("macro worker compiler failed"));
-    }
+    run_commands_parallel(commands);
 }
 
 void link_worker(const std::filesystem::path& dir, const std::filesystem::path& sdk,

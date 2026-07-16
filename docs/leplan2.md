@@ -370,6 +370,13 @@ and project-relative path policy remain separate. Root and named targets share
 one native-build entry parser, and always-constant or renaming helpers are
 removed instead of retained as compatibility surface.
 
+Macro worker ownership is explicit as well. Source and binary identities share
+one canonical hashing path, worker and SDK artifact generation use shared
+compiler-internal file I/O, and native compile commands use one bounded
+parallel runner. Generated protocol conversion remains generated,
+capability-scoped macro I/O remains isolated from compiler file access, and
+atomic publication remains local to each cache policy.
+
 The semantic and native API audit removes unreleased aliases rather than
 preserving them. Expression presence, decorator string literals, receiver
 class lookup, and native metadata merging use their canonical structured
