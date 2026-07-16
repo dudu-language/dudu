@@ -1,8 +1,5 @@
 #include "dudu/lsp/language_server.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
-#include "dudu/core/ast_type.hpp"
-#include "dudu/core/source.hpp"
 #include "dudu/core/version.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/lsp/language_server_code_actions.hpp"
@@ -12,35 +9,26 @@
 #include "dudu/lsp/language_server_hover.hpp"
 #include "dudu/lsp/language_server_inlay_hints.hpp"
 #include "dudu/lsp/language_server_json.hpp"
-#include "dudu/lsp/language_server_local_context.hpp"
-#include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_semantic_token_wire.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbol_results.hpp"
-#include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/lsp/language_server_text_sync.hpp"
+#include "dudu/lsp/language_server_transport.hpp"
 #include "dudu/lsp/language_server_types.hpp"
 #include "dudu/lsp/language_server_workspace.hpp"
-#include "dudu/native/native_build.hpp"
 #include "dudu/parser/parser.hpp"
-#include "dudu/sema/sema.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <condition_variable>
-#include <cstdio>
-#include <cstdlib>
+#include <exception>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <map>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -53,7 +41,7 @@ namespace {
 class LanguageServer {
   public:
     LanguageServer(std::istream& in, std::ostream& out, std::ostream& err)
-        : in_(in), out_(out), err_(err) {
+        : transport_(in, out), err_(err) {
         diagnostics_worker_ = std::thread([this] { diagnostics_worker_loop(); });
     }
 
@@ -69,7 +57,7 @@ class LanguageServer {
     }
 
     int run() {
-        while (std::optional<std::string> body = read_message()) {
+        while (std::optional<std::string> body = transport_.read_message()) {
             try {
                 handle_message(*body);
             } catch (const std::exception& error) {
@@ -83,8 +71,7 @@ class LanguageServer {
     }
 
   private:
-    std::istream& in_;
-    std::ostream& out_;
+    LspTransport transport_;
     std::ostream& err_;
     std::map<std::string, Document> documents_;
     size_t documents_revision_ = 0;
@@ -99,87 +86,12 @@ class LanguageServer {
         std::map<std::filesystem::path, std::string> source_overrides;
         size_t revision = 0;
     };
-    mutable std::mutex output_mutex_;
     mutable std::mutex diagnostics_mutex_;
     std::condition_variable diagnostics_cv_;
     std::map<std::string, DiagnosticsJob> pending_diagnostics_;
     std::map<std::string, size_t> native_ready_revisions_;
     bool diagnostics_stopping_ = false;
-    size_t server_request_sequence_ = 0;
     std::thread diagnostics_worker_;
-
-    std::optional<std::string> read_message() {
-        std::string line;
-        size_t content_length = 0;
-        while (std::getline(in_, line)) {
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
-            }
-            if (line.empty()) {
-                break;
-            }
-            constexpr std::string_view header = "Content-Length:";
-            if (line.rfind(header, 0) == 0) {
-                content_length = static_cast<size_t>(std::stoul(line.substr(header.size())));
-            }
-        }
-        if (content_length == 0) {
-            return std::nullopt;
-        }
-        std::string body(content_length, '\0');
-        in_.read(body.data(), static_cast<std::streamsize>(body.size()));
-        if (in_.gcount() != static_cast<std::streamsize>(body.size())) {
-            return std::nullopt;
-        }
-        return body;
-    }
-
-    void write_message(const std::string& body) {
-        const std::lock_guard lock(output_mutex_);
-        out_ << "Content-Length: " << body.size() << "\r\n\r\n" << body;
-        out_.flush();
-    }
-
-    void respond(const Json& id, const std::string& result) {
-        std::ostringstream body;
-        body << "{\"jsonrpc\":\"2.0\",\"id\":" << id_json(id) << ",\"result\":" << result << "}";
-        write_message(body.str());
-    }
-
-    void respond_error(const Json& id, int code, const std::string& message) {
-        std::ostringstream body;
-        body << "{\"jsonrpc\":\"2.0\",\"id\":" << id_json(id) << ",\"error\":{\"code\":" << code
-             << ",\"message\":\"" << json_escape(message) << "\"}}";
-        write_message(body.str());
-    }
-
-    void notify(std::string_view method, const std::string& params) {
-        std::ostringstream body;
-        body << "{\"jsonrpc\":\"2.0\",\"method\":\"" << method << "\",\"params\":" << params << "}";
-        write_message(body.str());
-    }
-
-    void request_client_refresh(std::string_view method) {
-        std::ostringstream body;
-        body << "{\"jsonrpc\":\"2.0\",\"id\":\"dudu-refresh-" << ++server_request_sequence_
-             << "\",\"method\":\"" << method << "\",\"params\":null}";
-        write_message(body.str());
-    }
-
-    static std::string id_json(const Json& id) {
-        if (id.is_null()) {
-            return "null";
-        }
-        if (const std::string* text = id.string()) {
-            return "\"" + json_escape(*text) + "\"";
-        }
-        if (const double* number = std::get_if<double>(&id.value)) {
-            std::ostringstream out;
-            out << static_cast<long long>(*number);
-            return out.str();
-        }
-        return "null";
-    }
 
     void handle_message(const std::string& body) {
         const Json message = JsonParser(body).parse();
@@ -195,12 +107,12 @@ class LanguageServer {
             if (method == "initialize") {
                 configure_initialize(params);
                 if (id != nullptr) {
-                    respond(*id, initialize_result());
+                    transport_.respond(*id, initialize_result());
                 }
             } else if (method == "shutdown") {
                 shutdown_ = true;
                 if (id != nullptr) {
-                    respond(*id, "null");
+                    transport_.respond(*id, "null");
                 }
             } else if (method == "exit") {
                 exit_ = true;
@@ -212,66 +124,66 @@ class LanguageServer {
                 did_save(params);
             } else if (method == "textDocument/formatting") {
                 if (id != nullptr) {
-                    respond(*id, formatting_result(params));
+                    transport_.respond(*id, formatting_result(params));
                 }
             } else if (method == "textDocument/documentSymbol") {
                 if (id != nullptr) {
-                    respond(*id, document_symbol_result(params));
+                    transport_.respond(*id, document_symbol_result(params));
                 }
             } else if (method == "textDocument/semanticTokens/full") {
                 if (id != nullptr) {
-                    respond(*id, semantic_tokens_result(params));
+                    transport_.respond(*id, semantic_tokens_result(params));
                 }
             } else if (method == "textDocument/definition") {
                 if (id != nullptr) {
-                    respond(*id, definition_result(params));
+                    transport_.respond(*id, definition_result(params));
                 }
             } else if (method == "textDocument/references") {
                 if (id != nullptr) {
-                    respond(*id, references_result(params));
+                    transport_.respond(*id, references_result(params));
                 }
             } else if (method == "textDocument/prepareRename") {
                 if (id != nullptr) {
-                    respond(*id, prepare_rename_result(params));
+                    transport_.respond(*id, prepare_rename_result(params));
                 }
             } else if (method == "textDocument/rename") {
                 if (id != nullptr) {
-                    respond(*id, rename_result(params));
+                    transport_.respond(*id, rename_result(params));
                 }
             } else if (method == "textDocument/codeAction") {
                 if (id != nullptr) {
-                    respond(*id, code_action_result(params));
+                    transport_.respond(*id, code_action_result(params));
                 }
             } else if (method == "textDocument/hover") {
                 if (id != nullptr) {
-                    respond(*id, hover_result(params));
+                    transport_.respond(*id, hover_result(params));
                 }
             } else if (method == "textDocument/inlayHint") {
                 if (id != nullptr) {
-                    respond(*id, inlay_hint_result(params));
+                    transport_.respond(*id, inlay_hint_result(params));
                 }
             } else if (method == "textDocument/completion") {
                 if (id != nullptr) {
-                    respond(*id, completion_result(params));
+                    transport_.respond(*id, completion_result(params));
                 }
             } else if (method == "completionItem/resolve") {
                 if (id != nullptr) {
-                    respond(*id, completion_resolve_result(params));
+                    transport_.respond(*id, completion_resolve_result(params));
                 }
             } else if (method == "textDocument/signatureHelp") {
                 if (id != nullptr) {
-                    respond(*id, signature_help_result(params));
+                    transport_.respond(*id, signature_help_result(params));
                 }
             } else if (method == "workspace/symbol") {
                 if (id != nullptr) {
-                    respond(*id, workspace_symbol_result(params));
+                    transport_.respond(*id, workspace_symbol_result(params));
                 }
             } else if (id != nullptr) {
-                respond(*id, "null");
+                transport_.respond(*id, "null");
             }
         } catch (const std::exception& error) {
             if (id != nullptr) {
-                respond_error(*id, -32603, error.what());
+                transport_.respond_error(*id, -32603, error.what());
             } else {
                 err_ << "dudu-lsp: " << method << ": " << error.what() << '\n';
             }
@@ -389,7 +301,7 @@ class LanguageServer {
             params << diagnostic_json(diagnostics[i]);
         }
         params << "]}";
-        notify("textDocument/publishDiagnostics", params.str());
+        transport_.notify("textDocument/publishDiagnostics", params.str());
     }
 
     void queue_full_diagnostics(const std::string& uri) {
@@ -432,7 +344,7 @@ class LanguageServer {
             if (revision != document_revisions_.end() && job.revision == revision->second) {
                 native_ready_revisions_[job.document.uri] = job.revision;
                 publish_diagnostics(job.document.uri, diagnostics);
-                request_client_refresh("workspace/semanticTokens/refresh");
+                transport_.request_client_refresh("workspace/semanticTokens/refresh");
             }
         }
     }

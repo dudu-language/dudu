@@ -228,6 +228,12 @@ Outcome:
   call-site and signature-help units at 99 and 148 lines
 - consolidated their duplicated Markdown documentation serialization in the
   LSP JSON wire helper
+- moved Content-Length framing, synchronized output, responses, errors,
+  notifications, and server-initiated refresh requests into one JSON-RPC
+  transport boundary
+- removed transport state and eleven stale compiler/native/standard-library
+  includes from the server session; `language_server.cpp` is now 533 lines and
+  the transport unit is 93 lines
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator

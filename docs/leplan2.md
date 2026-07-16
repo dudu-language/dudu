@@ -330,6 +330,11 @@ shared token-based call-site query handles dotted and generic calls plus the
 active argument index, so neither capability maintains a private source-text
 parser.
 
+JSON-RPC transport is separate from language-server session policy.
+Content-Length framing, synchronized writes, response/error envelopes,
+notifications, and refresh request IDs have one owner; document state,
+diagnostics scheduling, and capability dispatch remain in the server session.
+
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured
 receiver/type-resolution path in an owned index-hook unit. Duplicate and stale
