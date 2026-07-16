@@ -20,12 +20,6 @@ void shift_token_locations(std::vector<Token>& tokens, const SourceLocation& bas
 
 } // namespace
 
-SourceLocation expr_token_end_location(const Token& token) {
-    SourceLocation end = token.location;
-    end.column += static_cast<int>(token.text.size());
-    return end;
-}
-
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
     text = trim_view_with_location(text, location);
     if (text.empty()) {

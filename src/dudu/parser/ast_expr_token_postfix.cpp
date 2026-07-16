@@ -1,8 +1,8 @@
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/parser/ast_expr_token_parser.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
-#include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -140,7 +140,7 @@ size_t ExprTokenParser::expr_token_begin(const Expr& expr) const {
 size_t ExprTokenParser::expr_token_end(const Expr& expr) const {
     const size_t begin = expr_token_begin(expr);
     for (size_t i = begin; i < tokens_.size(); ++i) {
-        const SourceLocation end = expr_token_end_location(tokens_[i]);
+        const SourceLocation end = token_end_location(tokens_[i]);
         if (end.line == expr.range.end.line && end.column == expr.range.end.column) {
             return i + 1;
         }

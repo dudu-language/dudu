@@ -52,6 +52,7 @@ bool token_text_is(const Token& token, TokenKind kind, const char (&literal)[N])
     return token.kind == kind && text_is(token.text, literal);
 }
 
+SourceLocation token_end_location(const Token& token);
 std::string token_kind_name(TokenKind kind);
 
 } // namespace dudu

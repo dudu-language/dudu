@@ -2,6 +2,19 @@
 
 namespace dudu {
 
+SourceLocation token_end_location(const Token& token) {
+    SourceLocation end = token.location;
+    for (const char c : token.text) {
+        if (c == '\n') {
+            ++end.line;
+            end.column = 1;
+        } else {
+            ++end.column;
+        }
+    }
+    return end;
+}
+
 std::string token_kind_name(TokenKind kind) {
     switch (kind) {
     case TokenKind::Identifier:

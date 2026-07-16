@@ -15,12 +15,6 @@ bool type_token(const Token& token) {
            token.kind != TokenKind::Dedent && token.kind != TokenKind::End;
 }
 
-SourceLocation token_end_location(const Token& token) {
-    SourceLocation end = token.location;
-    end.column += static_cast<int>(token.text.size());
-    return end;
-}
-
 bool type_metadata_base_args_are_types(const TypeRef& type) {
     if (type.kind != TypeKind::Template) {
         return false;

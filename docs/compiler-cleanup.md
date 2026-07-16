@@ -151,6 +151,12 @@ Outcome:
   support, where match and expression lowering can share the structured fact
 - reduced `cpp_expr_call_emit.cpp` from 744 to 512 lines while keeping the
   extracted index-hook unit at 236 lines
+- separated token-span collection, source spelling reconstruction, and
+  expression/type subparser handoff from top-level grammar and recovery
+- reduced `parser.cpp` from 646 to 430 lines; the owned syntax-piece bridge is
+  217 lines and introduces no second parser or source-string semantic path
+- replaced three token end-position implementations with one core token
+  operation, including correct line and column ranges for multiline tokens
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, and canonical fixture suites.

@@ -318,6 +318,12 @@ receiver/type-resolution path in an owned index-hook unit. Duplicate and stale
 declarations were removed, and shared enum payload classification moved to
 semantic enum support instead of remaining a call-emission helper.
 
+The parser audit separated source/token-piece reconstruction and handoff to the
+expression and type token parsers from top-level declaration grammar and
+recovery. `parser.cpp` now owns the grammar cursor and recovery policy; the
+syntax-piece unit owns only token ranges, diagnostic spelling, and structured
+subparser entry.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 

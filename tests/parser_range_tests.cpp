@@ -10,6 +10,18 @@
 
 namespace {
 
+void test_multiline_token_end_location() {
+    const dudu::Token token{
+        .text = "'''first\nsecond'''",
+        .location = {.file = dudu::SourceFileName("multiline.dd"), .line = 4, .column = 7},
+        .kind = dudu::TokenKind::String,
+    };
+    const dudu::SourceLocation end = dudu::token_end_location(token);
+    assert(end.file == token.location.file);
+    assert(end.line == 5);
+    assert(end.column == 10);
+}
+
 void test_statement_source_range_uses_token_span() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    value   =    add(1, 2)\n"
@@ -217,6 +229,7 @@ void test_misplaced_docstrings_are_rejected() {
 
 int main() {
     try {
+        test_multiline_token_end_location();
         test_statement_source_range_uses_token_span();
         test_declaration_ranges_cover_complete_bodies();
         test_digit_suffixed_member_receiver();

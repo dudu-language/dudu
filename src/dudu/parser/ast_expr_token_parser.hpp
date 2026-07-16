@@ -12,7 +12,6 @@
 
 namespace dudu {
 
-SourceLocation expr_token_end_location(const Token& token);
 inline bool expression_token(const Token& token) {
     return token.kind != TokenKind::Newline && token.kind != TokenKind::Indent &&
            token.kind != TokenKind::Dedent && token.kind != TokenKind::End;

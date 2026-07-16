@@ -151,7 +151,7 @@ SourceRange ExprTokenParser::range_between(size_t begin, size_t end) const {
         return range;
     }
     range.start = tokens_[begin].location;
-    range.end = expr_token_end_location(tokens_[end - 1]);
+    range.end = token_end_location(tokens_[end - 1]);
     return range;
 }
 
@@ -176,7 +176,7 @@ std::string ExprTokenParser::text_between(size_t begin, size_t end) const {
             ++cursor.column;
         }
         out += token.text;
-        cursor = expr_token_end_location(token);
+        cursor = token_end_location(token);
     }
     return out;
 }
@@ -195,7 +195,7 @@ Expr ExprTokenParser::make_node_from_start(ExprKind kind, SourceLocation start, 
     expr.location = start;
     expr.range.start = start;
     expr.range.end =
-        (end > 0 && end <= tokens_.size()) ? expr_token_end_location(tokens_[end - 1]) : start;
+        (end > 0 && end <= tokens_.size()) ? token_end_location(tokens_[end - 1]) : start;
     return expr;
 }
 
