@@ -5,7 +5,9 @@
 #include "dudu/native/native_header_cache_format.hpp"
 #include "dudu/project/project_config.hpp"
 
+#include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -34,7 +36,15 @@ std::filesystem::path default_cache_dir(const NativeHeaderOptions& options) {
 }
 
 std::string cache_id(const std::string& key) {
-    return std::to_string(std::hash<std::string>{}(key));
+    std::uint64_t first = 14695981039346656037ULL;
+    std::uint64_t second = 1099511628211ULL;
+    for (const unsigned char byte : key) {
+        first = (first ^ byte) * 1099511628211ULL;
+        second = (second + byte + 0x9e3779b97f4a7c15ULL) * 14029467366897019727ULL;
+    }
+    std::ostringstream out;
+    out << std::hex << std::setfill('0') << std::setw(16) << first << std::setw(16) << second;
+    return out.str();
 }
 
 NativeSymbolId symbol_id(const std::vector<std::string>& fields, size_t usr_index,
@@ -191,7 +201,7 @@ void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std:
 
 std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeaderRawCache& cache,
                                                               const SourceLocation& location) {
-    if (!native_header_dependency_stamps_current(cache.dependencies)) {
+    if (!cache.hit) {
         return std::nullopt;
     }
     const std::string text = read_text(scan_cache_path(cache));

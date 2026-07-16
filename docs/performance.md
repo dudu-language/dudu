@@ -60,8 +60,8 @@ Reproduce it with:
 | Operation | Median | p95 | Peak RSS |
 | --- | ---: | ---: | ---: |
 | tiny `duc check` | 20.9 ms | 22.2 ms | 54.4 MiB |
-| cold small native scan | 47.4 ms | 50.9 ms | 78.1 MiB |
-| cached native metadata | 21.5 ms | 22.2 ms | 54.8 MiB |
+| cold small native scan | 33.6 ms | 35.3 ms | 81.3 MiB |
+| cached small native check | 8.7 ms | 9.3 ms | 57.1 MiB |
 | generated-CMake no-op build | 72.7 ms | 74.7 ms | 53.8 MiB |
 | generated-CMake one-module edit | 331.8 ms | 340.7 ms | 109.8 MiB |
 | Dudu-only no-op module emit | 21.5 ms | 23.0 ms | 57.9 MiB |
@@ -82,6 +82,27 @@ overlays reduced that case to 84.8 ms. Follow-up measurements are 155.3 ms at
 The 332 ms changed-project build includes about 22 ms of Dudu analysis and
 emission. The remaining time belongs to CMake, GCC compilation, and linking.
 Dudu reports these phases separately.
+
+Native header awareness has a separate explicit include-graph matrix:
+
+| Header graph | Cold check | Cached check |
+| --- | ---: | ---: |
+| small C fixture | 33.6 ms | 8.7 ms |
+| `string` + `unordered_map` + `vector` | 1,035.0 ms | 48.8 ms |
+| 13-header STL interop fixture | 1,874.5 ms | 114.8 ms |
+| SDL3 | 190.0 ms | 36.1 ms |
+| raylib | 68.8 ms | 13.3 ms |
+
+The larger cached check includes ordinary Dudu parsing and semantic analysis;
+loading its cached native metadata itself takes about 18 ms. Direct imports are
+scanned as one translation unit, with isolated fallback only when headers have
+conflicting global declarations. `--timings` reports libclang, AST dump, AST
+parse, macro preprocessing, cache, and serialization phases. The explicit
+benchmark also probes both libstdc++ and libc++ when installed:
+
+```sh
+./scripts/bench_native_headers.py --samples 5
+```
 
 Reproduce the frontend suite with:
 

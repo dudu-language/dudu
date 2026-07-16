@@ -98,8 +98,26 @@ budget.
 
 ### 2. Harden Cold Native Indexing And Metadata Caching
 
-Current small-header results are good, but large template-heavy include graphs
-can still make Clang work dominate compilation and editor startup.
+Status: complete for the P0 latency gate. Direct native imports in one module
+now share one ordered scanner translation unit instead of reparsing overlapping
+include graphs once per header. Headers that cannot coexist fall back to
+isolated scans. The scanner reports cache lookup, parsed-scan deserialization,
+libclang, AST dump, AST parse, macro dump/parse, serialization, and Clang-pass
+counts under `--timings`.
+
+On the reference machine, batching `string`, `unordered_map`, and `vector` cut
+the cold check from 2.30 seconds to about 1.03 seconds and the cached check from
+65.6 ms to 48.8 ms. Filtering irrelevant textual AST lines reduced measured AST
+parse time from 887 ms to 543 ms. Small-header, SDL3, and raylib cached checks
+are 8.7 ms, 36.1 ms, and 13.3 ms. A larger 13-header STL fixture spends about
+18 ms loading cached native metadata; its complete cached semantic check is
+about 115 ms.
+
+Cache identities now include the concrete compiler executable state, language
+mode, scanner flags, include paths, defines, pkg-config output, relevant
+include-search environment, import order/style, and transitive dependency
+stamps. The suite covers direct and transitive header edits, compiler
+replacement, libstdc++, and libc++.
 
 Required work:
 
@@ -119,6 +137,12 @@ Completion:
 - cold dogfood workspace usable under 1 second
 - no stale symbol, hover, definition, or overload information after a header
   or build-flag change
+
+The current result meets the gate. Replacing the textual Clang AST reader with
+a single structured libclang traversal remains a measured architecture option,
+not a reason to delay P1 work while dogfood workspaces remain under one second.
+Reproduce the bounded include-graph matrix with
+`./scripts/bench_native_headers.py --samples 5`.
 
 ### 3. Keep LSP Requests Independent Of Cold Work
 

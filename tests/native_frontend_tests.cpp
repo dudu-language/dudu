@@ -4,6 +4,7 @@
 #include "dudu/native/native_header_cache_deps.hpp"
 #include "dudu/native/native_header_merge.hpp"
 #include "dudu/native/native_header_parse.hpp"
+#include "dudu/native/native_header_scan_command.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_header_usr.hpp"
 #include "dudu/native/native_headers.hpp"
@@ -27,6 +28,22 @@
 #include <string>
 
 namespace {
+void test_native_compiler_identity_tracks_executable_changes(const std::filesystem::path& root) {
+    const std::filesystem::path compiler = root / "build/native-compiler-identity";
+    {
+        std::ofstream out(compiler);
+        out << "compiler-v1\n";
+    }
+    const std::string first = dudu::native_header_compiler_identity(compiler.string());
+    {
+        std::ofstream out(compiler, std::ios::app);
+        out << "compiler-v2\n";
+    }
+    const std::string second = dudu::native_header_compiler_identity(compiler.string());
+    assert(!first.empty());
+    assert(first != second);
+}
+
 void test_libclang_collects_stable_native_usrs(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "tests/fixtures";
     const std::filesystem::path probe = root / "build/native-usr-probe.cpp";
@@ -1445,6 +1462,7 @@ void test_native_scan_merges_reopened_namespaces() {
 int main() {
     try {
         const std::filesystem::path root = DUDU_REPO_ROOT;
+        test_native_compiler_identity_tracks_executable_changes(root);
         test_libclang_collects_stable_native_usrs(root);
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);

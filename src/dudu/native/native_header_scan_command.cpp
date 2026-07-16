@@ -5,8 +5,8 @@
 #include "dudu/native/native_build.hpp"
 #include "dudu/project/project_driver.hpp"
 
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -104,8 +104,42 @@ std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& op
     if (error) {
         return {};
     }
-    return "|" + path.string() + "|" + std::to_string(size) + "|" +
-           file_time_stamp(mtime);
+    return "|" + path.string() + "|" + std::to_string(size) + "|" + file_time_stamp(mtime);
+}
+
+std::string compiler_identity(const std::string& command) {
+    std::filesystem::path executable = command;
+    if (!executable.has_parent_path()) {
+        const char* path_env = std::getenv("PATH");
+        std::istringstream paths(path_env == nullptr ? "" : path_env);
+        std::string directory;
+        while (std::getline(paths, directory, ':')) {
+            const std::filesystem::path candidate =
+                (directory.empty() ? std::filesystem::current_path()
+                                   : std::filesystem::path(directory)) /
+                executable;
+            std::error_code error;
+            if (std::filesystem::is_regular_file(candidate, error) && !error) {
+                executable = candidate;
+                break;
+            }
+        }
+    }
+
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(executable, error);
+    if (!error) {
+        executable = canonical;
+    }
+    const auto size = std::filesystem::file_size(executable, error);
+    if (error) {
+        return command;
+    }
+    const auto mtime = std::filesystem::last_write_time(executable, error);
+    if (error) {
+        return command;
+    }
+    return executable.string() + "|" + std::to_string(size) + "|" + file_time_stamp(mtime);
 }
 
 std::string include_line(const ImportDecl& import) {
@@ -113,6 +147,21 @@ std::string include_line(const ImportDecl& import) {
         return "#include <" + native_header_unquoted(import.module_path) + ">\n";
     }
     return "#include \"" + native_header_unquoted(import.module_path) + "\"\n";
+}
+
+std::string scanner_environment_identity() {
+    std::string identity;
+    for (const char* name :
+         {"CPATH", "CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH", "SDKROOT", "MACOSX_DEPLOYMENT_TARGET"}) {
+        const char* value = std::getenv(name);
+        identity += "|";
+        identity += name;
+        identity += "=";
+        if (value != nullptr) {
+            identity += value;
+        }
+    }
+    return identity;
 }
 
 } // namespace
@@ -152,7 +201,8 @@ std::vector<std::string> native_header_scanner_arguments(const NativeHeaderOptio
         args.push_back("-I" + options.source_dir.lexically_normal().string());
     }
     for (const std::string& include_dir : options.config.include_dirs) {
-        args.push_back("-I" + project_path(options.config, include_dir).lexically_normal().string());
+        args.push_back("-I" +
+                       project_path(options.config, include_dir).lexically_normal().string());
     }
     for (const std::string& define : options.config.defines) {
         args.push_back("-D" + define);
@@ -183,14 +233,27 @@ std::filesystem::path native_header_temp_base(const std::filesystem::path& sourc
     return source_dir / (".dudu_native_headers_" + ticks);
 }
 
+std::string native_header_compiler_identity(const std::string& command) {
+    return compiler_identity(command);
+}
+
 std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                                    const std::string& flags) {
-    return "v8|" +
-           std::string(import.native_include_style == NativeIncludeStyle::System ? "system|"
-                                                                                 : "path|") +
-           native_header_unquoted(import.module_path) + "|" +
-           native_header_clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
-           header_stamp(import, options);
+    return native_header_scan_key(std::span<const ImportDecl>(&import, 1), options, flags);
+}
+
+std::string native_header_scan_key(std::span<const ImportDecl> imports,
+                                   const NativeHeaderOptions& options, const std::string& flags) {
+    std::string key = "v10-batch|" +
+                      native_header_compiler_identity(native_header_clangxx_command()) + "|" +
+                      options.config.cpp_std + "|" + flags + scanner_environment_identity();
+    for (const ImportDecl& import : imports) {
+        key += "|";
+        key += import.native_include_style == NativeIncludeStyle::System ? "system|" : "path|";
+        key += native_header_unquoted(import.module_path);
+        key += header_stamp(import, options);
+    }
+    return key;
 }
 
 std::string native_header_run_capture(const std::string& command,
@@ -205,11 +268,19 @@ std::string native_header_run_capture(const std::string& command,
 }
 
 std::string native_header_scanner_source_for_header(const ImportDecl& import, bool with_c_prelude) {
+    return native_header_scanner_source_for_headers(std::span<const ImportDecl>(&import, 1),
+                                                    with_c_prelude);
+}
+
+std::string native_header_scanner_source_for_headers(std::span<const ImportDecl> imports,
+                                                     bool with_c_prelude) {
     std::string source;
     if (with_c_prelude) {
         source += "#include <stddef.h>\n#include <stdio.h>\n";
     }
-    source += include_line(import);
+    for (const ImportDecl& import : imports) {
+        source += include_line(import);
+    }
     source += "int dudu_probe = 0;\n";
     return source;
 }

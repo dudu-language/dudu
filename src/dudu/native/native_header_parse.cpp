@@ -100,6 +100,17 @@ std::optional<TypeLayout> scanned_layout(const NativeCursorIdentityIndex& identi
 
 TypeRef normalize_native_type_ref(TypeRef type);
 
+bool relevant_ast_line(std::string_view line) {
+    return line.find("Decl") != std::string_view::npos ||
+           line.find("TemplateArgument") != std::string_view::npos ||
+           line.find("IntegerLiteral") != std::string_view::npos ||
+           line.find("CXXBoolLiteralExpr") != std::string_view::npos ||
+           line.find("TextComment") != std::string_view::npos ||
+           line.find("public '") != std::string_view::npos ||
+           line.find("protected '") != std::string_view::npos ||
+           line.find("private '") != std::string_view::npos;
+}
+
 std::string native_template_value(std::string text) {
     text = trim_copy(std::move(text));
     if (text.size() >= 2 && text.front() == '\'' && text.back() == '\'') {
@@ -419,10 +430,6 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<CommentTarget>& comment_targets,
                     const NativeCursorIdentityIndex& identities, const SourceLocation& location,
                     std::string& current_file) {
-    SourceLocation decl_location = ast_source_location(line, location, current_file);
-    if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
-        current_file = concrete_file;
-    }
     static const std::regex typedef_decl(
         R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex record_decl(
@@ -481,6 +488,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     }
     while (!param_targets.empty() && param_targets.back().depth >= depth) {
         param_targets.pop_back();
+    }
+    if (!relevant_ast_line(line)) {
+        return;
+    }
+    SourceLocation decl_location = ast_source_location(line, location, current_file);
+    if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
+        current_file = concrete_file;
     }
     if (line.find("TypeAliasTemplateDecl") != std::string::npos) {
         templates.push_back({.depth = depth,
@@ -706,8 +720,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         const bool public_record = !starts_with(raw_name, "__");
         const bool internal_template_definition =
-            !public_record && line.find(" definition") != std::string::npos &&
-            !templates.empty() && templates.back().kind == TemplateContext::Kind::Class;
+            !public_record && line.find(" definition") != std::string::npos && !templates.empty() &&
+            templates.back().kind == TemplateContext::Kind::Class;
         if (public_record || internal_template_definition) {
             const bool is_union = match[2].str() == "union";
             const std::string record_spelling = is_union ? "union " + raw_name : "";
