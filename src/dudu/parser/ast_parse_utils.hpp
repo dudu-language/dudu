@@ -32,7 +32,6 @@ CommaPart trim_comma_part(std::string_view text, size_t offset);
 std::vector<CommaPart> split_top_level_comma_parts(std::string_view text);
 Expr make_expr(ExprKind kind, std::string_view text, SourceLocation location);
 TypeRef make_type(TypeKind kind, std::string_view text, SourceLocation location);
-TypeKind wrapper_type_kind(std::string_view name);
 std::vector<TypeRef> parse_type_list(std::string_view text, SourceLocation location);
 
 } // namespace dudu

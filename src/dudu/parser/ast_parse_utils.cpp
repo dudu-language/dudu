@@ -239,29 +239,4 @@ TypeRef make_type(TypeKind kind, std::string_view text, SourceLocation location)
     return type;
 }
 
-TypeKind wrapper_type_kind(std::string_view name) {
-    if (name == "const") {
-        return TypeKind::Const;
-    }
-    if (name == "volatile") {
-        return TypeKind::Volatile;
-    }
-    if (name == "atomic") {
-        return TypeKind::Atomic;
-    }
-    if (name == "device") {
-        return TypeKind::Device;
-    }
-    if (name == "storage") {
-        return TypeKind::Storage;
-    }
-    if (name == "shared") {
-        return TypeKind::Shared;
-    }
-    if (name == "static") {
-        return TypeKind::Static;
-    }
-    return TypeKind::Unknown;
-}
-
 } // namespace dudu

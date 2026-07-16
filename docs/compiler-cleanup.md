@@ -157,9 +157,18 @@ Outcome:
   217 lines and introduces no second parser or source-string semantic path
 - replaced three token end-position implementations with one core token
   operation, including correct line and column ranges for multiline tokens
+- moved template-call lowering out of the general expression dispatcher;
+  allocation, pointer-cast, layout, shape-assumption, generic-constructor, and
+  native C++ template calls now share one owned structured path
+- moved wrapper-type classification from parser utilities into the core type
+  model, so code generation does not depend on parser implementation helpers
+- reduced `cpp_expr_emit.cpp` from 626 to 445 lines; the extracted
+  template-call unit is 203 lines and preserves the existing `Expr` and
+  `TypeRef` contracts
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
-negative, and canonical fixture suites.
+negative, code-generation shape, and canonical fixture suites, plus
+`raymarch-dd`, `dudu-webserver`, and the complete `dudu-datascience` target API.
 
 ### Language server
 

@@ -89,6 +89,31 @@ std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_vie
     return type.children;
 }
 
+TypeKind wrapper_type_kind(std::string_view name) {
+    if (name == "const") {
+        return TypeKind::Const;
+    }
+    if (name == "volatile") {
+        return TypeKind::Volatile;
+    }
+    if (name == "atomic") {
+        return TypeKind::Atomic;
+    }
+    if (name == "device") {
+        return TypeKind::Device;
+    }
+    if (name == "storage") {
+        return TypeKind::Storage;
+    }
+    if (name == "shared") {
+        return TypeKind::Shared;
+    }
+    if (name == "static") {
+        return TypeKind::Static;
+    }
+    return TypeKind::Unknown;
+}
+
 std::vector<TypeRef>
 template_type_arg_refs_with_aliases(const TypeRef& type, std::string_view name,
                                     const std::map<std::string, TypeRef>& aliases) {

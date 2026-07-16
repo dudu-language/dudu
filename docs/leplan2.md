@@ -324,6 +324,14 @@ recovery. `parser.cpp` now owns the grammar cursor and recovery policy; the
 syntax-piece unit owns only token ranges, diagnostic spelling, and structured
 subparser entry.
 
+The expression-emission audit separated template-call lowering from the general
+expression dispatcher. Allocation, pointer casts, layout builtins,
+shape-assumption calls, generic constructors, and native C++ template calls now
+use one structured `Expr`/`TypeRef` path. Wrapper-type classification also moved
+from parser utilities into the core type model, removing a parser-to-codegen
+ownership leak. `cpp_expr_emit.cpp` is now 445 lines and the owned template-call
+unit is 203 lines.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 
