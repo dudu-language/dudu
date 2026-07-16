@@ -185,6 +185,14 @@ Outcome:
   by free functions, classes, and enum methods
 - reduced `cpp_emit_classes.cpp` from 618 to 249 lines; the class-method unit is
   373 lines, and the shared declaration helper is 34 lines
+- separated free-function declaration and body emission from generated-artifact
+  assembly; decorators, signatures, variadic packs, generic/header ownership,
+  test filtering, and C ABI declarations now have one free-function owner
+- moved class forward declarations into class emission, leaving
+  `cpp_emit.cpp` responsible for ordering header, source, module, and test
+  artifact sections rather than implementing declaration policy
+- reduced `cpp_emit.cpp` from 553 to 272 lines; the free-function emission unit
+  is 286 lines and the class layout unit is 265 lines
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus

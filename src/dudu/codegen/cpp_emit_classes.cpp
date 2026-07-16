@@ -172,6 +172,22 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 
 } // namespace
 
+void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& module,
+                                     const CppEmitOptions& options, bool header_only) {
+    if (module.classes.empty()) {
+        return;
+    }
+    for (const ClassDecl& klass : module.classes) {
+        if (header_only && !visible_in_cpp_header(klass.visibility)) {
+            continue;
+        }
+        emit_cpp_template_parameters(out, generic_cpp_params_for_class(klass),
+                                     generic_cpp_value_params_for_class(klass));
+        out << "struct " << emitted_name(klass, options) << ";\n";
+    }
+    out << '\n';
+}
+
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
                   const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,

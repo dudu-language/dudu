@@ -368,7 +368,12 @@ virtual/abstract policy, operator names, method signatures, bodies, and
 out-of-line definitions have one class-method owner. Free functions, classes,
 and enum methods also share one C++ template-parameter renderer and one
 header-visibility predicate instead of maintaining three formatting copies.
-`cpp_emit_classes.cpp` is now 249 lines and the class-method unit is 373 lines.
+Free-function decorators, signatures, variadic packs, generic/header
+ownership, test filtering, bodies, and C ABI declarations now have one owner
+as well. Class forward declarations moved into class emission, so
+`cpp_emit.cpp` only assembles generated header, source, module, and test
+artifacts. It is now 272 lines; the free-function unit is 286 lines, the class
+layout unit is 265 lines, and the class-method unit is 373 lines.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
