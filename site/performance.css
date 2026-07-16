@@ -1,0 +1,385 @@
+.performance-page {
+  --performance-width: 1180px;
+}
+
+.performance-hero {
+  padding: 70px 0 54px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(112deg, #3a2119 0, #2a1d18 42%, var(--page) 82%);
+}
+
+.performance-hero-inner {
+  width: min(var(--performance-width), calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.performance-kicker {
+  margin: 0 0 10px;
+  color: var(--amber);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.performance-hero h1 {
+  max-width: 920px;
+  margin: 0;
+  font-size: clamp(42px, 6vw, 68px);
+  font-weight: 520;
+  line-height: 1.05;
+}
+
+.performance-lede {
+  max-width: 850px;
+  margin: 22px 0 0;
+  color: #d0bfb3;
+  font-size: 19px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 42px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.metric {
+  min-width: 0;
+  padding: 20px;
+  background: #151615;
+}
+
+.metric strong,
+.metric span {
+  display: block;
+}
+
+.metric strong {
+  color: var(--accent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 620;
+  line-height: 1.15;
+}
+
+.metric span {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.performance-shell {
+  width: min(var(--performance-width), calc(100% - 32px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+
+.performance-nav {
+  position: sticky;
+  top: 82px;
+  padding: 54px 0;
+}
+
+.performance-nav strong {
+  display: block;
+  margin-bottom: 13px;
+  color: var(--dim);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.performance-nav a {
+  padding: 6px 0;
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.performance-nav a:hover {
+  color: var(--accent);
+}
+
+.performance-content {
+  min-width: 0;
+  padding: 54px 0 96px;
+}
+
+.performance-section {
+  margin-bottom: 72px;
+  scroll-margin-top: 82px;
+}
+
+.performance-section > h2 {
+  margin: 0 0 16px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+  font-size: 30px;
+  font-weight: 570;
+}
+
+.performance-section h3 {
+  margin: 34px 0 10px;
+  font-size: 19px;
+}
+
+.performance-section p,
+.performance-section li {
+  color: #d0c6bf;
+}
+
+.performance-section code:not(pre code) {
+  padding: 2px 5px;
+  border: 1px solid #413d38;
+  color: var(--cyan);
+  background: #1b1c1a;
+}
+
+.measurement-note {
+  margin: 24px 0;
+  padding: 16px 18px;
+  border-left: 3px solid var(--amber);
+  background: #211c18;
+  color: var(--muted);
+}
+
+.measurement-note strong {
+  color: var(--ink);
+}
+
+.table-wrap {
+  max-width: 100%;
+  margin: 22px 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+}
+
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #131514;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-table th,
+.performance-table td {
+  padding: 11px 13px;
+  border-bottom: 1px solid #302f2c;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.performance-table th:first-child,
+.performance-table td:first-child {
+  text-align: left;
+}
+
+.performance-table thead th {
+  color: var(--muted);
+  background: #1a1b19;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.performance-table tbody th {
+  color: var(--ink);
+  font-weight: 520;
+}
+
+.performance-table tr:last-child > * {
+  border-bottom: 0;
+}
+
+.performance-table .focus-row > * {
+  color: var(--accent);
+  background: #1d2118;
+}
+
+.phase-line {
+  margin: 24px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+}
+
+.phase {
+  min-width: 0;
+  padding: 18px;
+  border-right: 1px solid var(--line);
+}
+
+.phase:last-child {
+  border-right: 0;
+}
+
+.phase small,
+.phase strong,
+.phase span {
+  display: block;
+}
+
+.phase small {
+  color: var(--dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.phase strong {
+  margin: 6px 0 2px;
+  color: var(--cyan);
+  font-size: 24px;
+}
+
+.phase span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.comparison-bars {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: #131514;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 76px;
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-track {
+  height: 13px;
+  background: #282925;
+}
+
+.bar-fill {
+  width: var(--bar-width);
+  height: 100%;
+  background: #8c624d;
+}
+
+.bar-row.dudu .bar-fill {
+  background: var(--accent);
+}
+
+.bar-row > :last-child {
+  color: var(--muted);
+  text-align: right;
+}
+
+.definition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 32px;
+  margin: 28px 0;
+}
+
+.definition-grid div {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.definition-grid dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.definition-grid dd {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.source-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.source-link {
+  padding: 16px;
+  border: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.source-link strong,
+.source-link span {
+  display: block;
+}
+
+.source-link span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .performance-shell {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .performance-nav {
+    position: static;
+    padding: 28px 0 0;
+    columns: 2;
+  }
+
+  .performance-nav strong {
+    column-span: all;
+  }
+
+  .performance-content {
+    padding-top: 38px;
+  }
+}
+
+@media (max-width: 620px) {
+  .performance-hero {
+    padding: 48px 0 38px;
+  }
+
+  .metric-grid,
+  .phase-line,
+  .definition-grid,
+  .source-links {
+    grid-template-columns: 1fr;
+  }
+
+  .phase {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .phase:last-child {
+    border-bottom: 0;
+  }
+
+  .performance-nav {
+    columns: 1;
+  }
+
+  .bar-row {
+    grid-template-columns: 62px minmax(0, 1fr) 66px;
+    gap: 8px;
+  }
+}

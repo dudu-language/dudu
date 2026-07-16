@@ -32,20 +32,25 @@ LANGUAGE_REFERENCES = {
     "docs/arrays-views-and-indexing.md",
 }
 CANONICAL_REFERENCES = LANGUAGE_REFERENCES | {
+    "docs/compiler-performance-matrix.md",
     "docs/known-limitations.md",
+    "docs/macro-performance-matrix.md",
     "docs/native-compatibility-matrix.md",
+    "docs/performance.md",
 }
 PUBLIC_PAGES = {
     "index.html",
     "install.html",
     "tour.html",
     "docs.html",
+    "performance.html",
     "roadmap.html",
 }
 EXPECTED_NAV = {
     "/tour.html",
     "/install.html",
     "/docs.html",
+    "/performance.html",
     "/roadmap.html",
 }
 

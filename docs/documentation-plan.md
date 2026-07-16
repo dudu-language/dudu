@@ -11,7 +11,7 @@ explanation. It does not create empty categories merely to match that model.
 
 ## Public Structure
 
-The public site has five connected layers:
+The public site has six connected layers:
 
 1. **Tour** explains why Dudu exists and compares concrete code with Python,
    C, C++, Rust, GLSL, and array languages.
@@ -21,6 +21,9 @@ The public site has five connected layers:
    embedded targets, GPU code, and editor setup.
 5. **Reference** states exact syntax, CLI behavior, built-in types, attributes,
    diagnostics, and current limitations.
+6. **Performance** reports generated runtime, compiler, C++ emission, native
+   backend, incremental build, editor, native-header, scaling, and macro costs
+   separately, with exact reproduction commands and measurement scope.
 
 The first public implementation may keep these layers in one searchable manual.
 The information architecture must remain stable if sections later become
@@ -49,6 +52,8 @@ separate pages.
   allocators, and diagnosed pointer escapes.
 - `docs/arrays-views-and-indexing.md` owns fixed-array and library-defined
   indexing behavior.
+- `docs/performance.md` owns the current measurement record and links the
+  dedicated compiler and macro comparison methodologies.
 - `site/docs.html` is the curated public manual, not a second independent spec.
 
 When behavior changes, update the canonical source document and its public

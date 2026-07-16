@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Measured Dudu runtime, compiler, build, editor, native-header, scaling, and macro performance.">
+    <meta name="theme-color" content="#3a2119">
+    <link rel="canonical" href="https://dudulang.org/performance.html">
+    <title>Performance | Dudu</title>
+    <link rel="icon" href="/assets/icon.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/layout.css">
+    <link rel="stylesheet" href="/performance.css">
+    <link rel="stylesheet" href="/assets/syntax.css">
+    <script defer data-manual src="/vendor/prism/prism-core.min.js"></script>
+    <script defer src="/vendor/prism/prism-bash.min.js"></script>
+    <script defer src="/assets/syntax.js"></script>
+  </head>
+  <body class="performance-page" data-code-language="bash">
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="/"><span class="brand-word">Dudu</span><img class="brand-mark" src="/assets/poop.svg" alt=""></a>
+        <div class="nav-links">
+          <a href="/tour.html">Tour</a>
+          <a href="/install.html">Install</a>
+          <a href="/docs.html">Docs</a>
+          <a aria-current="page" href="/performance.html">Performance</a>
+          <a href="/roadmap.html">Roadmap</a>
+        </div>
+        <div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="performance-hero">
+        <div class="performance-hero-inner">
+          <p class="performance-kicker">Reference measurements, July 2026</p>
+          <h1>Performance is not one number.</h1>
+          <p class="performance-lede">Dudu has generated-program runtime, language frontend, C++ emission, native compilation, incremental build, editor, native-header, and macro costs. This page measures them separately.</p>
+          <div class="metric-grid" aria-label="Current representative measurements">
+            <div class="metric"><strong>0.94-1.03x</strong><span>Dudu runtime relative to handwritten C++ across nine covered workloads</span></div>
+            <div class="metric"><strong>20.9 ms</strong><span>Median tiny <code>duc check</code></span></div>
+            <div class="metric"><strong>72.6 ms</strong><span>Median generated-CMake no-op build</span></div>
+            <div class="metric"><strong>&lt; 23 ms</strong><span>Slowest p95 warm editor request in both dogfood workspaces</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="performance-shell">
+        <aside class="performance-nav" aria-label="Performance sections">
+          <strong>On this page</strong>
+          <a href="#reading">How to read this</a>
+          <a href="#runtime">Generated runtime</a>
+          <a href="#compiler">Compiler comparison</a>
+          <a href="#builds">Build latency</a>
+          <a href="#scaling">Scaling and emission</a>
+          <a href="#native">Native headers</a>
+          <a href="#editor">Editor latency</a>
+          <a href="#macros">Macros</a>
+          <a href="#reproduce">Reproduce results</a>
+          <a href="#assessment">Assessment</a>
+        </aside>
+
+        <article class="performance-content">
+          <section id="reading" class="performance-section">
+            <h2>How to read these results</h2>
+            <p>Dudu compiles source to C++20. A complete build therefore contains work performed by Dudu and work performed by the configured C++ toolchain. Reporting only the final duration would hide which part costs time and would make optimization results difficult to interpret.</p>
+            <dl class="definition-grid">
+              <div><dt>Frontend</dt><dd>Lexing, parsing, module resolution, semantic analysis, and diagnostics.</dd></div>
+              <div><dt>C++ emission</dt><dd>Generating module headers, sources, runtime support, and source mappings.</dd></div>
+              <div><dt>Native backend</dt><dd>The external C++ compiler and linker. Dudu currently uses the host toolchain.</dd></div>
+              <div><dt>Generated runtime</dt><dd>The speed and memory use of the finished program after native optimization.</dd></div>
+              <div><dt>Cold</dt><dd>No reusable result for the measured operation. Operating-system file caches remain warm unless noted.</dd></div>
+              <div><dt>Incremental</dt><dd>Only invalidated Dudu modules and native objects are rebuilt.</dd></div>
+            </dl>
+            <div class="measurement-note"><strong>Reference machine:</strong> AMD Ryzen 9 9950X, 16 cores / 32 threads, Ubuntu 24.04, GCC 13.3, Clang 18.1.3, Dudu 0.1.0-alpha.13 Release build. Published comparisons use five samples unless the section says otherwise and report median and p95 wall time.</div>
+          </section>
+
+          <section id="runtime" class="performance-section">
+            <h2>Generated program runtime</h2>
+            <p>The acceptance criterion is parity with equivalent handwritten C++ using the same data structures, operations, compiler, and optimization flags. The current suite uses GCC 13.3 with <code>-O3 -DNDEBUG</code> and 10,000,000 elements or iterations.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Benchmark</th><th>Dudu median</th><th>C++ median</th><th>Dudu / C++</th></tr></thead>
+              <tbody>
+                <tr><th>Scalar arithmetic</th><td>8.926 ms</td><td>9.044 ms</td><td>0.987</td></tr>
+                <tr><th>Pointer traversal</th><td>9.539 ms</td><td>9.293 ms</td><td>1.026</td></tr>
+                <tr><th>Struct field access</th><td>19.510 ms</td><td>19.472 ms</td><td>1.002</td></tr>
+                <tr><th>Fixed arrays</th><td>19.349 ms</td><td>19.501 ms</td><td>0.992</td></tr>
+                <tr><th><code>list</code> / <code>std::vector</code></th><td>109.968 ms</td><td>110.810 ms</td><td>0.992</td></tr>
+                <tr><th>Tuple return</th><td>20.197 ms</td><td>21.451 ms</td><td>0.942</td></tr>
+                <tr><th>Function callback</th><td>41.307 ms</td><td>43.103 ms</td><td>0.958</td></tr>
+                <tr><th>Particle update</th><td>38.836 ms</td><td>39.369 ms</td><td>0.986</td></tr>
+                <tr><th>Eight-thread accumulation</th><td>1.568 ms</td><td>1.560 ms</td><td>1.005</td></tr>
+              </tbody>
+            </table></div>
+            <p>The observed range is 0.94-1.03 times handwritten C++. The differences are consistent with measurement and code-layout noise. This suite does not demonstrate a systematic Dudu runtime tax for the operations it covers. It is not a claim about every library, allocator, algorithm, or native API.</p>
+            <div class="code-window" data-language="bash"><div class="code-label">Reproduce the runtime suite</div><pre><code>./scripts/bench.sh 10000000 --samples 5 \
+    --emit-report build/benchmarks/runtime.json</code></pre></div>
+          </section>
+
+          <section id="compiler" class="performance-section">
+            <h2>Compiler and toolchain comparison</h2>
+            <p>The compiler matrix generates equivalent programs containing primitive fields, records or classes, methods, functions, calls, and an entry point. The reference workload contains 1,000 units. Frontend and executable production are reported separately where each toolchain exposes both operations.</p>
+            <div class="phase-line" aria-label="Dudu complete self-contained toolchain phases">
+              <div class="phase"><small>1 / frontend and emit</small><strong>219.4 ms</strong><span><code>duc emit</code>, including frontend analysis</span></div>
+              <div class="phase"><small>2 / native backend</small><strong>256.4 ms</strong><span>GCC compile and link</span></div>
+              <div class="phase"><small>complete path</small><strong>477.4 ms</strong><span>Self-contained executable</span></div>
+            </div>
+
+            <h3>Frontend checking</h3>
+            <div class="comparison-bars" aria-label="Frontend median wall time comparison">
+              <div class="bar-row"><span>C++</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 6.3%"></div></div><span>21.7 ms</span></div>
+              <div class="bar-row"><span>Rust</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 32.8%"></div></div><span>112.5 ms</span></div>
+              <div class="bar-row dudu"><span>Dudu</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 37.2%"></div></div><span>127.7 ms</span></div>
+              <div class="bar-row"><span>Go</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 51.6%"></div></div><span>176.9 ms</span></div>
+              <div class="bar-row"><span>Nim</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 68.2%"></div></div><span>233.9 ms</span></div>
+              <div class="bar-row"><span>Swift</span><div class="bar-track"><div class="bar-fill" style="--bar-width: 100%"></div></div><span>342.9 ms</span></div>
+            </div>
+
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Language / operation</th><th>Median</th><th>p95</th><th>Peak RSS</th></tr></thead>
+              <tbody>
+                <tr class="focus-row"><th>Dudu frontend</th><td>127.7 ms</td><td>132.4 ms</td><td>63.7 MiB</td></tr>
+                <tr><th>Dudu <code>duc emit</code>, frontend included</th><td>219.4 ms</td><td>227.4 ms</td><td>66.4 MiB</td></tr>
+                <tr><th>C++ backend for Dudu output</th><td>256.4 ms</td><td>259.3 ms</td><td>90.7 MiB</td></tr>
+                <tr class="focus-row"><th>Dudu complete executable</th><td>477.4 ms</td><td>482.5 ms</td><td>90.7 MiB</td></tr>
+                <tr><th>C++ frontend</th><td>21.7 ms</td><td>23.3 ms</td><td>27.5 MiB</td></tr>
+                <tr><th>C++ executable</th><td>264.8 ms</td><td>269.8 ms</td><td>66.5 MiB</td></tr>
+                <tr><th>Rust frontend</th><td>112.5 ms</td><td>118.1 ms</td><td>101.6 MiB</td></tr>
+                <tr><th>Rust executable</th><td>141.1 ms</td><td>142.1 ms</td><td>124.2 MiB</td></tr>
+                <tr><th>Go frontend</th><td>176.9 ms</td><td>182.9 ms</td><td>210.6 MiB</td></tr>
+                <tr><th>Go executable</th><td>231.1 ms</td><td>251.2 ms</td><td>81.1 MiB</td></tr>
+                <tr><th>Nim frontend</th><td>233.9 ms</td><td>237.4 ms</td><td>35.6 MiB</td></tr>
+                <tr><th>Nim executable</th><td>383.5 ms</td><td>392.6 ms</td><td>39.9 MiB</td></tr>
+                <tr><th>Swift frontend</th><td>342.9 ms</td><td>347.1 ms</td><td>115.1 MiB</td></tr>
+                <tr><th>Swift executable</th><td>1,191.1 ms</td><td>1,268.7 ms</td><td>194.6 MiB</td></tr>
+                <tr><th>C# / MSBuild executable</th><td>865.5 ms</td><td>1,459.9 ms</td><td>149.0 MiB</td></tr>
+              </tbody>
+            </table></div>
+            <div class="measurement-note"><strong>Cost relative to direct C++:</strong> this clean self-contained Dudu path is 1.80 times the equivalent C++ executable build. That ratio includes Dudu analysis and emission followed by GCC. Normal projects use per-module generated C++ and CMake-backed incremental builds, measured separately below.</div>
+          </section>
+
+          <section id="builds" class="performance-section">
+            <h2>Development and incremental build latency</h2>
+            <p>The project-driver fixture contains two Dudu modules and a local native header. Private edits rebuild only the changed generated module. Public interface edits also rebuild dependents. CMake remains responsible for native source and header dependencies.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Operation</th><th>Median</th><th>p95</th><th>Peak RSS</th></tr></thead>
+              <tbody>
+                <tr><th>Tiny <code>duc check</code></th><td>20.9 ms</td><td>22.2 ms</td><td>54.4 MiB</td></tr>
+                <tr><th>Project no-op check</th><td>20.7 ms</td><td>22.4 ms</td><td>57.3 MiB</td></tr>
+                <tr><th>Generated-CMake no-op build</th><td>72.6 ms</td><td>75.5 ms</td><td>56.3 MiB</td></tr>
+                <tr><th>Generated-CMake no-op run</th><td>72.6 ms</td><td>75.3 ms</td><td>56.1 MiB</td></tr>
+                <tr><th>Generated-CMake no-op test</th><td>72.4 ms</td><td>75.2 ms</td><td>56.0 MiB</td></tr>
+                <tr><th>Private dependency edit</th><td>131.0 ms</td><td>134.1 ms</td><td>57.7 MiB</td></tr>
+                <tr><th>Public interface edit</th><td>159.0 ms</td><td>165.1 ms</td><td>57.8 MiB</td></tr>
+                <tr><th>Native-header edit</th><td>130.4 ms</td><td>134.0 ms</td><td>56.1 MiB</td></tr>
+                <tr><th>Build-configuration edit</th><td>422.1 ms</td><td>440.7 ms</td><td>88.6 MiB</td></tr>
+                <tr><th>Dudu-only no-op module emit</th><td>21.5 ms</td><td>23.0 ms</td><td>57.9 MiB</td></tr>
+                <tr><th>Dudu-only changed-module emit</th><td>22.0 ms</td><td>22.1 ms</td><td>58.1 MiB</td></tr>
+              </tbody>
+            </table></div>
+            <p>A no-op build still invokes <code>cmake --build</code>. This is the native dependency check that discovers edits to user C and C++ sources and headers. Dudu preserves generated modification times, skips configure, reports zero dirty modules, and lets CMake skip compilation and linking.</p>
+          </section>
+
+          <section id="scaling" class="performance-section">
+            <h2>Frontend scaling and C++ emission</h2>
+            <p>The broad scaling matrix generates several source shapes so a fast result for one parser pattern cannot hide a slow semantic path elsewhere. It includes inheritance, expressions, multidimensional indexing, operators, native declarations, and multi-module projects.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Source shape</th><th>~10k lines</th><th>~50k lines</th><th>~100k lines</th><th>Clean emit at ~100k</th></tr></thead>
+              <tbody>
+                <tr><th>Inheritance / abstract dispatch</th><td>33.8 ms</td><td>94.4 ms</td><td>180.4 ms</td><td>389.7 ms</td></tr>
+                <tr><th>Expression-heavy</th><td>71.6 ms</td><td>305.0 ms</td><td>589.6 ms</td><td>940.1 ms</td></tr>
+                <tr><th>Shaped indexing / swizzles</th><td>63.5 ms</td><td>258.5 ms</td><td>502.9 ms</td><td>838.5 ms</td></tr>
+                <tr><th>Overloaded operators</th><td>54.9 ms</td><td>196.8 ms</td><td>375.5 ms</td><td>638.7 ms</td></tr>
+                <tr><th>Native declarations / overloads</th><td>102.0 ms</td><td>436.3 ms</td><td>870.3 ms</td><td>1,490.6 ms</td></tr>
+                <tr><th>Mixed nine-module project</th><td>44.0 ms</td><td>144.3 ms</td><td>289.3 ms</td><td>378.4 ms</td></tr>
+              </tbody>
+            </table></div>
+            <p>The 50k-to-100k curves are approximately linear. A class-heavy path that previously copied the complete symbol graph for every class took 2,651 ms at 50,000 lines; scoped symbol overlays reduced it to 84.8 ms. Follow-up measurements were 155.3 ms at 100,000 lines and 306.9 ms at 200,000 lines.</p>
+
+            <h3>Generated output size</h3>
+            <p>The compiler comparison's 10,003 lines of Dudu emit 20,023 lines of inspectable self-contained C++. Of those, 4,005 lines are blank and source-location comments consume 185,962 bytes. Removing comments and blank lines leaves 14,256 lines and 288,680 bytes. The remaining expansion is primarily forward declarations, prototypes, and out-of-line method definitions used to preserve declaration order and module boundaries.</p>
+          </section>
+
+          <section id="native" class="performance-section">
+            <h2>Native-header awareness</h2>
+            <p>Dudu uses Clang to import C and C++ declarations for compilation and editor intelligence. Cold scans pay Clang's header parsing cost. Cached checks load Dudu's serialized native metadata.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Header graph</th><th>Cold check</th><th>Cached check</th></tr></thead>
+              <tbody>
+                <tr><th>Small C fixture</th><td>33.6 ms</td><td>8.7 ms</td></tr>
+                <tr><th><code>string</code> + <code>unordered_map</code> + <code>vector</code></th><td>1,035.0 ms</td><td>48.8 ms</td></tr>
+                <tr><th>13-header STL fixture</th><td>1,874.5 ms</td><td>114.8 ms</td></tr>
+                <tr><th>SDL3</th><td>190.0 ms</td><td>36.1 ms</td></tr>
+                <tr><th>raylib</th><td>68.8 ms</td><td>13.3 ms</td></tr>
+              </tbody>
+            </table></div>
+            <p>Direct imports are scanned as one translation unit, with isolated scans only when headers contain conflicting global declarations. Cached native metadata loading for the large fixture itself takes about 18 ms. Timing output separates libclang, AST dump, AST parse, macro preprocessing, cache, and serialization phases.</p>
+          </section>
+
+          <section id="editor" class="performance-section">
+            <h2>Editor latency</h2>
+            <p>Each sample starts a fresh language server. Workspace usability is measured through immediate recovering-parser diagnostics. Full semantic and native diagnostics continue on one coalescing background worker. Warm requests run after project and native indexes are populated.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Workspace and operation</th><th>Median</th><th>p95</th><th>Peak RSS</th></tr></thead>
+              <tbody>
+                <tr><th><code>raymarch-dd</code> workspace usable</th><td>7.5 ms</td><td>8.0 ms</td><td>280.6 MiB</td></tr>
+                <tr><th><code>raymarch-dd</code> cached first native hover</th><td>219.5 ms</td><td>222.1 ms</td><td>280.6 MiB</td></tr>
+                <tr><th><code>raymarch-dd</code> slowest warm request</th><td>21.0 ms</td><td>22.8 ms</td><td>280.6 MiB</td></tr>
+                <tr><th><code>dudu-webserver</code> workspace usable</th><td>7.5 ms</td><td>7.8 ms</td><td>173.7 MiB</td></tr>
+                <tr><th><code>dudu-webserver</code> cached first native hover</th><td>91.6 ms</td><td>92.3 ms</td><td>173.7 MiB</td></tr>
+                <tr><th><code>dudu-webserver</code> slowest warm request</th><td>11.8 ms</td><td>12.3 ms</td><td>173.7 MiB</td></tr>
+              </tbody>
+            </table></div>
+            <p>The request probe covers definition, hover, references, completion, semantic tokens, rename, and native-aware hover. With native metadata removed, workspace usability remained 8.2 ms and 7.6 ms; the deliberately native hover then paid a background scan of 3.65 seconds and 1.08 seconds. Native scanning does not block parser diagnostics or unrelated Dudu requests.</p>
+          </section>
+
+          <section id="macros" class="performance-section">
+            <h2>Declaration macro compilation</h2>
+            <p>The macro matrix defines 1,000 two-field types and generates one method for each type. Package downloads and the first toolchain dependency bootstrap are excluded. Dudu macro execution itself is about 16 ms; cold application time is dominated by compiling and linking the generated native worker.</p>
+            <div class="table-wrap"><table class="performance-table">
+              <thead><tr><th>Language</th><th>Clean app</th><th>Warm app</th><th>Unrelated edit</th><th>Decorated edit</th></tr></thead>
+              <tbody>
+                <tr><th>Rust 1.94</th><td>153.6 ms</td><td>37.3 ms</td><td>88.3 ms</td><td>88.8 ms</td></tr>
+                <tr class="focus-row"><th>Dudu</th><td>410.1 ms</td><td>52.5 ms</td><td>53.3 ms</td><td>67.5 ms</td></tr>
+                <tr><th>Nim 1.6</th><td>819.7 ms</td><td>176.2 ms</td><td>192.6 ms</td><td>194.5 ms</td></tr>
+                <tr><th>Swift 6.3</th><td>2,160.3 ms</td><td>454.7 ms</td><td>1,404.4 ms</td><td>1,352.9 ms</td></tr>
+                <tr><th>C# / .NET 8</th><td>2,440.3 ms</td><td>502.8 ms</td><td>1,565.9 ms</td><td>1,592.9 ms</td></tr>
+              </tbody>
+            </table></div>
+            <p>Dudu's first SDK cache bootstrap is a separate one-time toolchain operation. Macro packages compile into separate translation units and reuse the stable generated SDK support. Warm and edit paths reuse package and expansion caches by content identity.</p>
+          </section>
+
+          <section id="reproduce" class="performance-section">
+            <h2>Reproduce the measurements</h2>
+            <p>Benchmark harnesses generate their fixtures from source, capture exact compiler commands and versions, retain raw samples, and write structured reports under ignored build directories. The published tables are not typed into tests as expected constants; regression thresholds are maintained separately from informational cross-language comparisons.</p>
+            <div class="code-window" data-language="bash"><div class="code-label">Representative commands</div><pre><code># Runtime parity
+./scripts/bench.sh 10000000 --samples 5
+
+# Compiler and generated-output scaling
+./scripts/bench_compiler.sh --build-type Release --samples 3 \
+    --line-scales 10000,50000,100000 \
+    --shapes inheritance,expressions,indexing,operators,native,mixed \
+    --emit-scaling
+
+# Cross-language compiler matrix
+python3 scripts/bench_compiler_compare.py --samples 5
+
+# Native headers
+./scripts/bench_native_headers.py --samples 5
+
+# Macro comparison
+dudu bench compiler -- --suite macros --samples 5 \
+    --compare rust,csharp,swift,nim</code></pre></div>
+            <div class="source-links">
+              <a class="source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/performance.md"><strong>Complete performance record</strong><span>All tables, current findings, and reproduction details</span></a>
+              <a class="source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/compiler-performance-matrix.md"><strong>Compiler matrix methodology</strong><span>Fixture shape, source sizes, commands, and generated C++ anatomy</span></a>
+              <a class="source-link" href="https://github.com/dudu-language/dudu/blob/master/docs/macro-performance-matrix.md"><strong>Macro matrix methodology</strong><span>Equivalent declaration-generation fixtures and historical results</span></a>
+              <a class="source-link" href="https://github.com/dudu-language/dudu/tree/master/scripts"><strong>Benchmark harnesses</strong><span>Executable scripts used to generate the reports</span></a>
+            </div>
+          </section>
+
+          <section id="assessment" class="performance-section">
+            <h2>Current assessment</h2>
+            <ul>
+              <li>Generated runtime performance is in the intended C++ class for the covered operations.</li>
+              <li>The Dudu frontend is competitive with the measured modern-language frontends on the 1,000-unit fixture, but GCC checks equivalent C++ substantially faster.</li>
+              <li>Complete clean executable production costs more than direct C++ because Dudu adds frontend and emission work before invoking the C++ backend.</li>
+              <li>Per-module emission and CMake-backed incremental builds keep the normal edit loop much shorter than a clean self-contained build.</li>
+              <li>Cold large C++ header graphs remain visible. Serialized native metadata makes repeated checks substantially cheaper.</li>
+              <li>Warm editor requests are responsive in the current dogfood projects. First native symbol queries can still pay background scanning cost when no metadata cache exists.</li>
+              <li>The alpha label reflects compatibility, diagnostics, platforms, ABI stability, and ecosystem work. It does not mean generated programs run through an interpreter.</li>
+            </ul>
+            <div class="measurement-note"><strong>Scope:</strong> benchmark results describe the listed fixtures, machine, compiler versions, and flags. They are useful for finding regressions and understanding toolchain costs. They are not universal rankings of languages or guarantees for unrelated programs.</div>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><span>Dudu performance measurements.</span><a href="https://github.com/dudu-language/dudu/blob/master/docs/performance.md">Full performance record</a></div></footer>
+  </body>
+</html>

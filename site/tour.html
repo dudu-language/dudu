@@ -29,6 +29,7 @@
           <a aria-current="page" href="/tour.html">Tour</a>
           <a href="/install.html">Install</a>
           <a href="/docs.html">Docs</a>
+          <a href="/performance.html">Performance</a>
           <a href="/roadmap.html">Roadmap</a>
         </div>
         <div class="nav-meta"><span>0.1.0-alpha.13</span><a href="https://github.com/dudu-language/dudu">GitHub</a></div>
@@ -666,7 +667,8 @@ std::vector&lt;std::thread&gt; threads;
             <div class="benchmark-note">
               <h3>Benchmark details</h3>
               <p>Local microbenchmarks, July 2026: Ryzen 9 9950X, CPython 3.12.3, Dudu 0.1.0-alpha.13, C++20 with <code>-O3 -DNDEBUG</code>. Peak RSS is from <code>/usr/bin/time</code>. Results vary by machine and workload.</p>
-              <p>Across scalar, pointer, field, fixed-array, vector, tuple, and callback cases, median Dudu-to-handwritten-C++ ratios ranged from <strong>0.97x to 1.05x</strong> in the same run.</p>
+              <p>Across nine scalar, pointer, field, fixed-array, vector, tuple, callback, particle, and threaded cases, median Dudu-to-handwritten-C++ ratios ranged from <strong>0.94x to 1.03x</strong> in the current run.</p>
+              <p><a href="/performance.html">See compiler, incremental build, native-header, editor, macro, scaling, and complete runtime measurements.</a></p>
               <a href="https://github.com/dudu-language/dudu/blob/master/scripts/bench_python.sh">Read and rerun the Python comparison</a>
             </div>
           </section>
