@@ -1,6 +1,7 @@
 #include "dudu/codegen/cpp_emit_enum_methods.hpp"
 
 #include "dudu/codegen/cpp_emit.hpp"
+#include "dudu/codegen/cpp_emit_declaration_support.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
@@ -9,37 +10,13 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
-#include <set>
 #include <sstream>
 
 namespace dudu {
 namespace {
 
-bool visible_in_header(const FunctionDecl& method) {
-    return method.visibility != Visibility::Private;
-}
-
 bool generic_method(const FunctionDecl& method) {
     return !generic_cpp_params_for_function(method).empty();
-}
-
-void emit_template_params(std::ostringstream& out, const FunctionDecl& method) {
-    const std::vector<std::string> params = generic_cpp_params_for_function(method);
-    if (params.empty())
-        return;
-    const std::set<std::string> values = generic_cpp_value_params_for_function(method);
-    out << "template <";
-    for (size_t i = 0; i < params.size(); ++i) {
-        if (i > 0)
-            out << ", ";
-        const std::string name = generic_param_base_name(params[i]);
-        if (generic_param_is_pack(params[i])) {
-            out << "typename... " << name;
-        } else {
-            out << (values.contains(name) ? "size_t " : "typename ") << name;
-        }
-    }
-    out << ">\n";
 }
 
 TypeRef substitute_self(const EnumDecl& en, const TypeRef& type) {
@@ -63,7 +40,8 @@ void emit_body(std::ostringstream& out, const EnumDecl& en, const FunctionDecl& 
                const std::vector<std::string>& aliases,
                const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
                const CppEmitOptions& options) {
-    emit_template_params(out, method);
+    emit_cpp_template_parameters(out, generic_cpp_params_for_function(method),
+                                 generic_cpp_value_params_for_function(method));
     emit_signature(out, en, method, aliases, options);
     out << " {\n";
     CppLocalContext locals;
@@ -95,11 +73,12 @@ void emit_enum_method_declarations(std::ostringstream& out, const ModuleAst& mod
     bool emitted = false;
     for (const EnumDecl& en : module.enums) {
         for (const FunctionDecl& method : en.methods) {
-            if ((header_only && !visible_in_header(method)) ||
+            if ((header_only && !visible_in_cpp_header(method.visibility)) ||
                 (header_only && generic_method(method))) {
                 continue;
             }
-            emit_template_params(out, method);
+            emit_cpp_template_parameters(out, generic_cpp_params_for_function(method),
+                                         generic_cpp_value_params_for_function(method));
             emit_signature(out, en, method, aliases, options);
             out << ";\n";
             emitted = true;
@@ -115,10 +94,11 @@ void emit_private_enum_method_declarations(std::ostringstream& out, const Module
     bool emitted = false;
     for (const EnumDecl& en : module.enums) {
         for (const FunctionDecl& method : en.methods) {
-            if (visible_in_header(method)) {
+            if (visible_in_cpp_header(method.visibility)) {
                 continue;
             }
-            emit_template_params(out, method);
+            emit_cpp_template_parameters(out, generic_cpp_params_for_function(method),
+                                         generic_cpp_value_params_for_function(method));
             emit_signature(out, en, method, aliases, options);
             out << ";\n";
             emitted = true;
@@ -136,7 +116,8 @@ void emit_enum_method_definitions(std::ostringstream& out, const ModuleAst& modu
                                   const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
         for (const FunctionDecl& method : en.methods) {
-            const bool emit_in_header = generic_method(method) && visible_in_header(method);
+            const bool emit_in_header =
+                generic_method(method) && visible_in_cpp_header(method.visibility);
             if (header_only != emit_in_header) {
                 continue;
             }

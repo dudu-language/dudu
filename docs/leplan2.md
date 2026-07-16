@@ -361,6 +361,15 @@ orchestration. Singleton and multi-module builds now use one span-based path,
 so emission does not copy the root AST or maintain duplicate regular and test
 branches. The unused module-write forwarding API was removed.
 
+Class emission is separated by responsibility as well. Class ordering, class
+shape, fields, constants, and artifact orchestration remain in the class
+layout unit. Constructor and `super.init` handling, receiver substitution,
+virtual/abstract policy, operator names, method signatures, bodies, and
+out-of-line definitions have one class-method owner. Free functions, classes,
+and enum methods also share one C++ template-parameter renderer and one
+header-visibility predicate instead of maintaining three formatting copies.
+`cpp_emit_classes.cpp` is now 249 lines and the class-method unit is 373 lines.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 

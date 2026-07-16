@@ -176,11 +176,21 @@ Outcome:
 - corrected project-backend fixtures that still configured the removed
   `DUDU_EXECUTABLE` CMake input instead of `DUC_EXECUTABLE`; the stale name had
   allowed those fixtures to fall back to an unrelated installed compiler
+- separated class method emission from class layout and ordering; constructor
+  and `super.init` handling, receiver substitution, virtual/abstract policy,
+  operator names, method signatures, bodies, and out-of-line definitions now
+  have one owner
+- consolidated three copies of C++ template-parameter rendering and duplicate
+  header-visibility predicates behind one declaration-emission helper shared
+  by free functions, classes, and enum methods
+- reduced `cpp_emit_classes.cpp` from 618 to 249 lines; the class-method unit is
+  373 lines, and the shared declaration helper is 34 lines
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus
 CLI/project smoke, generated-CMake backend fixtures, `raymarch-dd`,
-`dudu-webserver`, and the complete `dudu-datascience` target API.
+`dudu-webserver`, and the complete `dudu-datascience` target API. The complete
+fast suite remains green in 69.20 seconds with 710,404 KiB peak RSS.
 
 ### Language server
 

@@ -1,6 +1,7 @@
 #include "dudu/codegen/cpp_emit.hpp"
 
 #include "dudu/codegen/cpp_emit_classes.hpp"
+#include "dudu/codegen/cpp_emit_declaration_support.hpp"
 #include "dudu/codegen/cpp_emit_enum_methods.hpp"
 #include "dudu/codegen/cpp_emit_enums.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
@@ -133,12 +134,8 @@ std::string cpp_emit_function_decorator_args(const FunctionDecl& fn, std::string
     return {};
 }
 
-bool visible_in_header(Visibility visibility) {
-    return visibility != Visibility::Private;
-}
-
 bool visible_function_in_header(const FunctionDecl& fn, const CppEmitOptions& options = {}) {
-    return visible_in_header(fn.visibility) &&
+    return visible_in_cpp_header(fn.visibility) &&
            (options.expose_test_functions || !cpp_emit_function_is_test(fn));
 }
 
@@ -148,26 +145,6 @@ bool emit_before_constants(const FunctionDecl& fn) {
 
 bool generic_function(const FunctionDecl& fn) {
     return !generic_cpp_params_for_function(fn).empty();
-}
-
-void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params,
-                          const std::set<std::string>& value_params = {}) {
-    if (params.empty()) {
-        return;
-    }
-    out << "template <";
-    for (size_t i = 0; i < params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        const std::string name = generic_param_base_name(params[i]);
-        if (generic_param_is_pack(params[i])) {
-            out << "typename... " << name;
-        } else {
-            out << (value_params.contains(name) ? "size_t " : "typename ") << name;
-        }
-    }
-    out << ">\n";
 }
 
 std::map<std::string, TypeRef> function_return_types(const ModuleAst& module) {
@@ -290,8 +267,8 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, TypeRef>& function_returns,
                         const Symbols& symbols, const CppEmitOptions& options = {}) {
-    emit_template_params(out, cpp_emit_template_params_for_function(fn),
-                         generic_cpp_value_params_for_function(fn));
+    emit_cpp_template_parameters(out, cpp_emit_template_params_for_function(fn),
+                                 generic_cpp_value_params_for_function(fn));
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     CppLocalContext locals;
@@ -320,8 +297,8 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
         if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, cpp_emit_template_params_for_function(fn),
-                             generic_cpp_value_params_for_function(fn));
+        emit_cpp_template_parameters(out, cpp_emit_template_params_for_function(fn),
+                                     generic_cpp_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";
         emitted = true;
@@ -337,11 +314,11 @@ void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& m
         return;
     }
     for (const ClassDecl& klass : module.classes) {
-        if (header_only && !visible_in_header(klass.visibility)) {
+        if (header_only && !visible_in_cpp_header(klass.visibility)) {
             continue;
         }
-        emit_template_params(out, generic_cpp_params_for_class(klass),
-                             generic_cpp_value_params_for_class(klass));
+        emit_cpp_template_parameters(out, generic_cpp_params_for_class(klass),
+                                     generic_cpp_value_params_for_class(klass));
         out << "struct " << emitted_name(klass, options) << ";\n";
     }
     out << '\n';
@@ -494,7 +471,7 @@ std::string emit_cpp_module_implementation(const ModuleAst& module, const CppEmi
 
     ModuleAst source_local;
     for (const ClassDecl& klass : module.classes) {
-        if (!visible_in_header(klass.visibility)) {
+        if (!visible_in_cpp_header(klass.visibility)) {
             source_local.classes.push_back(klass);
         }
     }
