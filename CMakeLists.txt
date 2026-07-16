@@ -219,9 +219,21 @@ if(DUDU_BUILD_TESTS)
     target_compile_definitions(
         dudu_language_server_project_index_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
-    dudu_add_test(dudu_language_server_navigation_tests
-        tests/language_server_navigation_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_language_server_navigation_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_language_server_definition_hover_tests
+        tests/language_server_definition_hover_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_language_server_symbol_references_tests
+        tests/language_server_symbol_references_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_language_server_module_native_references_tests
+        tests/language_server_module_native_references_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_language_server_definition_hover_tests
+        PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_language_server_symbol_references_tests
+        PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_language_server_module_native_references_tests
+        PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_language_server_text_sync_tests
         tests/language_server_text_sync_tests.cpp dudu_frontend)

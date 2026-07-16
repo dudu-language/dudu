@@ -383,8 +383,10 @@ assertion, and code-action ownership now live in bounded Python modules behind
 a five-line launcher. The former 1,280-line general language-server test
 driver is now four independent executables for diagnostics/recovery,
 completion/inlay behavior, native editor intelligence, and project-index
-cache behavior. The default fast CTest inventory is 37 ownership-specific
-targets.
+cache behavior. Lint fixtures moved to the diagnostics owner, and the former
+1,337-line navigation driver is now bounded definition/hover,
+symbol-reference, and module/native-reference executables. The default fast
+CTest inventory is 39 ownership-specific targets.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform

@@ -289,6 +289,92 @@ void test_lsp_lints_do_not_leak_from_dependency_modules() {
     }
 }
 
+void test_lsp_unreachable_lint_uses_branch_structure() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_unreachable.dd",
+                             .text = "def choose(x: i32) -> i32:\n"
+                                     "    if x < 0:\n"
+                                     "        return -1\n"
+                                     "    elif x == 0:\n"
+                                     "        return 0\n"
+                                     "    else:\n"
+                                     "        return 1\n"
+                                     "    value: i32 = 4\n"
+                                     "    return value\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int unreachable_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.unreachable") {
+            ++unreachable_count;
+            assert(diag.location.line == 8);
+        }
+    }
+    assert(unreachable_count == 1);
+}
+
+void test_lsp_unreachable_lint_does_not_flag_partial_branch_return() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_partial_branch_return.dd",
+                             .text = "def choose(x: i32) -> i32:\n"
+                                     "    if x < 0:\n"
+                                     "        return -1\n"
+                                     "    value: i32 = x + 1\n"
+                                     "    return value\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.code != "dudu.lint.unreachable");
+    }
+}
+
+void test_lsp_unreachable_lint_does_not_flag_return_continuation() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_return_continuation.dd",
+                             .text = "def value(x: f32) -> f32:\n"
+                                     "    return x\n"
+                                     "        + 0.5\n"
+                                     "        + 0.25\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.code != "dudu.lint.unreachable");
+    }
+}
+
+void test_lsp_scope_lint_tracks_inferred_assignment_locals() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_inferred_locals.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    used = 1\n"
+                                     "    unused = 2\n"
+                                     "    return used\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int unused_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.unused") {
+            ++unused_count;
+            assert(diag.location.line == 3);
+        }
+    }
+    assert(unused_count == 1);
+}
+
+void test_lsp_suspicious_cast_lint_uses_type_refs() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_suspicious_cast.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    wide: f64 = 1.0\n"
+                                     "    narrow = f32(wide)\n"
+                                     "    return i32(narrow)\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int cast_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.suspicious_cast") {
+            ++cast_count;
+            assert(diag.location.line == 3);
+        }
+    }
+    assert(cast_count == 1);
+}
+
 } // namespace
 
 int main() {
@@ -303,6 +389,11 @@ int main() {
         test_lsp_block_header_diagnostics_use_extra_token_location();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_lints_do_not_leak_from_dependency_modules();
+        test_lsp_unreachable_lint_uses_branch_structure();
+        test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
+        test_lsp_unreachable_lint_does_not_flag_return_continuation();
+        test_lsp_scope_lint_tracks_inferred_assignment_locals();
+        test_lsp_suspicious_cast_lint_uses_type_refs();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

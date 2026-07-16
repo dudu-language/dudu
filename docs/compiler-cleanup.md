@@ -422,15 +422,19 @@ Outcome:
   diagnostics/recovery, completion/inlay, native-editor, and project-index
   executables between 290 and 474 lines; failures now identify the owning LSP
   capability instead of stopping one monolithic sequence
-- the default CTest inventory is now 37 targets, and adding a normal C++ test
+- moved lint behavior out of the 1,337-line navigation driver and into the
+  diagnostics owner, then split navigation into definition/hover,
+  symbol-reference identity, and module/native-reference identity executables;
+  all four resulting owners are between 402 and 487 lines
+- the default CTest inventory is now 39 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 37 fast test executables,
+The latest ownership-cleanup milestone passes all 39 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 52.11 seconds with 622,808 KiB peak RSS. Representative frontend and
+matrix in 53.01 seconds with 622,404 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.
