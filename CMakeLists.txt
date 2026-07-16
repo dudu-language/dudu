@@ -201,8 +201,23 @@ if(DUDU_BUILD_TESTS)
     dudu_add_test(dudu_ast_frontend_tests tests/ast_frontend_tests.cpp dudu_frontend)
     dudu_add_test(dudu_ast_type_frontend_tests tests/ast_type_frontend_tests.cpp dudu_frontend)
     dudu_add_test(dudu_ast_shape_frontend_tests tests/ast_shape_frontend_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_language_server_tests tests/language_server_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_language_server_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_language_server_diagnostics_tests
+        tests/language_server_diagnostics_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_language_server_completion_inlay_tests
+        tests/language_server_completion_inlay_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_language_server_native_editor_tests
+        tests/language_server_native_editor_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_language_server_project_index_tests
+        tests/language_server_project_index_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_language_server_diagnostics_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_language_server_completion_inlay_tests
+        PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_language_server_native_editor_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_language_server_project_index_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_language_server_navigation_tests
         tests/language_server_navigation_tests.cpp dudu_frontend)

@@ -380,7 +380,11 @@ scan basics, import identity, deduplication, cache behavior, template metadata,
 and import projection. The LSP matrix is no longer a Python program hidden in a
 1,532-line shell heredoc; protocol, fixture, request, core assertion, native
 assertion, and code-action ownership now live in bounded Python modules behind
-a five-line launcher.
+a five-line launcher. The former 1,280-line general language-server test
+driver is now four independent executables for diagnostics/recovery,
+completion/inlay behavior, native editor intelligence, and project-index
+cache behavior. The default fast CTest inventory is 37 ownership-specific
+targets.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
