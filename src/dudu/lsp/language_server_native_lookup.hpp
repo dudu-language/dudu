@@ -2,9 +2,11 @@
 
 #include "dudu/core/ast.hpp"
 
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace dudu {
 
@@ -30,5 +32,7 @@ native_alias_target_class_definition(const NativeClassDefinitionIndex& class_ind
 
 std::optional<NativeClassDefinition>
 native_alias_target_class_definition(const ModuleAst& module, const std::string& alias_name);
+
+std::optional<std::filesystem::path> native_identity_source_path(std::string_view identity);
 
 } // namespace dudu

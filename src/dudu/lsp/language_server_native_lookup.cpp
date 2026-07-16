@@ -3,6 +3,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/native/native_header_identity.hpp"
 
+#include <filesystem>
 #include <utility>
 
 namespace dudu {
@@ -63,6 +64,20 @@ native_alias_target_class_definition(const ModuleAst& module, const std::string&
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::filesystem::path> native_identity_source_path(std::string_view identity) {
+    if (!identity.starts_with("usr:")) {
+        return std::nullopt;
+    }
+    const size_t delimiter = identity.find("::", 4);
+    if (delimiter == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const std::filesystem::path path(identity.substr(4, delimiter - 4));
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+    return error ? path.lexically_normal() : canonical;
 }
 
 } // namespace dudu

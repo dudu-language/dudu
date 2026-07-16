@@ -1,8 +1,8 @@
 #include "dudu/lsp/language_server_builtin_hover.hpp"
 
 #include "dudu/core/ast_type.hpp"
-#include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_markdown.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
@@ -22,14 +22,6 @@ struct BuiltinFunctionDoc {
     std::string signature;
     std::string description;
 };
-
-std::string fenced_code(std::string_view language, const std::string& code) {
-    return "```" + std::string(language) + "\n" + code + "\n```";
-}
-
-std::string hover_json_from_markdown(const std::string& markdown) {
-    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) + "\"}}";
-}
 
 std::optional<BuiltinFunctionDoc> builtin_function_doc(const std::string& name) {
     static const std::map<std::string, BuiltinFunctionDoc> docs = {
@@ -221,8 +213,7 @@ std::optional<std::string> builtin_function_hover_json(const AstSelection& selec
         if (!doc) {
             return std::nullopt;
         }
-        return hover_json_from_markdown(fenced_code("dudu", doc->signature) + "\n\n" +
-                                        doc->description);
+        return markdown_hover_json(fenced_code("dudu", doc->signature) + "\n\n" + doc->description);
     }
     return std::nullopt;
 }
@@ -253,7 +244,7 @@ std::optional<std::string> builtin_member_hover_json(const ExprPath& path, const
     const std::string markdown =
         fenced_code("dudu", render_method_signature(kind, method, signature)) + "\n\n" +
         method_description(kind, method, normalized_receiver);
-    return hover_json_from_markdown(markdown);
+    return markdown_hover_json(markdown);
 }
 
 } // namespace dudu

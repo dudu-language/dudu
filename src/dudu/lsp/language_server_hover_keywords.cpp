@@ -2,6 +2,7 @@
 
 #include "dudu/core/token.hpp"
 #include "dudu/lsp/language_server_json.hpp"
+#include "dudu/lsp/language_server_markdown.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/parser/lexer.hpp"
 
@@ -11,10 +12,6 @@
 
 namespace dudu {
 namespace {
-
-std::string fenced_code(std::string_view language, const std::string& code) {
-    return "```" + std::string(language) + "\n" + code + "\n```";
-}
 
 std::optional<Token> token_at_cursor(const Document& doc, const Json* params) {
     if (params == nullptr) {

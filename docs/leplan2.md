@@ -393,6 +393,10 @@ also has one shared rule for variadics, duplicate parameters, parameter types,
 and return types across enum methods, class methods, and free functions.
 `sema_methods.cpp` is 560 lines instead of 597 and
 `sema_declarations.cpp` is 549 lines instead of 575.
+LSP hover presentation now has one Markdown fence/serialization owner, native
+identity path lookup lives at the native boundary, and primitive/native-alias
+hover construction lives with type hover. The general hover dispatcher is 469
+lines instead of 588 and no longer owns those independent semantic tables.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.

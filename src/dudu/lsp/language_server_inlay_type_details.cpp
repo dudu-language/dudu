@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_json.hpp"
+#include "dudu/lsp/language_server_markdown.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_type_layout.hpp"
 
@@ -36,10 +37,6 @@ std::optional<std::string> builtin_type_tooltip(const std::string& name) {
                "slicing.";
     }
     return std::nullopt;
-}
-
-std::string fenced_code(std::string_view language, const std::string& code) {
-    return "```" + std::string(language) + "\n" + code + "\n```";
 }
 
 std::string class_preview(const ClassDecl& klass, bool native) {

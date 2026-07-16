@@ -276,6 +276,14 @@ Outcome:
 - reduced `language_server_definition.cpp` from 617 to 456 lines; the
   native-header definition unit is 177 lines and exposes one capability-level
   query
+- consolidated fenced-code and Markdown hover serialization in one LSP
+  presentation helper instead of five local implementations
+- moved primitive and native-alias hover construction into type-hover
+  ownership, and moved native identity source-path extraction into the native
+  lookup boundary
+- reduced `language_server_hover.cpp` from 588 to 469 lines; it now dispatches
+  hover queries without owning primitive type tables or native alias
+  presentation
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator
