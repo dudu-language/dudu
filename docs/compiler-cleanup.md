@@ -410,15 +410,19 @@ Outcome:
   them instead of hiding those differences in the helper
 - registered `dudu_macro_expansion_render_tests`, which the old duplicated
   lists built but accidentally omitted from CTest
-- the default CTest inventory is now 29 targets, and adding a normal C++ test
+- split the 1,732-line native frontend test executable by actual ownership:
+  scan basics, import identity, scan deduplication, cache behavior, template
+  metadata, and import projection now have independent targets between 168 and
+  533 lines
+- the default CTest inventory is now 34 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 29 fast test executables,
+The latest ownership-cleanup milestone passes all 34 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 51.91 seconds with 623,188 KiB peak RSS. Representative frontend and
+matrix in 53.08 seconds with 622,956 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.

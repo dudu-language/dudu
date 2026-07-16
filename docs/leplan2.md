@@ -374,7 +374,10 @@ Test build ownership is explicit as well. One CMake helper owns executable
 creation, linking, the C++ language level, strict warnings, warning-as-error
 policy, and CTest registration. This removed three duplicated target lists and
 exposed an expansion-render test that had been built but never registered.
-Target-specific fixture definitions remain local to their tests.
+Target-specific fixture definitions remain local to their tests. The former
+1,732-line native frontend driver is now six independent fixture groups for
+scan basics, import identity, deduplication, cache behavior, template metadata,
+and import projection.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform

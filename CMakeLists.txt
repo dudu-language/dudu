@@ -217,8 +217,29 @@ if(DUDU_BUILD_TESTS)
     target_compile_definitions(dudu_module_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_type_inference_tests tests/type_inference_tests.cpp dudu_frontend)
-    dudu_add_test(dudu_native_frontend_tests tests/native_frontend_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_native_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_native_scan_basics_tests tests/native_scan_basics_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_import_identity_tests
+        tests/native_import_identity_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_scan_dedupe_tests
+        tests/native_scan_dedupe_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_header_cache_tests
+        tests/native_header_cache_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_template_metadata_tests
+        tests/native_template_metadata_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_import_projection_tests
+        tests/native_import_projection_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_native_scan_basics_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_import_identity_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_scan_dedupe_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_header_cache_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_template_metadata_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_import_projection_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_native_type_compat_tests tests/native_type_compat_tests.cpp dudu_frontend)
     target_compile_definitions(dudu_native_type_compat_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
