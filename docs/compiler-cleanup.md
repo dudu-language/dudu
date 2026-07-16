@@ -165,10 +165,22 @@ Outcome:
 - reduced `cpp_expr_emit.cpp` from 626 to 445 lines; the extracted
   template-call unit is 203 lines and preserves the existing `Expr` and
   `TypeRef` contracts
+- separated generated-name, imported-symbol, native-alias, and public-ABI
+  projection from module artifact rendering and file orchestration
+- made singleton and multi-module emission share one span-based path, removing
+  six temporary copies of the complete root `ModuleAst` and duplicate regular
+  and test emission branches
+- removed the unused `write_cpp_module_artifacts` forwarding API
+- reduced `cpp_emit_modules.cpp` from 644 to 381 lines; its 260-line context
+  unit now owns the policy used to construct `CppEmitOptions`
+- corrected project-backend fixtures that still configured the removed
+  `DUDU_EXECUTABLE` CMake input instead of `DUC_EXECUTABLE`; the stale name had
+  allowed those fixtures to fall back to an unrelated installed compiler
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus
-`raymarch-dd`, `dudu-webserver`, and the complete `dudu-datascience` target API.
+CLI/project smoke, generated-CMake backend fixtures, `raymarch-dd`,
+`dudu-webserver`, and the complete `dudu-datascience` target API.
 
 ### Language server
 

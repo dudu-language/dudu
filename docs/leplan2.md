@@ -332,6 +332,12 @@ from parser utilities into the core type model, removing a parser-to-codegen
 ownership leak. `cpp_expr_emit.cpp` is now 445 lines and the owned template-call
 unit is 203 lines.
 
+The module-emission audit separated generated-name, native-alias,
+imported-symbol, and public-ABI projection from artifact rendering and file
+orchestration. Singleton and multi-module builds now use one span-based path,
+so emission does not copy the root AST or maintain duplicate regular and test
+branches. The unused module-write forwarding API was removed.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 

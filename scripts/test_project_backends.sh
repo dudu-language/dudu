@@ -313,9 +313,9 @@ mkdir -p "$cmake_project_dir"
 "$repo_root/build/duc" cmake "$repo_root/tests/fixtures/project_default_output/main.dd" \
     -o "$cmake_project_dir/CMakeLists.txt"
 grep -q "add_executable(default_tool" "$cmake_project_dir/CMakeLists.txt"
-grep -q "DUDU_EXECUTABLE" "$cmake_project_dir/CMakeLists.txt"
+grep -q "DUC_EXECUTABLE" "$cmake_project_dir/CMakeLists.txt"
 cmake -S "$cmake_project_dir" -B "$repo_root/build/project_cmake_build" \
-    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+    -DDUC_EXECUTABLE="$repo_root/build/duc" >/dev/null
 cmake --build "$repo_root/build/project_cmake_build" >/dev/null
 set +e
 "$repo_root/build/project_cmake_build/default_tool"
@@ -337,7 +337,7 @@ grep -q "target_compile_options(main PRIVATE \"-DDUDU_PROJECT_CC_FLAG=2\")" \
     "$cmake_cc_dir/CMakeLists.txt"
 grep -q "target_link_directories(main PRIVATE" "$cmake_cc_dir/CMakeLists.txt"
 cmake -S "$cmake_cc_dir" -B "$repo_root/build/project_cmake_cc_build" \
-    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+    -DDUC_EXECUTABLE="$repo_root/build/duc" >/dev/null
 cmake --build "$repo_root/build/project_cmake_cc_build" >/dev/null
 set +e
 "$repo_root/build/project_cmake_cc_build/main"
@@ -354,7 +354,7 @@ mkdir -p "$cmake_multifile_dir"
     -o "$cmake_multifile_dir/CMakeLists.txt"
 grep -q "helper.dd" "$cmake_multifile_dir/CMakeLists.txt"
 cmake -S "$cmake_multifile_dir" -B "$repo_root/build/project_cmake_multifile_build" \
-    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+    -DDUC_EXECUTABLE="$repo_root/build/duc" >/dev/null
 cmake --build "$repo_root/build/project_cmake_multifile_build" >/dev/null
 set +e
 "$repo_root/build/project_cmake_multifile_build/main"

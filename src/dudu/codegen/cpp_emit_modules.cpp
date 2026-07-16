@@ -4,12 +4,14 @@
 #include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
 #include "dudu/codegen/cpp_module_dependencies.hpp"
+#include "dudu/codegen/cpp_module_emit_context.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/file_io.hpp"
 
 #include <fstream>
 #include <optional>
 #include <set>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 
@@ -36,255 +38,17 @@ std::filesystem::path module_artifact_base(const ModuleAst& module) {
     return module_artifact_base_for_path(module.module_path);
 }
 
-bool public_abi_function(const FunctionDecl& fn, bool test_source) {
-    return fn.visibility != Visibility::Private && (test_source || !cpp_emit_function_is_test(fn));
+std::span<const ModuleAst> module_units(const ModuleAst& module) {
+    if (module.module_units.empty()) {
+        return {&module, 1};
+    }
+    return module.module_units;
 }
 
-std::string module_target_kind(const ModuleAst& module) {
-    const auto found = module.build_values.find("TARGET_KIND");
-    if (found == module.build_values.end()) {
-        return {};
-    }
-    std::string value = found->second;
-    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        value = value.substr(1, value.size() - 2);
-    }
-    return value;
-}
-
-bool preserve_public_abi_names(const ModuleAst& module) {
-    const std::string kind = module_target_kind(module);
-    return kind == "library" || kind == "shared_library";
-}
-
-void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, bool public_abi,
-                               bool test_source) {
-    for (const TypeAliasDecl& alias : unit.aliases) {
-        if (!alias.cpp_name.empty()) {
-            options.generated_type_names[alias.name] = alias.cpp_name;
-        }
-    }
-    for (const EnumDecl& en : unit.enums) {
-        if (!en.cpp_name.empty()) {
-            options.generated_type_names[en.name] = en.cpp_name;
-            options.generated_value_names[en.name] = en.cpp_name;
-        }
-    }
-    for (const ClassDecl& klass : unit.classes) {
-        if (!klass.cpp_name.empty()) {
-            options.generated_type_names[klass.name] = klass.cpp_name;
-            options.generated_value_names[klass.name] = klass.cpp_name;
-        }
-        for (const ConstDecl& constant : klass.constants) {
-            if (!constant.cpp_name.empty()) {
-                options.generated_value_names[klass.name + "." + constant.name] = constant.cpp_name;
-            }
-        }
-        for (const FunctionDecl& method : klass.methods) {
-            if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-                !cpp_emit_function_has_decorator(method, "operator")) {
-                options.generated_value_names[klass.name + "." + method.name] = method.cpp_name;
-                if (!klass.cpp_name.empty()) {
-                    options.generated_value_names[klass.cpp_name + "." + method.name] =
-                        method.cpp_name;
-                }
-            }
-        }
-    }
-    for (const ConstDecl& constant : unit.constants) {
-        if (!constant.cpp_name.empty()) {
-            options.generated_value_names[constant.name] = constant.cpp_name;
-        }
-    }
-    for (const FunctionDecl& fn : unit.functions) {
-        if (!fn.cpp_name.empty()) {
-            options.generated_value_names[fn.name] =
-                cpp_emit_function_has_decorator(fn, "extern_c") ||
-                        (public_abi && public_abi_function(fn, test_source))
-                    ? fn.name
-                    : fn.cpp_name;
-        }
-    }
-}
-
-void add_reserved_method_generated_names(CppEmitOptions& options, const std::string& type_name,
-                                         const ClassDecl& klass) {
-    for (const FunctionDecl& method : klass.methods) {
-        if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-            !cpp_emit_function_has_decorator(method, "operator")) {
-            options.generated_value_names[type_name + "." + method.name] = method.cpp_name;
-        }
-    }
-}
-
-std::vector<std::string> stripped_alias_prefixes(const ModuleAst& unit) {
-    std::vector<std::string> out;
-    for (const std::string& alias : namespace_aliases(unit)) {
-        if (!alias.empty() && alias.front() == '!') {
-            out.push_back(alias.substr(1));
-        }
-    }
-    return out;
-}
-
-std::optional<std::string> strip_native_alias_prefix(const std::string& name,
-                                                     const std::vector<std::string>& aliases) {
-    for (const std::string& alias : aliases) {
-        const std::string marker = alias + ".";
-        if (name.starts_with(marker)) {
-            return name.substr(marker.size());
-        }
-    }
-    return std::nullopt;
-}
-
-std::string native_alias_emit_name(const NativeTypeDecl& type, const std::string& stripped_name) {
-    if (type.native_spelling.starts_with("struct ") || type.native_spelling.starts_with("union ") ||
-        type.native_spelling.starts_with("enum ")) {
-        return type.native_spelling;
-    }
-    return stripped_name;
-}
-
-void add_native_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
-    const std::vector<std::string> aliases = stripped_alias_prefixes(unit);
-    if (aliases.empty()) {
-        return;
-    }
-    for (const NativeTypeDecl& type : unit.native_types) {
-        if (const auto name = strip_native_alias_prefix(type.name, aliases)) {
-            options.generated_type_names[type.name] = native_alias_emit_name(type, *name);
-        }
-    }
-    for (const ClassDecl& klass : unit.native_classes) {
-        if (const auto name = strip_native_alias_prefix(klass.name, aliases)) {
-            const std::string emitted = klass.cpp_name.empty() ? *name : klass.cpp_name;
-            options.generated_type_names[klass.name] = emitted;
-            options.generated_value_names[klass.name] = emitted;
-        }
-    }
-    for (const NativeValueDecl& value : unit.native_values) {
-        if (const auto name = strip_native_alias_prefix(value.name, aliases)) {
-            options.generated_value_names[value.name] = *name;
-        }
-    }
-    for (const NativeFunctionDecl& fn : unit.native_functions) {
-        if (const auto name = strip_native_alias_prefix(fn.name, aliases)) {
-            options.generated_value_names[fn.name] = *name;
-        }
-    }
-    for (const NativeMacroDecl& macro : unit.native_macros) {
-        if (const auto name = strip_native_alias_prefix(macro.name, aliases)) {
-            options.generated_value_names[macro.name] = *name;
-        }
-    }
-}
-
-const ClassDecl* dependency_class_named(const ModuleAst& dependency, const std::string& name) {
-    for (const ClassDecl& klass : dependency.classes) {
-        if (klass.name == name) {
-            return &klass;
-        }
-    }
-    return nullptr;
-}
-
-void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& dependency,
-                                  const ImportDecl& import, bool public_abi, bool test_source) {
-    const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
-    const bool selective = import.kind == ImportKind::From;
-    const std::string selective_name = import.alias.empty() ? import.imported_name : import.alias;
-    auto expose = [&](const std::string& name) {
-        return selective ? selective_name : prefix + "." + name;
-    };
-    for (const TypeAliasDecl& alias : dependency.aliases) {
-        if ((!selective || alias.name == import.imported_name) && !alias.cpp_name.empty()) {
-            options.generated_type_names[expose(alias.name)] = alias.cpp_name;
-        }
-    }
-    for (const EnumDecl& en : dependency.enums) {
-        if ((!selective || en.name == import.imported_name) && !en.cpp_name.empty()) {
-            options.generated_type_names[expose(en.name)] = en.cpp_name;
-            options.generated_value_names[expose(en.name)] = en.cpp_name;
-        }
-    }
-    for (const ClassDecl& klass : dependency.classes) {
-        if ((!selective || klass.name == import.imported_name) && !klass.cpp_name.empty()) {
-            options.generated_type_names[expose(klass.name)] = klass.cpp_name;
-            options.generated_value_names[expose(klass.name)] = klass.cpp_name;
-            for (const FunctionDecl& method : klass.methods) {
-                if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-                    !cpp_emit_function_has_decorator(method, "operator")) {
-                    options.generated_value_names[expose(klass.name) + "." + method.name] =
-                        method.cpp_name;
-                    options.generated_value_names[klass.cpp_name + "." + method.name] =
-                        method.cpp_name;
-                }
-            }
-        }
-    }
-    for (const ConstDecl& constant : dependency.constants) {
-        if ((!selective || constant.name == import.imported_name) && !constant.cpp_name.empty()) {
-            options.generated_value_names[expose(constant.name)] = constant.cpp_name;
-            const std::string type_name = type_ref_head_name(constant.type_ref);
-            if (const ClassDecl* klass = dependency_class_named(dependency, type_name)) {
-                add_reserved_method_generated_names(options, import.module_path + "." + type_name,
-                                                    *klass);
-            }
-        }
-    }
-    for (const FunctionDecl& fn : dependency.functions) {
-        if ((!selective || fn.name == import.imported_name) && !fn.cpp_name.empty()) {
-            options.generated_value_names[expose(fn.name)] =
-                cpp_emit_function_has_decorator(fn, "extern_c") ||
-                        (public_abi && public_abi_function(fn, test_source))
-                    ? fn.name
-                    : fn.cpp_name;
-        }
-    }
-}
-
-std::string resolved_module_path_for_import(const ModuleAst& unit, const ImportDecl& import) {
-    for (const ModuleDependency& dependency : unit.dependencies) {
-        if (dependency.kind == import.kind && dependency.import_module_path == import.module_path &&
-            dependency.location.line == import.location.line &&
-            dependency.location.column == import.location.column) {
-            return dependency.resolved_module_path;
-        }
-    }
-    return import.module_path;
-}
-
-CppEmitOptions module_emit_options(const ModuleAst& unit,
-                                   const std::map<std::string, const ModuleAst*>& modules,
-                                   bool test_source = false, bool public_abi = false,
-                                   bool include_macro_host_modules = false) {
-    CppEmitOptions options;
-    options.emit_prelude = false;
-    options.use_generated_names = true;
-    options.test_source = test_source;
-    options.expose_test_functions = test_source;
-    add_local_generated_names(options, unit, public_abi, test_source);
-    add_native_generated_names(options, unit);
-    for (const ImportDecl& import : unit.imports) {
-        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
-            continue;
-        }
-        const auto dependency = modules.find(resolved_module_path_for_import(unit, import));
-        if (dependency != modules.end() &&
-            (include_macro_host_modules ||
-             dependency->second->compilation_domain != CompilationDomain::MacroHost)) {
-            add_imported_generated_names(options, *dependency->second, import, public_abi,
-                                         test_source);
-        }
-    }
-    return options;
-}
-
-std::vector<std::string>
-module_include_paths(const ModuleAst& unit, const std::map<std::string, const ModuleAst*>& modules,
-                     bool include_macro_host_modules, bool public_dependencies,
-                     const std::vector<bool>& public_imports) {
+std::vector<std::string> module_include_paths(const ModuleAst& unit, const CppModuleMap& modules,
+                                              bool include_macro_host_modules,
+                                              bool public_dependencies,
+                                              const std::vector<bool>& public_imports) {
     std::set<std::string> paths;
     for (size_t i = 0; i < unit.imports.size(); ++i) {
         const ImportDecl& import = unit.imports[i];
@@ -320,8 +84,8 @@ ModuleAst import_subset(const ModuleAst& unit, bool public_dependencies,
 }
 
 void emit_dependency_includes(std::ostringstream& out, const ModuleAst& unit,
-                              const std::map<std::string, const ModuleAst*>& modules,
-                              bool include_macro_host_modules, bool public_dependencies) {
+                              const CppModuleMap& modules, bool include_macro_host_modules,
+                              bool public_dependencies) {
     const std::vector<bool> public_imports = cpp_public_import_mask(unit);
     emit_native_includes(out, import_subset(unit, public_dependencies, public_imports));
     const std::vector<std::string> includes = module_include_paths(
@@ -335,8 +99,7 @@ void emit_dependency_includes(std::ostringstream& out, const ModuleAst& unit,
 }
 
 void emit_module_header_includes(std::ostringstream& out, const ModuleAst& unit,
-                                 const std::map<std::string, const ModuleAst*>& modules,
-                                 bool include_macro_host_modules) {
+                                 const CppModuleMap& modules, bool include_macro_host_modules) {
     out << "#include \"dudu_runtime.hpp\"\n";
     emit_dependency_includes(out, unit, modules, include_macro_host_modules, true);
     out << '\n';
@@ -369,24 +132,23 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
     }
 }
 
-std::string header_with_module_includes(const ModuleAst& unit,
-                                        const std::map<std::string, const ModuleAst*>& modules,
+std::string header_with_module_includes(const ModuleAst& unit, const CppModuleMap& modules,
                                         bool test_source = false, bool public_abi = false,
                                         bool include_macro_host_modules = false) {
     std::ostringstream out;
     emit_module_header_includes(out, unit, modules, include_macro_host_modules);
-    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source, public_abi,
-                                                     include_macro_host_modules));
+    out << emit_cpp_header(unit,
+                           make_cpp_module_emit_options(unit, modules, test_source, public_abi,
+                                                        include_macro_host_modules));
     return out.str();
 }
 
-std::string source_with_boundary_comment(const ModuleAst& unit,
-                                         const std::map<std::string, const ModuleAst*>& modules,
+std::string source_with_boundary_comment(const ModuleAst& unit, const CppModuleMap& modules,
                                          bool test_source = false, bool public_abi = false,
                                          bool include_macro_host_modules = false) {
     std::ostringstream out;
-    const CppEmitOptions options =
-        module_emit_options(unit, modules, test_source, public_abi, include_macro_host_modules);
+    const CppEmitOptions options = make_cpp_module_emit_options(
+        unit, modules, test_source, public_abi, include_macro_host_modules);
     emit_generated_banner(out);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n"
         << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n";
@@ -399,9 +161,8 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
 }
 
 void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
-                      const std::map<std::string, const ModuleAst*>& modules,
-                      bool test_source = false, bool public_abi = false,
-                      bool include_macro_host_modules = false) {
+                      const CppModuleMap& modules, bool test_source = false,
+                      bool public_abi = false, bool include_macro_host_modules = false) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
@@ -415,8 +176,8 @@ void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit
                                                            include_macro_host_modules)});
 }
 
-std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
-    std::map<std::string, const ModuleAst*> out;
+CppModuleMap module_map(std::span<const ModuleAst> units) {
+    CppModuleMap out;
     for (const ModuleAst& unit : units) {
         out[unit.module_path] = &unit;
     }
@@ -436,9 +197,7 @@ bool should_emit_module(const std::set<std::string>& module_paths, const ModuleA
 
 ModuleAst test_harness_module(const ModuleAst& module) {
     ModuleAst out;
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
-    for (const ModuleAst& unit : units) {
+    for (const ModuleAst& unit : module_units(module)) {
         for (const FunctionDecl& fn : unit.functions) {
             if (cpp_emit_function_is_test(fn)) {
                 out.functions.push_back(fn);
@@ -458,9 +217,7 @@ std::string test_harness_source(const ModuleAst& module, const std::string& filt
            "#include <string_view>\n"
            "#include <type_traits>\n"
            "#include \"dudu_runtime.hpp\"\n";
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
-    for (const ModuleAst& unit : units) {
+    for (const ModuleAst& unit : module_units(module)) {
         if (unit.compilation_domain == CompilationDomain::MacroHost) {
             continue;
         }
@@ -476,8 +233,7 @@ std::string test_harness_source(const ModuleAst& module, const std::string& filt
 } // namespace
 
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module) {
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    const std::span<const ModuleAst> units = module_units(module);
     std::vector<std::string> module_paths;
     module_paths.reserve(units.size());
     for (const ModuleAst& unit : units) {
@@ -503,17 +259,10 @@ emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string
                    .module_path = {},
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
-    if (module.module_units.empty()) {
-        if (should_emit_module(filter, module, emit_options.include_macro_host_modules)) {
-            append_artifacts(out, module, {{module.module_path, &module}}, false,
-                             preserve_public_abi_names(module),
-                             emit_options.include_macro_host_modules);
-        }
-        return out;
-    }
-    const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
+    const std::span<const ModuleAst> units = module_units(module);
+    const CppModuleMap modules = module_map(units);
     const bool public_abi = preserve_public_abi_names(module);
-    for (const ModuleAst& unit : module.module_units) {
+    for (const ModuleAst& unit : units) {
         if (should_emit_module(filter, unit, emit_options.include_macro_host_modules)) {
             append_artifacts(out, unit, modules, false, public_abi,
                              emit_options.include_macro_host_modules);
@@ -525,8 +274,7 @@ emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string
 std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& module,
                                                               const std::string& filter,
                                                               bool capture_output) {
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    const std::span<const ModuleAst> units = module_units(module);
     std::vector<std::string> module_paths;
     module_paths.reserve(units.size());
     for (const ModuleAst& unit : units) {
@@ -548,16 +296,11 @@ emit_cpp_test_module_artifacts(const ModuleAst& module,
                    .module_path = {},
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
-    if (module.module_units.empty()) {
-        if (should_emit_module(module_filter_set, module)) {
-            append_artifacts(out, module, {{module.module_path, &module}}, true);
-        }
-    } else {
-        const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
-        for (const ModuleAst& unit : module.module_units) {
-            if (should_emit_module(module_filter_set, unit)) {
-                append_artifacts(out, unit, modules, true);
-            }
+    const std::span<const ModuleAst> units = module_units(module);
+    const CppModuleMap modules = module_map(units);
+    for (const ModuleAst& unit : units) {
+        if (should_emit_module(module_filter_set, unit)) {
+            append_artifacts(out, unit, modules, true);
         }
     }
     out.push_back({.path = "test_harness.cpp",
@@ -569,8 +312,7 @@ emit_cpp_test_module_artifacts(const ModuleAst& module,
 
 std::vector<std::filesystem::path> cpp_module_source_paths(const ModuleAst& module) {
     std::vector<std::filesystem::path> out;
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    const std::span<const ModuleAst> units = module_units(module);
     out.reserve(units.size());
     for (const ModuleAst& unit : units) {
         if (unit.compilation_domain == CompilationDomain::MacroHost) {
@@ -590,8 +332,7 @@ std::vector<std::filesystem::path> cpp_test_module_source_paths(const ModuleAst&
 std::vector<std::filesystem::path> cpp_module_artifact_paths(const ModuleAst& module) {
     std::vector<std::filesystem::path> out;
     out.push_back("dudu_runtime.hpp");
-    const std::vector<ModuleAst>& units =
-        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    const std::span<const ModuleAst> units = module_units(module);
     out.reserve(1 + units.size() * 2);
     for (const ModuleAst& unit : units) {
         if (unit.compilation_domain == CompilationDomain::MacroHost) {
@@ -635,10 +376,6 @@ void write_cpp_artifacts(const std::filesystem::path& dir,
         }
         out << artifact.content;
     }
-}
-
-void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module) {
-    write_cpp_artifacts(dir, emit_cpp_module_artifacts(module));
 }
 
 } // namespace dudu

@@ -43,6 +43,5 @@ std::vector<std::filesystem::path> cpp_module_artifact_paths(const ModuleAst& mo
 std::vector<std::filesystem::path> cpp_test_module_artifact_paths(const ModuleAst& module);
 void write_cpp_artifacts(const std::filesystem::path& dir,
                          const std::vector<CppModuleArtifact>& artifacts);
-void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module);
 
 } // namespace dudu
