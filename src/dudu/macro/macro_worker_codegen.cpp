@@ -171,10 +171,12 @@ std::string generate_worker_source(const Plan& plan, const WorkerSourceOptions& 
     if (plan.definitions.empty()) {
         throw std::invalid_argument("cannot generate a worker without macro definitions");
     }
-    std::set<std::string> sources(options.module_sources.begin(), options.module_sources.end());
-    if (sources.empty()) {
+    std::set<std::string> headers(options.module_headers.begin(), options.module_headers.end());
+    if (headers.empty()) {
         for (const auto& [_, definition] : plan.definitions) {
-            sources.insert(module_source(definition.module_path));
+            std::filesystem::path header = module_source(definition.module_path);
+            header.replace_extension(".hpp");
+            headers.insert(header.generic_string());
         }
     }
 
@@ -182,8 +184,8 @@ std::string generate_worker_source(const Plan& plan, const WorkerSourceOptions& 
     out << "// Generated Dudu macro worker.\n"
         << "#include \"dudu/macro/macro_sdk_bridge_generated.hpp\"\n"
         << "#include \"dudu/macro/macro_worker_runtime.hpp\"\n";
-    for (const std::string& source : sources) {
-        out << "#include " << cpp_string_literal(source) << "\n";
+    for (const std::string& header : headers) {
+        out << "#include " << cpp_string_literal(header) << "\n";
     }
     out << "\n#include <span>\n#include <stdexcept>\n#include <string_view>\n#include <utility>\n\n"
         << "using namespace dudu::macro;\n"

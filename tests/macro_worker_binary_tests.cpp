@@ -7,6 +7,7 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 
 namespace {
@@ -59,6 +60,16 @@ void test_build_launch_and_cache() {
     const dudu::macro::WorkerBinary first = dudu::macro::build_worker_binary(module, plan, options);
     assert(!first.cache_hit);
     assert(std::filesystem::is_regular_file(first.executable));
+    assert(std::filesystem::is_regular_file(first.executable.parent_path() / "objects/unit_0.o"));
+    assert(std::filesystem::is_regular_file(first.executable.parent_path() / "objects/unit_1.o"));
+    const std::string worker_source =
+        [&] {
+            std::ifstream input(first.executable.parent_path() / "worker.cpp");
+            assert(input);
+            return std::string(std::istreambuf_iterator<char>(input), {});
+        }();
+    assert(worker_source.find("#include \"macros.hpp\"") != std::string::npos);
+    assert(worker_source.find("#include \"macros.cpp\"") == std::string::npos);
 
     dudu::macro::WorkerProcess worker = dudu::macro::WorkerProcess::launch(first.executable);
     const dudu::macro::protocol::MacroCatalog catalog = worker.describe();

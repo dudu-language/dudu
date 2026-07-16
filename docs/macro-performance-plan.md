@@ -204,21 +204,21 @@ shared SDK to rebuild.
 ## 2026-07-14 Optimization Result
 
 The original Le Plan 2 fixture used 1,000 decorated two-field classes. Its
-Release median was 987.0 ms cold and 50.6 ms cached. The current three-sample
+Release median was 987.0 ms cold and 50.6 ms cached. The current five-sample
 medians are:
 
 | Case | Median | p95 |
 | --- | ---: | ---: |
-| first SDK bootstrap plus project | 2723.1 ms | 2773.6 ms |
-| cold project with shared SDK | 519.2 ms | 519.8 ms |
-| explicit 1,000-type expansion | 115.0 ms | 116.8 ms |
-| cached project | 54.2 ms | 54.6 ms |
-| unrelated edit | 51.6 ms | 52.8 ms |
+| first SDK bootstrap plus project | 2513.5 ms | 2542.1 ms |
+| cold project with shared SDK | 410.1 ms | 432.2 ms |
+| explicit 1,000-type expansion | 112.3 ms | 114.2 ms |
+| cached project | 52.5 ms | 54.4 ms |
+| unrelated edit | 53.3 ms | 54.2 ms |
 
-The cold project contains 367.7 ms p95 of package C++ compilation and 32.7 ms
-of linking. Macro execution itself is 16.2 ms. First SDK preparation is
-2215.9 ms median and is keyed by compiler, standard, toolchain, Dudu identity,
-SDK contents, include paths, defines, and flags.
+The cold project contains 257.3 ms median package C++ compilation and 30.9 ms
+of linking. Macro execution itself is 16.3 ms. SDK preparation is keyed by
+compiler, standard, toolchain, Dudu identity, SDK contents, include paths,
+defines, and flags.
 
 The following experiments were rejected or corrected rather than retained as
 special cases:
@@ -226,9 +226,10 @@ special cases:
 - An initial precompiled-header attempt was silently invalidated because the
   compile command force-included the capabilities header first. The package now
   enters through the cached SDK header directly.
-- Compiling generated Dudu modules as independent native units retained about
-  593 ms of cold package compile time because each process parsed the same
-  native header surface and competed for CPU and memory bandwidth.
+- Compiling generated Dudu modules independently without the shared SDK PCH
+  retained about 593 ms of cold package compile time. With the PCH in place,
+  compiling package modules separately from the worker glue in parallel is the
+  current 257.3 ms path.
 - Combining only decorator-definition modules omitted transitive Dudu helpers
   such as `dudu.macro`. The worker now embeds the complete generated dependency
   closure; external C++ sources remain separate.
@@ -236,10 +237,10 @@ special cases:
   tokens. The catalog now uses length-delimited octal string literals and a
   single decoder helper.
 
-The next architecture-level cold improvement is a stable prebuilt generic
-launcher/package ABI so project builds compile only macro package logic. Do not
-replace that work with compiler-daemon state or a speculative cache that hides
-the native compile.
+The current result meets the cold and cached budgets. A stable prebuilt generic
+launcher/package ABI remains an option only if larger real macro packages show
+that catalog/dispatch compilation is material. Do not add that complexity or a
+compiler daemon to optimize an already-compliant fixture.
 
 ## Tooling
 

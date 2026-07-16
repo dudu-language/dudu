@@ -115,15 +115,14 @@ Package downloads and the first Swift Syntax dependency bootstrap are excluded.
 | Language | Clean app | Warm app | Unrelated edit | Decorated edit |
 | --- | ---: | ---: | ---: | ---: |
 | Rust 1.94 | 153.6 ms | 37.3 ms | 88.3 ms | 88.8 ms |
-| Dudu, current | 519.2 ms | 54.2 ms | 51.6 ms | 63.6 ms |
+| Dudu, current | 410.1 ms | 52.5 ms | 53.3 ms | 67.5 ms |
 | Nim 1.6 | 819.7 ms | 176.2 ms | 192.6 ms | 194.5 ms |
 | Swift 6.3 | 2,160.3 ms | 454.7 ms | 1,404.4 ms | 1,352.9 ms |
 | C# / .NET 8 | 2,440.3 ms | 502.8 ms | 1,565.9 ms | 1,592.9 ms |
 
-The current Dudu row uses three samples after the latest optimization; the
-other rows use five. It is therefore shown as a current result, not silently
-substituted into the original five-sample table. About 400 ms of the Dudu cold
-case is external GCC compile/link work. Macro execution itself is about 2 ms.
+The current Dudu row uses five Release samples. About 288 ms of the cold case
+is external GCC compile/link work. Macro execution itself is about 16 ms for
+the 1,000 generated methods.
 
 See [Macro Performance Matrix](macro-performance-matrix.md) for workload details,
 package compile time, RSS, historical results, and reproduction commands.

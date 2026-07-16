@@ -54,6 +54,11 @@ language, rendered-string semantic paths, or temporary compiler shortcuts.
 
 This is the immediate priority.
 
+The complete bounded backlog, generated-program parity work, benchmark rules,
+and stopping conditions live in [Dudu Performance Tasks](performance-tasks.md).
+Use that document for performance pushes instead of growing an unbounded list
+of speculative optimizations here.
+
 Pure Dudu frontend throughput is no longer uniformly slow. Recent results in
 [Le Plan: Compiler Throughput](le_plan.md#11-compiler-throughput-and-build-performance)
 put most 50,000-line generated shapes near 90-300 ms. The remaining bad latency
@@ -155,16 +160,13 @@ generated artifacts.
 
 The initial macro baseline put a cold 1,000-type project at 987.0 ms, with a
 cached run at 50.6 ms. A content-addressed shared SDK precompiled header,
-parallel SDK bootstrap, one generated Dudu package translation unit, and a
-compact binary catalog literal reduced the cold-project median to 519.2 ms.
-The measured cold path is 367.7 ms of external C++ compilation, 32.3 ms of
-linking, 16.2 ms of macro execution, and Dudu orchestration/analysis around
-those phases. The first SDK bootstrap for a new Dudu/C++ toolchain identity is
-2.72 s; 2.22 s of that is the one-time SDK preparation. Cached projects remain
-54.2 ms. The cold result is 19 ms above the initial target because of an
-explicit external native compile, not hidden frontend work. The concrete
-follow-up is a stable prebuilt generic macro launcher/package ABI that avoids
-recompiling launcher and catalog machinery for each package.
+parallel SDK bootstrap, compact binary catalog literal, and separate parallel
+compilation of package modules and worker glue reduced the five-sample cold
+median to 410.1 ms. The measured cold path now contains 257.3 ms of external
+C++ compilation, 30.9 ms of linking, and 16.3 ms of macro execution. Cached
+projects take 52.5 ms. Both cold and cached paths meet the initial budgets; a
+generic launcher/plugin ABI is not justified without a larger measured package
+that fails them.
 
 The generated C++ boundary milestone is complete. Application-native imports
 are owned by generated module headers or sources instead of
@@ -358,7 +360,8 @@ Do not make GitHub Actions part of the normal patch/test loop.
 
 ## Execution Order
 
-1. User-visible latency and current benchmark budgets
+1. P0 user-visible latency and current benchmark budgets from
+   [Dudu Performance Tasks](performance-tasks.md)
 2. Native template/header correctness exposed by real programs
 3. Architecture/readability cleanup encountered during that work
 4. Editor/diagnostic polish after cold indexing is fixed

@@ -88,8 +88,8 @@ and generated Markdown under `build/compiler_compare`.
 
 ## Current Finding
 
-The Dudu frontend is competitive on this workload: it is 1.21 times the Rust
-frontend time, 0.77 times Go, 0.58 times Nim, and 0.40 times Swift. GCC remains
+The Dudu frontend is competitive on this workload: it is 1.14 times the Rust
+frontend time, 0.72 times Go, 0.55 times Nim, and 0.37 times Swift. GCC remains
 substantially faster for its equivalent C++ input.
 
 Dudu's complete self-contained path remains slower than the direct native

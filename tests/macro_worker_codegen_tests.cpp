@@ -31,10 +31,11 @@ void test_worker_source_uses_stable_entry_points() {
         dudu::macro::generate_worker_source(plan, {.package = "demo",
                                                    .binary_identity = "identity-1",
                                                    .project_root = dir.string(),
-                                                   .module_sources = {},
+                                                   .module_headers = {},
                                                    .capabilities = {"fs.read=schemas/**", "clock"},
                                                    .non_cacheable_macros = {}});
-    assert(source.find("#include \"macros.cpp\"") != std::string::npos);
+    assert(source.find("#include \"macros.hpp\"") != std::string::npos);
+    assert(source.find("#include \"macros.cpp\"") == std::string::npos);
     assert(source.find(".entry_point = \"macros.Debug\"") != std::string::npos);
     assert(source.find("request.declaration.class_decl") != std::string::npos);
     assert(source.find("dudu_macros_Debug(std::move(input))") != std::string::npos);
@@ -62,7 +63,7 @@ void test_worker_catalog_contains_helper_schema_and_definition() {
         dudu::macro::generate_worker_source(plan, {.package = "demo",
                                                    .binary_identity = "identity-2",
                                                    .project_root = dir.string(),
-                                                   .module_sources = {},
+                                                   .module_headers = {},
                                                    .capabilities = {},
                                                    .non_cacheable_macros = {}});
     assert(source.find("descriptor.attribute_schema = decode_class_decl") != std::string::npos);

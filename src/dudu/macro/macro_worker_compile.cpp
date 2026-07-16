@@ -201,8 +201,14 @@ struct CompileUnit {
 };
 
 std::vector<CompileUnit> compile_units(const std::filesystem::path& dir,
+                                       const std::vector<CppModuleArtifact>& artifacts,
                                        const WorkerBuildOptions& options) {
     std::vector<std::filesystem::path> sources = {dir / "worker.cpp"};
+    for (const CppModuleArtifact& artifact : artifacts) {
+        if (artifact.kind == CppModuleArtifactKind::Source && artifact.module_path != "dudu.ast") {
+            sources.push_back(dir / artifact.path);
+        }
+    }
     sources.insert(sources.end(), options.cpp_sources.begin(), options.cpp_sources.end());
 
     const std::filesystem::path object_dir = dir / "objects";
@@ -300,7 +306,7 @@ WorkerBinary::Timings compile_worker(const std::filesystem::path& dir,
     const Clock::time_point sdk_start = Clock::now();
     const std::filesystem::path sdk = prepare_sdk(artifacts, options);
     timings.sdk_prepare_ns = elapsed_ns(sdk_start);
-    const std::vector<CompileUnit> units = compile_units(dir, options);
+    const std::vector<CompileUnit> units = compile_units(dir, artifacts, options);
     const Clock::time_point compile_start = Clock::now();
     compile_units_parallel(dir, sdk, options, units);
     timings.compile_ns = elapsed_ns(compile_start);

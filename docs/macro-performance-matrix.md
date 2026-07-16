@@ -42,27 +42,28 @@ The first-ever Dudu SDK cache bootstrap on this machine takes about 4.8
 seconds. It occurs once per SDK/toolchain identity, not once per project. A
 normal cold project build after bootstrap is the 1.04-second result above.
 
-## Follow-Up Dudu Result
+## Current Dudu Result
 
-The next Dudu implementation combines generated package modules into one
-translation unit and uses a shared SDK precompiled header. A three-sample run
-of the same 1,000-type workload measured:
+The current Dudu implementation uses a shared SDK precompiled header and
+compiles generated package modules separately from the small catalog/dispatch
+worker. Those independent translation units compile in parallel. A five-sample
+run of the same 1,000-type workload measured:
 
 | Case | Median | p95 |
 | --- | ---: | ---: |
-| first SDK bootstrap plus app | 2723.1 ms | 2773.6 ms |
-| macro package compile | 367.7 ms | 369.4 ms |
-| macro package link | 32.3 ms | 32.7 ms |
-| cold app after SDK bootstrap | 519.2 ms | 519.8 ms |
-| warm app | 54.2 ms | 54.6 ms |
-| unrelated edit | 51.6 ms | 52.8 ms |
-| decorated-helper edit | 63.6 ms | 63.8 ms |
-| handwritten app | 25.8 ms | 26.9 ms |
+| first SDK bootstrap plus app | 2513.5 ms | 2542.1 ms |
+| macro package compile | 257.3 ms | 277.4 ms |
+| macro package link | 30.9 ms | 32.8 ms |
+| cold app after SDK bootstrap | 410.1 ms | 432.2 ms |
+| warm app | 52.5 ms | 54.4 ms |
+| unrelated edit | 53.3 ms | 54.2 ms |
+| decorated-helper edit | 67.5 ms | 67.8 ms |
+| handwritten app | 27.2 ms | 27.4 ms |
 
-This result is not substituted into the five-sample cross-language table
-because its sample count differs. It records a further 50% cold improvement
-over the prior 1.04-second Dudu result. About 400 ms remains in the explicitly
-measured external GCC compile/link boundary.
+This records a further 21% cold improvement over the prior 519.2 ms result.
+Separating package implementation from worker glue reduced median external GCC
+compilation from 364.0 ms to 257.3 ms without changing macro semantics or
+introducing a plugin ABI.
 
 ## Reproduction
 

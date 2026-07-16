@@ -77,7 +77,7 @@ std::vector<std::string> dependency_closure(const ModuleAst& module, const Plan&
 std::string build_identity(const std::vector<CppModuleArtifact>& artifacts, const Plan& plan,
                            const WorkerBuildOptions& options) {
     StableHash hash;
-    hash.add("dudu-macro-worker-binary-v2-unified");
+    hash.add("dudu-macro-worker-binary-v3-separate-modules");
     hash.add(std::to_string(protocol::protocol_version));
     hash.add(std::to_string(protocol::schema_version));
     hash.add(options.package);
@@ -125,7 +125,7 @@ std::optional<std::string> source_identity(const ModuleAst& module,
                                            const Plan& plan, const WorkerBuildOptions& options) {
     const auto modules = unit_map(module);
     StableHash hash;
-    hash.add("dudu-macro-worker-source-v1");
+    hash.add("dudu-macro-worker-source-v2-separate-modules");
     hash.add(std::to_string(protocol::protocol_version));
     hash.add(std::to_string(protocol::schema_version));
     hash.add(options.package);
@@ -274,10 +274,11 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
     std::filesystem::remove_all(staging);
     std::filesystem::create_directories(staging);
     write_worker_artifacts(staging, artifacts);
-    std::vector<std::string> module_sources;
+    std::vector<std::string> module_headers;
     for (const CppModuleArtifact& artifact : artifacts) {
-        if (artifact.kind == CppModuleArtifactKind::Source && artifact.module_path != "dudu.ast") {
-            module_sources.push_back(artifact.path.generic_string());
+        if (artifact.kind == CppModuleArtifactKind::Header && artifact.module_path != "dudu.ast" &&
+            artifact.path != "dudu_runtime.hpp") {
+            module_headers.push_back(artifact.path.generic_string());
         }
     }
     write_text(
@@ -285,7 +286,7 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         generate_worker_source(plan, {.package = options.package,
                                       .binary_identity = identity,
                                       .project_root = options.project_root.generic_string(),
-                                      .module_sources = std::move(module_sources),
+                                      .module_headers = std::move(module_headers),
                                       .capabilities = options.capabilities,
                                       .non_cacheable_macros = options.non_cacheable_macros}));
     WorkerBinary::Timings timings;
