@@ -289,8 +289,16 @@ if(DUDU_BUILD_TESTS)
     dudu_add_test(dudu_native_type_compat_tests tests/native_type_compat_tests.cpp dudu_frontend)
     target_compile_definitions(dudu_native_type_compat_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
-    dudu_add_test(dudu_emit_frontend_tests tests/emit_frontend_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_emit_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_emit_native_pointer_tests
+        tests/emit_native_pointer_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_emit_collection_match_tests
+        tests/emit_collection_match_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_emit_class_function_tests
+        tests/emit_class_function_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_emit_native_pointer_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_emit_collection_match_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_parser_range_tests tests/parser_range_tests.cpp dudu_frontend)
     dudu_add_test(dudu_project_config_tests tests/project_config_tests.cpp dudu_frontend)
@@ -316,6 +324,7 @@ if(DUDU_BUILD_TESTS)
 
     dudu_add_test(dudu_macro_ast_bridge_tests tests/macro_ast_bridge_tests.cpp dudu_frontend)
     dudu_add_test(dudu_macro_expansion_tests tests/macro_expansion_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_macro_capability_tests tests/macro_capability_tests.cpp dudu_frontend)
     dudu_add_test(dudu_macro_expansion_render_tests
         tests/macro_expansion_render_tests.cpp dudu_frontend)
     dudu_add_test(dudu_macro_package_fixture_tests

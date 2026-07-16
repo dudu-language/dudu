@@ -99,7 +99,7 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     }
-    const std::string method_name = trim(callee.substr(dot + 1));
+    const std::string method_name = trim_string(callee.substr(dot + 1));
     if (method_name.empty()) {
         if (location != nullptr) {
             fail(*location, "super call requires a method name");

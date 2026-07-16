@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/sema_bindings.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
@@ -173,7 +174,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         }
         const auto pointee_type = unary_type_child_ref(type, TypeKind::Pointer);
         if (!pointee_type) {
-            const std::string type_display = trim(substitute_type_ref_text(type, {}));
+            const std::string type_display = trim_string(substitute_type_ref_text(type, {}));
             sema_fail(target_location, "cannot dereference non-pointer: " + type_display);
         }
         return *pointee_type;

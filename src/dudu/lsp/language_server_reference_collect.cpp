@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"

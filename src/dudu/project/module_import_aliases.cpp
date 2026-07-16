@@ -7,13 +7,9 @@
 namespace dudu {
 namespace {
 
-TypeRef module_named_type_ref(const std::string& name, const SourceLocation& location) {
-    return named_type_ref(name, location);
-}
-
 TypeRef module_qualified_type_ref(const std::string& prefix, const std::string& name,
                                   const SourceLocation& location) {
-    return module_named_type_ref(prefix + "." + name, location);
+    return named_type_ref(prefix + "." + name, location);
 }
 
 NativeSymbolId module_symbol_identity(std::string canonical_path) {
@@ -57,19 +53,19 @@ std::map<std::string, TypeRef> selective_type_substitutions(const ModuleAst& dep
     for (const TypeAliasDecl& alias : dependency.aliases) {
         out[alias.name] =
             alias.name == import.imported_name
-                ? module_named_type_ref(exposed_name, import.location)
+                ? named_type_ref(exposed_name, import.location)
                 : module_qualified_type_ref(import.module_path, alias.name, import.location);
     }
     for (const EnumDecl& en : dependency.enums) {
         out[en.name] =
             en.name == import.imported_name
-                ? module_named_type_ref(exposed_name, import.location)
+                ? named_type_ref(exposed_name, import.location)
                 : module_qualified_type_ref(import.module_path, en.name, import.location);
     }
     for (const ClassDecl& klass : dependency.classes) {
         out[klass.name] =
             klass.name == import.imported_name
-                ? module_named_type_ref(exposed_name, import.location)
+                ? named_type_ref(exposed_name, import.location)
                 : module_qualified_type_ref(import.module_path, klass.name, import.location);
     }
     for (const NativeTypeDecl& type : dependency.native_types) {

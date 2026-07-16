@@ -15,13 +15,13 @@ struct MacroParams {
 };
 
 MacroParams macro_params(std::string args) {
-    args = trim_copy(std::move(args));
+    args = trim_string(std::move(args));
     if (args.empty()) {
         return {};
     }
     MacroParams out;
     for (std::string part : split_top_level_args(args)) {
-        part = trim_copy(std::move(part));
+        part = trim_string(std::move(part));
         if (part == "..." || part.find("...") != std::string::npos || part == "__VA_ARGS__") {
             out.variadic = true;
         } else {

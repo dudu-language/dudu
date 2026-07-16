@@ -393,8 +393,13 @@ semantics/codegen ownership, with manifest behavior consolidated into the
 project-config suite. Module loading/import identity, project indexing, and
 generated module artifacts also have independent test owners. Core type
 compatibility, native templates, member substitution/lookup, expression shape,
-and type/array shape now have bounded independent fixtures as well. The
-default fast CTest inventory is 49 ownership-specific targets.
+and type/array shape now have bounded independent fixtures as well. Macro
+capability policy is separate from expansion/editor integration, and emission
+fixtures are separated into native/pointer, collection/match, and
+class/function ownership. The default fast CTest inventory is 52
+ownership-specific targets. The 533-line native template metadata fixture
+remains one cohesive documented exception rather than being split across
+shared generated-header vocabulary.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
@@ -412,6 +417,16 @@ The semantic and native API audit removes unreleased aliases rather than
 preserving them. Expression presence, decorator string literals, receiver
 class lookup, and native metadata merging use their canonical structured
 operations directly.
+
+The final core audit also removed the remaining duplicate trimming APIs,
+one-use pointer/construction/import forwarding helpers, and the allocation
+semantic trampoline. Generic AST traversal templates now live in
+`core/ast_visit.hpp` instead of the AST data header, so consumers opt into
+behavior explicitly. Remaining hand-written files slightly above the
+300-500-line guideline were reviewed and retained only where they own one
+stateful grammar, semantic, module-loading, native-matching, or LSP-session
+operation; the rationale is recorded in
+[Compiler Cleanup](compiler-cleanup.md#final-size-and-wrapper-audit).
 
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured

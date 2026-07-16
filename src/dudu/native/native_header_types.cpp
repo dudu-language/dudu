@@ -104,7 +104,7 @@ std::optional<std::string> lower_compiler_type_transform(const std::string& type
             continue;
         }
         const std::string argument =
-            trim_copy(type.substr(name.size() + 1, close - name.size() - 1));
+            trim_string(type.substr(name.size() + 1, close - name.size() - 1));
         if (argument.empty()) {
             return std::nullopt;
         }
@@ -130,19 +130,19 @@ std::vector<std::string> split_cpp_scope_path(std::string_view type) {
         }
         if (angle_depth == 0 && index + 1 < type.size() && type[index] == ':' &&
             type[index + 1] == ':') {
-            parts.push_back(trim_copy(std::string(type.substr(start, index - start))));
+            parts.push_back(trim_string(std::string(type.substr(start, index - start))));
             start = index + 2;
             ++index;
         }
     }
-    parts.push_back(trim_copy(std::string(type.substr(start))));
+    parts.push_back(trim_string(std::string(type.substr(start))));
     return parts;
 }
 
 std::string collapse_template_associated_type(std::string type) {
     constexpr std::string_view typename_prefix = "typename ";
     if (starts_with(type, typename_prefix)) {
-        type = trim_copy(type.substr(typename_prefix.size()));
+        type = trim_string(type.substr(typename_prefix.size()));
     }
     size_t template_keyword = type.find("::template ");
     while (template_keyword != std::string::npos) {
@@ -210,11 +210,11 @@ std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
         } else if ((c == ')' || c == ']' || c == '}') && paren_depth > 0) {
             --paren_depth;
         } else if (c == ',' && paren_depth == 0 && angle_depth == 0) {
-            out.push_back(trim_copy(std::string(args.substr(start, i - start))));
+            out.push_back(trim_string(std::string(args.substr(start, i - start))));
             start = i + 1;
         }
     }
-    const std::string last = trim_copy(std::string(args.substr(start)));
+    const std::string last = trim_string(std::string(args.substr(start)));
     if (!last.empty()) {
         out.push_back(last);
     }
@@ -227,10 +227,10 @@ std::string lower_template_type(std::string type) {
         return cpp_scope_to_dudu(scalar_dudu_type(type));
     }
     const size_t close = matching_angle(type, open);
-    if (close == std::string::npos || trim_copy(type.substr(close + 1)).empty() == false) {
+    if (close == std::string::npos || trim_string(type.substr(close + 1)).empty() == false) {
         return cpp_scope_to_dudu(scalar_dudu_type(type));
     }
-    std::string out = cpp_scope_to_dudu(scalar_dudu_type(trim_copy(type.substr(0, open))));
+    std::string out = cpp_scope_to_dudu(scalar_dudu_type(trim_string(type.substr(0, open))));
     out.push_back('[');
     bool first = true;
     for (std::string arg : split_cpp_top_level_args(type.substr(open + 1, close - open - 1))) {
@@ -247,18 +247,18 @@ std::string lower_template_type(std::string type) {
 std::optional<std::pair<std::string, std::vector<std::string>>>
 split_suffix_array_type(std::string type) {
     std::vector<std::string> dims;
-    type = trim_copy(std::move(type));
+    type = trim_string(std::move(type));
     while (type.ends_with("]")) {
         const size_t open = type.rfind('[');
         if (open == std::string::npos) {
             return std::nullopt;
         }
-        const std::string dim = trim_copy(type.substr(open + 1, type.size() - open - 2));
+        const std::string dim = trim_string(type.substr(open + 1, type.size() - open - 2));
         if (dim.empty()) {
             return std::nullopt;
         }
         dims.insert(dims.begin(), dim);
-        type = trim_copy(type.substr(0, open));
+        type = trim_string(type.substr(0, open));
     }
     if (dims.empty() || type.empty()) {
         return std::nullopt;
@@ -286,7 +286,7 @@ std::optional<std::string> lower_function_pointer_type(const std::string& type) 
             return std::nullopt;
         }
         const std::string declarator =
-            trim_copy(type.substr(declarator_open + 1, declarator_close - declarator_open - 1));
+            trim_string(type.substr(declarator_open + 1, declarator_close - declarator_open - 1));
         size_t params_open = declarator_close + 1;
         while (params_open < type.size() && type[params_open] == ' ') {
             ++params_open;
@@ -297,7 +297,7 @@ std::optional<std::string> lower_function_pointer_type(const std::string& type) 
             if (params_close == std::string::npos) {
                 return std::nullopt;
             }
-            const std::string result_type = trim_copy(type.substr(0, declarator_open));
+            const std::string result_type = trim_string(type.substr(0, declarator_open));
             if (result_type.empty()) {
                 return std::nullopt;
             }
@@ -333,13 +333,13 @@ std::optional<std::string> lower_function_pointer_type(const std::string& type) 
 } // namespace
 
 std::string dudu_type(std::string type) {
-    type = trim_copy(std::move(type));
+    type = trim_string(std::move(type));
     type = erase_all(std::move(type), "__restrict__");
     type = erase_all(std::move(type), "__restrict");
     type = erase_all(std::move(type), " restrict");
-    type = trim_copy(std::move(type));
+    type = trim_string(std::move(type));
     if (type.ends_with("...")) {
-        return dudu_type(trim_copy(type.substr(0, type.size() - 3))) + "...";
+        return dudu_type(trim_string(type.substr(0, type.size() - 3))) + "...";
     }
     if (type == "const char *")
         return "cstr";
@@ -354,10 +354,10 @@ std::string dudu_type(std::string type) {
     while (!type.empty()) {
         if (type.back() == '*') {
             ++pointer_depth;
-            type = trim_copy(type.substr(0, type.size() - 1));
+            type = trim_string(type.substr(0, type.size() - 1));
         } else if (type.back() == '&') {
             ++reference_depth;
-            type = trim_copy(type.substr(0, type.size() - 1));
+            type = trim_string(type.substr(0, type.size() - 1));
         } else {
             break;
         }
@@ -366,14 +366,14 @@ std::string dudu_type(std::string type) {
     while (starts_with(type, "const ") || ends_with(type, " const")) {
         is_const = true;
         if (starts_with(type, "const ")) {
-            type = trim_copy(type.substr(6));
+            type = trim_string(type.substr(6));
         } else {
-            type = trim_copy(type.substr(0, type.size() - 6));
+            type = trim_string(type.substr(0, type.size() - 6));
         }
     }
     for (const char* prefix : {"class ", "struct ", "union ", "enum "}) {
         if (starts_with(type, prefix)) {
-            type = trim_copy(type.substr(std::string_view(prefix).size()));
+            type = trim_string(type.substr(std::string_view(prefix).size()));
             break;
         }
     }
@@ -426,7 +426,7 @@ std::string signature_receiver_type(const std::string& signature) {
     const size_t close =
         open == std::string::npos ? std::string::npos : matching_paren(signature, open);
     const std::string suffix =
-        close == std::string::npos ? "" : trim_copy(signature.substr(close + 1));
+        close == std::string::npos ? "" : trim_string(signature.substr(close + 1));
     const bool is_const =
         std::regex_search(suffix, std::regex(R"((^|\s)const(\s|$))"));
     const bool rvalue =

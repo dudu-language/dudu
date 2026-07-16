@@ -105,7 +105,7 @@ std::string lower_string_literal_value(std::string_view value) {
 std::string lower_member_expr(std::string receiver, const std::string& member,
                               const std::vector<std::string>& aliases,
                               const CppEmitOptions& options, const bool scoped_receiver) {
-    receiver = trim_copy(std::move(receiver));
+    receiver = trim_string(std::move(receiver));
     if (receiver.empty()) {
         return member;
     }

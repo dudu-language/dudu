@@ -296,7 +296,7 @@ std::set<std::string> type_candidate_names(const TypeRef& type) {
         out.insert(head);
         for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
             if (head.starts_with(tag)) {
-                out.insert(trim_copy(head.substr(tag.size())));
+                out.insert(trim_string(head.substr(tag.size())));
             }
         }
     }

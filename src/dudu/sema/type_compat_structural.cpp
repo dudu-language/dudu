@@ -25,7 +25,7 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
         }
         break;
     case TypeKind::Value:
-        if (trim_copy(expected.value) != trim_copy(got.value)) {
+        if (trim_string(expected.value) != trim_string(got.value)) {
             return false;
         }
         break;
@@ -101,7 +101,7 @@ bool structural_fixed_array_assignment_allowed(const TypeRef& expected, const Ty
 }
 
 bool shaped_dim_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
-    if (expected.kind == TypeKind::Value && trim_copy(expected.value) == "dyn") {
+    if (expected.kind == TypeKind::Value && trim_string(expected.value) == "dyn") {
         return true;
     }
     return type_ref_equivalent(expected, got);

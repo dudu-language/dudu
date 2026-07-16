@@ -88,7 +88,7 @@ std::optional<std::string> lower_parsed_wrapper_type(const std::string& type) {
 } // namespace
 
 std::string lower_cpp_type_name(std::string name) {
-    name = trim_copy(std::move(name));
+    name = trim_string(std::move(name));
     if (name.empty()) {
         return "void";
     }
@@ -109,7 +109,7 @@ std::string lower_cpp_type_name(std::string name,
 
 std::string lower_cpp_type_name(std::string name, const std::vector<std::string>& namespace_aliases,
                                 const CppEmitOptions& options) {
-    name = trim_copy(std::move(name));
+    name = trim_string(std::move(name));
     const std::string emitted = emitted_type_name(name, options);
     if (emitted != name) {
         return emitted;
@@ -170,7 +170,7 @@ std::string strip_c_import_type_aliases(std::string type,
 }
 
 std::string lower_cpp_type_spelling(const std::string& raw_type) {
-    std::string type = trim_copy(raw_type);
+    std::string type = trim_string(raw_type);
 
     if (type.empty()) {
         return "void";
@@ -207,7 +207,7 @@ std::string lower_cpp_type_spelling(const std::string& raw_type) {
 }
 
 std::string lower_cpp_type_spelling(const std::string& raw_type, const CppEmitOptions& options) {
-    const std::string type = trim_copy(raw_type);
+    const std::string type = trim_string(raw_type);
     const std::string emitted = emitted_type_name(type, options);
     if (emitted != type) {
         return emitted;
@@ -223,7 +223,7 @@ std::string lower_cpp_type_spelling(const std::string& raw_type,
 std::string lower_cpp_type_spelling(const std::string& raw_type,
                                     const std::vector<std::string>& namespace_aliases,
                                     const CppEmitOptions& options) {
-    const std::string type = trim_copy(raw_type);
+    const std::string type = trim_string(raw_type);
     const std::string emitted = emitted_type_name(type, options);
     if (emitted != type) {
         return emitted;

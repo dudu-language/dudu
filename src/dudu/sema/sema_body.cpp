@@ -8,6 +8,7 @@
 #include "dudu/core/escapes.hpp"
 #include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_alloc.hpp"
 #include "dudu/sema/sema_assignment.hpp"
@@ -380,7 +381,7 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
     Symbols scoped_symbols = symbols;
     const auto mode = module.build_values.find("TARGET_MODE");
     if (mode != module.build_values.end()) {
-        base.target_mode = trim(mode->second);
+        base.target_mode = trim_string(mode->second);
         if (base.target_mode.size() >= 2 && base.target_mode.front() == '"' &&
             base.target_mode.back() == '"') {
             base.target_mode = base.target_mode.substr(1, base.target_mode.size() - 2);

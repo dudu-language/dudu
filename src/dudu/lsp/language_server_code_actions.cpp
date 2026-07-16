@@ -74,7 +74,7 @@ size_t import_insertion_line(const Document& doc, const ModuleAst& module) {
     }
     const std::vector<std::string> lines = document_lines(doc.text);
     size_t current = 0;
-    while (current < lines.size() && trim_copy(lines[current]).empty()) {
+    while (current < lines.size() && trim_string(lines[current]).empty()) {
         ++current;
     }
     return current;

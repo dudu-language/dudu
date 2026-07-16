@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/lsp/language_server_lint_common.hpp"
 #include "dudu/sema/sema_common.hpp"
 

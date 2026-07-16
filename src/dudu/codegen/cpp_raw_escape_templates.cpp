@@ -151,7 +151,7 @@ std::string lower_offsetof_call(std::string expr) {
             break;
         }
         const std::string type = expr.substr(type_start, type_end - type_start);
-        const std::string field = trim_copy(expr.substr(field_start, field_end - field_start));
+        const std::string field = trim_string(expr.substr(field_start, field_end - field_start));
         const std::string replacement =
             "offsetof(" + lower_cpp_type_spelling(type) + ", " + field + ")";
         expr.replace(pos, field_end + 1 - pos, replacement);

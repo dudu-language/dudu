@@ -29,15 +29,15 @@ bool bind_template_placeholder(const std::string& name, TypeRef got,
 }
 
 std::string strip_forwarding_suffix(std::string type) {
-    type = trim(std::move(type));
+    type = trim_string(std::move(type));
     if (type.ends_with("...")) {
-        type = trim(type.substr(0, type.size() - 3));
+        type = trim_string(type.substr(0, type.size() - 3));
     }
     while (!type.empty() && type.back() == '&') {
-        type = trim(type.substr(0, type.size() - 1));
+        type = trim_string(type.substr(0, type.size() - 1));
     }
     while (!type.empty() && (type.front() == '&' || type.front() == '*')) {
-        type = trim(type.substr(1));
+        type = trim_string(type.substr(1));
     }
     return type;
 }
@@ -69,7 +69,7 @@ native_template_pack_placeholder_spelling(std::string type,
     type = strip_forwarding_suffix(std::move(type));
     if (type.ends_with("...")) {
         type.erase(type.size() - 3);
-        type = trim_copy(type);
+        type = trim_string(type);
     }
     type = normalized_template_param_name(std::move(type));
     if (template_params.contains(type)) {

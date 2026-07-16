@@ -305,7 +305,7 @@ std::string native_header_scan_error_message(const ImportDecl& import, std::stri
                                              const std::string& clang) {
     std::ostringstream out;
     out << "could not scan native header " << native_header_unquoted(import.module_path);
-    detail = trim_copy(std::move(detail));
+    detail = trim_string(std::move(detail));
     if (!detail.empty()) {
         out << "\n" << detail;
     }

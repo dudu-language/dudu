@@ -94,10 +94,6 @@ bool equality_assignment_allowed(const FunctionScope& scope, std::string_view op
                                           can_assign_ast(scope, right_ref, left_expr, left_ref));
 }
 
-TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
-    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
-}
-
 } // namespace
 
 bool is_arithmetic_op(std::string_view op) {
@@ -166,9 +162,9 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
             return std::nullopt;
         }
         if (got_ref.kind == TypeKind::Reference && got_ref.children.size() == 1) {
-            return pointer_type_ref(got_ref.children.front(), expr.location);
+            return wrapped_type_ref(TypeKind::Pointer, got_ref.children.front(), expr.location);
         }
-        return pointer_type_ref(got_ref, expr.location);
+        return wrapped_type_ref(TypeKind::Pointer, got_ref, expr.location);
     }
     if (location != nullptr) {
         sema_expr_fail(*location, "unsupported unary operator: " + std::string(expr.op));

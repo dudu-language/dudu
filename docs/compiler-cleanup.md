@@ -264,6 +264,20 @@ Outcome:
   prefix/suffix checks, and top-level argument splitting into `core/text`;
   parser and semantic code no longer import code-generation ownership merely
   to use string helpers
+- removed the remaining semantic-analysis `trim(std::string)` implementation
+  and the forwarding `trim_copy` alias; parser, sema, native scanning, codegen,
+  project configuration, and LSP code now use the single `core/text`
+  trimming contract
+- removed one-use pointer-type, constructor-display, and imported-type
+  forwarding helpers whose names added no policy beyond the structured
+  `TypeRef` operations they called
+- removed the private allocation-inference trampoline and its one-use pointer
+  wrapper; the public allocation semantic operation now contains the complete
+  rule directly
+- moved generic AST expression/statement traversal templates out of the AST
+  data header and into `core/ast_visit.hpp`; AST consumers now opt into
+  traversal behavior without making every AST include instantiate visitor
+  machinery
 - removed all upward parser, semantic-analysis, and code-generation includes
   from `src/dudu/core`
 - collapsed duplicate fixed-array and shaped-type rendering/substitution onto
@@ -441,18 +455,59 @@ Outcome:
   compatibility, native template matching, member substitution, member lookup,
   expression/decorator shape, and type/array-shape executables between 236 and
   482 lines
-- the default CTest inventory is now 49 targets, and adding a normal C++ test
+- split the 583-line macro expansion driver into expansion/editor integration
+  and capability-policy executables; cache input invalidation, undeclared
+  capability rejection, and nondeterministic approval no longer share one
+  failure sequence with LSP and expansion rendering
+- split the 566-line mixed emission driver into native/pointer,
+  collection/match, and class/function executables between 186 and 226 lines
+- retained the 533-line native template metadata driver as one documented
+  exception because its fixtures exercise one scanner metadata contract and
+  share the same generated header vocabulary
+- the default CTest inventory is now 52 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 49 fast test executables,
+The latest ownership-cleanup milestone passes all 52 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 52.97 seconds with 623,216 KiB peak RSS. Representative frontend and
+matrix in 52.20 seconds with 623,592 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.
+
+### Final size and wrapper audit
+
+The remaining hand-written production files above the 500-line guideline were
+reviewed by ownership rather than split to satisfy a number:
+
+- `core/ast_type.cpp` and `core/ast_expr.cpp` own the structured type and
+  expression model respectively; traversal templates are no longer mixed into
+  the AST data header
+- `parser/parser_statements.cpp` and `parser/ast_type_token_parser.cpp` each
+  own one grammar family and its recovery behavior
+- `sema/sema_methods.cpp`, `sema/sema_declarations.cpp`, `sema/sema_ops.cpp`,
+  and `sema/type_compat.cpp` each own one semantic contract after shared checks
+  and native/structural compatibility were extracted
+- `native/native_signature_match_support.cpp` owns candidate arity, explicit
+  template matching, conversion ranking, and failure reasons used by one
+  overload-resolution operation
+- `project/module_loader.cpp` owns recursive source-tree loading and recovery;
+  project indexing, stamps, aliases, and CMake emission live elsewhere
+- `lsp/language_server.cpp` owns session state and protocol dispatch after
+  transport, capabilities, and individual editor queries were extracted
+
+These files remain modest exceptions because further splitting would divide
+one stateful operation across arbitrary files. Generated macro protocol
+sources remain exempt from the hand-written size guideline.
+
+The final wrapper scan keeps small helpers when they encode a public overload,
+semantic predicate, protocol conversion, recursive entry point, or ownership
+boundary. It removed helpers that only renamed an identical call or returned a
+constant. Remaining source-location fallback values are limited to macro
+declarations that legitimately arrive without their own source range; they are
+diagnostic provenance, not a semantic fallback path.
 
 ## Completion Gate
 

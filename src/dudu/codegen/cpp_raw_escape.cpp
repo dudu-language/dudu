@@ -159,7 +159,7 @@ std::string lower_named_argument_calls(std::string expr) {
             if (i > 0) {
                 replacement << ", ";
             }
-            replacement << "." << trim_copy(parts[i].substr(0, equal)) << " = "
+            replacement << "." << trim_string(parts[i].substr(0, equal)) << " = "
                         << lower_raw_cpp_escape_expr(parts[i].substr(equal + 1));
         }
         replacement << "}";
@@ -189,7 +189,7 @@ std::string lower_comma_indexing(std::string expr) {
         }
         std::ostringstream replacement;
         for (const std::string& part : parts) {
-            replacement << "[" << trim_copy(part) << "]";
+            replacement << "[" << trim_string(part) << "]";
         }
         const std::string text = replacement.str();
         expr.replace(open, close + 1 - open, text);
@@ -255,8 +255,8 @@ std::string lower_slice_indexing(std::string expr) {
             continue;
         }
         const std::string target = expr.substr(name_start, open - name_start);
-        const std::string start = trim_copy(inside.substr(0, colon));
-        const std::string end = trim_copy(inside.substr(colon + 1));
+        const std::string start = trim_string(inside.substr(0, colon));
+        const std::string end = trim_string(inside.substr(colon + 1));
         if (start.empty() || end.empty()) {
             open = expr.find('[', close + 1);
             continue;

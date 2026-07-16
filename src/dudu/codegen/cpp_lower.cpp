@@ -19,7 +19,7 @@ std::string replace_dots(std::string text) {
 }
 
 bool is_non_type_template_arg(const std::string& text) {
-    const std::string trimmed = trim_copy(text);
+    const std::string trimmed = trim_string(text);
     if (trimmed.empty()) {
         return false;
     }
@@ -58,11 +58,11 @@ std::string unescape_cpp_string(std::string text) {
 }
 
 std::string cpp_escape_body(std::string text) {
-    text = trim_copy(std::move(text));
+    text = trim_string(std::move(text));
     if (!starts_with(text, "cpp(") || text.back() != ')') {
         return {};
     }
-    text = trim_copy(text.substr(4, text.size() - 5));
+    text = trim_string(text.substr(4, text.size() - 5));
     if (starts_with(text, "\"\"\"") && ends_with(text, "\"\"\"")) {
         return text.substr(3, text.size() - 6);
     }
@@ -78,7 +78,7 @@ std::vector<std::string> cpp_escape_lines(std::string body_text) {
     std::istringstream body(std::move(body_text));
     std::string line;
     while (std::getline(body, line)) {
-        line = trim_copy(std::move(line));
+        line = trim_string(std::move(line));
         if (!line.empty()) {
             lines.push_back(std::move(line));
         }
@@ -88,7 +88,7 @@ std::vector<std::string> cpp_escape_lines(std::string body_text) {
 
 std::string lower_raw_template_call_arg(const std::string& arg,
                                         const std::vector<std::string>& namespace_aliases) {
-    const std::string trimmed = trim_copy(arg);
+    const std::string trimmed = trim_string(arg);
     if (is_non_type_template_arg(trimmed)) {
         return trimmed;
     }

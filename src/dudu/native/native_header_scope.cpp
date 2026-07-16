@@ -104,7 +104,7 @@ std::string qualify_scoped_type_impl(const NativeHeaderScan& scan,
                                      const std::vector<std::pair<int, std::string>>& namespaces,
                                      const std::vector<NativeClassScope>* classes,
                                      std::string type) {
-    type = trim_copy(std::move(type));
+    type = trim_string(std::move(type));
     if (type.empty())
         return type;
     if (type.front() == '*' || type.front() == '&')
@@ -159,7 +159,7 @@ std::string generic_param_name(std::string name) {
     while (name.ends_with("...")) {
         name.resize(name.size() - 3);
     }
-    return trim_copy(std::move(name));
+    return trim_string(std::move(name));
 }
 
 void add_generic_params(std::set<std::string>& protected_names,
@@ -198,7 +198,7 @@ void qualify_completed_type_ref(TypeRef& type, const NativeHeaderScan& scan,
     if (type.kind != TypeKind::Named && type.kind != TypeKind::Template) {
         return;
     }
-    const std::string name = trim_copy(type.name);
+    const std::string name = trim_string(type.name);
     if (name.empty() || name.find('.') != std::string::npos ||
         name.find("::") != std::string::npos || dudu_builtin_type(name) ||
         protected_names.contains(name) || scan_has_type(scan, name)) {

@@ -22,10 +22,6 @@ TypeRef template_pointer_cast_type_ref(const Expr& expr) {
     return pointer;
 }
 
-TypeRef pointer_type_ref_from_pointee(TypeRef pointee, SourceLocation location) {
-    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
-}
-
 TypeRef template_constructor_type_ref(const Expr& expr, std::string name,
                                       std::vector<TypeRef> type_args) {
     TypeRef type;
@@ -285,7 +281,7 @@ std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, 
     for (const Expr& arg : expr.children) {
         (void)infer_expr_type_ast(scope, arg, location);
     }
-    return pointer_type_ref_from_pointee(std::move(pointee), expr.location);
+    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), expr.location);
 }
 
 } // namespace

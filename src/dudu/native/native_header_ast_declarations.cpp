@@ -122,7 +122,7 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         std::regex_search(line, match, typedef_decl)) {
         const std::string raw_name = match[2].str();
         const std::string name = join_scope(namespaces, raw_name);
-        const std::string underlying_type = trim_copy(match[3].str());
+        const std::string underlying_type = trim_string(match[3].str());
         const std::string lowered_type =
             qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
         const bool useful_alias = (lowered_type != raw_name && lowered_type != name) ||

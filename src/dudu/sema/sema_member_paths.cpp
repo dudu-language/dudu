@@ -1,6 +1,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_common.hpp"
@@ -18,7 +19,7 @@ namespace {
 bool is_indexed_local_segment(const std::string& text) {
     const size_t index = text.find('[');
     return index != std::string::npos && text.back() == ']' &&
-           is_plain_identifier(trim(text.substr(0, index)));
+           is_plain_identifier(trim_string(text.substr(0, index)));
 }
 
 std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::string>& params,
@@ -220,7 +221,7 @@ bool is_cpp_escape_member_path_string(const std::string& path) {
     while (start < path.size()) {
         const size_t dot = path.find('.', start);
         const std::string part = path.substr(start, dot == std::string::npos ? dot : dot - start);
-        const std::string trimmed = trim(part);
+        const std::string trimmed = trim_string(part);
         if (!is_plain_identifier(trimmed) && !is_indexed_local_segment(trimmed)) {
             return false;
         }

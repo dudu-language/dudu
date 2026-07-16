@@ -15,7 +15,7 @@ namespace native_ast_parse {
 namespace {
 
 std::string native_template_value(std::string text) {
-    text = trim_copy(std::move(text));
+    text = trim_string(std::move(text));
     if (text.size() >= 2 && text.front() == '\'' && text.back() == '\'') {
         return text.substr(1, text.size() - 2);
     }

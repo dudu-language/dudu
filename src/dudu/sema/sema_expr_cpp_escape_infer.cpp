@@ -17,10 +17,6 @@ bool is_function_type_ref(const TypeRef& type) {
            type.children.front().kind == TypeKind::Function;
 }
 
-TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
-    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
-}
-
 } // namespace
 
 bool known_cpp_escape_type_ref(const Symbols& symbols, const TypeRef& type) {
@@ -101,7 +97,8 @@ std::optional<TypeRef> infer_parsed_pointer_cast_escape_ref(const FunctionScope&
     for (const Expr& arg : parsed.children) {
         (void)infer_expr_type_ast(scope, arg, location);
     }
-    return pointer_type_ref(std::move(type_ref), expr_callee(parsed).front().location);
+    return wrapped_type_ref(TypeKind::Pointer, std::move(type_ref),
+                            expr_callee(parsed).front().location);
 }
 
 std::optional<TypeRef> infer_parsed_unary_escape_ref(const FunctionScope& scope, const Expr& parsed,
@@ -121,7 +118,8 @@ std::optional<TypeRef> infer_parsed_unary_escape_ref(const FunctionScope& scope,
     if (parsed.op == "&") {
         const TypeRef type = infer_expr_type_ast(scope, child, location);
         if (has_type_ref(type)) {
-            return pointer_type_ref(type, location == nullptr ? child.location : *location);
+            return wrapped_type_ref(TypeKind::Pointer, type,
+                                    location == nullptr ? child.location : *location);
         }
     }
     return std::nullopt;

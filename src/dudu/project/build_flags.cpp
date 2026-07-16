@@ -1,6 +1,7 @@
 #include "dudu/project/build_flags.hpp"
 
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <algorithm>

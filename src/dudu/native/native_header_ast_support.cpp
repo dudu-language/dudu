@@ -27,7 +27,7 @@ bool native_param_name_token(std::string_view token) {
 }
 
 void append_doc_text(std::string& doc, std::string text) {
-    text = trim_copy(std::move(text));
+    text = trim_string(std::move(text));
     if (text.empty()) {
         return;
     }
@@ -165,7 +165,7 @@ std::optional<std::string> parm_var_decl_name(const std::string& line) {
     if (type_quote == std::string::npos) {
         return std::nullopt;
     }
-    std::istringstream words(trim_copy(line.substr(0, type_quote)));
+    std::istringstream words(trim_string(line.substr(0, type_quote)));
     std::vector<std::string> tokens;
     std::string token;
     while (words >> token) {

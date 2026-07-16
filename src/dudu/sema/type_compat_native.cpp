@@ -27,7 +27,7 @@ bool is_native_numeric_type(const TypeRef& type) {
 }
 
 std::string native_type_head_spelling(const TypeRef& type) {
-    return trim_copy(type_ref_head_name(type));
+    return trim_string(type_ref_head_name(type));
 }
 
 std::string native_type_tail_name(const TypeRef& type) {
@@ -63,7 +63,7 @@ TypeRef normalize_tuple_element(const TypeRef& type) {
         (tuple_type.name != "std.tuple" && tuple_type.name != "tuple")) {
         return type;
     }
-    const std::string index_text = trim_copy(type.children[0].value);
+    const std::string index_text = trim_string(type.children[0].value);
     if (index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
         return type;
     }
@@ -94,7 +94,7 @@ std::optional<TypeKind> builtin_wrapper_template_kind(const std::string& name) {
 }
 
 std::string normalize_cpp_primitive_type(std::string type) {
-    type = trim_copy(std::move(type));
+    type = trim_string(std::move(type));
     const size_t qualifier = type.find_last_of(".:");
     if (qualifier != std::string::npos && qualifier + 1 < type.size()) {
         const std::string tail = type.substr(qualifier + 1);

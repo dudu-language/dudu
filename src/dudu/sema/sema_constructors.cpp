@@ -17,10 +17,6 @@ namespace {
     throw CompileError(location, message);
 }
 
-std::string constructor_param_type_display(const ConstructorParam& param) {
-    return type_ref_text(param.type_ref);
-}
-
 bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorParam& expected,
                                 const Expr& value, const TypeRef& got_ref) {
     if (has_type_ref(expected.type_ref) && has_type_ref(got_ref) &&
@@ -149,7 +145,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
             if (!constructor_arg_assignable(scope, param, arg, got_ref)) {
                 fail(*location, "constructor " + klass.name + " argument " +
                                     std::to_string(positional + 1) + " expects " +
-                                    constructor_param_type_display(param) + ", got " +
+                                    type_ref_text(param.type_ref) + ", got " +
                                     type_ref_text(got_ref));
             }
             ++positional;
@@ -168,7 +164,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
         const TypeRef got_ref = infer_expr_type_ast(scope, value, location);
         if (!constructor_arg_assignable(scope, *param, value, got_ref)) {
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
-                                constructor_param_type_display(*param) + ", got " +
+                                type_ref_text(param->type_ref) + ", got " +
                                 type_ref_text(got_ref));
         }
     }

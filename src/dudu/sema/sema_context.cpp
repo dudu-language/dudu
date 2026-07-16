@@ -125,16 +125,6 @@ std::string compute_base_type(const TypeRef& type) {
 
 } // namespace
 
-std::string trim(std::string text) {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
-        text.erase(text.begin());
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
-        text.pop_back();
-    }
-    return text;
-}
-
 std::string base_type(const TypeRef& type) {
     return compute_base_type(type);
 }
@@ -304,11 +294,11 @@ std::vector<std::string> split_cpp_escape_top_level(std::string text) {
         } else if (c == ')' || c == ']' || c == '}') {
             --depth;
         } else if (c == ',' && depth == 0) {
-            out.push_back(trim(text.substr(start, i - start)));
+            out.push_back(trim_string(text.substr(start, i - start)));
             start = i + 1;
         }
     }
-    out.push_back(trim(text.substr(start)));
+    out.push_back(trim_string(text.substr(start)));
     return out;
 }
 

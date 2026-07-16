@@ -106,10 +106,6 @@ std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr, const Sym
     return type_ref;
 }
 
-TypeRef pointer_type_ref_from_pointee(TypeRef type, SourceLocation location) {
-    return wrapped_type_ref(TypeKind::Pointer, std::move(type), location);
-}
-
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
                                           const CppLocalContext& locals,
@@ -377,7 +373,7 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     return "reinterpret_cast<" +
-           lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
+           lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, *pointee, expr.location), aliases,
                           options) +
            ">(" +
            join_lowered_exprs(call.children, aliases, locals, local_type_refs, ", ", symbols,
@@ -424,8 +420,8 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (starts_with(callee_name, "*")) {
         if (const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(expr, symbols)) {
             return "reinterpret_cast<" +
-                   lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
-                                  options) +
+                   lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, *pointee, expr.location),
+                                  aliases, options) +
                    ">(" +
                    join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ",
                                       symbols, options) +

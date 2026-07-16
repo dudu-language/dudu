@@ -36,7 +36,7 @@ inline std::string native_symbol_identity_key(const NativeSymbolId& identity) {
 }
 
 inline std::string native_type_name_without_tag(std::string name) {
-    name = trim_copy(std::move(name));
+    name = trim_string(std::move(name));
     for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
         if (name.starts_with(tag)) {
             return trim_string(std::string_view(name).substr(tag.size()));

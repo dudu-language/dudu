@@ -6,16 +6,12 @@
 #include <utility>
 
 namespace dudu {
-namespace {
 
-TypeRef pointer_type_ref_from_pointee(TypeRef pointee) {
-    const SourceLocation location = pointee.location;
-    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
-}
-
-std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
-    const Symbols& symbols, const SourceLocation* location, const std::string& callee,
-    const std::vector<TypeRef>& type_args, const size_t arg_count) {
+std::optional<TypeRef> infer_allocation_call_type_ref(const Symbols& symbols,
+                                                      const SourceLocation* location,
+                                                      const std::string& callee,
+                                                      const std::vector<TypeRef>& type_args,
+                                                      const size_t arg_count) {
     if (callee != "new" && callee != "malloc") {
         return std::nullopt;
     }
@@ -23,7 +19,7 @@ std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
         throw CompileError(*location, callee + " expects 1 type argument, got " +
                                           std::to_string(type_args.size()));
     }
-    const TypeRef type_ref = type_args.size() == 1 ? type_args.front() : TypeRef{};
+    TypeRef type_ref = type_args.size() == 1 ? type_args.front() : TypeRef{};
     if (location != nullptr && type_args.size() == 1) {
         if (const auto unknown = unknown_type_ref(symbols, type_ref)) {
             const SourceLocation error_location =
@@ -42,18 +38,10 @@ std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
                                "cannot allocate abstract class: " + type_ref_text(type_ref));
         }
     }
-    return has_type_ref(type_ref) ? pointer_type_ref_from_pointee(type_ref) : TypeRef{};
-}
-
-} // namespace
-
-std::optional<TypeRef> infer_allocation_call_type_ref(const Symbols& symbols,
-                                                      const SourceLocation* location,
-                                                      const std::string& callee,
-                                                      const std::vector<TypeRef>& type_args,
-                                                      const size_t arg_count) {
-    return infer_allocation_call_type_ref_from_type_args(symbols, location, callee, type_args,
-                                                         arg_count);
+    const SourceLocation type_location = type_ref.location;
+    return has_type_ref(type_ref)
+               ? wrapped_type_ref(TypeKind::Pointer, std::move(type_ref), type_location)
+               : TypeRef{};
 }
 
 bool is_deallocation_call(std::string_view callee) {

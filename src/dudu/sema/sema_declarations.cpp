@@ -195,7 +195,7 @@ std::string target_mode(const ModuleAst& module) {
     if (found == module.build_values.end()) {
         return "hosted";
     }
-    std::string value = trim(found->second);
+    std::string value = trim_string(found->second);
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
         return value.substr(1, value.size() - 2);
     }

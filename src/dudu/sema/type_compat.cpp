@@ -93,7 +93,7 @@ bool is_cstr_type(const TypeRef& type) {
 }
 
 std::string type_tail_name(const TypeRef& type) {
-    std::string name = trim_copy(type_ref_head_name(normalize_cpp_type_artifacts_ref(type)));
+    std::string name = trim_string(type_ref_head_name(normalize_cpp_type_artifacts_ref(type)));
     const size_t dot = name.find_last_of(".:");
     if (dot != std::string::npos && dot + 1 < name.size()) {
         name = name.substr(dot + 1);
@@ -150,7 +150,7 @@ bool is_numeric_literal_expr(const Expr& expr) {
 }
 
 std::optional<std::string> dyn_shape_arithmetic_expr(const TypeRef& type) {
-    if (type.kind == TypeKind::Value && trim_copy(type.value) != "dyn") {
+    if (type.kind == TypeKind::Value && trim_string(type.value) != "dyn") {
         const std::set<std::string> ids = shape_value_expr_identifiers(type.value);
         if (ids.contains("dyn")) {
             return normalize_shape_value_expr(type.value);
@@ -481,7 +481,7 @@ std::string shape_list_text(const TypeRef& type) {
 }
 
 bool shape_dim_accepts(const TypeRef& expected, const TypeRef& got) {
-    return (expected.kind == TypeKind::Value && trim_copy(expected.value) == "dyn") ||
+    return (expected.kind == TypeKind::Value && trim_string(expected.value) == "dyn") ||
            type_ref_equivalent(expected, got);
 }
 

@@ -44,7 +44,7 @@ bool direct_import(const ImportDecl& import) {
 }
 
 std::string unquoted_source_file(std::string value) {
-    value = trim_copy(std::move(value));
+    value = trim_string(std::move(value));
     while (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') ||
                                  (value.front() == '\'' && value.back() == '\''))) {
         value = value.substr(1, value.size() - 2);

@@ -8,7 +8,6 @@ namespace dudu {
 
 std::string_view trim_view(std::string_view text);
 std::string trim_string(std::string_view text);
-std::string trim_copy(std::string text);
 bool is_identifier_continue(char c);
 bool is_identifier_start(char c);
 bool is_identifier(std::string_view text);

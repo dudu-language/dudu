@@ -48,23 +48,23 @@ std::vector<std::string> read_lines(const std::filesystem::path& path) {
 }
 
 std::string trim_macro_doc_line(std::string text) {
-    text = trim_copy(std::move(text));
+    text = trim_string(std::move(text));
     if (text.starts_with("///")) {
-        return trim_copy(text.substr(3));
+        return trim_string(text.substr(3));
     }
     if (text.starts_with("//")) {
-        return trim_copy(text.substr(2));
+        return trim_string(text.substr(2));
     }
     if (text.starts_with("/**")) {
-        text = trim_copy(text.substr(3));
+        text = trim_string(text.substr(3));
     } else if (text.starts_with("/*")) {
-        text = trim_copy(text.substr(2));
+        text = trim_string(text.substr(2));
     }
     if (text.ends_with("*/")) {
-        text = trim_copy(text.substr(0, text.size() - 2));
+        text = trim_string(text.substr(0, text.size() - 2));
     }
     if (text.starts_with("*")) {
-        text = trim_copy(text.substr(1));
+        text = trim_string(text.substr(1));
     }
     return text;
 }
@@ -74,7 +74,7 @@ std::string macro_doc_before_line(const std::vector<std::string>& lines, size_t 
     bool in_block = false;
     for (size_t cursor = define_index; cursor > 0;) {
         --cursor;
-        std::string line = trim_copy(lines[cursor]);
+        std::string line = trim_string(lines[cursor]);
         if (line.empty()) {
             break;
         }

@@ -102,7 +102,7 @@ std::vector<std::filesystem::path> compiler_include_dirs(const ProjectConfig& co
     std::istringstream lines(output);
     std::string line;
     while (std::getline(lines, line)) {
-        const std::string trimmed = trim_copy(line);
+        const std::string trimmed = trim_string(line);
         if (trimmed == "#include <...> search starts here:") {
             in_search = true;
             continue;

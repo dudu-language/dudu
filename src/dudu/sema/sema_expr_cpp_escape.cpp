@@ -13,7 +13,7 @@ using namespace cpp_escape_infer_detail;
 
 TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
                                   const SourceLocation* location) {
-    expr = trim(std::move(expr));
+    expr = trim_string(std::move(expr));
     if (expr.empty()) {
         return void_type_ref(location == nullptr ? SourceLocation{} : *location);
     }
@@ -147,8 +147,8 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
         }
         const size_t method_dot = callee.rfind('.');
         if (method_dot != std::string::npos && is_cpp_escape_member_path_string(callee)) {
-            const std::string receiver = trim(callee.substr(0, method_dot));
-            const std::string method_name = trim(callee.substr(method_dot + 1));
+            const std::string receiver = trim_string(callee.substr(0, method_dot));
+            const std::string method_name = trim_string(callee.substr(method_dot + 1));
             FunctionSignature signature;
             if (!scope.local_type_refs.contains(receiver) &&
                 scope.symbols.classes.contains(receiver) &&
@@ -187,8 +187,8 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
             }
         }
         if (method_dot != std::string::npos) {
-            const std::string prefix = trim(callee.substr(0, method_dot));
-            const std::string method_name = trim(callee.substr(method_dot + 1));
+            const std::string prefix = trim_string(callee.substr(0, method_dot));
+            const std::string method_name = trim_string(callee.substr(method_dot + 1));
             const TypeRef prefix_type_ref =
                 local_type_ref(scope, prefix, location == nullptr ? SourceLocation{} : *location);
             if (has_type_ref(prefix_type_ref)) {

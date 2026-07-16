@@ -59,7 +59,7 @@ std::vector<TypeRef> substitute_generic_type_ref_list(const std::vector<TypeRef>
 }
 
 bool same_name(std::string_view left, std::string_view right) {
-    return trim_copy(std::string(left)) == trim_copy(std::string(right));
+    return trim_string(std::string(left)) == trim_string(std::string(right));
 }
 
 bool same_generic_param_name(const TypeRef& dim, const std::string& param) {
@@ -289,7 +289,7 @@ bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_ty
         return true;
     }
     if (param_type.kind == TypeKind::Template) {
-        if (trim(param_type.name) != trim(arg_type.name)) {
+        if (trim_string(param_type.name) != trim_string(arg_type.name)) {
             return true;
         }
         size_t arg_index = 0;

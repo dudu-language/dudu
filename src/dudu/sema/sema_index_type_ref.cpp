@@ -62,7 +62,7 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
         if (i > 0) {
             value << ", ";
         }
-        const std::string dim_value = trim_copy(shape[i]);
+        const std::string dim_value = trim_string(shape[i]);
         value << dim_value;
         TypeRef dim;
         dim.kind = TypeKind::Value;

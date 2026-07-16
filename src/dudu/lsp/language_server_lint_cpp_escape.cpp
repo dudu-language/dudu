@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_lint_cpp_escape.hpp"
 
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/lsp/language_server_lint_common.hpp"
 
 #include <set>

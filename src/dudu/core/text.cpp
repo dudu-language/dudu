@@ -31,10 +31,6 @@ std::string trim_string(std::string_view text) {
     return std::string(trim_view(text));
 }
 
-std::string trim_copy(std::string text) {
-    return trim_string(text);
-}
-
 bool is_identifier_continue(char c) {
     return is_ascii_alpha(c) || is_ascii_digit(c) || c == '_';
 }

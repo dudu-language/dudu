@@ -85,7 +85,7 @@ std::string unescape_basic_string(const std::filesystem::path& path, const std::
 }
 
 std::string unquote(const std::filesystem::path& path, const std::string& line, std::string value) {
-    value = trim_copy(value);
+    value = trim_string(value);
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
         return unescape_basic_string(path, line,
                                      std::string_view(value).substr(1, value.size() - 2));
@@ -95,7 +95,7 @@ std::string unquote(const std::filesystem::path& path, const std::string& line, 
 
 std::vector<std::string> parse_string_array(const std::filesystem::path& path,
                                             const std::string& line, std::string value) {
-    value = trim_copy(std::move(value));
+    value = trim_string(std::move(value));
     if (value.size() < 2 || value.front() != '[' || value.back() != ']') {
         fail(path, "invalid array entry", line);
     }
@@ -123,7 +123,7 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
         if (c != ',') {
             continue;
         }
-        const std::string item = trim_copy(value.substr(start, cursor - start));
+        const std::string item = trim_string(value.substr(start, cursor - start));
         if (!item.empty()) {
             out.push_back(unquote(path, line, item));
         }
@@ -134,7 +134,7 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
 
 void require_true(const std::filesystem::path& path, const std::string& line,
                   const std::string& value) {
-    if (trim_copy(value) != "true") {
+    if (trim_string(value) != "true") {
         fail(path, "expected true", line);
     }
 }
@@ -163,7 +163,7 @@ void parse_macro_capability(ProjectConfig& config, const std::filesystem::path& 
 
 std::map<std::string, std::string> parse_inline_table(const std::filesystem::path& path,
                                                       const std::string& line, std::string value) {
-    value = trim_copy(std::move(value));
+    value = trim_string(std::move(value));
     if (value.size() < 2 || value.front() != '{' || value.back() != '}') {
         fail(path, "invalid inline table", line);
     }
@@ -191,7 +191,7 @@ std::map<std::string, std::string> parse_inline_table(const std::filesystem::pat
         if (c != ',') {
             continue;
         }
-        const std::string item = trim_copy(value.substr(start, cursor - start));
+        const std::string item = trim_string(value.substr(start, cursor - start));
         if (!item.empty()) {
             const size_t equal = item.find('=');
             if (equal == std::string::npos || equal == 0) {
@@ -328,7 +328,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
     std::string section;
     std::string line;
     while (std::getline(file, line)) {
-        line = trim_copy(strip_comment(std::move(line)));
+        line = trim_string(strip_comment(std::move(line)));
         if (line.empty()) {
             continue;
         }
@@ -345,7 +345,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         if (value.starts_with("[") && !array_is_closed(value)) {
             std::string continuation;
             while (std::getline(file, continuation)) {
-                continuation = trim_copy(strip_comment(std::move(continuation)));
+                continuation = trim_string(strip_comment(std::move(continuation)));
                 value += continuation;
                 if (array_is_closed(value)) {
                     break;

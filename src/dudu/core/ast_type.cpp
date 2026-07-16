@@ -37,7 +37,7 @@ std::string substitution_lookup_key(const TypeRef& type) {
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
-        return trim_copy(type.name);
+        return trim_string(type.name);
     default:
         return {};
     }
@@ -49,7 +49,7 @@ substituted_associated_path(const TypeRef& type,
     if (type.kind != TypeKind::Qualified) {
         return std::nullopt;
     }
-    const std::string name = trim_copy(type.name);
+    const std::string name = trim_string(type.name);
     const size_t dot = name.rfind('.');
     const size_t scope = name.rfind("::");
     if (dot == std::string::npos && scope == std::string::npos) {
@@ -159,9 +159,9 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::Associated:
     case TypeKind::AssociatedTemplate:
     case TypeKind::NativeTransform:
-        return trim_copy(type.name);
+        return trim_string(type.name);
     case TypeKind::Value:
-        return trim_copy(type.value);
+        return trim_string(type.value);
     case TypeKind::Function:
         return "fn";
     case TypeKind::Pointer:
@@ -250,10 +250,10 @@ std::string substitute_type_ref_text(const TypeRef& type,
         return substitute_wrapper("static", type, substitutions);
     case TypeKind::Template:
         if (type.name.find("::") != std::string::npos) {
-            return trim_copy(type.name) + "<" +
+            return trim_string(type.name) + "<" +
                    join_substituted_types(type.children, 0, substitutions) + ">";
         }
-        return trim_copy(type.name) + "[" +
+        return trim_string(type.name) + "[" +
                join_substituted_types(type.children, 0, substitutions) + "]";
     case TypeKind::Associated:
         if (type.children.size() != 1) {
@@ -262,7 +262,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
                 "malformed structured type node: associated is missing its owner type");
         }
         return substitute_type_ref_text(type.children.front(), substitutions) + "." +
-               trim_copy(type.name);
+               trim_string(type.name);
     case TypeKind::AssociatedTemplate:
         if (type.children.empty()) {
             throw CompileError(
@@ -270,7 +270,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
                 "malformed structured type node: associated template is missing its owner type");
         }
         return substitute_type_ref_text(type.children.front(), substitutions) + "." +
-               trim_copy(type.name) + "[" +
+               trim_string(type.name) + "[" +
                join_substituted_types(type.children, 1, substitutions) + "]";
     case TypeKind::NativeTransform:
         if (type.children.size() != 1) {
@@ -278,7 +278,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
                 type.location,
                 "malformed structured type node: native transform requires one child type");
         }
-        return trim_copy(type.name) + "(" +
+        return trim_string(type.name) + "(" +
                substitute_type_ref_text(type.children.front(), substitutions) + ")";
     case TypeKind::FixedArray:
         if (type.children.empty()) {
@@ -312,7 +312,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
         return shape_value_expr_substitute(type.value, substitutions);
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return trim_copy(type.name);
+        return trim_string(type.name);
     case TypeKind::Unknown:
         return {};
     }
@@ -324,8 +324,8 @@ std::string type_ref_text(const TypeRef& type) {
 }
 
 bool has_type_ref(const TypeRef& type) {
-    return type.kind != TypeKind::Unknown || type.malformed || !trim_copy(type.name).empty() ||
-           !trim_copy(type.value).empty() || !type.children.empty();
+    return type.kind != TypeKind::Unknown || type.malformed || !trim_string(type.name).empty() ||
+           !trim_string(type.value).empty() || !type.children.empty();
 }
 
 bool has_expr_type_ref(const Expr& expr) {

@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_lint_scope.hpp"
 
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/core/naming.hpp"
 #include "dudu/lsp/language_server_lint_common.hpp"
 

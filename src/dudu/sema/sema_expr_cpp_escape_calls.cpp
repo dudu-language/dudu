@@ -1,8 +1,9 @@
 #include "dudu/sema/sema_expr_cpp_escape_calls.hpp"
 
+#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_scan.hpp"
 
@@ -22,7 +23,7 @@ std::vector<Expr> parse_escape_exprs(const std::vector<std::string>& exprs,
 }
 
 std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
-    std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
+    std::string args = trim_string(expr.substr(open + 1, expr.size() - open - 2));
     return parse_escape_exprs(
         args.empty() ? std::vector<std::string>{} : split_top_level_args(args), location);
 }
@@ -68,7 +69,7 @@ std::optional<EscapeCall> parse_cpp_escape_call_text(const std::string& expr, si
     if (find_call_close(expr, open) != expr.size() - 1) {
         return std::nullopt;
     }
-    const std::string callee = trim(expr.substr(0, open));
+    const std::string callee = trim_string(expr.substr(0, open));
     return EscapeCall{.callee = callee,
                       .callee_expr = Expr{},
                       .callee_type_ref = named_type_ref(callee, location),

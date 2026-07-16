@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_visit.hpp"
 #include "dudu/core/decorators.hpp"
 
 #include <set>

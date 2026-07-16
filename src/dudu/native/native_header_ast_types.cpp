@@ -132,10 +132,10 @@ std::optional<TypeLayout> scanned_layout(const NativeCursorIdentityIndex& identi
 }
 
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
-    text = trim_copy(std::move(text));
+    text = trim_string(std::move(text));
     if (text.ends_with("...")) {
         return pack_expansion_type_ref(normalize_native_type_ref(parse_type_text(
-                                           trim_copy(text.substr(0, text.size() - 3)), location)),
+                                           trim_string(text.substr(0, text.size() - 3)), location)),
                                        location);
     }
     return normalize_native_type_ref(parse_type_text(text, location));
