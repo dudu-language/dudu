@@ -1,40 +1,12 @@
 #include "dudu/project/standard_library.hpp"
 
-#include <array>
-#include <cstdlib>
-#include <optional>
-#include <system_error>
+#include "dudu/support/executable.hpp"
 
-#if defined(__APPLE__)
-#include <mach-o/dyld.h>
-#elif defined(__linux__)
-#include <unistd.h>
-#endif
+#include <cstdlib>
+#include <system_error>
 
 namespace dudu {
 namespace {
-
-std::optional<std::filesystem::path> executable_path() {
-#if defined(__APPLE__)
-    std::uint32_t size = 0;
-    (void)_NSGetExecutablePath(nullptr, &size);
-    std::string buffer(size, '\0');
-    if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
-        return std::nullopt;
-    }
-    buffer.resize(buffer.find('\0'));
-    return std::filesystem::path(buffer);
-#elif defined(__linux__)
-    std::array<char, 4096> buffer{};
-    const ssize_t size = readlink("/proc/self/exe", buffer.data(), buffer.size());
-    if (size <= 0 || static_cast<std::size_t>(size) == buffer.size()) {
-        return std::nullopt;
-    }
-    return std::filesystem::path(std::string(buffer.data(), static_cast<std::size_t>(size)));
-#else
-    return std::nullopt;
-#endif
-}
 
 std::filesystem::path canonical_if_present(const std::filesystem::path& path) {
     std::error_code error;
@@ -53,7 +25,7 @@ std::filesystem::path standard_library_root() {
             return root;
         }
     }
-    if (const std::optional<std::filesystem::path> executable = executable_path()) {
+    if (const std::optional<std::filesystem::path> executable = current_executable_path()) {
         const std::filesystem::path bin = executable->parent_path();
         for (const std::filesystem::path& candidate :
              {bin / ".." / "share" / "dudu" / "lib", bin / ".." / "lib"}) {

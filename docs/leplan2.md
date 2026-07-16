@@ -369,6 +369,10 @@ parsing live in one parser unit, while target application, upward discovery,
 and project-relative path policy remain separate. Root and named targets share
 one native-build entry parser, and always-constant or renaming helpers are
 removed instead of retained as compatibility surface.
+Running-executable and `PATH` lookup are now shared support operations rather
+than separate CLI, standard-library, macro, and native-scanner platform
+implementations. Each caller still owns its toolchain identity and layout
+policy.
 
 Macro worker ownership is explicit as well. Source and binary identities share
 one canonical hashing path, worker and SDK artifact generation use shared

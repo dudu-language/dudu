@@ -6,8 +6,8 @@
 #include "dudu/project/cmake_emit.hpp"
 #include "dudu/project/project_dependencies.hpp"
 #include "dudu/project/project_driver.hpp"
+#include "dudu/support/executable.hpp"
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -22,32 +22,6 @@ namespace {
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
-}
-
-std::optional<std::filesystem::path> find_executable_on_path(const std::filesystem::path& name) {
-    const char* env_path = std::getenv("PATH");
-    if (env_path == nullptr || name.empty() || name.has_parent_path()) {
-        return std::nullopt;
-    }
-    const std::string path = env_path;
-    size_t start = 0;
-    while (start <= path.size()) {
-        const size_t end = path.find(':', start);
-        const std::filesystem::path dir =
-            path.substr(start, end == std::string::npos ? std::string::npos : end - start);
-        const std::filesystem::path candidate = dir / name;
-        std::error_code error;
-        if (std::filesystem::exists(candidate, error) && !error) {
-            const std::filesystem::path canonical =
-                std::filesystem::weakly_canonical(candidate, error);
-            return error ? candidate : canonical;
-        }
-        if (end == std::string::npos) {
-            break;
-        }
-        start = end + 1;
-    }
-    return std::nullopt;
 }
 
 FormatPathOptions format_options_for_project(const CliOptions& options) {
@@ -72,7 +46,7 @@ FormatPathOptions format_options_for_project(const CliOptions& options) {
 
 std::filesystem::path cli_executable_path(char* executable) {
     const std::filesystem::path raw = executable == nullptr ? "dudu" : executable;
-    if (const std::optional<std::filesystem::path> found = find_executable_on_path(raw)) {
+    if (const std::optional<std::filesystem::path> found = find_executable(raw)) {
         return *found;
     }
     std::error_code error;
@@ -98,7 +72,7 @@ std::filesystem::path cli_compiler_path(char* executable) {
         const std::filesystem::path canonical = std::filesystem::weakly_canonical(sibling, error);
         return error ? sibling : canonical;
     }
-    if (const std::optional<std::filesystem::path> found = find_executable_on_path(compiler_name)) {
+    if (const std::optional<std::filesystem::path> found = find_executable(compiler_name)) {
         return *found;
     }
     fail("could not find the duc compiler beside " + tool.string() + " or on PATH");

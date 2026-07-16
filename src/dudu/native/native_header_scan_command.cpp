@@ -4,6 +4,7 @@
 #include "dudu/core/text.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/project/project_driver.hpp"
+#include "dudu/support/executable.hpp"
 
 #include <cctype>
 #include <chrono>
@@ -108,23 +109,8 @@ std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& op
 }
 
 std::string compiler_identity(const std::string& command) {
-    std::filesystem::path executable = command;
-    if (!executable.has_parent_path()) {
-        const char* path_env = std::getenv("PATH");
-        std::istringstream paths(path_env == nullptr ? "" : path_env);
-        std::string directory;
-        while (std::getline(paths, directory, ':')) {
-            const std::filesystem::path candidate =
-                (directory.empty() ? std::filesystem::current_path()
-                                   : std::filesystem::path(directory)) /
-                executable;
-            std::error_code error;
-            if (std::filesystem::is_regular_file(candidate, error) && !error) {
-                executable = candidate;
-                break;
-            }
-        }
-    }
+    std::filesystem::path executable =
+        find_executable(command).value_or(std::filesystem::path(command));
 
     std::error_code error;
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(executable, error);

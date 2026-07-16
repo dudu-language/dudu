@@ -88,6 +88,11 @@ Outcome:
   native build entries for root and named targets through one parser
 - removed the always-true `parse_true` helper; capability flags now validate
   directly without pretending to compute a value
+- moved running-executable and `PATH` command resolution into one support
+  boundary used by `dudu`/`duc` pairing, standard-library discovery, macro
+  runtime discovery, and native compiler cache identity
+- removed four independent platform/path searches, including duplicate Linux
+  `/proc/self/exe` and macOS `_NSGetExecutablePath` implementations
 
 Validation: project configuration tests, CLI help/smoke checks, project
 backend tests, complete `scripts/test_fast.sh` in 70.56 seconds with
