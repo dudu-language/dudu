@@ -274,13 +274,14 @@ const ProjectIndex& indexed_module_graph(const CliOptions& options, const std::s
     return index;
 }
 
-ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
+const ModuleAst& checked_module(const CliOptions& options, const std::string& source,
+                                bool check_bodies) {
     return checked_index(options, source, check_bodies).merged_module();
 }
 
 void check_source_file(CliOptions options, const std::filesystem::path& path) {
     options.input = path;
-    (void)checked_module(options, read_required_text_file(path), true);
+    (void)checked_index(options, read_required_text_file(path), true);
 }
 
 bool check_source_path(const CliOptions& options) {
