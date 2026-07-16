@@ -24,6 +24,15 @@ const EnumValueDecl* enum_variant_decl(const EnumDecl& en, const std::string& va
     return nullptr;
 }
 
+bool enum_has_payloads(const EnumDecl& en) {
+    for (const EnumValueDecl& value : en.values) {
+        if (!value.payload_fields.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
 enum_variant_from_path(const Symbols& symbols, const std::string& path) {
     const size_t dot = path.find('.');

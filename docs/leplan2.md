@@ -312,6 +312,12 @@ of 275, 296, and 220 lines. Native call identity matching remains structured on
 policy or introduce source-text lookup. The focused frontend, references,
 rename, navigation, and text-synchronization tests remain green.
 
+The code-generation audit also removed index-operator lowering from the general
+call emitter. Index reads, writes, and compound writes now share one structured
+receiver/type-resolution path in an owned index-hook unit. Duplicate and stale
+declarations were removed, and shared enum payload classification moved to
+semantic enum support instead of remaining a call-emission helper.
+
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.
 

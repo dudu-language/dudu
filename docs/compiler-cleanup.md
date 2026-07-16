@@ -143,6 +143,14 @@ Outcome:
   macros, or unrelated implementation classes
 - fixed member lookup on native types returned through another Dudu module,
   including `list[std.thread]` and indexed `.join()` calls
+- moved index-operator hook lowering out of the general call emitter and gave
+  reads, writes, and compound writes one receiver/type-resolution path
+- removed the duplicate index-hook declarations and the stale overload that
+  no longer matched the implementation
+- moved enum payload classification from call emission into semantic enum
+  support, where match and expression lowering can share the structured fact
+- reduced `cpp_expr_call_emit.cpp` from 744 to 512 lines while keeping the
+  extracted index-hook unit at 236 lines
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, and canonical fixture suites.

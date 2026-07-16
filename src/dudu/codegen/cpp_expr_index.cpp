@@ -1,7 +1,7 @@
 #include "dudu/codegen/cpp_expr_index.hpp"
 
-#include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
+#include "dudu/codegen/cpp_expr_index_hooks.hpp"
 #include "dudu/codegen/cpp_expr_slices.hpp"
 #include "dudu/core/ast_expr.hpp"
 

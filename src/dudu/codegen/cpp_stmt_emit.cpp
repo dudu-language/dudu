@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
+#include "dudu/codegen/cpp_expr_index_hooks.hpp"
 #include "dudu/codegen/cpp_expr_swizzles.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_match_emit.hpp"

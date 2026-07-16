@@ -55,11 +55,5 @@ std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>&
                                const CppLocalContext& locals = {});
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
                                const CppLocalContext& locals, const CppEmitOptions& options);
-std::optional<std::string>
-lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const std::map<std::string, TypeRef>& local_type_refs,
-                            const Symbols* symbols, const CppEmitOptions& options);
-bool enum_has_payloads(const EnumDecl& en);
 
 } // namespace dudu

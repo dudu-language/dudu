@@ -41,23 +41,6 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
                                            const std::map<std::string, TypeRef>& local_type_refs,
                                            const Symbols* symbols, const CppEmitOptions& options);
 std::optional<std::string>
-lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const std::map<std::string, TypeRef>& local_type_refs,
-                            const std::map<std::string, TypeRef>& function_returns,
-                            const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string>
-lower_compound_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                                     const CppLocalContext& locals,
-                                     const std::map<std::string, TypeRef>& local_type_refs,
-                                     const std::map<std::string, TypeRef>& function_returns,
-                                     const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string>
-lower_index_read_hook(const Expr& expr, const std::vector<std::string>& aliases,
-                      const CppLocalContext& locals,
-                      const std::map<std::string, TypeRef>& local_type_refs, const Symbols* symbols,
-                      const CppEmitOptions& options);
-std::optional<std::string>
 lower_enum_method_call(const Expr& expr, const std::vector<std::string>& aliases,
                        const CppLocalContext& locals,
                        const std::map<std::string, TypeRef>& local_type_refs,
