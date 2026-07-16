@@ -414,6 +414,10 @@ Outcome:
   scan basics, import identity, scan deduplication, cache behavior, template
   metadata, and import projection now have independent targets between 168 and
   533 lines
+- replaced the 1,532-line shell heredoc used for the LSP matrix with a five-line
+  launcher and real Python modules for protocol handling, workspace fixtures,
+  request construction, core editor assertions, native assertions, and code
+  actions; every owned module is at most 466 lines
 - the default CTest inventory is now 34 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
@@ -422,7 +426,7 @@ site checks, and relevant packaging/build probes.
 
 The latest ownership-cleanup milestone passes all 34 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 53.08 seconds with 622,956 KiB peak RSS. Representative frontend and
+matrix in 52.85 seconds with 622,812 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.

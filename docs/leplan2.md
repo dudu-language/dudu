@@ -377,7 +377,10 @@ exposed an expansion-render test that had been built but never registered.
 Target-specific fixture definitions remain local to their tests. The former
 1,732-line native frontend driver is now six independent fixture groups for
 scan basics, import identity, deduplication, cache behavior, template metadata,
-and import projection.
+and import projection. The LSP matrix is no longer a Python program hidden in a
+1,532-line shell heredoc; protocol, fixture, request, core assertion, native
+assertion, and code-action ownership now live in bounded Python modules behind
+a five-line launcher.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
