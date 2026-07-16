@@ -96,6 +96,22 @@ void check_variadic_params(const FunctionDecl& fn) {
     }
 }
 
+void check_function_types(const FunctionDecl& fn, const Symbols& symbols) {
+    check_variadic_params(fn);
+    std::set<std::string> params;
+    for (const ParamDecl& param : fn.params) {
+        if (!params.insert(param.name).second) {
+            fail(param.location, "duplicate parameter: " + param.name);
+        }
+        check_supported_type_shape(param.location, param.type_ref);
+        check_known_type_ref(symbols, param.location, param.type_ref, "unknown parameter type: ");
+    }
+    if (function_has_return_type(fn)) {
+        check_supported_type_shape(fn.location, fn.return_type_ref);
+    }
+    check_known_type_ref(symbols, fn.location, fn.return_type_ref, "unknown return type: ");
+}
+
 bool receiver_type_is_reference_to_class(const Symbols& symbols, const TypeRef& type,
                                          std::string_view class_name) {
     TypeRef resolved = resolve_alias_ref(symbols, type);
@@ -329,21 +345,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (has_decorator(method, "extern_c") || is_test_function(method)) {
                 fail(method.location, "@extern_c and @test are only valid on free functions");
             }
-            check_variadic_params(method);
-            std::set<std::string> params;
-            for (const ParamDecl& param : method.params) {
-                if (!params.insert(param.name).second) {
-                    fail(param.location, "duplicate parameter: " + param.name);
-                }
-                check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(scoped_symbols, param.location, param.type_ref,
-                                     "unknown parameter type: ");
-            }
-            if (function_has_return_type(method)) {
-                check_supported_type_shape(method.location, method.return_type_ref);
-            }
-            check_known_type_ref(scoped_symbols, method.location, method.return_type_ref,
-                                 "unknown return type: ");
+            check_function_types(method, scoped_symbols);
         }
     }
     for (const ClassDecl& klass : module.classes) {
@@ -512,21 +514,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (is_test_function(method)) {
                 fail(method.location, "@test is only valid on free functions");
             }
-            check_variadic_params(method);
-            std::set<std::string> params;
-            for (const ParamDecl& param : method.params) {
-                if (!params.insert(param.name).second) {
-                    fail(param.location, "duplicate parameter: " + param.name);
-                }
-                check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(scoped_symbols, param.location, param.type_ref,
-                                     "unknown parameter type: ");
-            }
-            if (function_has_return_type(method)) {
-                check_supported_type_shape(method.location, method.return_type_ref);
-            }
-            check_known_type_ref(scoped_symbols, method.location, method.return_type_ref,
-                                 "unknown return type: ");
+            check_function_types(method, scoped_symbols);
         }
     }
     for (const FunctionDecl& fn : module.functions) {
@@ -554,21 +542,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(fn.location, "@test return type must be void, bool, or i32");
             }
         }
-        check_variadic_params(fn);
-        std::set<std::string> params;
-        for (const ParamDecl& param : fn.params) {
-            if (!params.insert(param.name).second) {
-                fail(param.location, "duplicate parameter: " + param.name);
-            }
-            check_supported_type_shape(param.location, param.type_ref);
-            check_known_type_ref(scoped_symbols, param.location, param.type_ref,
-                                 "unknown parameter type: ");
-        }
-        if (function_has_return_type(fn)) {
-            check_supported_type_shape(fn.location, fn.return_type_ref);
-        }
-        check_known_type_ref(scoped_symbols, fn.location, fn.return_type_ref,
-                             "unknown return type: ");
+        check_function_types(fn, scoped_symbols);
     }
 }
 

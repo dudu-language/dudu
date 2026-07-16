@@ -387,6 +387,12 @@ Function/class decorator lookup and test-function classification are core
 declaration facts now. Semantic analysis, code generation, module ABI
 projection, and test discovery no longer maintain subsystem-prefixed wrappers
 or independent definitions of what constitutes a test.
+Generic method inference now has one recursive enum/class/base traversal for
+both argument-only and expected-return binding. Function declaration checking
+also has one shared rule for variadics, duplicate parameters, parameter types,
+and return types across enum methods, class methods, and free functions.
+`sema_methods.cpp` is 560 lines instead of 597 and
+`sema_declarations.cpp` is 549 lines instead of 575.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.

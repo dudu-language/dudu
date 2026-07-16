@@ -202,6 +202,14 @@ Outcome:
 - removed five subsystem-local decorator forwarding wrappers and two duplicate
   test classifiers, including the codegen-prefixed APIs that exposed no
   code-generation policy
+- collapsed argument-only and expected-return generic method inference onto one
+  enum/class/base traversal while preserving their distinct typed binding
+  policies
+- consolidated variadic, duplicate-parameter, parameter-type, and return-type
+  declaration checks across enum methods, class methods, and free functions
+- reduced `sema_methods.cpp` from 597 to 560 lines and
+  `sema_declarations.cpp` from 575 to 549 lines without adding another semantic
+  abstraction layer
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus
