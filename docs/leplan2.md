@@ -325,6 +325,11 @@ source lines to rediscover declaration syntax, and imported class previews use
 an owning presentation-symbol context instead of query-local declaration
 copies.
 
+Completion and signature help now have separate capability owners. Their
+shared token-based call-site query handles dotted and generic calls plus the
+active argument index, so neither capability maintains a private source-text
+parser.
+
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured
 receiver/type-resolution path in an owned index-hook unit. Duplicate and stale

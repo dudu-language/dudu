@@ -8,6 +8,7 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbol_results.hpp"
 #include "dudu/native/native_headers.hpp"

@@ -8,6 +8,7 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_reference_query.hpp"
 #include "dudu/lsp/language_server_references.hpp"
+#include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_headers.hpp"

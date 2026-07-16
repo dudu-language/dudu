@@ -11,6 +11,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"

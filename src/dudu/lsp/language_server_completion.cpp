@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_completion.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_call_site.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
@@ -8,14 +9,9 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
-#include "dudu/native/native_headers.hpp"
-#include "dudu/parser/lexer.hpp"
 #include "dudu/project/module_names.hpp"
-#include "dudu/sema/sema_context.hpp"
-#include "dudu/sema/sema_function_type.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -70,21 +66,13 @@ std::string completion_documentation(const std::string& label, const std::string
     return label;
 }
 
-void write_documentation(std::ostringstream& out, std::string_view documentation) {
-    if (documentation.empty()) {
-        return;
-    }
-    out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\"" << json_escape(documentation)
-        << "\"}";
-}
-
 void write_completion_item(std::ostringstream& out, std::string_view label, int kind,
                            std::string_view detail, std::string_view documentation = {}) {
     out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind;
     if (!detail.empty()) {
         out << ",\"detail\":\"" << json_escape(detail) << "\"";
     }
-    write_documentation(out, documentation);
+    write_markdown_documentation(out, documentation);
     out << "}";
 }
 
@@ -127,7 +115,7 @@ std::string completion_items_json(const std::vector<Symbol>& symbols) {
         out << "{\"label\":\"" << json_escape(symbol.name)
             << "\",\"kind\":" << completion_kind(symbol.kind) << ",\"detail\":\""
             << json_escape(symbol.detail) << "\"";
-        write_documentation(out, symbol.doc_comment);
+        write_markdown_documentation(out, symbol.doc_comment);
         out << "}";
     }
     out << "]";
@@ -284,157 +272,6 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
     return out.str();
 }
 
-struct CallSite {
-    std::string name;
-    int parameter = 0;
-};
-
-struct SignatureCandidate {
-    std::string label;
-    std::string documentation;
-};
-
-void add_constructor_signature_candidates(std::vector<SignatureCandidate>& signatures,
-                                          const ModuleAst& current, const std::string& call_name) {
-    const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
-        for (const ClassDecl& klass : classes) {
-            if (klass.name == call_name) {
-                signatures.push_back({.label = constructor_detail(klass),
-                                      .documentation = constructor_doc_comment(klass)});
-            }
-        }
-    };
-    add_from_classes(current.classes);
-    add_from_classes(current.native_classes);
-}
-
-void add_member_signature_candidates(std::vector<SignatureCandidate>& signatures,
-                                     const ModuleAst& current, const CallSite& call,
-                                     const Json* params) {
-    const size_t dot = call.name.rfind('.');
-    if (dot == std::string::npos || dot == 0 || dot + 1 >= call.name.size()) {
-        return;
-    }
-    const std::string receiver = call.name.substr(0, dot);
-    const std::string member = call.name.substr(dot + 1);
-    for (const Symbol& symbol : class_member_symbols_for_owner(current, receiver)) {
-        if (symbol.name == member && (symbol.kind == lsp_symbol_kind::Method ||
-                                      symbol.kind == lsp_symbol_kind::Constructor)) {
-            signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
-        }
-    }
-    const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
-    if (!has_type_ref(type_ref)) {
-        return;
-    }
-    const ModuleAst& module = current;
-    const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
-    const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
-        for (const ClassDecl& klass : classes) {
-            if (!candidate_types.contains(klass.name)) {
-                continue;
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                if (method.name == member) {
-                    signatures.push_back(
-                        {.label = function_detail(method), .documentation = method.doc_comment});
-                }
-            }
-        }
-    };
-    add_from_classes(module.classes);
-    add_from_classes(module.native_classes);
-}
-
-bool signature_token_before_cursor(const Token& token, int line, int character) {
-    if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
-        token.kind == TokenKind::Dedent || token.kind == TokenKind::End) {
-        return false;
-    }
-    if (token.location.line - 1 != line) {
-        return false;
-    }
-    return token.location.column - 1 < character;
-}
-
-std::vector<Token> signature_tokens_before_cursor(const Document& doc, int line, int character) {
-    std::vector<Token> out;
-    for (const Token& token : lex_source(doc.text, doc.path)) {
-        if (signature_token_before_cursor(token, line, character)) {
-            out.push_back(token);
-        }
-    }
-    return out;
-}
-
-std::string call_name_before_open_paren(const std::vector<Token>& tokens, size_t open_index) {
-    if (open_index == 0) {
-        return {};
-    }
-    size_t name_end = open_index - 1;
-    if (tokens[name_end].kind == TokenKind::RBracket) {
-        int bracket_depth = 0;
-        std::optional<size_t> template_open;
-        for (size_t index = name_end + 1; index-- > 0;) {
-            if (tokens[index].kind == TokenKind::RBracket) {
-                ++bracket_depth;
-            } else if (tokens[index].kind == TokenKind::LBracket) {
-                --bracket_depth;
-                if (bracket_depth == 0) {
-                    template_open = index;
-                    break;
-                }
-            }
-        }
-        if (!template_open || *template_open == 0) {
-            return {};
-        }
-        name_end = *template_open - 1;
-    }
-    if (tokens[name_end].kind != TokenKind::Identifier) {
-        return {};
-    }
-    size_t start = name_end;
-    while (start >= 2 && tokens[start - 1].kind == TokenKind::Dot &&
-           tokens[start - 2].kind == TokenKind::Identifier) {
-        start -= 2;
-    }
-    std::string out;
-    for (size_t i = start; i <= name_end; ++i) {
-        if (tokens[i].kind != TokenKind::Identifier && tokens[i].kind != TokenKind::Dot) {
-            return {};
-        }
-        out += tokens[i].text;
-    }
-    return out;
-}
-
-CallSite call_site_at(const Document& doc, const Json* params) {
-    const LspPosition position = lsp_position(params);
-    const std::vector<Token> tokens =
-        signature_tokens_before_cursor(doc, position.line, position.character);
-    int depth = 0;
-    int parameter = 0;
-    for (size_t index = tokens.size(); index-- > 0;) {
-        const Token& token = tokens[index];
-        if (token.kind == TokenKind::RParen) {
-            ++depth;
-            continue;
-        }
-        if (token.kind == TokenKind::LParen) {
-            if (depth > 0) {
-                --depth;
-                continue;
-            }
-            return {.name = call_name_before_open_paren(tokens, index), .parameter = parameter};
-        }
-        if (token.kind == TokenKind::Comma && depth == 0) {
-            ++parameter;
-        }
-    }
-    return {};
-}
-
 } // namespace
 
 std::string completion_json(const Document* doc, const Json* params) {
@@ -447,7 +284,7 @@ std::string completion_json(const Document* doc, const Json* params) {
         }
     }
     if (doc != nullptr) {
-        const CallSite call = call_site_at(*doc, params);
+        const LspCallSite call = lsp_call_site_at(*doc, params);
         if (index != nullptr && current != nullptr && !call.name.empty()) {
             if (const std::optional<MacroEditorCall> macro =
                     macro_call_for_reference(*index, *current, call.name)) {
@@ -462,7 +299,7 @@ std::string completion_json(const Document* doc, const Json* params) {
                                 << json_escape(option.name + ": " + option.type)
                                 << "\",\"insertText\":\"" << json_escape(option.name + "=${1}")
                                 << "\",\"insertTextFormat\":2";
-                    write_documentation(macro_items, option.documentation);
+                    write_markdown_documentation(macro_items, option.documentation);
                     macro_items << "}";
                 }
                 macro_items << "]";
@@ -565,63 +402,6 @@ std::string completion_resolve_json(const Json* params) {
             << json_escape(completion_documentation(label, detail)) << "\"}";
     }
     out << "}";
-    return out.str();
-}
-
-std::string signature_help_json(const Document* doc, const Json* params) {
-    if (doc == nullptr) {
-        return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
-    }
-    const CallSite call = call_site_at(*doc, params);
-    if (call.name.empty()) {
-        return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
-    }
-    std::vector<SignatureCandidate> signatures;
-    if (const ProjectIndex* index = completion_index(*doc)) {
-        const ModuleAst& current = index->visible_unit_for_path(doc->path);
-        const std::optional<MacroEditorCall> macro =
-            macro_call_for_reference(*index, current, call.name);
-        if (macro) {
-            signatures.push_back(
-                {.label = macro->signature, .documentation = macro->documentation});
-        }
-        const Symbols semantic_symbols = collect_symbols(current);
-        add_member_signature_candidates(signatures, current, call, params);
-        add_constructor_signature_candidates(signatures, current, call.name);
-        for (const Symbol& symbol : symbols_for_module(current, true)) {
-            if (!macro && symbol_matches(symbol.name, call.name) &&
-                (symbol.kind == lsp_symbol_kind::Function ||
-                 symbol.kind == lsp_symbol_kind::Method)) {
-                signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
-            }
-        }
-        for (const NativeValueDecl& value : current.native_values) {
-            if (!symbol_matches(value.name, call.name)) {
-                continue;
-            }
-            FunctionSignature signature;
-            if (!parse_function_type_or_alias(semantic_symbols, native_value_type_ref(value),
-                                              signature)) {
-                continue;
-            }
-            std::string label = function_type(signature);
-            if (label.starts_with("fn")) {
-                label.replace(0, 2, call.name);
-            }
-            signatures.push_back({.label = std::move(label), .documentation = value.doc_comment});
-        }
-    }
-    std::ostringstream out;
-    out << "{\"signatures\":[";
-    for (size_t i = 0; i < signatures.size(); ++i) {
-        if (i > 0) {
-            out << ",";
-        }
-        out << "{\"label\":\"" << json_escape(signatures[i].label) << "\"";
-        write_documentation(out, signatures[i].documentation);
-        out << "}";
-    }
-    out << "],\"activeSignature\":0,\"activeParameter\":" << call.parameter << "}";
     return out.str();
 }
 

@@ -221,6 +221,13 @@ Outcome:
 - reduced `language_server_inlay_hints.cpp` from 646 to 520 lines and
   `language_server_local_context.cpp` from 433 to 336 lines; their shared scope
   and imported-symbol ownership units are 122 and 61 lines
+- separated signature help from completion and moved their shared generic-call
+  and active-parameter detection into one token-based call-site query
+- removed signature-help declarations and implementation from completion
+  ownership; `language_server_completion.cpp` is now 408 lines, with the
+  call-site and signature-help units at 99 and 148 lines
+- consolidated their duplicated Markdown documentation serialization in the
+  LSP JSON wire helper
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator

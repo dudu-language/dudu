@@ -7,6 +7,7 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_config.hpp"
 #include "dudu/project/project_index.hpp"

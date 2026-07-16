@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_json.hpp"
 
 #include <cctype>
+#include <ostream>
 #include <stdexcept>
 
 namespace dudu {
@@ -255,6 +256,13 @@ int required_int_value(const Json* json, std::string_view field_name) {
     }
     throw std::runtime_error("missing or invalid required LSP integer field: " +
                              std::string(field_name));
+}
+
+void write_markdown_documentation(std::ostream& out, std::string_view documentation) {
+    if (!documentation.empty()) {
+        out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
+            << json_escape(documentation) << "\"}";
+    }
 }
 
 } // namespace dudu

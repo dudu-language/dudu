@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iosfwd>
 #include <map>
 #include <optional>
 #include <string>
@@ -50,5 +51,6 @@ std::string json_escape(std::string_view text);
 std::string string_value(const Json* json);
 int optional_int_value(const Json* json, int default_value = 0);
 int required_int_value(const Json* json, std::string_view field_name);
+void write_markdown_documentation(std::ostream& out, std::string_view documentation);
 
 } // namespace dudu
