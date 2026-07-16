@@ -25,16 +25,8 @@ namespace {
     throw std::runtime_error(message);
 }
 
-std::filesystem::path build_config_path(const std::filesystem::path& input) {
-    return find_project_config(input);
-}
-
-ProjectConfig config_for_input(const std::filesystem::path& input) {
-    return parse_project_config(build_config_path(input));
-}
-
 ProjectConfig config_for_options(const TestDriverOptions& options) {
-    ProjectConfig config = config_for_input(options.input);
+    ProjectConfig config = parse_project_config(find_project_config(options.input));
     if (!options.target_name.empty()) {
         config = apply_project_target(std::move(config), options.target_name);
     }
@@ -42,10 +34,6 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
         ensure_project_dependencies(config, false, options.quiet);
     }
     return config;
-}
-
-ProjectConfig build_config_for_options(const TestDriverOptions& options) {
-    return config_for_options(options);
 }
 
 bool looks_like_test_input(const std::filesystem::path& value) {
@@ -189,7 +177,7 @@ std::filesystem::path default_test_output(const TestDriverOptions& options,
 }
 
 int run_one_test_entry(TestDriverOptions options) {
-    const ProjectConfig config = build_config_for_options(options);
+    const ProjectConfig config = config_for_options(options);
     const std::filesystem::path output =
         options.output.value_or(default_test_output(options, config));
     const bool project_output = options.project_driver && !options.quiet;
@@ -238,7 +226,7 @@ int run_project_tests(TestDriverOptions options) {
         (!options.input.empty() && std::filesystem::is_directory(options.input))) {
         return run_recursive_tests(std::move(options));
     }
-    const ProjectConfig project = parse_project_config(build_config_path(options.input));
+    const ProjectConfig project = parse_project_config(find_project_config(options.input));
     if (!options.input.empty() && !looks_like_test_input(options.input)) {
         const std::string input = options.input.string();
         if (project.targets.contains(input)) {

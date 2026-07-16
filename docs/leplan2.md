@@ -288,7 +288,8 @@ real library consumer.
 
 Continue the cleanup requirements in
 [Le Plan: Compiler Readability](le_plan.md#18-compiler-readability-and-style-pass)
-without starting an unbounded rewrite.
+and track the subsystem audit and measured baseline in
+[Compiler Cleanup](compiler-cleanup.md), without starting an unbounded rewrite.
 
 - keep parser, module resolution, binding, type checking, lowering, emission,
   diagnostics, LSP, and native boundaries separately owned

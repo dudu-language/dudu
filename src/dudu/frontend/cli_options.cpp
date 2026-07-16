@@ -24,10 +24,6 @@ void add_build_value(CliOptions& options, const std::string& define) {
 
 } // namespace
 
-std::filesystem::path build_config_path(const std::filesystem::path& input) {
-    return find_project_config(input);
-}
-
 CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     CliOptions options;
     options.project_driver = project_driver;
@@ -274,7 +270,7 @@ CliOptions resolve_project_input(CliOptions options) {
     }
     const std::filesystem::path config_path = options.input.empty()
                                                   ? std::filesystem::path("dudu.toml")
-                                                  : build_config_path(options.input);
+                                                  : find_project_config(options.input);
     const ProjectConfig project = parse_project_config(config_path);
     const bool command_uses_project_entry = options.build || options.run || options.cmake ||
                                             options.emit_cpp || options.emit_modules ||

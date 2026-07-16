@@ -77,8 +77,7 @@ void print_macro_performance(bool enabled, const macro::ExpansionReport& report)
                        milliseconds(report.timings.package_sdk_prepare_ns));
     print_project_step(true, "macro.package_compile",
                        milliseconds(report.timings.package_compile_ns));
-    print_project_step(true, "macro.package_link",
-                       milliseconds(report.timings.package_link_ns));
+    print_project_step(true, "macro.package_link", milliseconds(report.timings.package_link_ns));
     print_project_step(true, "macro.worker_start", milliseconds(report.timings.worker_start_ns));
     print_project_step(true, "macro.protocol", milliseconds(report.timings.protocol_ns));
     print_project_step(true, "macro.execute", milliseconds(report.timings.execute_ns));
@@ -145,7 +144,7 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
 }
 
 int run_project_benchmarks(const CliOptions& options) {
-    const ProjectConfig config = parse_project_config(build_config_path(options.input));
+    const ProjectConfig config = parse_project_config(find_project_config(options.input));
     if (!options.command_args.empty() && options.command_args.front() == "compiler") {
         const std::filesystem::path script = project_path(config, "scripts/bench_compiler.sh");
         if (!std::filesystem::exists(script)) {
@@ -168,10 +167,6 @@ int run_project_benchmarks(const CliOptions& options) {
     return std::system(project_shell_command(config, effective_command).c_str()) == 0 ? 0 : 1;
 }
 
-ProjectConfig config_for_input(const std::filesystem::path& input) {
-    return parse_project_config(build_config_path(input));
-}
-
 std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
     if (input.empty()) {
         return std::filesystem::current_path();
@@ -184,12 +179,12 @@ NativeHeaderOptions native_header_options_for_clean_cache(const CliOptions& opti
         const std::filesystem::path root = options.input.empty() ? "." : options.input;
         return {.config = parse_project_config(root / "dudu.toml"), .source_dir = root};
     }
-    return {.config = config_for_input(options.input),
+    return {.config = parse_project_config(find_project_config(options.input)),
             .source_dir = source_dir_for_input(options.input)};
 }
 
 ProjectConfig config_for_options(const CliOptions& options) {
-    ProjectConfig config = config_for_input(options.input);
+    ProjectConfig config = parse_project_config(find_project_config(options.input));
     if (!options.target_name.empty()) {
         config = apply_project_target(std::move(config), options.target_name);
     }
@@ -199,16 +194,12 @@ ProjectConfig config_for_options(const CliOptions& options) {
     return config;
 }
 
-ProjectConfig build_config_for_options(const CliOptions& options) {
-    return config_for_options(options);
-}
-
 FormatPathOptions format_options_for_project(const CliOptions& options) {
     FormatPathOptions out;
     if (!options.project_driver || !std::filesystem::is_directory(options.input)) {
         return out;
     }
-    const std::filesystem::path config_path = build_config_path(options.input);
+    const std::filesystem::path config_path = find_project_config(options.input);
     if (config_path.empty() || !std::filesystem::exists(config_path)) {
         return out;
     }
@@ -410,7 +401,7 @@ std::vector<std::string> all_project_module_paths(const ProjectIndex& index) {
 }
 
 int run_build_command(const CliOptions& options, char* executable) {
-    const ProjectConfig config = build_config_for_options(options);
+    const ProjectConfig config = config_for_options(options);
     const std::filesystem::path dudu_executable = executable_path(executable);
     const bool project_output = options.project_driver && !options.quiet;
     print_project_step(project_output, "backend", "cmake");
@@ -429,7 +420,7 @@ int run_build_command(const CliOptions& options, char* executable) {
 }
 
 int run_run_command(const CliOptions& options, char* executable) {
-    const ProjectConfig config = build_config_for_options(options);
+    const ProjectConfig config = config_for_options(options);
     const std::filesystem::path dudu_executable = executable_path(executable);
     if (config.target_kind != "executable") {
         fail("cannot run target kind: " + config.target_kind);
@@ -455,7 +446,7 @@ int run_run_command(const CliOptions& options, char* executable) {
 int run_deps_fetch_command(const CliOptions& options) {
     const std::filesystem::path root =
         options.input.empty() ? std::filesystem::path(".") : options.input;
-    ProjectConfig config = parse_project_config(build_config_path(root));
+    ProjectConfig config = parse_project_config(find_project_config(root));
     ensure_project_dependencies(config, true, options.quiet);
     print_project_step(options.project_driver && !options.quiet, "deps", "fetched");
     return 0;

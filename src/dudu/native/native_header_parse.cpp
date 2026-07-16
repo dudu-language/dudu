@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/native/native_header_ast_parse_internal.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"
@@ -12,61 +13,7 @@
 #include <sstream>
 
 namespace dudu {
-namespace {
-
-struct TemplateContext {
-    enum class Kind {
-        Alias,
-        Class,
-        Function,
-    };
-
-    int depth = 0;
-    Kind kind = Kind::Function;
-    std::vector<std::string> params;
-    std::vector<bool> param_is_value;
-    std::vector<bool> param_has_default;
-    std::vector<TypeRef> param_defaults;
-    int last_param_depth = -1;
-    SourceLocation location;
-};
-
-enum class CommentTargetKind {
-    Type,
-    Value,
-    Function,
-    Class,
-    Field,
-    StaticField,
-    Method,
-    Namespace,
-};
-
-struct CommentTarget {
-    int depth = 0;
-    CommentTargetKind kind = CommentTargetKind::Function;
-    size_t primary = 0;
-    size_t secondary = 0;
-};
-
-enum class ParamTargetKind {
-    Function,
-    Method,
-};
-
-struct ParamTarget {
-    int depth = 0;
-    ParamTargetKind kind = ParamTargetKind::Function;
-    size_t primary = 0;
-    size_t secondary = 0;
-    size_t next_param = 0;
-};
-
-struct EnumContext {
-    int depth = 0;
-    std::string type_name;
-    std::string value_scope;
-};
+namespace native_ast_parse {
 
 bool dudu_primitive_name(std::string_view name) {
     for (std::string_view primitive : {"bool", "char", "f32", "f64", "i8", "i16", "i32", "i64",
@@ -400,9 +347,8 @@ size_t append_native_function(NativeHeaderScan& scan,
                               const NativeCursorIdentityIndex& identities, std::string raw_name,
                               const std::string& signature, const SourceLocation& location,
                               const std::string& current_file,
-                              const std::vector<std::string>& template_params = {},
-                              const std::vector<bool>& template_param_is_value = {},
-                              bool deleted = false) {
+                              const std::vector<std::string>& template_params,
+                              const std::vector<bool>& template_param_is_value, bool deleted) {
     NativeFunctionDecl fn;
     fn.name = join_scope(namespaces, raw_name);
     fn.identity = scanned_identity(identities, NativeCursorKind::Function, raw_name, location,
@@ -426,23 +372,17 @@ size_t append_native_function(NativeHeaderScan& scan,
     return scan.functions.size() - 1;
 }
 
-void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
-                    std::vector<std::pair<int, std::string>>& namespaces,
-                    std::vector<std::pair<int, size_t>>& classes, std::vector<EnumContext>& enums,
-                    std::vector<TemplateContext>& templates,
-                    std::vector<std::pair<int, size_t>>& functions,
-                    std::vector<ParamTarget>& param_targets,
-                    std::vector<CommentTarget>& comment_targets,
-                    const NativeCursorIdentityIndex& identities, const SourceLocation& location,
-                    std::string& current_file) {
-    static const std::regex typedef_decl(
-        R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex record_decl(
-        R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
-    static const std::regex specialization_decl(
-        R"((ClassTemplate(Partial)?SpecializationDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
-    static const std::regex enum_decl(
-        R"(EnumDecl.*(?:line:[0-9]+:[0-9]+|col:[0-9]+)(?: referenced)? (?:(class|struct) )?([A-Za-z_][A-Za-z0-9_]*)(?: '[^']*')?$)");
+void parse_ast_line(AstParseState& state, const std::string& line) {
+    NativeHeaderScan& scan = state.scan;
+    const SourceLocation& location = state.root_location;
+    auto& namespaces = state.namespaces;
+    auto& classes = state.classes;
+    auto& enums = state.enums;
+    auto& templates = state.templates;
+    auto& functions = state.functions;
+    auto& param_targets = state.param_targets;
+    auto& comment_targets = state.comment_targets;
+    std::string& current_file = state.current_file;
     static const std::regex template_type_param(
         R"(TemplateTypeParmDecl.*\bindex [0-9]+ (\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex template_value_param(
@@ -452,20 +392,6 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex template_param_index(R"(\bindex ([0-9]+)(?: |$))");
     static const std::regex template_integer_default(R"(IntegerLiteral.* ([+-]?[0-9]+)$)");
     static const std::regex template_bool_default(R"(CXXBoolLiteralExpr.* (true|false)$)");
-    static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
-    static const std::regex fn_decl(
-        R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex using_shadow_function(
-        R"(UsingShadowDecl.*\bFunction 0x[0-9A-Fa-f]+ '([A-Za-z_][A-Za-z0-9_]*)' '([^']*)')");
-    static const std::regex method_decl(
-        R"(CXXMethodDecl.*\b((?:operator(?:\(\)|\[\]|[^\s']+))|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex ctor_decl(
-        R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex base_decl(R"(\b(public|protected|private) '([^']+)')");
-    static const std::regex enum_value_decl(
-        R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex var_decl(R"(VarDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex text_comment(R"re(Text="(.*)")re");
     const int depth = ast_depth(line);
     std::smatch match;
@@ -636,363 +562,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     if (!param_targets.empty() && line.find("ParmVarDecl") != std::string::npos) {
         apply_param_name(scan, param_targets.back(), parm_var_decl_name(line).value_or(""));
     }
-    if (line.find("NamespaceDecl") != std::string::npos &&
-        std::regex_search(line, match, ns_decl)) {
-        if (line.ends_with(" inline")) {
-            return;
-        }
-        const std::string name = match[1].str();
-        namespaces.push_back({depth, name});
-        if (starts_with(name, "__")) {
-            return;
-        }
-        scan.namespaces.push_back(
-            {.name = name,
-             .identity = scanned_identity(identities, NativeCursorKind::Namespace, name,
-                                          decl_location, name, current_file),
-             .location = decl_location});
-        comment_targets.push_back({.depth = depth,
-                                   .kind = CommentTargetKind::Namespace,
-                                   .primary = scan.namespaces.size() - 1});
-    } else if ((line.find("TypedefDecl") != std::string::npos ||
-                line.find("TypeAliasDecl") != std::string::npos) &&
-               std::regex_search(line, match, typedef_decl)) {
-        const std::string raw_name = match[2].str();
-        const std::string name = join_scope(namespaces, raw_name);
-        const std::string underlying_type = trim_copy(match[3].str());
-        const std::string lowered_type =
-            qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
-        const bool useful_alias = (lowered_type != raw_name && lowered_type != name) ||
-                                  (lowered_type == raw_name && dudu_primitive_name(raw_name) &&
-                                   underlying_type != raw_name);
-        if (!starts_with(raw_name, "__") || useful_alias) {
-            const TypeRef type_ref =
-                useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
-            const std::string visible_name =
-                classes.empty() ? name : scan.classes[classes.back().second].name + "." + raw_name;
-            NativeTypeDecl native_type{
-                .name = visible_name,
-                .native_spelling = useful_alias ? lowered_type : "",
-                .type_ref = type_ref,
-                .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
-                                             decl_location, visible_name, current_file),
-                .layout =
-                    scanned_layout(identities, NativeCursorKind::Type, raw_name, decl_location),
-                .location = decl_location};
-            if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
-                native_type.generic_params = templates.back().params;
-                native_type.generic_default_args = templates.back().param_defaults;
-                native_type.generic_min_args = 0;
-                for (size_t i = 0; i < templates.back().params.size(); ++i) {
-                    const bool is_pack = templates.back().params[i].ends_with("...");
-                    if (!templates.back().param_has_default[i] && !is_pack) {
-                        ++*native_type.generic_min_args;
-                    }
-                }
-            }
-            scan.types.push_back(std::move(native_type));
-            if (!classes.empty() && useful_alias) {
-                scan.classes[classes.back().second].type_aliases.push_back(
-                    {.name = raw_name,
-                     .cpp_name = visible_name,
-                     .type_ref = type_ref,
-                     .origin_module = current_file,
-                     .location = decl_location});
-            }
-            comment_targets.push_back({.depth = depth,
-                                       .kind = CommentTargetKind::Type,
-                                       .primary = scan.types.size() - 1});
-        }
-    } else if ((line.find("ClassTemplatePartialSpecializationDecl") != std::string::npos ||
-                (line.find("ClassTemplateSpecializationDecl") != std::string::npos &&
-                 line.find("implicit_instantiation") == std::string::npos)) &&
-               std::regex_search(line, match, specialization_decl)) {
-        const std::string raw_name = match[4].str();
-        const std::string name = class_name(scan, namespaces, classes, raw_name);
-        ClassDecl klass;
-        klass.name = name;
-        klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                          decl_location, name, current_file);
-        klass.layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location);
-        klass.native_declaration = true;
-        klass.native_partial_specialization = match[2].matched;
-        klass.location = decl_location;
-        scan.classes.push_back(std::move(klass));
-        classes.push_back({depth, scan.classes.size() - 1});
-        comment_targets.push_back(
-            {.depth = depth, .kind = CommentTargetKind::Class, .primary = scan.classes.size() - 1});
-    } else if ((line.find("RecordDecl") != std::string::npos ||
-                line.find("CXXRecordDecl") != std::string::npos) &&
-               std::regex_search(line, match, record_decl)) {
-        const std::string raw_name = match[3].str();
-        if (raw_name == "definition") {
-            return;
-        }
-        const std::string name = class_name(scan, namespaces, classes, raw_name);
-        const bool public_record = !starts_with(raw_name, "__");
-        const bool internal_template_definition =
-            !public_record && line.find(" definition") != std::string::npos && !templates.empty() &&
-            templates.back().kind == TemplateContext::Kind::Class;
-        if (public_record || internal_template_definition) {
-            const bool is_union = match[2].str() == "union";
-            const std::string record_spelling = is_union ? "union " + raw_name : "";
-            if (public_record) {
-                scan.types.push_back(
-                    {.name = name,
-                     .native_spelling = record_spelling,
-                     .type_ref = is_union ? named_type_ref(name, decl_location) : TypeRef{},
-                     .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                                  decl_location, name, current_file),
-                     .layout = scanned_layout(identities, NativeCursorKind::Class, raw_name,
-                                              decl_location),
-                     .location = decl_location});
-                comment_targets.push_back({.depth = depth,
-                                           .kind = CommentTargetKind::Type,
-                                           .primary = scan.types.size() - 1});
-            }
-            if (line.find(" definition") != std::string::npos) {
-                ClassDecl klass;
-                klass.name = name;
-                klass.native_declaration = true;
-                if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Class) {
-                    klass.generic_params = templates.back().params;
-                    klass.generic_default_args = templates.back().param_defaults;
-                    klass.generic_min_args = 0;
-                    for (size_t i = 0; i < templates.back().params.size(); ++i) {
-                        const bool is_pack = templates.back().params[i].ends_with("...");
-                        if (!templates.back().param_has_default[i] && !is_pack) {
-                            ++*klass.generic_min_args;
-                        }
-                    }
-                }
-                klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                                  decl_location, name, current_file);
-                klass.layout =
-                    scanned_layout(identities, NativeCursorKind::Class, raw_name, decl_location);
-                klass.location = decl_location;
-                scan.classes.push_back(std::move(klass));
-                classes.push_back({depth, scan.classes.size() - 1});
-                comment_targets.push_back({.depth = depth,
-                                           .kind = CommentTargetKind::Class,
-                                           .primary = scan.classes.size() - 1});
-            }
-        }
-    } else if (line.find("EnumDecl") != std::string::npos &&
-               std::regex_search(line, match, enum_decl)) {
-        const bool scoped = match[1].matched;
-        const std::string raw_name = match[2].str();
-        const std::string name = class_name(scan, namespaces, classes, raw_name);
-        if (!starts_with(raw_name, "__")) {
-            scan.types.push_back(
-                {.name = name,
-                 .native_spelling = "",
-                 .type_ref = {},
-                 .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name,
-                                              decl_location, name, current_file),
-                 .layout =
-                     scanned_layout(identities, NativeCursorKind::Type, raw_name, decl_location),
-                 .location = decl_location});
-            comment_targets.push_back({.depth = depth,
-                                       .kind = CommentTargetKind::Type,
-                                       .primary = scan.types.size() - 1});
-            std::string value_scope;
-            if (scoped) {
-                value_scope = name;
-            } else if (!classes.empty()) {
-                value_scope = scan.classes[classes.back().second].name;
-            } else {
-                value_scope = join_scope(namespaces, "");
-                if (!value_scope.empty()) {
-                    value_scope.pop_back();
-                }
-            }
-            enums.push_back(
-                {.depth = depth, .type_name = name, .value_scope = std::move(value_scope)});
-        }
-    } else if (line.find("UsingShadowDecl") != std::string::npos &&
-               std::regex_search(line, match, using_shadow_function)) {
-        const std::string raw_name = match[1].str();
-        if (!starts_with(raw_name, "__")) {
-            append_native_function(scan, namespaces, identities, raw_name, match[2].str(),
-                                   decl_location, current_file);
-        }
-    } else if (line.find("FunctionDecl") != std::string::npos &&
-               std::regex_search(line, match, fn_decl)) {
-        const std::string raw_name = match[1].str();
-        if (starts_with(raw_name, "__")) {
-            return;
-        }
-        const std::string signature = match[2].str();
-        std::vector<std::string> template_params;
-        std::vector<bool> template_param_is_value;
-        if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
-            template_params = templates.back().params;
-            template_param_is_value = templates.back().param_is_value;
-        }
-        const size_t function_index =
-            append_native_function(scan, namespaces, identities, raw_name, signature, decl_location,
-                                   current_file, template_params, template_param_is_value,
-                                   line.find(" delete", line.rfind('\'')) != std::string::npos);
-        functions.push_back({depth, function_index});
-        param_targets.push_back(
-            {.depth = depth, .kind = ParamTargetKind::Function, .primary = function_index});
-        comment_targets.push_back(
-            {.depth = depth, .kind = CommentTargetKind::Function, .primary = function_index});
-    } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
-               std::regex_search(line, match, method_decl)) {
-        FunctionDecl method;
-        method.name = match[1].str();
-        method.native_identity = scanned_identity(
-            identities, NativeCursorKind::Method, method.name, decl_location,
-            scan.classes[classes.back().second].identity.canonical_path + "." + method.name,
-            current_file);
-        if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
-            method.generic_params = templates.back().params;
-            method.generic_param_is_value = templates.back().param_is_value;
-        }
-        if (line.find(" static", line.rfind('\'')) == std::string::npos) {
-            method.receiver_type_ref =
-                parse_native_type_text(signature_receiver_type(match[2].str()), decl_location);
-        }
-        method.return_type_ref = parse_native_type_text(
-            qualify_scoped_type(scan, namespaces, classes, signature_return_type(match[2].str())),
-            decl_location);
-        for (const std::string& param : signature_params(match[2].str())) {
-            ParamDecl decl;
-            decl.name = "arg" + std::to_string(method.params.size());
-            decl.type_ref = parse_native_type_text(
-                qualify_scoped_type(scan, namespaces, classes, param), decl_location);
-            decl.location = decl_location;
-            method.params.push_back(std::move(decl));
-        }
-        method.deleted = line.find(" delete", line.rfind('\'')) != std::string::npos;
-        method.location = decl_location;
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].methods.push_back(std::move(method));
-        param_targets.push_back({.depth = depth,
-                                 .kind = ParamTargetKind::Method,
-                                 .primary = class_index,
-                                 .secondary = scan.classes[class_index].methods.size() - 1});
-        comment_targets.push_back({.depth = depth,
-                                   .kind = CommentTargetKind::Method,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].methods.size() - 1});
-    } else if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
-               std::regex_search(line, match, ctor_decl)) {
-        const std::vector<std::string> params =
-            qualify_scoped_types(scan, namespaces, classes, signature_params(match[2].str()));
-        FunctionDecl ctor;
-        ctor.name = "init";
-        ctor.native_identity = scanned_identity(
-            identities, NativeCursorKind::Constructor, match[1].str(), decl_location,
-            scan.classes[classes.back().second].identity.canonical_path + ".init", current_file);
-        for (const std::string& param : params) {
-            ParamDecl decl;
-            decl.name = "arg" + std::to_string(ctor.params.size());
-            decl.type_ref = parse_native_type_text(param, decl_location);
-            decl.location = decl_location;
-            ctor.params.push_back(std::move(decl));
-        }
-        ctor.location = decl_location;
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].methods.push_back(std::move(ctor));
-        param_targets.push_back({.depth = depth,
-                                 .kind = ParamTargetKind::Method,
-                                 .primary = class_index,
-                                 .secondary = scan.classes[class_index].methods.size() - 1});
-        comment_targets.push_back({.depth = depth,
-                                   .kind = CommentTargetKind::Method,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].methods.size() - 1});
-    } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
-               std::regex_search(line, match, field_decl)) {
-        const std::string type =
-            qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].fields.push_back(
-            {.name = match[1].str(),
-             .type_ref = parse_native_type_text(type, decl_location),
-             .value_expr = {},
-             .decorators = {},
-             .location = decl_location});
-        comment_targets.push_back({.depth = depth,
-                                   .kind = CommentTargetKind::Field,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].fields.size() - 1});
-    } else if (!classes.empty() &&
-               (line.find("public '") != std::string::npos ||
-                line.find("protected '") != std::string::npos ||
-                line.find("private '") != std::string::npos) &&
-               std::regex_search(line, match, base_decl)) {
-        add_base_class(scan.classes[classes.back().second],
-                       qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str())),
-                       decl_location);
-    } else if (line.find("EnumConstantDecl") != std::string::npos &&
-               std::regex_search(line, match, enum_value_decl)) {
-        const std::string raw_name = match[1].str();
-        if (!starts_with(raw_name, "__")) {
-            const std::string type =
-                enums.empty() ? dudu_type(match[2].str()) : enums.back().type_name;
-            const std::string name = enums.empty() || enums.back().value_scope.empty()
-                                         ? raw_name
-                                         : enums.back().value_scope + "." + raw_name;
-            scan.values.push_back(
-                {.name = name,
-                 .native_spelling = type,
-                 .type_ref = parse_native_type_text(type, decl_location),
-                 .enum_constant = true,
-                 .identity = scanned_identity(identities, NativeCursorKind::Value, raw_name,
-                                              decl_location, name, current_file),
-                 .location = decl_location});
-            comment_targets.push_back({.depth = depth,
-                                       .kind = CommentTargetKind::Value,
-                                       .primary = scan.values.size() - 1});
-        }
-    } else if (!classes.empty() && line.find("VarDecl") != std::string::npos &&
-               line.find("ParmVarDecl") == std::string::npos &&
-               std::regex_search(line, match, var_decl)) {
-        const std::string name = match[1].str();
-        if (!starts_with(name, "__")) {
-            const size_t class_index = classes.back().second;
-            const std::string type =
-                qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
-            scan.classes[class_index].static_fields.push_back(
-                {.name = name,
-                 .cpp_name = {},
-                 .type_ref = parse_native_type_text(type, decl_location),
-                 .value_expr = {},
-                 .decorators = {},
-                 .origin_module = {},
-                 .location = decl_location});
-            comment_targets.push_back(
-                {.depth = depth,
-                 .kind = CommentTargetKind::StaticField,
-                 .primary = class_index,
-                 .secondary = scan.classes[class_index].static_fields.size() - 1});
-        }
-    } else if (line.find("VarDecl") != std::string::npos &&
-               line.find("ParmVarDecl") == std::string::npos &&
-               std::regex_search(line, match, var_decl)) {
-        const std::string raw_name = match[1].str();
-        if (!starts_with(raw_name, "__") && raw_name != "dudu_probe") {
-            const std::string name = join_scope(namespaces, raw_name);
-            const std::string type =
-                qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
-            scan.values.push_back(
-                {.name = name,
-                 .native_spelling = type,
-                 .type_ref = parse_native_type_text(type, decl_location),
-                 .identity = scanned_identity(identities, NativeCursorKind::Value, raw_name,
-                                              decl_location, name, current_file),
-                 .location = decl_location});
-            comment_targets.push_back({.depth = depth,
-                                       .kind = CommentTargetKind::Value,
-                                       .primary = scan.values.size() - 1});
-        }
-    }
+    parse_ast_declaration(state, line, depth, decl_location);
 }
 
-} // namespace
+} // namespace native_ast_parse
 
 void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
                     const SourceLocation& location) {
@@ -1001,19 +574,11 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
 
 void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump, const SourceLocation& location,
                     const NativeCursorIdentityIndex& identities) {
-    std::vector<std::pair<int, std::string>> namespaces;
-    std::vector<std::pair<int, size_t>> classes;
-    std::vector<EnumContext> enums;
-    std::vector<TemplateContext> templates;
-    std::vector<std::pair<int, size_t>> functions;
-    std::vector<ParamTarget> param_targets;
-    std::vector<CommentTarget> comment_targets;
-    std::string current_file;
+    native_ast_parse::AstParseState state(scan, identities, location);
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions, param_targets,
-                       comment_targets, identities, location, current_file);
+        native_ast_parse::parse_ast_line(state, line);
     }
 }
 

@@ -46,6 +46,5 @@ struct CliOptions {
 
 CliOptions parse_cli_options(int argc, char** argv, bool project_driver);
 CliOptions resolve_project_input(CliOptions options);
-std::filesystem::path build_config_path(const std::filesystem::path& input);
 
 } // namespace dudu
