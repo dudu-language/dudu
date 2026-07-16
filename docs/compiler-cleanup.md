@@ -54,6 +54,8 @@ and typed facts.
 - keep dependency fetching and target selection explicit at command entry
 - split command dispatch only where command families have independent
   ownership
+- keep `dudu` responsible for project/toolchain orchestration and invoke
+  `duc` explicitly for compilation
 
 Outcome:
 
@@ -68,6 +70,9 @@ Outcome:
 - reduced the mixed 676-line dispatcher to 93 lines; the two owned command
   units are 230 and 410 lines
 - preserved the cached module-emission short circuit before source loading
+- renamed generated CMake's compiler input to `DUC_EXECUTABLE`
+- made build, run, and test resolve the sibling or `PATH` `duc` binary instead
+  of passing the `dudu` project driver back into generated compilation rules
 
 Validation: project configuration tests, CLI help/smoke checks, project
 backend tests, and dogfood `dudu build`.
@@ -123,6 +128,21 @@ in 68.75 seconds with 683,636 KiB peak RSS.
 - keep parser recovery in parser ownership and semantic decisions in sema
 - keep raw source rewriting confined to explicit C++ escape lowering
 - split files over the size guideline when they combine distinct behavior
+
+Outcome:
+
+- separated structural native type normalization from compatibility
+  normalization, so template-aware member lookup retains arguments while
+  assignment compatibility can still collapse equivalent C++ spellings
+- fixed native member lookup for aliases such as
+  `std.basic_string[char] -> std.string` without encoding standard-library
+  names in overload resolution
+- added one semantic boundary for native types exposed by imported Dudu
+  modules; it follows the reachable module graph and imports only types that
+  cross Dudu declarations instead of leaking native functions, values,
+  macros, or unrelated implementation classes
+- fixed member lookup on native types returned through another Dudu module,
+  including `list[std.thread]` and indexed `.join()` calls
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, and canonical fixture suites.
@@ -181,7 +201,3 @@ than cleanup regressions:
 
 - `cpp_stdlib_algorithms.dd`: `std.vector.erase(first, last)` loses the pointee
   type in the scanned iterator parameter
-- `raymarch-dd`: `threads[i].join()` is not resolved through an indexed native
-  container element
-- `dudu-webserver`: `query.size()` retains an unsubstituted native return type
-  and fails overload acceptance

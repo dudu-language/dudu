@@ -223,11 +223,9 @@ TypeRef local_binding_type(const Stmt& stmt, const DuduSemanticIndex& dudu_index
     return obvious_expr_type(stmt.value_expr, dudu_index, &local_types);
 }
 
-std::optional<SemanticTokenShape>
-member_token_shape_for_receiver(const Expr& receiver, std::string_view member,
-                                const DuduSemanticIndex& dudu_index,
-                                const NativeSemanticIndex* native_index,
-                                const std::map<std::string, TypeRef>* local_types, bool callee) {
+std::optional<SemanticTokenShape> member_token_shape_for_receiver(
+    const Expr& receiver, std::string_view member, const DuduSemanticIndex& dudu_index,
+    const NativeSemanticIndex* native_index, const std::map<std::string, TypeRef>* local_types) {
     const TypeRef receiver_type = obvious_expr_type(receiver, dudu_index, local_types);
     const std::string type_name = type_ref_head_name(receiver_type);
     if (type_name.empty()) {
@@ -248,9 +246,6 @@ member_token_shape_for_receiver(const Expr& receiver, std::string_view member,
     }
     if (native_index != nullptr && native_index->values.contains(key)) {
         return SemanticTokenShape{.type = token_property, .modifiers = mod_native};
-    }
-    if (callee) {
-        return std::nullopt;
     }
     return std::nullopt;
 }
@@ -308,12 +303,10 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         } else if (!expr.children.empty()) {
             const std::optional<SemanticTokenShape> receiver_shape =
                 member_token_shape_for_receiver(expr.children.front(), expr.name, dudu_index,
-                                                native_index, local_types, true);
+                                                native_index, local_types);
             add_semantic_token(tokens, member_location, expr.name,
                                receiver_shape ? receiver_shape->type : token_method,
                                receiver_shape ? receiver_shape->modifiers : mod_unresolved);
-        } else if (path && dudu_index.enum_members.contains(*path)) {
-            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
             add_semantic_token(tokens, member_location, expr.name, token_method, mod_unresolved);
         }
@@ -407,7 +400,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         } else if (!expr.children.empty()) {
             const std::optional<SemanticTokenShape> receiver_shape =
                 member_token_shape_for_receiver(expr.children.front(), expr.name, dudu_index,
-                                                native_index, local_types, false);
+                                                native_index, local_types);
             add_semantic_token(tokens, member_location, expr.name,
                                receiver_shape ? receiver_shape->type : token_property,
                                receiver_shape ? receiver_shape->modifiers : mod_unresolved);
