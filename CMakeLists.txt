@@ -195,8 +195,14 @@ endfunction()
 if(DUDU_BUILD_TESTS)
     enable_testing()
 
-    dudu_add_test(dudu_frontend_tests tests/frontend_tests.cpp dudu_frontend)
-    target_compile_definitions(dudu_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    dudu_add_test(dudu_frontend_syntax_fixture_tests
+        tests/frontend_syntax_fixture_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_frontend_diagnostics_format_tests
+        tests/frontend_diagnostics_format_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_frontend_semantics_codegen_tests
+        tests/frontend_semantics_codegen_tests.cpp dudu_frontend)
+    target_compile_definitions(
+        dudu_frontend_syntax_fixture_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_language_server_semantic_token_tests
         tests/language_server_semantic_token_tests.cpp dudu_frontend)

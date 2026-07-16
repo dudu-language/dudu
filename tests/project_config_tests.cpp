@@ -402,6 +402,75 @@ void test_project_driver_command_defaults(const std::filesystem::path& root) {
     std::filesystem::current_path(original_cwd);
 }
 
+void test_full_project_driver_manifest(const std::filesystem::path& root) {
+    const std::filesystem::path dir = root / "build" / "project-driver-config-test";
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path config_path = dir / "dudu.toml";
+    write_text(config_path, "name = \"tool\"\n"
+                            "entry = \"src/main.dd\"\n"
+                            "\n"
+                            "[cxx]\n"
+                            "standard = \"c++23\"\n"
+                            "compiler = \"clang++\"\n"
+                            "\n"
+                            "[include]\n"
+                            "paths = [\n"
+                            "    \"src\",\n"
+                            "    \"include\",\n"
+                            "]\n"
+                            "\n"
+                            "[sources]\n"
+                            "cpp = [\"src/native.cpp\"]\n"
+                            "c = [\"src/native.c\"]\n"
+                            "\n"
+                            "[pkg]\n"
+                            "libs = [\"raylib\"]\n"
+                            "\n"
+                            "[link]\n"
+                            "paths = [\"lib\"]\n"
+                            "libs = [\"m\"]\n"
+                            "flags = [\"-pthread\"]\n"
+                            "\n"
+                            "[build]\n"
+                            "dir = \"out\"\n"
+                            "\n"
+                            "[targets.tool]\n"
+                            "entry = \"tools/tool.dd\"\n"
+                            "kind = \"executable\"\n"
+                            "\n"
+                            "[targets.tool.pkg]\n"
+                            "libs = [\"sqlite3\"]\n"
+                            "\n"
+                            "[targets.tests]\n"
+                            "entry = \"tests/main.dd\"\n"
+                            "kind = \"executable\"\n"
+                            "mode = \"hosted\"\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(config_path);
+    assert(config.name == "tool");
+    assert(config.main == "src/main.dd");
+    assert(config.cpp_std == "c++23");
+    assert(config.compiler == "clang++");
+    assert(config.include_dirs.size() == 2);
+    assert(config.cpp_sources.size() == 1);
+    assert(config.c_sources.size() == 1);
+    assert(config.pkg_config_packages.size() == 1);
+    assert(config.lib_dirs.size() == 1);
+    assert(config.libs.size() == 1);
+    assert(config.link_flags.size() == 1);
+    assert(config.build_dir == "out");
+    assert(config.targets.size() == 2);
+    assert(config.targets.at("tool").main == "tools/tool.dd");
+    assert(config.targets.at("tool").pkg_config_packages.size() == 1);
+    assert(config.targets.at("tests").target_mode == "hosted");
+
+    const dudu::ProjectConfig tests_config = dudu::apply_project_target(config, "tests");
+    assert(tests_config.name == "tests");
+    assert(tests_config.main == "tests/main.dd");
+    assert(tests_config.target_kind == "executable");
+    assert(tests_config.target_mode == "hosted");
+}
+
 } // namespace
 
 int main() {
@@ -415,6 +484,7 @@ int main() {
         test_invalid_manifest_string_escapes(DUDU_REPO_ROOT);
         test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);
         test_project_driver_command_defaults(DUDU_REPO_ROOT);
+        test_full_project_driver_manifest(DUDU_REPO_ROOT);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

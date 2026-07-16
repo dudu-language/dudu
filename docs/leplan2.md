@@ -388,7 +388,10 @@ cache behavior. Lint fixtures moved to the diagnostics owner, and the former
 symbol-reference, and module/native-reference executables. The default fast
 AST driver is likewise split into semantic-token, parser-recovery,
 statement-syntax, and declaration/query ownership. The default fast CTest
-inventory is 42 ownership-specific targets.
+frontend driver is now syntax/fixture, diagnostics/formatting, and
+semantics/codegen ownership, with manifest behavior consolidated into the
+project-config suite. The default fast CTest inventory is 44
+ownership-specific targets.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform

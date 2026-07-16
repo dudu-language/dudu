@@ -429,15 +429,19 @@ Outcome:
 - split the 1,134-line AST frontend driver into semantic-token, parser
   recovery, statement/unsupported-syntax, and declaration/match/editor-query
   executables between 259 and 425 lines
-- the default CTest inventory is now 42 targets, and adding a normal C++ test
+- split the 893-line mixed frontend driver into syntax/fixture,
+  diagnostics/formatting, and semantics/codegen executables between 229 and
+  426 lines; its full manifest case now lives in the 493-line project-config
+  owner and reuses that suite's fixture writer
+- the default CTest inventory is now 44 targets, and adding a normal C++ test
   has one registration point instead of four synchronized edits
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 42 fast test executables,
+The latest ownership-cleanup milestone passes all 44 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 52.71 seconds with 622,976 KiB peak RSS. Representative frontend and
+matrix in 51.61 seconds with 623,052 KiB peak RSS. Representative frontend and
 macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.
