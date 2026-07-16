@@ -334,6 +334,15 @@ JSON-RPC transport is separate from language-server session policy.
 Content-Length framing, synchronized writes, response/error envelopes,
 notifications, and refresh request IDs have one owner; document state,
 diagnostics scheduling, and capability dispatch remain in the server session.
+Native import-target navigation is separate from ordinary AST and symbol
+definition dispatch as well. Compiler and pkg-config include discovery,
+external process ownership, and header path resolution now live in one
+native-header query unit. `language_server_definition.cpp` is 456 lines instead
+of 617 and no longer acquires build-tool dependencies transitively.
+
+The command audit also consolidated the input-to-source-root rule shared by
+check, index, emit, and native-cache cleanup. Relative input handling now has
+one frontend owner instead of two private copies.
 
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured

@@ -89,13 +89,6 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
     out << text;
 }
 
-std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
-    if (input.empty()) {
-        return std::filesystem::current_path();
-    }
-    return input.has_parent_path() ? input.parent_path() : std::filesystem::current_path();
-}
-
 const ProjectIndex& checked_index(const CliOptions& options, const std::string& source,
                                   bool check_bodies) {
     const bool detail_output = !options.quiet && options.timings;
@@ -112,7 +105,7 @@ const ProjectIndex& checked_index(const CliOptions& options, const std::string& 
                                      .entry_source = source,
                                      .source_overrides = {},
                                      .config = config,
-                                     .source_dir = source_dir_for_input(options.input),
+                                     .source_dir = cli_source_dir_for_input(options.input),
                                      .build_values = options.build_values,
                                      .force_module_tree = force_module_tree,
                                      .include_native_headers = true,
@@ -134,7 +127,7 @@ const ProjectIndex& indexed_module_graph(const CliOptions& options, const std::s
                                      .entry_source = source,
                                      .source_overrides = {},
                                      .config = config,
-                                     .source_dir = source_dir_for_input(options.input),
+                                     .source_dir = cli_source_dir_for_input(options.input),
                                      .build_values = options.build_values,
                                      .force_module_tree = true,
                                      .include_native_headers = true,

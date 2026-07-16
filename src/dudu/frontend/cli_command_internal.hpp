@@ -9,6 +9,7 @@ namespace dudu {
 
 std::filesystem::path cli_executable_path(char* executable);
 std::filesystem::path cli_compiler_path(char* executable);
+std::filesystem::path cli_source_dir_for_input(const std::filesystem::path& input);
 ProjectConfig cli_project_config(const CliOptions& options);
 
 int run_project_benchmarks(const CliOptions& options);

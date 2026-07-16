@@ -73,6 +73,9 @@ Outcome:
 - renamed generated CMake's compiler input to `DUC_EXECUTABLE`
 - made build, run, and test resolve the sibling or `PATH` `duc` binary instead
   of passing the `dudu` project driver back into generated compilation rules
+- consolidated CLI input-to-source-root resolution into one command boundary,
+  so check, index, emit, and native-cache cleanup cannot drift on relative
+  input handling
 
 Validation: project configuration tests, CLI help/smoke checks, project
 backend tests, and dogfood `dudu build`.
@@ -258,6 +261,13 @@ Outcome:
 - removed transport state and eleven stale compiler/native/standard-library
   includes from the server session; `language_server.cpp` is now 533 lines and
   the transport unit is 93 lines
+- separated native import-target navigation from ordinary AST and symbol
+  definition dispatch; compiler and pkg-config include discovery, path
+  resolution, and external process ownership now live in one native-header
+  definition unit
+- reduced `language_server_definition.cpp` from 617 to 456 lines; the
+  native-header definition unit is 177 lines and exposes one capability-level
+  query
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator

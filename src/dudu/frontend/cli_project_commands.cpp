@@ -50,13 +50,6 @@ std::optional<std::filesystem::path> find_executable_on_path(const std::filesyst
     return std::nullopt;
 }
 
-std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
-    if (input.empty()) {
-        return std::filesystem::current_path();
-    }
-    return input.has_parent_path() ? input.parent_path() : std::filesystem::current_path();
-}
-
 FormatPathOptions format_options_for_project(const CliOptions& options) {
     FormatPathOptions format_options;
     if (!options.project_driver || !std::filesystem::is_directory(options.input)) {
@@ -111,6 +104,13 @@ std::filesystem::path cli_compiler_path(char* executable) {
     fail("could not find the duc compiler beside " + tool.string() + " or on PATH");
 }
 
+std::filesystem::path cli_source_dir_for_input(const std::filesystem::path& input) {
+    if (input.empty()) {
+        return std::filesystem::current_path();
+    }
+    return input.has_parent_path() ? input.parent_path() : std::filesystem::current_path();
+}
+
 ProjectConfig cli_project_config(const CliOptions& options) {
     ProjectConfig config = parse_project_config(find_project_config(options.input));
     if (!options.target_name.empty()) {
@@ -154,7 +154,7 @@ int run_clean_native_cache_command(const CliOptions& options) {
         native_options = {.config = parse_project_config(root / "dudu.toml"), .source_dir = root};
     } else {
         native_options = {.config = parse_project_config(find_project_config(options.input)),
-                          .source_dir = source_dir_for_input(options.input)};
+                          .source_dir = cli_source_dir_for_input(options.input)};
     }
     const std::filesystem::path cleaned = clean_native_header_cache(native_options);
     if (!options.quiet) {
