@@ -61,9 +61,13 @@ Outcome:
   wrappers that only renamed project configuration calls
 - retained target selection and dependency fetching in the command/test entry
   paths where those effects are visible
-- command-family ownership remains a separate cleanup item because
-  `cli_command.cpp` still combines dispatch, module emission, artifact
-  manifests, project builds, formatting, and benchmarks
+- split command ownership without adding a second dispatch framework:
+  `cli_command.cpp` now routes commands, `cli_project_commands.cpp` owns
+  project/build/dependency/format operations, and `cli_compile_command.cpp`
+  owns checking, indexing, emission, and artifact manifests
+- reduced the mixed 676-line dispatcher to 93 lines; the two owned command
+  units are 230 and 410 lines
+- preserved the cached module-emission short circuit before source loading
 
 Validation: project configuration tests, CLI help/smoke checks, project
 backend tests, and dogfood `dudu build`.
@@ -145,3 +149,15 @@ The pass is complete when:
 - generated C++, diagnostics, editor behavior, public syntax, and measured
   user-visible latency have not regressed
 - stable green milestones are committed and pushed
+
+## Known Baseline Failures
+
+These failures reproduce at `before_cleanup` and remain completion work rather
+than cleanup regressions:
+
+- `cpp_stdlib_algorithms.dd`: `std.vector.erase(first, last)` loses the pointee
+  type in the scanned iterator parameter
+- `raymarch-dd`: `threads[i].join()` is not resolved through an indexed native
+  container element
+- `dudu-webserver`: `query.size()` retains an unsubstituted native return type
+  and fails overload acceptance
