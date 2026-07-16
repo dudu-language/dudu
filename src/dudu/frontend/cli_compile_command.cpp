@@ -300,7 +300,7 @@ bool skip_current_module_emission(const CliOptions& options,
         !artifact_manifest_current(output_dir, artifact_manifest, stamp_file, compiler_path)) {
         return false;
     }
-    const bool project_output = !options.quiet && (options.project_driver || options.timings);
+    const bool project_output = !options.quiet;
     print_project_step(project_output, "dirty", "0 modules");
     print_project_step(project_output, "analyze", "0 modules");
     print_project_step(project_output, "emit", output_dir);
@@ -312,7 +312,7 @@ int emit_modules(const CliOptions& options, char* executable, bool tests) {
         fail(std::string(tests ? "emit-test-modules" : "emit-modules") +
              " requires -o <directory>");
     }
-    const bool project_output = !options.quiet && (options.project_driver || options.timings);
+    const bool project_output = !options.quiet;
     const std::filesystem::path compiler_path = cli_executable_path(executable);
     const std::filesystem::path stamp_file =
         *options.output / (tests ? ".dudu_test_sources.stamp" : ".dudu_sources.stamp");

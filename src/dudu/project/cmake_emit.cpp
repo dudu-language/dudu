@@ -60,7 +60,7 @@ void emit_cmake_list_values(std::ostringstream& out, std::string_view prefix,
 }
 
 void emit_cmake_depends(std::ostringstream& out, const std::vector<std::filesystem::path>& files) {
-    out << "    DEPENDS ${DUDU_EXECUTABLE}";
+    out << "    DEPENDS ${DUC_EXECUTABLE}";
     for (const std::filesystem::path& file : files) {
         out << ' ' << cmake_quote(file.string());
     }
@@ -116,8 +116,7 @@ std::vector<std::filesystem::path> generated_module_sources(const ModuleAst& mod
 
 std::vector<std::filesystem::path> generated_module_artifacts(const ModuleAst& module,
                                                               bool test_source = false) {
-    return test_source ? cpp_test_module_artifact_paths(module)
-                       : cpp_module_artifact_paths(module);
+    return test_source ? cpp_test_module_artifact_paths(module) : cpp_module_artifact_paths(module);
 }
 
 std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& config,
@@ -202,7 +201,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "project(" << target << " LANGUAGES C CXX)\n\n"
         << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
         << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
-        << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
+        << "set(DUC_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
         << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
@@ -219,7 +218,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED_ARTIFACTS} "
            "${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
-        << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_TIMING_ARGS} "
+        << "    COMMAND ${DUC_EXECUTABLE} emit-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
            "${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
@@ -271,7 +270,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "project(" << target << " LANGUAGES C CXX)\n\n"
         << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
         << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
-        << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
+        << "set(DUC_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
         << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
@@ -288,7 +287,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "    BYPRODUCTS ${DUDU_GENERATED_STAMP} ${DUDU_GENERATED_ARTIFACTS} "
            "${DUDU_SOURCE_STAMP}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
-        << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_TIMING_ARGS} "
+        << "    COMMAND ${DUC_EXECUTABLE} emit-test-modules ${DUDU_TIMING_ARGS} "
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
            "-o ${DUDU_GENERATED_DIR}";
     if (!filter.empty()) {

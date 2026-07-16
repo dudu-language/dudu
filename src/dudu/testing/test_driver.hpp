@@ -11,7 +11,7 @@ struct TestDriverOptions {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
     std::map<std::string, std::string> build_values;
-    std::filesystem::path dudu_executable = "dudu";
+    std::filesystem::path compiler_executable = "duc";
     std::string target_name;
     std::string test_filter;
     bool no_capture = false;

@@ -66,7 +66,7 @@ int run_cli(int argc, char** argv) {
         return run_project_tests({.input = options.input,
                                   .output = options.output,
                                   .build_values = options.build_values,
-                                  .dudu_executable = argv[0],
+                                  .compiler_executable = cli_compiler_path(argv[0]),
                                   .target_name = options.target_name,
                                   .test_filter = options.test_filter,
                                   .no_capture = options.no_capture,

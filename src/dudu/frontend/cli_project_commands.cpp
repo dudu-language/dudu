@@ -91,6 +91,26 @@ std::filesystem::path cli_executable_path(char* executable) {
     return error ? absolute : canonical;
 }
 
+std::filesystem::path cli_compiler_path(char* executable) {
+    const std::filesystem::path tool = cli_executable_path(executable);
+    if (tool.stem() == "duc") {
+        return tool;
+    }
+
+    const std::filesystem::path compiler_name =
+        std::filesystem::path("duc").replace_extension(tool.extension());
+    const std::filesystem::path sibling = tool.parent_path() / compiler_name;
+    std::error_code error;
+    if (std::filesystem::is_regular_file(sibling, error) && !error) {
+        const std::filesystem::path canonical = std::filesystem::weakly_canonical(sibling, error);
+        return error ? sibling : canonical;
+    }
+    if (const std::optional<std::filesystem::path> found = find_executable_on_path(compiler_name)) {
+        return *found;
+    }
+    fail("could not find the duc compiler beside " + tool.string() + " or on PATH");
+}
+
 ProjectConfig cli_project_config(const CliOptions& options) {
     ProjectConfig config = parse_project_config(find_project_config(options.input));
     if (!options.target_name.empty()) {
@@ -187,19 +207,20 @@ int run_cmake_command(const CliOptions& options) {
 
 int run_build_command(const CliOptions& options, char* executable) {
     const ProjectConfig config = cli_project_config(options);
-    const std::filesystem::path dudu_executable = cli_executable_path(executable);
+    const std::filesystem::path compiler_executable = cli_compiler_path(executable);
     const bool project_output = options.project_driver && !options.quiet;
     print_project_step(project_output, "backend", "cmake");
     print_project_step(project_output, "entry", options.input);
     print_project_step(project_output, "cmake", cmake_backend_log_source(config));
     print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
-    const std::filesystem::path bin = build_cmake_project({.config = config,
-                                                           .input = options.input,
-                                                           .output = options.output,
-                                                           .dudu_executable = dudu_executable,
-                                                           .stream_output = project_output,
-                                                           .timings = options.timings,
-                                                           .verbose = options.verbose});
+    const std::filesystem::path bin =
+        build_cmake_project({.config = config,
+                             .input = options.input,
+                             .output = options.output,
+                             .compiler_executable = compiler_executable,
+                             .stream_output = project_output,
+                             .timings = options.timings,
+                             .verbose = options.verbose});
     print_project_step(project_output, "output", bin);
     return 0;
 }
@@ -209,19 +230,20 @@ int run_run_command(const CliOptions& options, char* executable) {
     if (config.target_kind != "executable") {
         fail("cannot run target kind: " + config.target_kind);
     }
-    const std::filesystem::path dudu_executable = cli_executable_path(executable);
+    const std::filesystem::path compiler_executable = cli_compiler_path(executable);
     const bool project_output = options.project_driver && !options.quiet;
     print_project_step(project_output, "backend", "cmake");
     print_project_step(project_output, "entry", options.input);
     print_project_step(project_output, "cmake", cmake_backend_log_source(config));
     print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
-    const std::filesystem::path bin = build_cmake_project({.config = config,
-                                                           .input = options.input,
-                                                           .output = options.output,
-                                                           .dudu_executable = dudu_executable,
-                                                           .stream_output = project_output,
-                                                           .timings = options.timings,
-                                                           .verbose = options.verbose});
+    const std::filesystem::path bin =
+        build_cmake_project({.config = config,
+                             .input = options.input,
+                             .output = options.output,
+                             .compiler_executable = compiler_executable,
+                             .stream_output = project_output,
+                             .timings = options.timings,
+                             .verbose = options.verbose});
     const std::string command = append_command_args(shell_quote_path(bin), options.command_args);
     print_project_step(project_output, "run", command);
     return std::system(command.c_str()) == 0 ? 0 : 1;

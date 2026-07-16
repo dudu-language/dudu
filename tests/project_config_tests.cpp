@@ -162,11 +162,10 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     const std::string cmake = dudu::emit_cmake_project(config, project / "src" / "main.dd");
     assert(cmake.find((project / "dudu.toml").string()) != std::string::npos);
-    assert(cmake.find("DEPENDS ${DUDU_EXECUTABLE}") != std::string::npos);
+    assert(cmake.find("DEPENDS ${DUC_EXECUTABLE}") != std::string::npos);
     assert(cmake.find("CONTENT \"$<TARGET_FILE:manifest_dep_probe>\"") != std::string::npos);
     assert(cmake.find("DUDU_GENERATED_ARTIFACTS") != std::string::npos);
-    assert(cmake.find("target_precompile_headers(manifest_dep_probe PRIVATE") !=
-           std::string::npos);
+    assert(cmake.find("target_precompile_headers(manifest_dep_probe PRIVATE") != std::string::npos);
 
     const std::string test_cmake = dudu::emit_cmake_test_project(
         config, project / "src" / "main.dd", "manifest_dep_probe_tests", "", true);

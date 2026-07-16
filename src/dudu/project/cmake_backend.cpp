@@ -242,8 +242,8 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
 
     std::string configure_command =
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
-        " -DDUDU_EXECUTABLE=" +
-        shell_quote_path(std::filesystem::absolute(options.dudu_executable));
+        " -DDUC_EXECUTABLE=" +
+        shell_quote_path(std::filesystem::absolute(options.compiler_executable));
     configure_command += options.timings ? " -DDUDU_TIMINGS=ON" : " -DDUDU_TIMINGS=OFF";
     const std::filesystem::path configure_log = options.root / "configure.log";
     const std::filesystem::path configure_command_log = options.root / "configure.command";
@@ -341,7 +341,7 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
                            .root = default_cmake_backend_root(options.config),
                            .cmake_lists = emit_cmake_project(options.config, options.input, target),
                            .target = target,
-                           .dudu_executable = options.dudu_executable,
+                           .compiler_executable = options.compiler_executable,
                            .stream_output = options.stream_output,
                            .timings = options.timings,
                            .verbose = options.verbose});

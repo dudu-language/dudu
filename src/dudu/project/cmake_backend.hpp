@@ -13,7 +13,7 @@ struct CMakeBackendOptions {
     std::filesystem::path root;
     std::string cmake_lists;
     std::string target;
-    std::filesystem::path dudu_executable;
+    std::filesystem::path compiler_executable;
     bool stream_output = false;
     bool timings = false;
     bool verbose = false;
@@ -31,7 +31,7 @@ struct BuildCMakeProjectOptions {
     ProjectConfig config;
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
-    std::filesystem::path dudu_executable;
+    std::filesystem::path compiler_executable;
     bool stream_output = false;
     bool timings = false;
     bool verbose = false;

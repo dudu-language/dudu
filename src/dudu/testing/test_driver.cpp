@@ -192,7 +192,7 @@ int run_one_test_entry(TestDriverOptions options) {
          .cmake_lists = emit_cmake_test_project(config, options.input, target, options.test_filter,
                                                 !options.no_capture),
          .target = target,
-         .dudu_executable = options.dudu_executable,
+         .compiler_executable = options.compiler_executable,
          .stream_output = project_output,
          .timings = options.timings,
          .verbose = options.verbose});
