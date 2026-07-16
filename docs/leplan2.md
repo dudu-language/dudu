@@ -386,7 +386,9 @@ completion/inlay behavior, native editor intelligence, and project-index
 cache behavior. Lint fixtures moved to the diagnostics owner, and the former
 1,337-line navigation driver is now bounded definition/hover,
 symbol-reference, and module/native-reference executables. The default fast
-CTest inventory is 39 ownership-specific targets.
+AST driver is likewise split into semantic-token, parser-recovery,
+statement-syntax, and declaration/query ownership. The default fast CTest
+inventory is 42 ownership-specific targets.
 
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
