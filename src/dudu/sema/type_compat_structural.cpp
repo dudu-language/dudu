@@ -55,14 +55,6 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     return true;
 }
 
-bool same_type_name(const TypeRef& expected, const TypeRef& got) {
-    return type_refs_equivalent_ignoring_c_tags(expected, got);
-}
-
-bool same_type_name(std::string expected, const TypeRef& got) {
-    return type_refs_equivalent_ignoring_c_tags(named_type_ref(std::move(expected)), got);
-}
-
 bool is_transparent_wrapper(const TypeKind kind) {
     return kind == TypeKind::Atomic || kind == TypeKind::Volatile || kind == TypeKind::Device ||
            kind == TypeKind::Storage || kind == TypeKind::Shared;
@@ -146,9 +138,9 @@ bool structural_pointer_assignment_allowed(const TypeRef& expected, const TypeRe
     }
     const TypeRef& expected_pointee = expected.children.front();
     const TypeRef& got_pointee = got.children.front();
-    if (same_type_name("void", expected_pointee) ||
+    if (type_ref_is_void(expected_pointee) ||
         (expected_pointee.kind == TypeKind::Const && expected_pointee.children.size() == 1 &&
-         same_type_name("void", expected_pointee.children.front()))) {
+         type_ref_is_void(expected_pointee.children.front()))) {
         return true;
     }
     if (expected_pointee.kind == TypeKind::Const && expected_pointee.children.size() == 1 &&
@@ -190,10 +182,10 @@ bool structural_type_assignment_allowed(const TypeRef& expected, const TypeRef& 
     if (expected.kind == TypeKind::Unknown || got.kind == TypeKind::Unknown) {
         return false;
     }
-    if (same_type_name(expected, got)) {
+    if (type_refs_equivalent_ignoring_c_tags(expected, got)) {
         return true;
     }
-    if (same_type_name("auto", expected) || same_type_name("auto", got)) {
+    if (type_ref_is_auto(expected) || type_ref_is_auto(got)) {
         return true;
     }
     if ((expected.kind == TypeKind::Pointer || got.kind == TypeKind::Pointer) &&

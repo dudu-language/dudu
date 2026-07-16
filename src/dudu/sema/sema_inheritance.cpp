@@ -2,6 +2,7 @@
 
 #include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_inheritance_internal.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 
 #include <algorithm>
 #include <map>
@@ -12,14 +13,14 @@ namespace dudu {
 using namespace sema_inheritance_detail;
 
 bool native_base_assignable(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
-    const std::string base = unwrap_type(symbols, expected);
-    const std::string derived = unwrap_type(symbols, got);
+    const std::string base = receiver_class_name(symbols, expected);
+    const std::string derived = receiver_class_name(symbols, got);
     std::set<std::string> seen;
     return base != derived && derives_from_impl(symbols, got, base, seen);
 }
 
 bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type) {
-    const ClassDecl* klass = dudu_class_for_base(symbols, type);
+    const ClassDecl* klass = class_for_receiver_type(symbols, type);
     if (klass == nullptr) {
         return false;
     }
@@ -59,7 +60,7 @@ FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
 
 std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols, const TypeRef& type,
                                                      const std::string& name) {
-    const ClassDecl* klass = dudu_class_for_base(symbols, type);
+    const ClassDecl* klass = class_for_receiver_type(symbols, type);
     if (klass == nullptr) {
         return std::nullopt;
     }
@@ -81,7 +82,7 @@ std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols, con
 
 const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type,
                                      const std::string& name) {
-    const ClassDecl* klass = dudu_class_for_base(symbols, type);
+    const ClassDecl* klass = class_for_receiver_type(symbols, type);
     if (klass == nullptr) {
         return nullptr;
     }
@@ -113,7 +114,7 @@ void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& k
     }
 
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const ClassDecl* parent = dudu_class_for_base(symbols, base_decl.type_ref);
+        const ClassDecl* parent = class_for_receiver_type(symbols, base_decl.type_ref);
         if (parent == nullptr) {
             continue;
         }

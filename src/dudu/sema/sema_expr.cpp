@@ -1,10 +1,9 @@
 #include "dudu/sema/sema_expr.hpp"
 
-#include "dudu/sema/collection_literal_inference.hpp"
-
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/naming.hpp"
+#include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -98,16 +97,16 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::ListLiteral:
     case ExprKind::DictLiteral:
     case ExprKind::SetLiteral: {
-        const CollectionLiteralInference inferred = infer_collection_literal_type(
-            &scope.symbols, expr, [&](const Expr& child) {
+        const CollectionLiteralInference inferred =
+            infer_collection_literal_type(&scope.symbols, expr, [&](const Expr& child) {
                 return infer_expr_type_ast(scope, child, location);
             });
         if (inferred.status == CollectionLiteralStatus::Inferred) {
             return inferred.type_ref;
         }
-        const std::string name = expr.kind == ExprKind::ListLiteral
-                                     ? "list"
-                                     : expr.kind == ExprKind::DictLiteral ? "dict" : "set";
+        const std::string name = expr.kind == ExprKind::ListLiteral   ? "list"
+                                 : expr.kind == ExprKind::DictLiteral ? "dict"
+                                                                      : "set";
         return named_type_ref(name, type_location);
     }
     case ExprKind::DictEntry:
@@ -118,7 +117,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                    : named_type_ref("auto", type_location);
     case ExprKind::Slice:
         for (const Expr& child : expr.children) {
-            if (!missing_expr(child)) {
+            if (!expr_missing(child)) {
                 check_expr_ast(scope, child, location);
             }
         }
@@ -266,15 +265,15 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         break;
     case ExprKind::Index:
-        if (expr.children.size() != 2 || missing_expr(expr.children[0]) ||
-            missing_expr(expr.children[1])) {
+        if (expr.children.size() != 2 || expr_missing(expr.children[0]) ||
+            expr_missing(expr.children[1])) {
             if (location != nullptr) {
                 sema_expr_fail(*location, "index expression expects receiver and index");
             }
             return {};
         }
-        if (expr.children.size() == 2 && !missing_expr(expr.children[0]) &&
-            !missing_expr(expr.children[1])) {
+        if (expr.children.size() == 2 && !expr_missing(expr.children[0]) &&
+            !expr_missing(expr.children[1])) {
             const SourceLocation& index_location = location != nullptr ? *location : expr.location;
             const Expr& receiver = expr.children[0];
             const IndexOperatorTarget target = index_operator_target(receiver);

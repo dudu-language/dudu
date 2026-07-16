@@ -12,8 +12,6 @@
 namespace dudu {
 
 [[noreturn]] void sema_fail(const SourceLocation& location, const std::string& message);
-bool sema_has_expr(const Expr& expr);
-bool missing_expr(const Expr& expr);
 const SourceLocation& diagnostic_location(const SourceLocation& context, const Expr& expr);
 const SourceLocation& diagnostic_location(const SourceLocation& context, const TypeRef& type);
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref);

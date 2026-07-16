@@ -364,6 +364,17 @@ code-generation umbrella for generic string helpers. Native tag normalization,
 macro diagnostic source-location conversion, shaped-type rendering, and
 ellipsis parsing each have one owner instead of parallel copies or wrappers.
 
+Project configuration ownership is explicit too. Manifest syntax and value
+parsing live in one parser unit, while target application, upward discovery,
+and project-relative path policy remain separate. Root and named targets share
+one native-build entry parser, and always-constant or renaming helpers are
+removed instead of retained as compatibility surface.
+
+The semantic and native API audit removes unreleased aliases rather than
+preserving them. Expression presence, decorator string literals, receiver
+class lookup, and native metadata merging use their canonical structured
+operations directly.
+
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured
 receiver/type-resolution path in an owned index-hook unit. Duplicate and stale

@@ -13,7 +13,6 @@
 
 namespace dudu {
 
-bool has_expr(const Expr& expr);
 std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::string>& aliases,
                                   const std::map<std::string, TypeRef>& local_type_refs);
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,

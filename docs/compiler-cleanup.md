@@ -81,9 +81,18 @@ Outcome:
   detection now have one private project-index boundary
 - reduced `project_index.cpp` from 566 to 418 lines without exposing filesystem
   implementation through the public project index API
+- separated manifest parsing from target application, configuration discovery,
+  and project-relative path policy; `project_config.cpp` is now 75 lines and
+  the 446-line parser has one explicit owner
+- made the manifest parser use shared `core/text` trimming and consolidated
+  native build entries for root and named targets through one parser
+- removed the always-true `parse_true` helper; capability flags now validate
+  directly without pretending to compute a value
 
 Validation: project configuration tests, CLI help/smoke checks, project
-backend tests, and dogfood `dudu build`.
+backend tests, complete `scripts/test_fast.sh` in 70.56 seconds with
+737,924 KiB peak RSS, and dogfood builds for raymarch, webserver, raylib,
+SDL3/ImGui, tensor indexing, BLAS, OpenCL, and autograd targets.
 
 ### Native AST metadata reader
 
@@ -123,6 +132,9 @@ Outcome:
 - consolidated repeated six-collection scan merges behind one local helper
 - removed `alias_visible_functions`, whose import-kind guard returned for
   every foreign import before its filtering branch could run
+- removed the stale `merge_native_header_types` entry point; the scanner has
+  one accurately named `merge_native_headers` operation for all native
+  metadata
 - kept aliasing generic; no library, header, or namespace special case was
   introduced
 
@@ -145,6 +157,9 @@ Outcome:
 - fixed native member lookup for aliases such as
   `std.basic_string[char] -> std.string` without encoding standard-library
   names in overload resolution
+- removed expression-presence, decorator-string, receiver-class, and
+  class-lookup aliases that only renamed existing structured AST or semantic
+  operations
 - added one semantic boundary for native types exposed by imported Dudu
   modules; it follows the reachable module graph and imports only types that
   cross Dudu declarations instead of leaking native functions, values,

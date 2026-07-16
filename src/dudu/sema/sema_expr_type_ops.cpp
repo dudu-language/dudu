@@ -126,7 +126,7 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
     if (expr.kind != ExprKind::Unary) {
         return std::nullopt;
     }
-    if (expr.children.empty() || missing_expr(expr.children.front())) {
+    if (expr.children.empty() || expr_missing(expr.children.front())) {
         if (location != nullptr) {
             sema_expr_fail(*location, "operator " + std::string(expr.op) + " expects an operand");
         }
@@ -181,7 +181,7 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     if (expr.kind != ExprKind::Binary || expr.children.size() != 2) {
         return std::nullopt;
     }
-    if (missing_expr(expr.children[0]) || missing_expr(expr.children[1])) {
+    if (expr_missing(expr.children[0]) || expr_missing(expr.children[1])) {
         if (location != nullptr) {
             sema_expr_fail(*location,
                            "operator " + std::string(expr.op) + " expects left and right operands");

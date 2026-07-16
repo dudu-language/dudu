@@ -106,7 +106,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     check_local_address_escape(stmt, scope.local_type_refs);
     if (stmt.kind == StmtKind::Return) {
         const SourceLocation& value_location = diagnostic_location(stmt.location, stmt.value_expr);
-        if (missing_expr(stmt.value_expr)) {
+        if (expr_missing(stmt.value_expr)) {
             if (!type_ref_is_void(return_type_ref)) {
                 const std::string return_type = type_ref_text(return_type_ref);
                 sema_fail(value_location,
@@ -140,7 +140,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
-        if (sema_has_expr(stmt.value_expr)) {
+        if (expr_present(stmt.value_expr)) {
             (void)infer_expr_type_ast(scope, stmt.value_expr,
                                       &diagnostic_location(stmt.location, stmt.value_expr));
         }
@@ -285,7 +285,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, type.ref),
                                         type.ref, "unknown local type: ");
         }
-        if (sema_has_expr(stmt.value_expr)) {
+        if (expr_present(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, inferred.element_type_ref, stmt.value_expr,

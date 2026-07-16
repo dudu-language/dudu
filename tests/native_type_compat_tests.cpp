@@ -25,8 +25,7 @@ void test_native_string_literal_to_string_view(const std::filesystem::path& root
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-string-view-cache";
     std::filesystem::remove_all(config.build_dir);
-    dudu::merge_native_header_types(module,
-                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("dudu_native_string::size_of(\"dudu\")") != std::string::npos);
@@ -42,8 +41,7 @@ void test_none_to_native_cstr(const std::filesystem::path& root) {
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-cstr-none-cache";
     std::filesystem::remove_all(config.build_dir);
-    dudu::merge_native_header_types(module,
-                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("dudu_native_cstr::accepts_cstr(nullptr)") != std::string::npos);
@@ -85,7 +83,7 @@ void test_native_identity_controls_type_compatibility(const std::filesystem::pat
                            "def preserve(value: left.SharedWidget) -> right.SharedWidget:\n"
                            "    return value\n",
                            source_dir / "same.dd");
-    dudu::merge_native_header_types(same, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(same, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(same, {.check_bodies = true});
     const dudu::Symbols same_symbols = dudu::collect_symbols(same);
     const std::string& left_identity =
@@ -118,7 +116,7 @@ void test_native_identity_controls_type_compatibility(const std::filesystem::pat
                            "def reject(value: first.Widget) -> second.Widget:\n"
                            "    return value\n",
                            source_dir / "distinct.dd");
-    dudu::merge_native_header_types(distinct, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(distinct, {.config = config, .source_dir = source_dir});
     const dudu::Symbols distinct_symbols = dudu::collect_symbols(distinct);
     assert(distinct_symbols.native_type_identity_by_binding.at("first.Widget") !=
            distinct_symbols.native_type_identity_by_binding.at("second.Widget"));

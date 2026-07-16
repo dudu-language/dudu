@@ -1,8 +1,9 @@
 #include "dudu/codegen/cpp_emit_enums.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <sstream>
 
@@ -57,7 +58,7 @@ void emit_value_enums(std::ostringstream& out, const ModuleAst& module,
         out << " {\n";
         for (const EnumValueDecl& value : en.values) {
             out << "    " << value.name;
-            if (has_expr(value.value_expr)) {
+            if (expr_present(value.value_expr)) {
                 out << " = "
                     << lower_cpp_expr_ast(value.value_expr, aliases, CppLocalContext{}, options);
             }
@@ -68,8 +69,7 @@ void emit_value_enums(std::ostringstream& out, const ModuleAst& module,
 }
 
 void emit_payload_enums(std::ostringstream& out, const ModuleAst& module,
-                        const std::vector<std::string>& aliases,
-                        const CppEmitOptions& options) {
+                        const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
         if (!enum_has_payload_fields(en)) {
             continue;

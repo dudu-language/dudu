@@ -96,7 +96,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Raise) {
         out << indent(depth) << "throw";
-        if (has_expr(stmt.value_expr)) {
+        if (expr_present(stmt.value_expr)) {
             out << ' '
                 << lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols,
                                       options);
@@ -139,7 +139,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Return) {
         out << indent(depth) << "return";
-        if (has_expr(stmt.value_expr)) {
+        if (expr_present(stmt.value_expr)) {
             if (is_template_type(return_type_ref, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " std::nullopt";
@@ -174,7 +174,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << "[[maybe_unused]] ";
         }
         out << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << emitted_name;
-        if (has_expr(stmt.value_expr)) {
+        if (expr_present(stmt.value_expr)) {
             if (is_template_type(type.ref, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
@@ -285,12 +285,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 const bool inferred_collection =
                     is_collection_literal(stmt.value_expr) && has_type_ref(inferred_ref);
                 const std::string value =
-                    inferred_collection
-                        ? lower_expr_as_type_ref(inferred_ref, stmt.value_expr, aliases, locals,
-                                                 local_type_refs, function_returns, symbols,
-                                                 options)
-                        : lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs,
-                                             symbols, options);
+                    inferred_collection ? lower_expr_as_type_ref(inferred_ref, stmt.value_expr,
+                                                                 aliases, locals, local_type_refs,
+                                                                 function_returns, symbols, options)
+                                        : lower_emitted_expr(stmt.value_expr, aliases, locals,
+                                                             local_type_refs, symbols, options);
                 locals.bind(lhs);
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);

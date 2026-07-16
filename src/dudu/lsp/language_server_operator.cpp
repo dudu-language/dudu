@@ -24,7 +24,7 @@ namespace {
 std::optional<std::string> operator_name_for_method(const FunctionDecl& method) {
     for (const Decorator& decorator : method.decorators) {
         if (const std::optional<std::string> op =
-                decorator_first_string_arg(decorator, "operator")) {
+                decorator_first_string_literal_arg(decorator, "operator")) {
             return op;
         }
     }

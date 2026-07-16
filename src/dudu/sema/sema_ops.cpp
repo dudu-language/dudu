@@ -100,7 +100,7 @@ bool is_supported_dudu_operator(const std::string& op) {
 
 bool method_has_operator(const FunctionDecl& method, const std::string& op) {
     for (const Decorator& decorator : method.decorators) {
-        if (decorator_first_string_arg(decorator, "operator") == op) {
+        if (decorator_first_string_literal_arg(decorator, "operator") == op) {
             return true;
         }
     }

@@ -2,7 +2,6 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/sema/sema.hpp"
-#include "dudu/sema/sema_common.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -147,7 +146,7 @@ void check_text(const std::set<std::string>& names, const SourceLocation& locati
 }
 
 void check_expr(const std::set<std::string>& names, const Expr& expr) {
-    if (!sema_has_expr(expr)) {
+    if (!expr_present(expr)) {
         return;
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 &&

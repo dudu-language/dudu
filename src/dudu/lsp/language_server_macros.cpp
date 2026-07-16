@@ -147,11 +147,6 @@ const MacroDefinition* resolve(const ProjectIndex& index, const ModuleAst& curre
     return nullptr;
 }
 
-const MacroDefinition* definition_for_identity(const ProjectIndex& index,
-                                               std::string_view identity) {
-    return by_identity(index, identity);
-}
-
 bool same_source_file(const SourceLocation& location, const std::filesystem::path& path) {
     if (location.file.empty())
         return false;
@@ -169,10 +164,6 @@ bool position_on_range(const SourceRange& range, const LspPosition& position) {
     if (line == range.start.line && column < range.start.column)
         return false;
     return line != range.end.line || column <= range.end.column;
-}
-
-SourceRange source_range(const macro::protocol::SourceRange& range) {
-    return macro::from_protocol(range);
 }
 
 void add_reference(std::vector<ReferenceLocation>& out, std::set<std::pair<int, int>>& seen,
@@ -387,7 +378,7 @@ macro_reference_target_at(const ProjectIndex& index, const ModuleAst& current, c
         return std::nullopt;
     const LspPosition position = lsp_position(params);
     for (const MacroDefinition& definition : index.macro_report().definitions) {
-        const SourceRange range = source_range(definition.location);
+        const SourceRange range = macro::from_protocol(definition.location);
         if (same_source_file(range.start, current.source_path) &&
             position_on_range(range, position))
             return MacroReferenceTarget{.identity = definition.identity, .name = definition.name};
@@ -412,10 +403,10 @@ std::vector<ReferenceLocation> macro_reference_locations(const ProjectIndex& ind
                                                          std::string_view identity) {
     std::vector<ReferenceLocation> out;
     std::set<std::pair<int, int>> seen;
-    const MacroDefinition* target = definition_for_identity(index, identity);
+    const MacroDefinition* target = by_identity(index, identity);
     if (target == nullptr)
         return out;
-    const SourceRange definition_range = source_range(target->location);
+    const SourceRange definition_range = macro::from_protocol(target->location);
     if (same_source_file(definition_range.start, document.path))
         add_reference(out, seen, document, definition_range.start, target->name);
     for (const ImportDecl& import : current.imports) {

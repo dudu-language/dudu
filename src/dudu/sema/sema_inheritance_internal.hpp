@@ -21,7 +21,6 @@ struct MethodRecord {
     std::string label;
 };
 
-std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
 bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type, const std::string& base,
                        std::set<std::string>& seen);
 FunctionSignature inherited_method_signature_without_self(const FunctionDecl& method);
@@ -36,7 +35,6 @@ bool contains_method_identity(const std::vector<MethodIdentity>& identities,
 MethodRecord method_record_for_class_type(const Symbols& symbols, const ClassDecl& owner,
                                           const TypeRef& receiver_type, const FunctionDecl& method);
 MethodIdentity method_identity_without_self(const Symbols& symbols, const FunctionDecl& method);
-const ClassDecl* dudu_class_for_base(const Symbols& symbols, const TypeRef& base);
 bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass);
 bool interface_like_base(const Symbols& symbols, const ClassDecl& klass);
 void collect_inherited_fields(const Symbols& symbols, const ClassDecl& klass,

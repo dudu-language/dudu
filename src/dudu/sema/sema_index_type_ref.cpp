@@ -77,10 +77,6 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
     return type;
 }
 
-TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& receiver_type) {
-    return resolve_alias_ref(symbols, receiver_type);
-}
-
 bool foreign_or_auto_indexable_type(const TypeRef& type) {
     const std::string head = type_ref_head_name(type);
     return !has_type_ref(type) || type_ref_is_auto(type) || type.kind == TypeKind::Qualified ||
@@ -160,7 +156,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     const TypeRef unwrapped_receiver_type = unwrap_index_receiver_type(receiver_type);
     const bool receiver_is_native_alias =
         symbols.native_types.contains(type_ref_head_name(unwrapped_receiver_type));
-    const TypeRef resolved_type = resolve_type_ref_alias(symbols, receiver_type);
+    const TypeRef resolved_type = resolve_alias_ref(symbols, receiver_type);
     const TypeRef* type = &resolved_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
            type->children.size() == 1) {

@@ -27,6 +27,5 @@ void merge_native_headers(ModuleAst& module, const NativeHeaderOptions& options)
 
 std::vector<NativeTypeDecl> scan_native_header_types(const ModuleAst& module,
                                                      const NativeHeaderOptions& options);
-void merge_native_header_types(ModuleAst& module, const NativeHeaderOptions& options);
 
 } // namespace dudu

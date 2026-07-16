@@ -1,10 +1,9 @@
-#include "dudu/sema/sema_ops.hpp"
-
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/type_compat.hpp"
 
 #include <sstream>
@@ -16,7 +15,7 @@ namespace {
 
 bool method_has_operator(const FunctionDecl& method, const std::string& op) {
     for (const Decorator& decorator : method.decorators) {
-        if (decorator_first_string_arg(decorator, "operator") == op) {
+        if (decorator_first_string_literal_arg(decorator, "operator") == op) {
             return true;
         }
     }
@@ -66,10 +65,9 @@ TypeRef operator_method_type_ref(const Symbols& symbols, const TypeRef& receiver
                                  const ClassDecl& klass, const FunctionDecl& method,
                                  const std::vector<TypeRef>& method_args, const TypeRef& type) {
     TypeRef out = substitute_generic_type_ref(method.generic_params, method_args, type);
-    out = substitute_generic_type_ref(klass.generic_params, receiver_template_args(symbols, receiver),
-                                      out);
-    return substitute_type_ref(
-        out, {{"Self", operator_self_type_ref(symbols, receiver, klass)}});
+    out = substitute_generic_type_ref(klass.generic_params,
+                                      receiver_template_args(symbols, receiver), out);
+    return substitute_type_ref(out, {{"Self", operator_self_type_ref(symbols, receiver, klass)}});
 }
 
 FunctionSignature operator_method_signature(const Symbols& symbols, const TypeRef& receiver,
@@ -177,9 +175,8 @@ std::string operator_rejection_reason(const Symbols& symbols, const FunctionSign
 } // namespace
 
 std::string dudu_operator_no_match_message_for_args(
-    const Symbols& symbols, std::string_view op, const TypeRef& left,
-    const std::vector<Expr>& args, const std::vector<TypeRef>& arg_types,
-    std::string_view action, std::string_view label) {
+    const Symbols& symbols, std::string_view op, const TypeRef& left, const std::vector<Expr>& args,
+    const std::vector<TypeRef>& arg_types, std::string_view action, std::string_view label) {
     const std::string op_text(op);
     std::ostringstream out;
     out << "no matching @operator(\"" << op_text << "\") for " << action << " to " << label;

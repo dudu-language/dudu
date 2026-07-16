@@ -6,6 +6,7 @@
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
+#include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/naming.hpp"
@@ -202,7 +203,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' '
                 << emitted_member_name(klass.name, field.name, options);
-            if (has_expr(field.value_expr)) {
+            if (expr_present(field.value_expr)) {
                 out << " = ";
                 if (is_template_type(field.type_ref, "Option") &&
                     field.value_expr.kind == ExprKind::NoneLiteral) {

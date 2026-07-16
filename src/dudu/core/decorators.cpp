@@ -78,11 +78,6 @@ std::optional<std::string> decorator_arg_list_display(const Decorator& decorator
     return out.str();
 }
 
-std::optional<std::string> decorator_first_string_arg(const Decorator& decorator,
-                                                      std::string_view name) {
-    return decorator_first_string_literal_arg(decorator, name);
-}
-
 std::optional<std::string> decorator_first_string_literal_arg(const Decorator& decorator,
                                                               std::string_view name) {
     if (!decorator_call_matches(decorator, name) || decorator.expr.children.empty()) {

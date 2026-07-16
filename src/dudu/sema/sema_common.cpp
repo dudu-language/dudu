@@ -12,14 +12,6 @@ namespace dudu {
     throw CompileError(location, message, "dudu.sema.error");
 }
 
-bool missing_expr(const Expr& expr) {
-    return expr_missing(expr);
-}
-
-bool sema_has_expr(const Expr& expr) {
-    return expr_present(expr);
-}
-
 const SourceLocation& diagnostic_location(const SourceLocation& context, const Expr& expr) {
     return expr.range.end.column > expr.range.start.column ? expr.location : context;
 }

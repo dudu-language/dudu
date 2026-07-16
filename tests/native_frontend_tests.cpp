@@ -166,8 +166,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-header-test-cache";
     std::filesystem::remove_all(config.build_dir);
-    dudu::merge_native_header_types(module,
-                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("DuduNativeEvent event{};") != std::string::npos);
@@ -291,8 +290,7 @@ void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesyst
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-cxx-header-test-cache";
     std::filesystem::remove_all(config.build_dir);
-    dudu::merge_native_header_types(module,
-                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("#include \"native_headers/simple_c.h\"") != std::string::npos);
@@ -312,7 +310,7 @@ void test_native_layout_survives_parsed_scan_cache(const std::filesystem::path& 
     const auto scan = [&](std::string_view file_name) {
         dudu::ModuleAst module = dudu::parse_source(
             "from cpp.path import native_headers/simple_cpp.hpp\n", source_dir / file_name);
-        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+        dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
         return module;
     };
     const auto require_widget_layout = [](const dudu::ModuleAst& module) {
@@ -359,7 +357,7 @@ void test_native_static_class_fields_keep_owner_and_cache(const std::filesystem:
                                "    return cuda.blockIdx.x + cuda.blockDim.x + cuda.threadIdx.x\n";
     const auto scan = [&](std::string_view file_name) {
         dudu::ModuleAst module = dudu::parse_source(source, source_dir / file_name);
-        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+        dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
         return module;
     };
     const auto require_static_x = [](const dudu::ModuleAst& module, std::string_view class_name) {
@@ -408,8 +406,7 @@ void test_native_header_alias_preserves_identity(const std::filesystem::path& ro
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-header-alias-identity-cache";
     std::filesystem::remove_all(config.build_dir);
-    dudu::merge_native_header_types(module,
-                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
 
     bool saw_prefixed_type = false;
@@ -457,7 +454,7 @@ void test_direct_cpp_import_preserves_namespace_type_aliases(const std::filesyst
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
     bool saw_alias = false;
     for (const dudu::NativeTypeDecl& type : module.native_types) {
@@ -506,7 +503,7 @@ void test_native_operator_does_not_hijack_dudu_class_operator(const std::filesys
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("left * 3.0") != std::string::npos);
@@ -532,7 +529,7 @@ void test_native_identity_edge_cases(const std::filesystem::path& root) {
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
     bool saw_left = false;
     bool saw_right = false;
@@ -581,7 +578,7 @@ void test_native_identity_uses_clang_redeclaration_identity(const std::filesyste
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
     size_t things = 0;
     for (const dudu::ClassDecl& klass : module.native_classes) {
         if (klass.name == "Thing") {
@@ -631,16 +628,14 @@ void test_native_scan_dedupes_function_redeclarations_by_usr() {
         function.return_type_ref = dudu::parse_type_text("void", {});
         function.identity.usr = "c:@N@std@FT@>1#Tsort#t0.0#S0_#v#";
         function.identity.canonical_path = "std.sort";
-        function.location = {
-            .file = dudu::SourceFileName(source), .line = 1, .column = 1};
+        function.location = {.file = dudu::SourceFileName(source), .line = 1, .column = 1};
         scan.functions.push_back(std::move(function));
     }
 
     scan = dudu::dedupe_scan(std::move(scan));
-    assert(std::ranges::count_if(
-               scan.functions, [](const dudu::NativeFunctionDecl& function) {
-                   return function.name == "std.sort";
-               }) == 1);
+    assert(std::ranges::count_if(scan.functions, [](const dudu::NativeFunctionDecl& function) {
+               return function.name == "std.sort";
+           }) == 1);
 }
 
 void test_native_scan_dedupe_rejects_alias_identity_collision() {
@@ -741,7 +736,7 @@ void test_native_single_underscore_function_macros(const std::filesystem::path& 
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
     config.include_dirs = {"../native-macro-include"};
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("_dudu_macro_call(20, 22)") != std::string::npos);
@@ -753,7 +748,7 @@ void test_native_call_arity(const std::filesystem::path& root) {
                                                 "def main() -> i32:\n"
                                                 "    return dudu_native_add()\n",
                                                 root / "tests/fixtures/native_bad_arity.dd");
-    dudu::merge_native_header_types(
+    dudu::merge_native_headers(
         module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
     bool rejected = false;
     try {
@@ -770,7 +765,7 @@ void test_native_header_collision(const std::filesystem::path& root) {
         dudu::ModuleAst module = dudu::parse_source("from c.path import native_headers/simple_c.h\n"
                                                     "DUDU_NATIVE_MAGIC: i32 = 1\n",
                                                     root / "tests/fixtures/native_collision.dd");
-        dudu::merge_native_header_types(
+        dudu::merge_native_headers(
             module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
         dudu::analyze_module(module, {.check_bodies = true});
     } catch (const dudu::CompileError&) {
@@ -822,7 +817,7 @@ void test_native_header_cache_invalidates_local_header(const std::filesystem::pa
                                                "        return 42\n"
                                                "    return 0\n",
                                                source_dir / "main.dd");
-    dudu::merge_native_header_types(first, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(first, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(first, {.check_bodies = true});
 
     {
@@ -839,7 +834,7 @@ void test_native_header_cache_invalidates_local_header(const std::filesystem::pa
                                                     "        return 42\n"
                                                     "    return 0\n",
                                                     source_dir / "main.dd");
-        dudu::merge_native_header_types(second, {.config = config, .source_dir = source_dir});
+        dudu::merge_native_headers(second, {.config = config, .source_dir = source_dir});
         dudu::analyze_module(second, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
         failed = std::string(error.what()).find("cache_probe") != std::string::npos;
@@ -869,7 +864,7 @@ void test_native_header_cache_invalidates_included_header(const std::filesystem:
                                                "def main() -> i32:\n"
                                                "    return wrap.included_answer()\n",
                                                source_dir / "main.dd");
-    dudu::merge_native_header_types(first, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(first, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(first, {.check_bodies = true});
 
     {
@@ -883,7 +878,7 @@ void test_native_header_cache_invalidates_included_header(const std::filesystem:
                                                     "def main() -> i32:\n"
                                                     "    return wrap.included_answer()\n",
                                                     source_dir / "main.dd");
-        dudu::merge_native_header_types(second, {.config = config, .source_dir = source_dir});
+        dudu::merge_native_headers(second, {.config = config, .source_dir = source_dir});
         dudu::analyze_module(second, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
         failed = std::string(error.what()).find("included_answer") != std::string::npos;
@@ -902,7 +897,7 @@ void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
                                                     "        return 1\n"
                                                     "    return 0\n",
                                                     root / "tests/fixtures/native_pointer.dd");
-        dudu::merge_native_header_types(
+        dudu::merge_native_headers(
             module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
         dudu::analyze_module(module, {.check_bodies = true});
     } catch (const dudu::CompileError&) {
@@ -942,7 +937,7 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
     bool saw_template = false;
     bool saw_concrete = false;
@@ -998,7 +993,7 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     dudu::ProjectConfig config;
     config.project_dir = root;
     config.build_dir = root / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
     const dudu::ClassDecl& envelope = require_class(module, "depmeta.Envelope");
     assert((envelope.generic_params ==
@@ -1040,7 +1035,7 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     dudu::ModuleAst cached =
         dudu::parse_source("from cpp.path import native_dependent_alias_metadata.hpp\n",
                            source_dir / "native_dependent_alias_metadata_cached.dd");
-    dudu::merge_native_header_types(cached, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(cached, {.config = config, .source_dir = source_dir});
     const dudu::ClassDecl& cached_envelope = require_class(cached, "depmeta.Envelope");
     assert(cached_envelope.generic_params == envelope.generic_params);
     assert(cached_envelope.type_aliases.size() == envelope.type_aliases.size());
@@ -1064,16 +1059,15 @@ void test_internal_native_template_aliases_resolve_public_returns(
     dudu::ProjectConfig config;
     config.project_dir = root;
     config.build_dir = root / "build";
-    const dudu::ModuleAst import_only = dudu::parse_source(
-        "from cpp.path import native_internal_alias_factory.hpp\n",
-        source_dir / "native_internal_alias_factory_import.dd");
+    const dudu::ModuleAst import_only =
+        dudu::parse_source("from cpp.path import native_internal_alias_factory.hpp\n",
+                           source_dir / "native_internal_alias_factory_import.dd");
     const dudu::NativeHeaderScan scan =
         dudu::scan_native_headers(import_only, {.config = config, .source_dir = source_dir});
-    const auto select_pack = std::ranges::find_if(
-        scan.classes, [](const dudu::ClassDecl& klass) {
-            return klass.name == "internal_alias.SelectPack" &&
-                   !klass.native_specialization_args.empty();
-        });
+    const auto select_pack = std::ranges::find_if(scan.classes, [](const dudu::ClassDecl& klass) {
+        return klass.name == "internal_alias.SelectPack" &&
+               !klass.native_specialization_args.empty();
+    });
     assert(select_pack != scan.classes.end());
     assert(select_pack->native_specialization_args.size() == 3);
     assert(dudu::type_ref_text(select_pack->native_specialization_args[0]) == "0");
@@ -1082,26 +1076,26 @@ void test_internal_native_template_aliases_resolve_public_returns(
     assert(select_pack->type_aliases.size() == 1);
     assert(dudu::type_ref_text(select_pack->type_aliases[0].type_ref) == "T0");
 
-    dudu::ModuleAst module = dudu::parse_source(
-        "from cpp.path import native_internal_alias_factory.hpp\n"
-        "\n"
-        "class Node:\n"
-        "    value: i32\n"
-        "\n"
-        "def probe():\n"
-        "    holder: internal_alias.Holder[Node] = "
-        "internal_alias.make_holder[Node]()\n"
-        "    pack_result: i32 = "
-        "internal_alias.make_pack_element[1, i32, f32]()\n"
-        "    selected_pack: i32 = "
-        "internal_alias.select_pack[0, i32, f32]()\n"
-        "    pointer_result: i32 = internal_alias.select_result[*i32]()\n"
-        "    value_result: f32 = internal_alias.select_result[i32]()\n",
-        source_dir / "native_internal_alias_factory_scan.dd");
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::ModuleAst module =
+        dudu::parse_source("from cpp.path import native_internal_alias_factory.hpp\n"
+                           "\n"
+                           "class Node:\n"
+                           "    value: i32\n"
+                           "\n"
+                           "def probe():\n"
+                           "    holder: internal_alias.Holder[Node] = "
+                           "internal_alias.make_holder[Node]()\n"
+                           "    pack_result: i32 = "
+                           "internal_alias.make_pack_element[1, i32, f32]()\n"
+                           "    selected_pack: i32 = "
+                           "internal_alias.select_pack[0, i32, f32]()\n"
+                           "    pointer_result: i32 = internal_alias.select_result[*i32]()\n"
+                           "    value_result: f32 = internal_alias.select_result[i32]()\n",
+                           source_dir / "native_internal_alias_factory_scan.dd");
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
-    const auto internal = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto internal =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.__factory_result";
         });
     assert(internal != module.native_classes.end());
@@ -1112,8 +1106,8 @@ void test_internal_native_template_aliases_resolve_public_returns(
     assert(std::ranges::none_of(module.native_types, [](const dudu::NativeTypeDecl& type) {
         return type.name == "internal_alias.__factory_result";
     }));
-    const auto defaulted = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto defaulted =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.__defaulted_result";
         });
     assert(defaulted != module.native_classes.end());
@@ -1121,24 +1115,24 @@ void test_internal_native_template_aliases_resolve_public_returns(
     assert(defaulted->generic_min_args == 2);
     assert(defaulted->generic_default_args.size() == 3);
     assert(dudu::type_ref_text(defaulted->generic_default_args[2]) == "void");
-    const auto scoped = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto scoped =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.__scope.__rebind";
         });
     assert(scoped != module.native_classes.end());
     assert(std::ranges::none_of(module.native_classes, [](const dudu::ClassDecl& klass) {
         return klass.name == "internal_alias.__rebind";
     }));
-    const auto detected_specialization = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto detected_specialization =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.DetectedValue" &&
                    !klass.native_specialization_args.empty();
         });
     assert(detected_specialization != module.native_classes.end());
     assert(detected_specialization->native_specialization_requirements.size() == 1);
-    assert(dudu::type_ref_text(
-               detected_specialization->native_specialization_requirements.front()) ==
-           "internal_alias.Void[T.value_type]");
+    assert(
+        dudu::type_ref_text(detected_specialization->native_specialization_requirements.front()) ==
+        "internal_alias.Void[T.value_type]");
 
     const dudu::Symbols symbols = dudu::collect_symbols(module);
     const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
@@ -1155,46 +1149,41 @@ void test_internal_native_template_aliases_resolve_public_returns(
     }
     const dudu::TypeRef detected = dudu::resolve_associated_type_ref(
         symbols,
-        dudu::parse_type_text(
-            "internal_alias.DetectedValue[internal_alias.WithValue].type"));
+        dudu::parse_type_text("internal_alias.DetectedValue[internal_alias.WithValue].type"));
     assert(dudu::type_ref_text(detected) == "i32");
     const dudu::TypeRef fallback = dudu::resolve_associated_type_ref(
         symbols,
-        dudu::parse_type_text(
-            "internal_alias.DetectedValue[internal_alias.WithoutValue].type"));
+        dudu::parse_type_text("internal_alias.DetectedValue[internal_alias.WithoutValue].type"));
     assert(dudu::type_ref_text(fallback) == "f32");
     const auto signatures = symbols.native_function_signatures.find("internal_alias.make_holder");
     assert(signatures != symbols.native_function_signatures.end());
     assert(signatures->second.size() == 1);
     const dudu::FunctionSignature signature = dudu::substitute_explicit_template_signature(
         symbols, signatures->second.front(), {dudu::parse_type_text("Node")});
-    const std::string return_type =
-        dudu::type_ref_text(dudu::signature_return_type_ref(signature));
+    const std::string return_type = dudu::type_ref_text(dudu::signature_return_type_ref(signature));
     if (return_type != "internal_alias.Holder[Node]") {
         throw std::runtime_error("internal factory return resolved as " + return_type);
     }
-    const auto constant = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto constant =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.Constant";
         });
     assert(constant != module.native_classes.end());
     const auto value =
-        std::ranges::find_if(constant->static_fields, [](const dudu::ConstDecl& field) {
-            return field.name == "value";
-        });
+        std::ranges::find_if(constant->static_fields,
+                             [](const dudu::ConstDecl& field) { return field.name == "value"; });
     assert(value != constant->static_fields.end());
     assert(value->value_expr.kind == dudu::ExprKind::Name);
     assert(value->value_expr.name == "Value");
-    const auto select = std::ranges::find_if(
-        module.native_classes, [](const dudu::ClassDecl& klass) {
+    const auto select =
+        std::ranges::find_if(module.native_classes, [](const dudu::ClassDecl& klass) {
             return klass.name == "internal_alias.Select" &&
                    klass.native_specialization_args.empty();
         });
     assert(select != module.native_classes.end());
     const auto select_type =
-        std::ranges::find_if(select->type_aliases, [](const dudu::TypeAliasDecl& alias) {
-            return alias.name == "type";
-        });
+        std::ranges::find_if(select->type_aliases,
+                             [](const dudu::TypeAliasDecl& alias) { return alias.name == "type"; });
     assert(select_type != select->type_aliases.end());
     assert(select_type->generic_params.size() == 2);
     const std::string pointer_value = dudu::type_ref_text(dudu::resolve_associated_type_ref(
@@ -1208,14 +1197,10 @@ void test_internal_native_template_aliases_resolve_public_returns(
     const auto selected_signatures =
         symbols.native_function_signatures.find("internal_alias.select_result");
     assert(selected_signatures != symbols.native_function_signatures.end());
-    const dudu::FunctionSignature pointer_signature =
-        dudu::substitute_explicit_template_signature(
-            symbols, selected_signatures->second.front(),
-            {dudu::parse_type_text("*i32")});
-    const dudu::FunctionSignature value_signature =
-        dudu::substitute_explicit_template_signature(
-            symbols, selected_signatures->second.front(),
-            {dudu::parse_type_text("i32")});
+    const dudu::FunctionSignature pointer_signature = dudu::substitute_explicit_template_signature(
+        symbols, selected_signatures->second.front(), {dudu::parse_type_text("*i32")});
+    const dudu::FunctionSignature value_signature = dudu::substitute_explicit_template_signature(
+        symbols, selected_signatures->second.front(), {dudu::parse_type_text("i32")});
     assert(dudu::type_ref_text(dudu::signature_return_type_ref(pointer_signature)) == "i32");
     if (const std::string selected =
             dudu::type_ref_text(dudu::signature_return_type_ref(value_signature));
@@ -1239,24 +1224,22 @@ void test_equivalent_dependent_native_spellings_compare() {
 
 void test_standard_string_size_type_resolves_numeric(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "tests/fixtures";
-    dudu::ModuleAst module = dudu::parse_source(
-        "from cpp import string\n"
-        "\n"
-        "def prefix(value: std.string, count: usize) -> std.string:\n"
-        "    return std.string(value.substr(0, count))\n",
-        source_dir / "native_string_size_type_scan.dd");
+    dudu::ModuleAst module =
+        dudu::parse_source("from cpp import string\n"
+                           "\n"
+                           "def prefix(value: std.string, count: usize) -> std.string:\n"
+                           "    return std.string(value.substr(0, count))\n",
+                           source_dir / "native_string_size_type_scan.dd");
     dudu::ProjectConfig config;
     config.project_dir = root;
     config.build_dir = root / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
     const dudu::Symbols symbols = dudu::collect_symbols(module);
     if (!symbols.classes.contains("std.allocator_traits._Size")) {
         return;
     }
     const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
-        symbols,
-        dudu::parse_type_text(
-            "std.allocator_traits._Size[std.allocator[i32], i64].type"));
+        symbols, dudu::parse_type_text("std.allocator_traits._Size[std.allocator[i32], i64].type"));
     if (!dudu::native_numeric_operator_operand(resolved)) {
         throw std::runtime_error("std string size type resolved as " +
                                  dudu::type_ref_text(resolved));
@@ -1275,7 +1258,7 @@ void test_native_class_partial_specialization_metadata(const std::filesystem::pa
         dudu::ModuleAst module =
             dudu::parse_source("from cpp.path import native_headers/simple_cpp.hpp\n",
                                source_dir / "native_partial_specialization.dd");
-        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+        dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
         const std::string class_name = "dudu_native.AssociatedResult";
         size_t primary_count = 0;
@@ -1387,7 +1370,7 @@ void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
 
     bool saw_alias = false;
     for (const dudu::NativeTypeDecl& type : module.native_types) {
@@ -1431,7 +1414,7 @@ void test_native_scan_retries_with_c_prelude_for_context_headers(
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("value.count = 7;") != std::string::npos);
@@ -1459,7 +1442,7 @@ void test_aliased_c_import_prefixes_visible_transitive_functions(
                                                   "def main() -> i32:\n"
                                                   "    return wrap.dudu_wrap_answer()\n",
                                                   source_dir / "positive.dd");
-    dudu::merge_native_header_types(positive, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(positive, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(positive, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(positive);
     assert(cpp.find("dudu_wrap_answer()") != std::string::npos);
@@ -1469,7 +1452,7 @@ void test_aliased_c_import_prefixes_visible_transitive_functions(
                                                     "def main() -> i32:\n"
                                                     "    return wrap.remove(\"x\")\n",
                                                     source_dir / "transitive.dd");
-    dudu::merge_native_header_types(transitive, {.config = config, .source_dir = source_dir});
+    dudu::merge_native_headers(transitive, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(transitive, {.check_bodies = true});
     const std::string transitive_cpp = dudu::emit_cpp_source(transitive);
     assert(transitive_cpp.find("remove(\"x\")") != std::string::npos);
@@ -1596,9 +1579,8 @@ void test_native_scan_preserves_callable_and_static_methods() {
         {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
     scan = dudu::dedupe_scan(std::move(scan));
 
-    const auto klass = std::ranges::find_if(scan.classes, [](const dudu::ClassDecl& item) {
-        return item.name == "Callable";
-    });
+    const auto klass = std::ranges::find_if(
+        scan.classes, [](const dudu::ClassDecl& item) { return item.name == "Callable"; });
     assert(klass != scan.classes.end());
     const auto call = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
         return method.name == "operator()";
@@ -1608,15 +1590,13 @@ void test_native_scan_preserves_callable_and_static_methods() {
     assert(call->params.size() == 1);
     assert(dudu::type_ref_text(call->params.front().type_ref) == "i32");
 
-    const auto now = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
-        return method.name == "now";
-    });
+    const auto now = std::ranges::find_if(
+        klass->methods, [](const dudu::FunctionDecl& method) { return method.name == "now"; });
     assert(now != klass->methods.end());
     assert(!dudu::has_type_ref(now->receiver_type_ref));
 
-    const auto clone = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
-        return method.name == "clone";
-    });
+    const auto clone = std::ranges::find_if(
+        klass->methods, [](const dudu::FunctionDecl& method) { return method.name == "clone"; });
     assert(clone != klass->methods.end());
     assert(dudu::type_ref_text(clone->return_type_ref) == "Callable");
 }

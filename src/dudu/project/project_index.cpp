@@ -47,14 +47,14 @@ void merge_native_headers_for_tree(ModuleAst& module, const ProjectIndexOptions&
     const NativeHeaderOptions native_options{.config = options.config,
                                              .source_dir = options.source_dir};
     if (module.module_units.empty()) {
-        merge_native_header_types(module, native_options);
+        merge_native_headers(module, native_options);
         return;
     }
     if (options.include_native_headers_in_merged_module) {
-        merge_native_header_types(module, native_options);
+        merge_native_headers(module, native_options);
     }
     for (ModuleAst& unit : module.module_units) {
-        merge_native_header_types(unit, native_options);
+        merge_native_headers(unit, native_options);
     }
 }
 
@@ -217,8 +217,8 @@ native_identity_index_for_module(const ModuleAst& module) {
     return out;
 }
 
-std::map<std::string, std::set<std::string>> reverse_native_identity_index(
-    const std::map<std::string, std::set<std::string>>& by_name) {
+std::map<std::string, std::set<std::string>>
+reverse_native_identity_index(const std::map<std::string, std::set<std::string>>& by_name) {
     std::map<std::string, std::set<std::string>> out;
     for (const auto& [name, identities] : by_name) {
         for (const std::string& identity : identities) {
@@ -399,9 +399,8 @@ const ModuleAst* ProjectIndex::imported_unit(const ModuleAst& current,
     return unit_for_module(resolved_module_path);
 }
 
-std::set<std::string>
-ProjectIndex::native_queries_for_identity(const std::filesystem::path& path,
-                                          std::string_view identity) const {
+std::set<std::string> ProjectIndex::native_queries_for_identity(const std::filesystem::path& path,
+                                                                std::string_view identity) const {
     if (identity.empty()) {
         return {};
     }

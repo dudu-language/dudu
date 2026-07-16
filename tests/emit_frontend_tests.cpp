@@ -85,7 +85,7 @@ void test_value_member_emission() {
                                                 "    wave = std.sin(1.0)\n"
                                                 "    return player.health\n",
                                                 "value_member_emission.dd");
-    dudu::merge_native_header_types(module, {});
+    dudu::merge_native_headers(module, {});
     dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto wave = std::sin(1.0);") != std::string::npos);
@@ -377,7 +377,7 @@ void test_inferred_native_pointer_member_emission_uses_type_ast(const std::files
                            "    return info.value\n",
                            root / "tests" / "fixtures" / "inferred_native_pointer_member.dd");
     dudu::ModuleAst checked = module;
-    dudu::merge_native_header_types(
+    dudu::merge_native_headers(
         checked,
         dudu::NativeHeaderOptions{.config = {}, .source_dir = root / "tests" / "fixtures"});
     dudu::analyze_module(checked, {.check_bodies = true});
@@ -500,15 +500,14 @@ void test_class_emit_order_uses_type_ast_fields() {
 }
 
 void test_class_defaults_use_complete_enums_and_optional_values() {
-    const dudu::ModuleAst module = dudu::parse_source(
-        "enum State:\n"
-        "    Ready\n"
-        "    Done\n"
-        "\n"
-        "class Item:\n"
-        "    state: State = State.Ready\n"
-        "    value: Option[i32] = None\n",
-        "class_enum_optional_defaults.dd");
+    const dudu::ModuleAst module = dudu::parse_source("enum State:\n"
+                                                      "    Ready\n"
+                                                      "    Done\n"
+                                                      "\n"
+                                                      "class Item:\n"
+                                                      "    state: State = State.Ready\n"
+                                                      "    value: Option[i32] = None\n",
+                                                      "class_enum_optional_defaults.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("enum class State {") < cpp.find("struct Item {"));

@@ -198,10 +198,6 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
     return join_lowered_exprs(exprs, aliases, locals, separator, symbols, {});
 }
 
-bool has_expr(const Expr& expr) {
-    return expr_present(expr);
-}
-
 std::string cpp_binary_operator(std::string_view op) {
     if (op == "and") {
         return "&&";
@@ -272,7 +268,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Binary:
-        if (expr.children.size() == 2 && has_expr(expr.children[0]) && has_expr(expr.children[1])) {
+        if (expr.children.size() == 2 && expr_present(expr.children[0]) &&
+            expr_present(expr.children[1])) {
             return "(" +
                    lower_expr(expr.children[0], aliases, locals, local_type_refs, symbols,
                               options) +
