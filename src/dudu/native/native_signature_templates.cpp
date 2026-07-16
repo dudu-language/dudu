@@ -44,7 +44,8 @@ std::string strip_forwarding_suffix(std::string type) {
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             const NativeTemplateParameterNames& template_params,
-                            NativeTemplateBindings& bindings);
+                            NativeTemplateBindings& bindings,
+                            NativePackBindingMap& pack_bindings);
 
 std::string normalized_template_param_name(std::string name) {
     const size_t qualifier = name.find_last_of(".:");
@@ -79,7 +80,7 @@ native_template_pack_placeholder_spelling(std::string type,
 
 bool bind_template_pack_child(const TypeRef& expected, const std::vector<TypeRef>& got,
                               const NativeTemplateParameterNames& template_params,
-                              NativeTemplateBindings& bindings) {
+                              NativePackBindingMap& pack_bindings) {
     if (expected.kind != TypeKind::PackExpansion || expected.children.size() != 1) {
         return false;
     }
@@ -88,18 +89,25 @@ bool bind_template_pack_child(const TypeRef& expected, const std::vector<TypeRef
     if (!pack_name) {
         return false;
     }
-    if (got.empty()) {
-        return true;
+    const auto [found, inserted] = pack_bindings.emplace(*pack_name, got);
+    if (inserted || found->second.size() != got.size()) {
+        return inserted;
     }
-    return bind_template_placeholder(*pack_name, got.front(), bindings);
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (!binding_equivalent(found->second[i], got[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool bind_same_shape_children(const TypeRef& expected, const TypeRef& got,
                               const NativeTemplateParameterNames& template_params,
-                              NativeTemplateBindings& bindings) {
+                              NativeTemplateBindings& bindings,
+                              NativePackBindingMap& pack_bindings) {
     if (expected.children.size() == 1 &&
         bind_template_pack_child(expected.children.front(), got.children, template_params,
-                                 bindings)) {
+                                 pack_bindings)) {
         return true;
     }
     if (expected.children.size() != got.children.size()) {
@@ -107,7 +115,7 @@ bool bind_same_shape_children(const TypeRef& expected, const TypeRef& got,
     }
     for (size_t i = 0; i < expected.children.size(); ++i) {
         if (!bind_template_type_ref(expected.children[i], got.children[i], template_params,
-                                    bindings)) {
+                                    bindings, pack_bindings)) {
             return false;
         }
     }
@@ -120,10 +128,12 @@ bool same_native_template_name(const std::string& expected, const std::string& g
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             const NativeTemplateParameterNames& template_params,
-                            NativeTemplateBindings& bindings) {
+                            NativeTemplateBindings& bindings,
+                            NativePackBindingMap& pack_bindings) {
     if (got.kind == TypeKind::Shaped && expected.kind != TypeKind::Shaped &&
         !got.children.empty()) {
-        return bind_template_type_ref(expected, got.children.front(), template_params, bindings);
+        return bind_template_type_ref(expected, got.children.front(), template_params, bindings,
+                                      pack_bindings);
     }
 
     const std::string expected_name = type_ref_head_name(expected);
@@ -137,7 +147,7 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         return got.kind == TypeKind::Pointer && expected.children.size() == 1 &&
                got.children.size() == 1 &&
                bind_template_type_ref(expected.children.front(), got.children.front(),
-                                      template_params, bindings);
+                                      template_params, bindings, pack_bindings);
     }
     if (expected.kind == TypeKind::Reference) {
         if (expected.children.size() != 1) {
@@ -145,9 +155,9 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         }
         return got.kind == TypeKind::Reference && got.children.size() == 1
                    ? bind_template_type_ref(expected.children.front(), got.children.front(),
-                                            template_params, bindings)
+                                            template_params, bindings, pack_bindings)
                    : bind_template_type_ref(expected.children.front(), got, template_params,
-                                            bindings);
+                                            bindings, pack_bindings);
     }
     if (expected.kind == TypeKind::Const || expected.kind == TypeKind::Volatile ||
         expected.kind == TypeKind::Atomic || expected.kind == TypeKind::Storage ||
@@ -157,17 +167,17 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         }
         return got.kind == expected.kind && got.children.size() == 1
                    ? bind_template_type_ref(expected.children.front(), got.children.front(),
-                                            template_params, bindings)
+                                            template_params, bindings, pack_bindings)
                    : bind_template_type_ref(expected.children.front(), got, template_params,
-                                            bindings);
+                                            bindings, pack_bindings);
     }
     if (expected.kind == TypeKind::Template && got.kind == TypeKind::Template &&
         same_native_template_name(expected.name, got.name)) {
-        return bind_same_shape_children(expected, got, template_params, bindings);
+        return bind_same_shape_children(expected, got, template_params, bindings, pack_bindings);
     }
     if ((expected.kind == TypeKind::FixedArray || expected.kind == TypeKind::Shaped) &&
         expected.kind == got.kind) {
-        return bind_same_shape_children(expected, got, template_params, bindings);
+        return bind_same_shape_children(expected, got, template_params, bindings, pack_bindings);
     }
     return false;
 }
@@ -197,7 +207,8 @@ native_template_pack_placeholder(const TypeRef& type,
     if (type.kind == TypeKind::Named) {
         return native_template_pack_placeholder_spelling(type.name, template_params);
     }
-    if ((type.kind == TypeKind::Template || type.kind == TypeKind::Associated) &&
+    if ((type.kind == TypeKind::Template || type.kind == TypeKind::Associated ||
+         type.kind == TypeKind::AssociatedTemplate) &&
         type.children.size() == 1) {
         return native_template_pack_placeholder(type.children.front(), template_params);
     }
@@ -218,21 +229,36 @@ native_template_pack_placeholder(const TypeRef& type,
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
                                    const NativeTemplateParameterNames& template_params,
                                    NativeTemplateBindings& bindings) {
-    return bind_template_type_ref(expected, got, template_params, bindings);
+    NativePackBindingMap pack_bindings;
+    return bind_template_type_ref(expected, got, template_params, bindings, pack_bindings);
 }
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
                                    const TypeRef& got,
                                    const NativeTemplateParameterNames& template_params,
                                    NativeTemplateBindings& bindings) {
+    NativePackBindingMap pack_bindings;
+    return bind_native_template_type_ast(symbols, expected, got, template_params, bindings,
+                                         pack_bindings);
+}
+
+bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
+                                   const TypeRef& got,
+                                   const NativeTemplateParameterNames& template_params,
+                                   NativeTemplateBindings& bindings,
+                                   NativePackBindingMap& pack_bindings) {
     NativeTemplateBindings direct_bindings = bindings;
-    if (bind_template_type_ref(expected, got, template_params, direct_bindings)) {
+    NativePackBindingMap direct_pack_bindings = pack_bindings;
+    if (bind_template_type_ref(expected, got, template_params, direct_bindings,
+                               direct_pack_bindings)) {
         bindings = std::move(direct_bindings);
+        pack_bindings = std::move(direct_pack_bindings);
         return true;
     }
     TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
     TypeRef resolved_got = resolve_alias_ref(symbols, got);
-    return bind_template_type_ref(resolved_expected, resolved_got, template_params, bindings);
+    return bind_template_type_ref(resolved_expected, resolved_got, template_params, bindings,
+                                  pack_bindings);
 }
 
 } // namespace dudu

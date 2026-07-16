@@ -38,6 +38,43 @@ std::string semantic_identity_key(NativeCursorKind kind, std::string_view path) 
     return "semantic\n" + std::to_string(static_cast<int>(kind)) + "\n" + std::string(path);
 }
 
+std::string specialization_arguments_key(std::string_view name,
+                                         const SourceLocation& location) {
+    return "specialization\n" + normalized_source_path(location.file) + "\n" +
+           std::to_string(location.line) + "\n" + std::to_string(location.column) + "\n" +
+           std::string(name);
+}
+
+std::string encode_strings(const std::vector<std::string>& values) {
+    std::string out;
+    for (const std::string& value : values) {
+        out += std::to_string(value.size()) + ":" + value;
+    }
+    return out;
+}
+
+std::vector<std::string> decode_strings(std::string_view text) {
+    std::vector<std::string> out;
+    size_t cursor = 0;
+    while (cursor < text.size()) {
+        const size_t colon = text.find(':', cursor);
+        if (colon == std::string_view::npos) {
+            return {};
+        }
+        size_t size = 0;
+        const auto [end, error] =
+            std::from_chars(text.data() + cursor, text.data() + colon, size);
+        if (error != std::errc{} || end != text.data() + colon ||
+            size > text.size() - colon - 1) {
+            return {};
+        }
+        cursor = colon + 1;
+        out.emplace_back(text.substr(cursor, size));
+        cursor += size;
+    }
+    return out;
+}
+
 std::string cursor_semantic_path(CXCursor cursor) {
     std::vector<std::string> parts;
     for (CXCursor current = cursor; !clang_Cursor_isNull(current);
@@ -130,8 +167,90 @@ SourceLocation cursor_location(CXCursor cursor) {
             .column = static_cast<int>(column)};
 }
 
+bool word_token(CXTokenKind kind) {
+    return kind == CXToken_Identifier || kind == CXToken_Keyword ||
+           kind == CXToken_Literal;
+}
+
+std::string join_tokens(const std::vector<std::pair<std::string, CXTokenKind>>& tokens) {
+    std::string out;
+    CXTokenKind previous_kind = CXToken_Punctuation;
+    for (const auto& [spelling, kind] : tokens) {
+        if (!out.empty() && word_token(previous_kind) && word_token(kind)) {
+            out.push_back(' ');
+        }
+        out += spelling;
+        previous_kind = kind;
+    }
+    return out;
+}
+
+std::vector<std::string> specialization_arguments(CXTranslationUnit unit, CXCursor cursor,
+                                                  std::string_view name) {
+    CXToken* raw_tokens = nullptr;
+    unsigned token_count = 0;
+    clang_tokenize(unit, clang_getCursorExtent(cursor), &raw_tokens, &token_count);
+    std::vector<std::pair<std::string, CXTokenKind>> tokens;
+    tokens.reserve(token_count);
+    for (unsigned i = 0; i < token_count; ++i) {
+        tokens.emplace_back(cx_string(clang_getTokenSpelling(unit, raw_tokens[i])),
+                            clang_getTokenKind(raw_tokens[i]));
+    }
+    clang_disposeTokens(unit, raw_tokens, token_count);
+
+    size_t open = tokens.size();
+    for (size_t i = 0; i + 1 < tokens.size(); ++i) {
+        if (tokens[i].first == name && tokens[i + 1].first == "<") {
+            open = i + 1;
+            break;
+        }
+    }
+    if (open == tokens.size()) {
+        return {};
+    }
+
+    std::vector<std::string> out;
+    std::vector<std::pair<std::string, CXTokenKind>> current;
+    int angle_depth = 1;
+    for (size_t i = open + 1; i < tokens.size(); ++i) {
+        const std::string& token = tokens[i].first;
+        if (token == "<") {
+            ++angle_depth;
+            current.push_back(tokens[i]);
+            continue;
+        }
+        if (token == ">" ||
+            (angle_depth > 1 && token.find_first_not_of('>') == std::string::npos)) {
+            for (size_t close = 0; close < token.size(); ++close) {
+                --angle_depth;
+                if (angle_depth == 0) {
+                    if (!current.empty()) {
+                        out.push_back(join_tokens(current));
+                    }
+                    return out;
+                }
+                current.emplace_back(">", tokens[i].second);
+            }
+            continue;
+        }
+        if (token == "," && angle_depth == 1) {
+            out.push_back(join_tokens(current));
+            current.clear();
+            continue;
+        }
+        current.push_back(tokens[i]);
+    }
+    return {};
+}
+
+struct CursorCollectionContext {
+    NativeCursorIdentityIndex& index;
+    CXTranslationUnit unit;
+};
+
 CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) {
-    auto& index = *static_cast<NativeCursorIdentityIndex*>(data);
+    auto& context = *static_cast<CursorCollectionContext*>(data);
+    NativeCursorIdentityIndex& index = context.index;
     const std::optional<NativeCursorKind> kind = native_cursor_kind(cursor);
     if (kind) {
         const std::string name = cx_string(clang_getCursorSpelling(cursor));
@@ -140,6 +259,12 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
         if (!name.empty() && !usr.empty() && !location.file.empty()) {
             index.insert(*kind, name, location, usr, cursor_type_layout(cursor, *kind),
                          cursor_semantic_path(cursor));
+            if (clang_getCursorKind(cursor) ==
+                CXCursor_ClassTemplatePartialSpecialization) {
+                const std::vector<std::string> arguments =
+                    specialization_arguments(context.unit, cursor, name);
+                index.insert_specialization_arguments(name, location, arguments);
+            }
         }
     }
     return CXChildVisit_Recurse;
@@ -191,6 +316,22 @@ NativeCursorIdentityIndex::find_semantic_layout(NativeCursorKind kind,
                                                 std::string_view semantic_path) const {
     const auto found = layouts_.find(semantic_identity_key(kind, semantic_path));
     return found == layouts_.end() ? std::nullopt : std::optional<TypeLayout>{found->second};
+}
+
+void NativeCursorIdentityIndex::insert_specialization_arguments(
+    std::string name, SourceLocation location, std::vector<std::string> arguments) {
+    if (arguments.empty()) {
+        return;
+    }
+    identities_.insert_or_assign(specialization_arguments_key(name, location),
+                                 encode_strings(arguments));
+}
+
+std::vector<std::string> NativeCursorIdentityIndex::find_specialization_arguments(
+    std::string_view name, const SourceLocation& location) const {
+    const auto found = identities_.find(specialization_arguments_key(name, location));
+    return found == identities_.end() ? std::vector<std::string>{}
+                                      : decode_strings(found->second);
 }
 
 bool NativeCursorIdentityIndex::empty() const {
@@ -272,7 +413,8 @@ NativeCursorIdentityIndex scan_native_cursor_identities(const std::filesystem::p
         0, CXTranslationUnit_SkipFunctionBodies | CXTranslationUnit_KeepGoing, &unit);
     NativeCursorIdentityIndex out;
     if (error == CXError_Success && unit != nullptr) {
-        clang_visitChildren(clang_getTranslationUnitCursor(unit), collect_cursor, &out);
+        CursorCollectionContext context{.index = out, .unit = unit};
+        clang_visitChildren(clang_getTranslationUnitCursor(unit), collect_cursor, &context);
     }
     if (unit != nullptr) {
         clang_disposeTranslationUnit(unit);

@@ -65,6 +65,15 @@ inline std::string native_class_binding_key(const ClassDecl& klass) {
         }
         key += "]";
     }
+    if (!klass.native_specialization_requirements.empty()) {
+        key += " requires ";
+        for (size_t i = 0; i < klass.native_specialization_requirements.size(); ++i) {
+            if (i > 0) {
+                key += ",";
+            }
+            key += type_ref_text(klass.native_specialization_requirements[i]);
+        }
+    }
     return key;
 }
 

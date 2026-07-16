@@ -95,6 +95,10 @@ TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
 
 std::string receiver_class_name(const Symbols& symbols, const TypeRef& type) {
     const TypeRef current = unwrap_receiver_type_ref(symbols, type);
+    if (current.kind == TypeKind::AssociatedTemplate && !current.children.empty()) {
+        const std::string owner = receiver_class_name(symbols, current.children.front());
+        return owner.empty() ? std::string(current.name) : owner + "." + std::string(current.name);
+    }
     return strip_c_type_tag(type_ref_head_name(current));
 }
 

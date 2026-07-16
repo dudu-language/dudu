@@ -68,6 +68,32 @@ std::string substitution_lookup_key(const TypeRef& type) {
     }
 }
 
+std::optional<std::pair<std::string, std::string>>
+substituted_associated_path(const TypeRef& type,
+                            const std::map<std::string, TypeRef>& substitutions) {
+    if (type.kind != TypeKind::Qualified) {
+        return std::nullopt;
+    }
+    const std::string name = trim_copy(type.name);
+    const size_t dot = name.rfind('.');
+    const size_t scope = name.rfind("::");
+    if (dot == std::string::npos && scope == std::string::npos) {
+        return std::nullopt;
+    }
+    const bool use_scope =
+        scope != std::string::npos && (dot == std::string::npos || scope > dot);
+    const size_t separator = use_scope ? scope : dot;
+    const size_t width = use_scope ? 2 : 1;
+    if (separator == 0 || separator + width >= name.size()) {
+        return std::nullopt;
+    }
+    const std::string owner = name.substr(0, separator);
+    if (!substitutions.contains(owner)) {
+        return std::nullopt;
+    }
+    return std::pair{owner, name.substr(separator + width)};
+}
+
 std::map<std::string, std::string>
 substitution_texts(const std::map<std::string, TypeRef>& substitutions) {
     std::map<std::string, std::string> out;
@@ -156,6 +182,8 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::Qualified:
     case TypeKind::Template:
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
         return trim_copy(type.name);
     case TypeKind::Value:
         return trim_copy(type.value);
@@ -260,6 +288,23 @@ std::string substitute_type_ref_text(const TypeRef& type,
         }
         return substitute_type_ref_text(type.children.front(), substitutions) + "." +
                trim_copy(type.name);
+    case TypeKind::AssociatedTemplate:
+        if (type.children.empty()) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: associated template is missing its owner type");
+        }
+        return substitute_type_ref_text(type.children.front(), substitutions) + "." +
+               trim_copy(type.name) + "[" +
+               join_substituted_types(type.children, 1, substitutions) + "]";
+    case TypeKind::NativeTransform:
+        if (type.children.size() != 1) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: native transform requires one child type");
+        }
+        return trim_copy(type.name) + "(" +
+               substitute_type_ref_text(type.children.front(), substitutions) + ")";
     case TypeKind::FixedArray:
         if (type.children.empty()) {
             throw CompileError(
@@ -382,6 +427,8 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     case TypeKind::Qualified:
     case TypeKind::Template:
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
         if (type_ref_head_name(left) != type_ref_head_name(right)) {
             return false;
         }
@@ -517,6 +564,16 @@ TypeRef substitute_type_ref(const TypeRef& type,
             out.location = type.location;
             return out;
         }
+    }
+
+    if (const auto path = substituted_associated_path(type, substitutions)) {
+        TypeRef associated;
+        associated.kind = TypeKind::Associated;
+        associated.name = path->second;
+        associated.children.push_back(substitutions.at(path->first));
+        associated.location = type.location;
+        associated.range = type.range;
+        return associated;
     }
 
     if (type.kind == TypeKind::Value) {

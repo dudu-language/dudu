@@ -5,12 +5,13 @@
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_generics.hpp"
+#include "dudu/sema/sema_generics_detail.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_native_specializations.hpp"
+#include "dudu/sema/sema_native_type_transforms.hpp"
 
-#include <algorithm>
 #include <map>
 #include <optional>
-#include <set>
 
 namespace dudu {
 namespace {
@@ -53,110 +54,40 @@ std::optional<std::pair<std::string, std::string>> associated_type_path(std::str
                      std::string(head.substr(separator + width))};
 }
 
-bool specialization_values_equivalent(std::string_view pattern, std::string_view actual) {
-    if (pattern == actual) {
-        return true;
-    }
-    return (pattern == "1" && actual == "true") || (pattern == "true" && actual == "1") ||
-           (pattern == "0" && actual == "false") || (pattern == "false" && actual == "0");
+GenericTypeBindings owner_member_bindings(const ClassDecl& owner_class, const TypeRef& owner,
+                                          const GenericTypeBindings& specialization_bindings) {
+    GenericTypeBindings bindings = specialization_bindings;
+    const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
+    const auto owner_substitutions = receiver_template_ref_substitutions(owner_class, owner_args);
+    bindings.scalar.insert(owner_substitutions.begin(), owner_substitutions.end());
+    return bindings;
 }
 
-bool bind_specialization_pattern(const TypeRef& pattern, const TypeRef& actual,
-                                 const std::set<std::string>& params,
-                                 std::map<std::string, TypeRef>& bindings, int& score) {
-    const std::string pattern_name = type_ref_head_name(pattern);
-    if ((pattern.kind == TypeKind::Named || pattern.kind == TypeKind::Qualified) &&
-        params.contains(pattern_name)) {
-        const auto found = bindings.find(pattern_name);
-        if (found == bindings.end()) {
-            bindings.emplace(pattern_name, actual);
-            return true;
-        }
-        return type_ref_equivalent(found->second, actual) ||
-               type_ref_text(found->second) == type_ref_text(actual);
+TypeRef instantiate_member_alias(const TypeAliasDecl& alias,
+                                 const std::vector<TypeRef>& member_args,
+                                 GenericTypeBindings bindings) {
+    const std::vector<TypeRef> concrete_args =
+        generic_args_with_defaults(alias.generic_params, alias.generic_default_args, member_args);
+    for (size_t i = 0; i < alias.generic_params.size() && i < concrete_args.size(); ++i) {
+        bindings.scalar.insert_or_assign(generic_param_base_name(alias.generic_params[i]),
+                                         concrete_args[i]);
     }
-    if (pattern.kind == TypeKind::Value) {
-        ++score;
-        return actual.kind != TypeKind::Value ||
-               specialization_values_equivalent(pattern.value, actual.value);
-    }
-    if (pattern.kind != actual.kind || pattern.children.size() != actual.children.size()) {
-        return false;
-    }
-    if ((pattern.kind == TypeKind::Named || pattern.kind == TypeKind::Qualified ||
-         pattern.kind == TypeKind::Template || pattern.kind == TypeKind::Associated) &&
-        type_ref_head_name(pattern) != type_ref_head_name(actual)) {
-        return false;
-    }
-    if (pattern.kind == TypeKind::Named || pattern.kind == TypeKind::Qualified ||
-        pattern.kind == TypeKind::Template || pattern.kind == TypeKind::Associated) {
-        ++score;
-    }
-    for (size_t i = 0; i < pattern.children.size(); ++i) {
-        if (!bind_specialization_pattern(pattern.children[i], actual.children[i], params, bindings,
-                                         score)) {
-            return false;
-        }
-    }
-    return true;
+    return substitute_native_specialization_type(alias.type_ref, bindings);
 }
 
-const ClassDecl* specialized_class_for_owner(const Symbols& symbols, const TypeRef& owner,
-                                             std::string_view alias_name,
-                                             std::map<std::string, TypeRef>& bindings) {
-    const std::string owner_name = receiver_class_name(symbols, owner);
-    const auto found = symbols.native_class_specializations.find(owner_name);
-    if (found == symbols.native_class_specializations.end()) {
-        return nullptr;
+TypeRef canonical_native_associated_scalar(std::string_view alias_name, TypeRef resolved) {
+    const std::string type_name = type_ref_head_name(resolved);
+    if (alias_name == "size_type" &&
+        (type_name == "u8" || type_name == "u16" || type_name == "u32" || type_name == "u64" ||
+         type_name == "usize")) {
+        return named_type_ref("usize", resolved.location);
     }
-    std::vector<TypeRef> actual_args = template_arg_refs_from_type(owner);
-    if (const ClassDecl* primary = class_for_receiver_type(symbols, owner);
-        primary != nullptr && !primary->generic_params.empty()) {
-        actual_args = generic_args_with_defaults(primary->generic_params,
-                                                 primary->generic_default_args, actual_args);
+    if (alias_name == "difference_type" &&
+        (type_name == "i8" || type_name == "i16" || type_name == "i32" || type_name == "i64" ||
+         type_name == "isize")) {
+        return named_type_ref("isize", resolved.location);
     }
-    const ClassDecl* selected = nullptr;
-    int selected_score = -1;
-    bool ambiguous = false;
-    std::map<std::string, TypeRef> selected_bindings;
-    for (const ClassDecl& candidate : found->second) {
-        if (candidate.native_specialization_args.size() != actual_args.size() ||
-            std::ranges::none_of(candidate.type_aliases, [&](const TypeAliasDecl& alias) {
-                return alias.name == alias_name;
-            })) {
-            continue;
-        }
-        std::set<std::string> params;
-        for (const std::string& param : candidate.generic_params) {
-            params.insert(generic_param_base_name(param));
-        }
-        std::map<std::string, TypeRef> candidate_bindings;
-        int score = candidate.native_partial_specialization ? 0 : 1000;
-        bool matches = true;
-        for (size_t i = 0; i < actual_args.size(); ++i) {
-            if (!bind_specialization_pattern(candidate.native_specialization_args[i],
-                                             actual_args[i], params, candidate_bindings, score)) {
-                matches = false;
-                break;
-            }
-        }
-        if (!matches || score < selected_score) {
-            continue;
-        }
-        if (score == selected_score) {
-            ambiguous = true;
-            continue;
-        }
-        selected = &candidate;
-        selected_score = score;
-        selected_bindings = std::move(candidate_bindings);
-        ambiguous = false;
-    }
-    if (ambiguous) {
-        return nullptr;
-    }
-    bindings = std::move(selected_bindings);
-    return selected;
+    return resolved;
 }
 
 TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
@@ -170,11 +101,57 @@ TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
         child =
             resolve_associated_type_ref_impl(std::move(child), symbols, substitutions, depth + 1);
     }
+    if (type.kind == TypeKind::NativeTransform) {
+        TypeRef resolved = resolve_native_type_transform(symbols, type);
+        if (!type_ref_equivalent(resolved, type)) {
+            return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
+                                                    depth + 1);
+        }
+        return type;
+    }
+    if (type.kind == TypeKind::AssociatedTemplate && type.children.size() > 1) {
+        TypeRef owner = receiver_template_type_ref(symbols, type.children.front());
+        GenericTypeBindings specialization_bindings;
+        const ClassDecl* owner_class =
+            native_specialized_class_for_owner(symbols, owner, specialization_bindings);
+        if (owner_class == nullptr) {
+            owner_class = class_for_receiver_type(symbols, owner);
+        }
+        if (owner_class != nullptr) {
+            const std::vector<TypeRef> member_args(type.children.begin() + 1, type.children.end());
+            for (const TypeAliasDecl& alias : owner_class->type_aliases) {
+                if (alias.name != type.name) {
+                    continue;
+                }
+                TypeRef resolved = instantiate_member_alias(
+                    alias, member_args,
+                    owner_member_bindings(*owner_class, owner, specialization_bindings));
+                return canonical_native_associated_scalar(
+                    alias.name, resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                                 substitutions, depth + 1));
+            }
+        } else {
+            const std::string owner_name = receiver_class_name(symbols, owner);
+            const std::string alias_name = owner_name.empty()
+                                               ? std::string(type.name)
+                                               : owner_name + "." + std::string(type.name);
+            if (symbols.alias_type_refs.contains(alias_name)) {
+                TypeRef alias_use;
+                alias_use.kind = TypeKind::Template;
+                alias_use.name = alias_name;
+                alias_use.location = type.location;
+                alias_use.children.assign(type.children.begin() + 1, type.children.end());
+                TypeRef resolved = resolve_alias_ref(symbols, std::move(alias_use));
+                return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
+                                                        depth + 1);
+            }
+        }
+    }
     if (type.kind == TypeKind::Associated && type.children.size() == 1) {
         TypeRef owner = receiver_template_type_ref(symbols, type.children.front());
-        std::map<std::string, TypeRef> specialization_bindings;
+        GenericTypeBindings specialization_bindings;
         const ClassDecl* owner_class =
-            specialized_class_for_owner(symbols, owner, type.name, specialization_bindings);
+            native_specialized_class_for_owner(symbols, owner, specialization_bindings);
         if (owner_class == nullptr) {
             owner_class = class_for_receiver_type(symbols, owner);
         }
@@ -186,20 +163,78 @@ TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
                 continue;
             }
             TypeRef resolved;
-            if (!specialization_bindings.empty()) {
-                resolved = substitute_type_ref(alias.type_ref, specialization_bindings);
+            if (!specialization_bindings.scalar.empty() || !specialization_bindings.packs.empty()) {
+                resolved =
+                    substitute_native_specialization_type(alias.type_ref, specialization_bindings);
                 std::map<std::string, TypeRef> nested_substitutions = substitutions;
-                nested_substitutions.insert(specialization_bindings.begin(),
-                                            specialization_bindings.end());
-                return resolve_associated_type_ref_impl(std::move(resolved), symbols,
-                                                        nested_substitutions, depth + 1);
+                nested_substitutions.insert(specialization_bindings.scalar.begin(),
+                                            specialization_bindings.scalar.end());
+                return canonical_native_associated_scalar(
+                    alias.name, resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                                 nested_substitutions, depth + 1));
+            } else if (owner.kind == TypeKind::AssociatedTemplate && !owner.children.empty()) {
+                std::map<std::string, TypeRef> nested_substitutions = substitutions;
+                const TypeRef& parent_owner = owner.children.front();
+                if (const ClassDecl* parent_class =
+                        class_for_receiver_type(symbols, parent_owner)) {
+                    const std::vector<TypeRef> parent_args =
+                        template_arg_refs_from_type(parent_owner);
+                    const auto parent_substitutions =
+                        receiver_template_ref_substitutions(*parent_class, parent_args);
+                    nested_substitutions.insert(parent_substitutions.begin(),
+                                                parent_substitutions.end());
+                }
+                const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
+                const auto member_substitutions =
+                    receiver_template_ref_substitutions(*owner_class, owner_args);
+                nested_substitutions.insert(member_substitutions.begin(),
+                                            member_substitutions.end());
+                resolved = substitute_type_ref(alias.type_ref, nested_substitutions);
+                return canonical_native_associated_scalar(
+                    alias.name, resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                                 nested_substitutions, depth + 1));
             } else {
                 const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
                 resolved =
                     substitute_receiver_template_type(alias.type_ref, *owner_class, owner_args);
             }
-            return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
-                                                    depth + 1);
+            return canonical_native_associated_scalar(
+                alias.name, resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                             substitutions, depth + 1));
+        }
+        const GenericTypeBindings member_bindings =
+            owner_member_bindings(*owner_class, owner, specialization_bindings);
+        for (const ConstDecl& field : owner_class->static_fields) {
+            if (field.name != type.name) {
+                continue;
+            }
+            if (const auto value = native_constexpr_value_ref(
+                    field.value_expr, member_bindings.scalar, type.location)) {
+                return *value;
+            }
+            return type;
+        }
+        const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
+        std::map<std::string, TypeRef> owner_substitutions =
+            receiver_template_ref_substitutions(*owner_class, owner_args);
+        owner_substitutions.insert(specialization_bindings.scalar.begin(),
+                                   specialization_bindings.scalar.end());
+        GenericTypeBindings inherited_bindings;
+        inherited_bindings.scalar = owner_substitutions;
+        inherited_bindings.packs = specialization_bindings.packs;
+        for (const BaseClassDecl& base : owner_class->base_class_refs) {
+            TypeRef inherited;
+            inherited.kind = TypeKind::Associated;
+            inherited.name = type.name;
+            inherited.children.push_back(
+                substitute_native_specialization_type(base.type_ref, inherited_bindings));
+            inherited.location = type.location;
+            const std::string inherited_text = type_ref_text(inherited);
+            TypeRef resolved = resolve_associated_type_ref_impl(std::move(inherited), symbols,
+                                                                substitutions, depth + 1);
+            if (type_ref_text(resolved) != inherited_text) {
+                return resolved;
+            }
         }
         return type;
     }
@@ -223,8 +258,9 @@ TypeRef resolve_associated_type_ref_impl(TypeRef type, const Symbols& symbols,
         const std::vector<TypeRef> owner_args = template_arg_refs_from_type(owner);
         TypeRef resolved =
             substitute_receiver_template_type(alias.type_ref, *owner_class, owner_args);
-        return resolve_associated_type_ref_impl(std::move(resolved), symbols, substitutions,
-                                                depth + 1);
+        return canonical_native_associated_scalar(
+            alias.name, resolve_associated_type_ref_impl(std::move(resolved), symbols,
+                                                         substitutions, depth + 1));
     }
     return type;
 }
@@ -235,7 +271,13 @@ std::vector<TypeRef> template_arg_refs_from_type(const TypeRef& type) {
     if (type.kind == TypeKind::Shaped && !type.children.empty()) {
         return template_arg_refs_from_type(type.children.front());
     }
-    return type.kind == TypeKind::Template ? type.children : std::vector<TypeRef>{};
+    if (type.kind == TypeKind::Template) {
+        return type.children;
+    }
+    if (type.kind == TypeKind::AssociatedTemplate && type.children.size() > 1) {
+        return {type.children.begin() + 1, type.children.end()};
+    }
+    return {};
 }
 
 TypeRef resolve_associated_type_ref(const Symbols& symbols, TypeRef type) {

@@ -340,75 +340,97 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
                       : TypeKind::Qualified,
                   begin, cursor_);
     type.name = text;
-    while (match(TokenKind::LBracket)) {
-        const size_t inner_begin = cursor_;
-        std::vector<TypeRef> args;
-        const bool shape_args = (type.kind == TypeKind::Template && type.name == "array") ||
-                                type_metadata_base_args_are_types(type);
-        if (shape_args) {
-            args = parse_shape_list_until(TokenKind::RBracket);
-        } else {
-            args = parse_list_until(TokenKind::RBracket);
-        }
-        const size_t inner_end = cursor_;
-        if (!match(TokenKind::RBracket)) {
-            return make_node(TypeKind::Unknown, begin, cursor_);
-        }
-        const TypeKind wrapper = wrapper_type_kind(type.name);
-        if (wrapper != TypeKind::Unknown && type.kind != TypeKind::Template) {
-            TypeRef wrapped = make_node(wrapper, begin, cursor_);
-            if (!args.empty()) {
-                wrapped.children.push_back(std::move(args.front()));
+    while (!at_end()) {
+        if (match(TokenKind::LBracket)) {
+            const size_t inner_begin = cursor_;
+            std::vector<TypeRef> args;
+            const bool shape_args = (type.kind == TypeKind::Template && type.name == "array") ||
+                                    type_metadata_base_args_are_types(type);
+            if (shape_args) {
+                args = parse_shape_list_until(TokenKind::RBracket);
+            } else {
+                args = parse_list_until(TokenKind::RBracket);
             }
-            type = std::move(wrapped);
+            const size_t inner_end = cursor_;
+            if (!match(TokenKind::RBracket)) {
+                return make_node(TypeKind::Unknown, begin, cursor_);
+            }
+            const TypeKind wrapper = wrapper_type_kind(type.name);
+            if (wrapper != TypeKind::Unknown && type.kind != TypeKind::Template) {
+                TypeRef wrapped = make_node(wrapper, begin, cursor_);
+                if (!args.empty()) {
+                    wrapped.children.push_back(std::move(args.front()));
+                }
+                type = std::move(wrapped);
+                continue;
+            }
+            if (type.kind == TypeKind::Template && type.name == "array") {
+                TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
+                fixed.children.push_back(std::move(type));
+                fixed.children.insert(fixed.children.end(), std::make_move_iterator(args.begin()),
+                                      std::make_move_iterator(args.end()));
+                fixed.value = trim_string(text_between(inner_begin, inner_end));
+                type = std::move(fixed);
+                continue;
+            }
+            if (type_metadata_base_args_are_types(type)) {
+                TypeRef shaped = make_node(TypeKind::Shaped, begin, cursor_);
+                shaped.children.push_back(std::move(type));
+                shaped.children.insert(shaped.children.end(), std::make_move_iterator(args.begin()),
+                                       std::make_move_iterator(args.end()));
+                shaped.value = trim_string(text_between(inner_begin, inner_end));
+                type = std::move(shaped);
+                continue;
+            }
+            if (type.kind == TypeKind::Associated) {
+                TypeRef templ = make_node(TypeKind::AssociatedTemplate, begin, cursor_);
+                templ.name = type.name;
+                templ.children.push_back(std::move(type.children.front()));
+                templ.children.insert(templ.children.end(), std::make_move_iterator(args.begin()),
+                                      std::make_move_iterator(args.end()));
+                type = std::move(templ);
+                continue;
+            }
+            if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+                return make_node(TypeKind::Unknown, begin, cursor_);
+            }
+            TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
+            templ.name = type.name;
+            templ.children = std::move(args);
+            type = std::move(templ);
             continue;
         }
-        if (type.kind == TypeKind::Template && type.name == "array") {
-            TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
-            fixed.children.push_back(std::move(type));
-            fixed.children.insert(fixed.children.end(), std::make_move_iterator(args.begin()),
+        if (match_operator("<")) {
+            std::vector<TypeRef> args = parse_angle_template_args();
+            if (!match_operator(">")) {
+                return make_node(TypeKind::Unknown, begin, cursor_);
+            }
+            TypeRef templ = make_node(type.kind == TypeKind::Associated
+                                          ? TypeKind::AssociatedTemplate
+                                          : TypeKind::Template,
+                                      begin, cursor_);
+            templ.name = type.name;
+            if (type.kind == TypeKind::Associated) {
+                templ.children.push_back(std::move(type.children.front()));
+            }
+            templ.children.insert(templ.children.end(), std::make_move_iterator(args.begin()),
                                   std::make_move_iterator(args.end()));
-            fixed.value = trim_string(text_between(inner_begin, inner_end));
-            type = std::move(fixed);
+            type = std::move(templ);
             continue;
         }
-        if (type_metadata_base_args_are_types(type)) {
-            TypeRef shaped = make_node(TypeKind::Shaped, begin, cursor_);
-            shaped.children.push_back(std::move(type));
-            shaped.children.insert(shaped.children.end(), std::make_move_iterator(args.begin()),
-                                   std::make_move_iterator(args.end()));
-            shaped.value = trim_string(text_between(inner_begin, inner_end));
-            type = std::move(shaped);
+        if (match_scope_separator()) {
+            if (!at(TokenKind::Identifier)) {
+                return make_node(TypeKind::Unknown, begin, cursor_);
+            }
+            TypeRef associated = make_node(TypeKind::Associated, begin, cursor_ + 1);
+            associated.name = std::string(current().text);
+            ++cursor_;
+            associated.children.push_back(std::move(type));
+            associated.range = range_between(begin, cursor_);
+            type = std::move(associated);
             continue;
         }
-        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
-            return make_node(TypeKind::Unknown, begin, cursor_);
-        }
-        TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
-        templ.name = type.name;
-        templ.children = std::move(args);
-        type = std::move(templ);
-    }
-    while (match_operator("<")) {
-        TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
-        templ.name = type.name;
-        templ.children = parse_angle_template_args();
-        if (!match_operator(">")) {
-            return make_node(TypeKind::Unknown, begin, cursor_);
-        }
-        templ.range = range_between(begin, cursor_);
-        type = std::move(templ);
-    }
-    while (match_scope_separator()) {
-        if (!at(TokenKind::Identifier)) {
-            return make_node(TypeKind::Unknown, begin, cursor_);
-        }
-        TypeRef associated = make_node(TypeKind::Associated, begin, cursor_ + 1);
-        associated.name = std::string(current().text);
-        ++cursor_;
-        associated.children.push_back(std::move(type));
-        associated.range = range_between(begin, cursor_);
-        type = std::move(associated);
+        break;
     }
     return type;
 }

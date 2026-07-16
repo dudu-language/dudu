@@ -1,5 +1,6 @@
 #include "dudu/native/native_header_merge.hpp"
 
+#include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/native/native_header_collision.hpp"
@@ -91,6 +92,10 @@ bool type_ref_lists_equivalent(const std::vector<TypeRef>& lhs, const std::vecto
 }
 
 bool native_function_equivalent(const NativeFunctionDecl& lhs, const NativeFunctionDecl& rhs) {
+    if (lhs.name == rhs.name && lhs.identity.usr.starts_with("c:") &&
+        lhs.identity.usr == rhs.identity.usr) {
+        return true;
+    }
     return lhs.name == rhs.name && lhs.variadic == rhs.variadic &&
            lhs.deleted == rhs.deleted &&
            lhs.min_params == rhs.min_params && lhs.template_params == rhs.template_params &&
@@ -133,6 +138,10 @@ void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source) 
     if (target.native_specialization_args.empty()) {
         target.native_specialization_args = source.native_specialization_args;
     }
+    if (target.native_specialization_requirements.empty()) {
+        target.native_specialization_requirements =
+            source.native_specialization_requirements;
+    }
     target.native_partial_specialization =
         target.native_partial_specialization || source.native_partial_specialization;
     target.native_declaration = target.native_declaration || source.native_declaration;
@@ -160,13 +169,18 @@ void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source) 
             target.fields.push_back(field);
         }
     }
-    std::set<std::string> static_fields;
-    for (const ConstDecl& field : target.static_fields) {
-        static_fields.insert(field.name);
+    std::map<std::string, size_t> static_fields;
+    for (size_t i = 0; i < target.static_fields.size(); ++i) {
+        static_fields.emplace(target.static_fields[i].name, i);
     }
     for (const ConstDecl& field : source.static_fields) {
-        if (static_fields.insert(field.name).second) {
+        const auto existing = static_fields.find(field.name);
+        if (existing == static_fields.end()) {
+            static_fields.emplace(field.name, target.static_fields.size());
             target.static_fields.push_back(field);
+        } else if (expr_missing(target.static_fields[existing->second].value_expr) &&
+                   expr_present(field.value_expr)) {
+            target.static_fields[existing->second].value_expr = field.value_expr;
         }
     }
     for (const FunctionDecl& method : source.methods) {

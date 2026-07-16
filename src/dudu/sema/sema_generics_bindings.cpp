@@ -119,6 +119,13 @@ TypeRef substitute_generic_type_ref(const TypeRef& type, const GenericTypeBindin
     const std::string key = type_ref_head_name(type);
     if (!key.empty()) {
         if (const auto found = bindings.scalar.find(key); found != bindings.scalar.end()) {
+            if (type.kind == TypeKind::Template && !type.children.empty()) {
+                TypeRef out = type;
+                out.name = type_ref_head_name(found->second);
+                out.location = type.location;
+                out.children = substitute_generic_type_ref_list(type.children, bindings);
+                return out;
+            }
             TypeRef out = found->second;
             out.location = type.location;
             return out;

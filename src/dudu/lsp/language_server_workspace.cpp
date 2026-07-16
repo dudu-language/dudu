@@ -93,17 +93,25 @@ void collect_workspace_documents(const std::filesystem::path& root,
 
 } // namespace
 
-std::map<std::string, Document>
-workspace_documents(const std::map<std::string, Document>& open_documents) {
+std::map<std::string, Document> workspace_documents(
+    const std::map<std::string, Document>& open_documents,
+    const std::vector<std::filesystem::path>& workspace_roots) {
     std::map<std::string, Document> out = open_documents;
     std::set<std::filesystem::path> open_paths;
     std::set<std::filesystem::path> indexed_paths;
     std::set<std::filesystem::path> roots;
+    for (const std::filesystem::path& root : workspace_roots) {
+        if (!root.empty()) {
+            roots.insert(canonical_workspace_path(root));
+        }
+    }
     for (const auto& [uri, doc] : open_documents) {
         (void)uri;
         open_paths.insert(canonical_workspace_path(doc.path));
         const std::filesystem::path config = project_config_path(doc.path);
-        roots.insert(config.empty() ? doc.path.parent_path() : config.parent_path());
+        if (!config.empty()) {
+            roots.insert(canonical_workspace_path(config.parent_path()));
+        }
     }
     size_t scanned = 0;
     std::vector<Document> seed_documents;

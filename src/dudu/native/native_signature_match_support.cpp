@@ -378,7 +378,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
         const bool bound_template =
             has_type_ref(expected_ref) && has_type_ref(got_ref) &&
             bind_native_template_type_ast(scope.symbols, binding_pattern, binding_got,
-                                          template_params, bindings);
+                                          template_params, bindings, pack_bindings);
         if (!native_arg_assignable(scope, args[i], got_ref, expected_ref) &&
             !native_numeric_promotion(expected_ref, got_ref) && !bound_template) {
             return std::nullopt;

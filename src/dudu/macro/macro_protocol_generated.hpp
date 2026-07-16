@@ -50,6 +50,8 @@ enum class TypeKind : std::uint32_t {
     Function = 16,
     PackExpansion = 17,
     Shaped = 18,
+    AssociatedTemplate = 19,
+    NativeTransform = 20,
 };
 
 enum class ExpressionKind : std::uint32_t {

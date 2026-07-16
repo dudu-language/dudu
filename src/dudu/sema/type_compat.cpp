@@ -363,10 +363,8 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
 }
 
 bool type_assignment_allowed(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
-    const TypeRef resolved_expected =
-        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, expected));
-    const TypeRef resolved_got =
-        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, got));
+    const TypeRef resolved_expected = resolve_associated_type_ref(symbols, expected);
+    const TypeRef resolved_got = resolve_associated_type_ref(symbols, got);
     const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
     const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
     if (!type_ref_same_shape(canonical_expected, resolved_expected) &&
@@ -434,10 +432,8 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
 
 bool assignment_type_allowed(const Symbols& symbols, const TypeRef& expected, const Expr& expr,
                              const TypeRef& got) {
-    const TypeRef resolved_expected =
-        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, expected));
-    const TypeRef resolved_got =
-        resolve_associated_type_ref(symbols, resolve_alias_ref(symbols, got));
+    const TypeRef resolved_expected = resolve_associated_type_ref(symbols, expected);
+    const TypeRef resolved_got = resolve_associated_type_ref(symbols, got);
     const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);
     const TypeRef canonical_got = canonical_native_type_ref(symbols, resolved_got);
     if (!type_ref_same_shape(canonical_expected, resolved_expected) &&

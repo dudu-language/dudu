@@ -4,6 +4,7 @@
 #include "dudu/parser/ast_parse_utils.hpp"
 
 #include <sstream>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -12,6 +13,42 @@ namespace {
     throw CompileError(type.location,
                        "malformed structured type node: " + std::string(type_kind_name(type.kind)) +
                            " is missing its child type");
+}
+
+template <typename LowerType>
+std::string lower_dependent_type_path(const TypeRef& type, LowerType&& lower_type) {
+    if (type.kind == TypeKind::Associated) {
+        if (type.children.size() != 1) {
+            malformed_type_ref(type);
+        }
+        return lower_dependent_type_path(type.children.front(), lower_type) + "::" +
+               std::string(type.name);
+    }
+    if (type.kind == TypeKind::AssociatedTemplate) {
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        std::ostringstream out;
+        out << lower_dependent_type_path(type.children.front(), lower_type) << "::template "
+            << type.name << '<';
+        for (size_t index = 1; index < type.children.size(); ++index) {
+            if (index > 1) {
+                out << ", ";
+            }
+            out << lower_type(type.children[index]);
+        }
+        out << '>';
+        return out.str();
+    }
+    return lower_type(type);
+}
+
+template <typename LowerType>
+std::string lower_native_transform(const TypeRef& type, LowerType&& lower_type) {
+    if (type.children.size() != 1) {
+        malformed_type_ref(type);
+    }
+    return std::string(type.name) + "(" + lower_type(type.children.front()) + ")";
 }
 
 } // namespace
@@ -115,10 +152,13 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Template:
         return lower_template_type(type);
     case TypeKind::Associated:
-        if (type.children.size() != 1) {
-            malformed_type_ref(type);
-        }
-        return "typename " + lower_cpp_type(type.children.front()) + "::" + std::string(type.name);
+    case TypeKind::AssociatedTemplate:
+        return "typename " +
+               lower_dependent_type_path(type,
+                                         [](const TypeRef& child) { return lower_cpp_type(child); });
+    case TypeKind::NativeTransform:
+        return lower_native_transform(
+            type, [](const TypeRef& child) { return lower_cpp_type(child); });
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -194,11 +234,14 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases);
     case TypeKind::Associated:
-        if (type.children.size() != 1) {
-            malformed_type_ref(type);
-        }
-        return "typename " + lower_cpp_type(type.children.front(), namespace_aliases) +
-               "::" + std::string(type.name);
+    case TypeKind::AssociatedTemplate:
+        return "typename " + lower_dependent_type_path(type, [&](const TypeRef& child) {
+                   return lower_cpp_type(child, namespace_aliases);
+               });
+    case TypeKind::NativeTransform:
+        return lower_native_transform(type, [&](const TypeRef& child) {
+            return lower_cpp_type(child, namespace_aliases);
+        });
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -279,11 +322,14 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases, options);
     case TypeKind::Associated:
-        if (type.children.size() != 1) {
-            malformed_type_ref(type);
-        }
-        return "typename " + lower_cpp_type(type.children.front(), namespace_aliases, options) +
-               "::" + std::string(type.name);
+    case TypeKind::AssociatedTemplate:
+        return "typename " + lower_dependent_type_path(type, [&](const TypeRef& child) {
+                   return lower_cpp_type(child, namespace_aliases, options);
+               });
+    case TypeKind::NativeTransform:
+        return lower_native_transform(type, [&](const TypeRef& child) {
+            return lower_cpp_type(child, namespace_aliases, options);
+        });
     case TypeKind::Pointer:
         if (type.children.empty()) {
             malformed_type_ref(type);

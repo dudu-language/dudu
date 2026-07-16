@@ -69,6 +69,8 @@ bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
     switch (type.kind) {
     case TypeKind::Template:
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
     case TypeKind::Qualified:
     case TypeKind::FixedArray:
     case TypeKind::Shaped:

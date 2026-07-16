@@ -264,15 +264,22 @@ GCC/libstdc++ and Clang/libc++. It covers:
 
 The corresponding real standard-library consumers cover `std.less`,
 `std::chrono::steady_clock::now`, and
-`std.filesystem.path.filename().string()`. Scanner fixes were made in generic
-template, static-method, operator-method, and injected-class-name handling;
-none branch on a library or header name. Native scan cache format version 43
+`std.filesystem.path.filename().string()`. The next compatibility milestone
+also covers associated member templates, template-template and variadic pack
+bindings, partial-specialization requirements, static constexpr metadata,
+compiler type transforms, declarations referenced before their AST-dump
+definition, and C++ index aliases used by `std.string.substr`. Scanner fixes
+were made in generic template, static-method, operator-method,
+injected-class-name, scope qualification, and native identity handling; none
+branch on a library or header name. Native scan cache format version 46
 invalidates metadata produced before these rules.
 
-The canonical executable and negative fixture suites pass. Focused libc++
-validation passes for the native compatibility fixture, filesystem consumer,
-and member type tests. The complete libc++ suite remains an explicit
-portability job because its native scanner tests are intentionally heavy.
+The canonical executable and negative fixture suites pass. All three dogfood
+projects pass, including the webserver HTTP smoke, advanced indexing,
+BLAS/OpenCL targets, and autograd training. Focused libc++ validation passes
+for the native compatibility fixture, filesystem consumer, and member type
+tests. The complete libc++ suite remains an explicit portability job because
+its native scanner tests are intentionally heavy.
 
 Remaining work in this phase is driven by concrete matrix failures: richer
 diagnostics when constraints are unavailable in scanner metadata, additional
@@ -393,6 +400,12 @@ also has one shared rule for variadics, duplicate parameters, parameter types,
 and return types across enum methods, class methods, and free functions.
 `sema_methods.cpp` is 560 lines instead of 597 and
 `sema_declarations.cpp` is 549 lines instead of 575.
+Native partial-specialization matching and constexpr extraction now have their
+own typed semantic owner instead of sharing a 602-line associated-type
+resolver. Clang AST-dump ingestion is likewise split into type normalization,
+scan support, declaration extraction, and a 296-line line orchestrator instead
+of one 755-line parser. These are ownership splits only: native declarations,
+specializations, identities, and generated C++ remain behaviorally unchanged.
 LSP hover presentation now has one Markdown fence/serialization owner, native
 identity path lookup lives at the native boundary, and primitive/native-alias
 hover construction lives with type hover. The general hover dispatcher is 469
@@ -400,6 +413,12 @@ lines instead of 588 and no longer owns those independent semantic tables.
 Direct hover and inlay label parts now also share class previews, native and
 primitive type documentation, layouts, and definition locations.
 `language_server_inlay_type_details.cpp` is 108 lines instead of 216.
+Workspace ownership is explicit. The server records client `rootUri` and
+`workspaceFolders`, adds manifest roots discovered from open documents, and
+does not recursively scan the parent of a configless scratch file. A dedicated
+fixture verifies client-root discovery, manifest sibling discovery, and
+scratch isolation. This prevents unrelated duplicate modules from silently
+changing code actions or navigation results.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.

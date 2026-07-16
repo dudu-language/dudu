@@ -31,6 +31,31 @@ void apply_generic_metadata(ClassDecl& klass, const TemplateContext& context) {
     klass.generic_min_args = generic_min_args(context);
 }
 
+std::optional<size_t> current_class_index(const std::vector<NativeClassScope>& classes) {
+    return classes.empty() ? std::nullopt : classes.back().declaration_index;
+}
+
+std::vector<std::string> dependent_type_names(
+    const NativeHeaderScan& scan, const std::vector<NativeClassScope>& classes,
+    const std::vector<TemplateContext>& templates) {
+    std::vector<std::string> out;
+    for (const NativeClassScope& scope : classes) {
+        if (!scope.declaration_index) {
+            continue;
+        }
+        const ClassDecl& klass = scan.classes[*scope.declaration_index];
+        out.insert(out.end(), klass.generic_params.begin(), klass.generic_params.end());
+    }
+    for (const TemplateContext& context : templates) {
+        for (size_t i = 0; i < context.params.size(); ++i) {
+            if (i >= context.param_is_value.size() || !context.param_is_value[i]) {
+                out.push_back(context.params[i]);
+            }
+        }
+    }
+    return out;
+}
+
 } // namespace
 
 void parse_ast_declaration(AstParseState& state, const std::string& line, int depth,
@@ -108,9 +133,11 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
 
         const TypeRef type_ref =
-            useful_alias ? parse_native_type_text(lowered_type, location) : TypeRef{};
+            useful_alias ? parse_native_type_text(lowered_type, location,
+                                                   dependent_type_names(scan, classes, templates))
+                         : TypeRef{};
         const std::string visible_name =
-            classes.empty() ? name : scan.classes[classes.back().second].name + "." + raw_name;
+            classes.empty() ? name : classes.back().name + "." + raw_name;
         NativeTypeDecl native_type{
             .name = visible_name,
             .native_spelling = useful_alias ? lowered_type : "",
@@ -123,13 +150,19 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             apply_generic_metadata(native_type, templates.back());
         }
         scan.types.push_back(std::move(native_type));
-        if (!classes.empty() && useful_alias) {
-            scan.classes[classes.back().second].type_aliases.push_back(
-                {.name = raw_name,
-                 .cpp_name = visible_name,
-                 .type_ref = type_ref,
-                 .origin_module = current_file,
-                 .location = location});
+        if (const auto class_index = current_class_index(classes);
+            class_index && useful_alias) {
+            TypeAliasDecl alias{.name = raw_name,
+                                .cpp_name = visible_name,
+                                .type_ref = type_ref,
+                                .origin_module = current_file,
+                                .location = location};
+            if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
+                alias.generic_params = templates.back().params;
+                alias.generic_min_args = generic_min_args(templates.back());
+                alias.generic_default_args = templates.back().param_defaults;
+            }
+            scan.classes[*class_index].type_aliases.push_back(std::move(alias));
         }
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Type, .primary = scan.types.size() - 1});
@@ -151,7 +184,13 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         klass.native_partial_specialization = match[2].matched;
         klass.location = location;
         scan.classes.push_back(std::move(klass));
-        classes.push_back({depth, scan.classes.size() - 1});
+        classes.push_back({
+            .depth = depth,
+            .name = name,
+            .declaration_index = scan.classes.size() - 1,
+            .specialization_source_args =
+                identities.find_specialization_arguments(raw_name, location),
+        });
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Class, .primary = scan.classes.size() - 1});
         return;
@@ -170,6 +209,13 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             !public_record && line.find(" definition") != std::string::npos && !templates.empty() &&
             templates.back().kind == TemplateContext::Kind::Class;
         if (!public_record && !internal_template_definition) {
+            if (line.find(" definition") != std::string::npos) {
+                classes.push_back(
+                    {.depth = depth,
+                     .name = name,
+                     .declaration_index = std::nullopt,
+                     .specialization_source_args = {}});
+            }
             return;
         }
 
@@ -202,7 +248,11 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         klass.layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, location);
         klass.location = location;
         scan.classes.push_back(std::move(klass));
-        classes.push_back({depth, scan.classes.size() - 1});
+        classes.push_back(
+            {.depth = depth,
+             .name = name,
+             .declaration_index = scan.classes.size() - 1,
+             .specialization_source_args = {}});
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Class, .primary = scan.classes.size() - 1});
         return;
@@ -229,7 +279,7 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         if (scoped) {
             value_scope = name;
         } else if (!classes.empty()) {
-            value_scope = scan.classes[classes.back().second].name;
+            value_scope = classes.back().name;
         } else {
             value_scope = join_scope(namespaces, "");
             if (!value_scope.empty()) {
@@ -276,11 +326,15 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
 
     if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
         std::regex_search(line, match, method_decl)) {
+        const auto class_index = current_class_index(classes);
+        if (!class_index) {
+            return;
+        }
         FunctionDecl method;
         method.name = match[1].str();
         method.native_identity = scanned_identity(
             identities, NativeCursorKind::Method, method.name, location,
-            scan.classes[classes.back().second].identity.canonical_path + "." + method.name,
+            scan.classes[*class_index].identity.canonical_path + "." + method.name,
             current_file);
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             method.generic_params = templates.back().params;
@@ -303,28 +357,31 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
         method.deleted = line.find(" delete", line.rfind('\'')) != std::string::npos;
         method.location = location;
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].methods.push_back(std::move(method));
+        scan.classes[*class_index].methods.push_back(std::move(method));
         param_targets.push_back({.depth = depth,
                                  .kind = ParamTargetKind::Method,
-                                 .primary = class_index,
-                                 .secondary = scan.classes[class_index].methods.size() - 1});
+                                 .primary = *class_index,
+                                 .secondary = scan.classes[*class_index].methods.size() - 1});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Method,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].methods.size() - 1});
+                                   .primary = *class_index,
+                                   .secondary = scan.classes[*class_index].methods.size() - 1});
         return;
     }
 
     if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
         std::regex_search(line, match, constructor_decl)) {
+        const auto class_index = current_class_index(classes);
+        if (!class_index) {
+            return;
+        }
         const std::vector<std::string> params =
             qualify_scoped_types(scan, namespaces, classes, signature_params(match[2].str()));
         FunctionDecl constructor;
         constructor.name = "init";
         constructor.native_identity = scanned_identity(
             identities, NativeCursorKind::Constructor, match[1].str(), location,
-            scan.classes[classes.back().second].identity.canonical_path + ".init", current_file);
+            scan.classes[*class_index].identity.canonical_path + ".init", current_file);
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(constructor.params.size());
@@ -333,25 +390,27 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             constructor.params.push_back(std::move(decl));
         }
         constructor.location = location;
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].methods.push_back(std::move(constructor));
+        scan.classes[*class_index].methods.push_back(std::move(constructor));
         param_targets.push_back({.depth = depth,
                                  .kind = ParamTargetKind::Method,
-                                 .primary = class_index,
-                                 .secondary = scan.classes[class_index].methods.size() - 1});
+                                 .primary = *class_index,
+                                 .secondary = scan.classes[*class_index].methods.size() - 1});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Method,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].methods.size() - 1});
+                                   .primary = *class_index,
+                                   .secondary = scan.classes[*class_index].methods.size() - 1});
         return;
     }
 
     if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
         std::regex_search(line, match, field_decl)) {
+        const auto class_index = current_class_index(classes);
+        if (!class_index) {
+            return;
+        }
         const std::string type =
             qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].fields.push_back(
+        scan.classes[*class_index].fields.push_back(
             {.name = match[1].str(),
              .type_ref = parse_native_type_text(type, location),
              .value_expr = {},
@@ -359,8 +418,8 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
              .location = location});
         comment_targets.push_back({.depth = depth,
                                    .kind = CommentTargetKind::Field,
-                                   .primary = class_index,
-                                   .secondary = scan.classes[class_index].fields.size() - 1});
+                                   .primary = *class_index,
+                                   .secondary = scan.classes[*class_index].fields.size() - 1});
         return;
     }
 
@@ -369,9 +428,12 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
          line.find("protected '") != std::string::npos ||
          line.find("private '") != std::string::npos) &&
         std::regex_search(line, match, base_decl)) {
-        add_base_class(scan.classes[classes.back().second],
-                       qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str())),
-                       location);
+        if (const auto class_index = current_class_index(classes)) {
+            add_base_class(
+                scan.classes[*class_index],
+                qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str())),
+                location);
+        }
         return;
     }
 
@@ -410,8 +472,11 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
     const std::string type =
         qualify_scoped_type(scan, namespaces, classes, dudu_type(match[2].str()));
     if (!classes.empty()) {
-        const size_t class_index = classes.back().second;
-        scan.classes[class_index].static_fields.push_back(
+        const auto class_index = current_class_index(classes);
+        if (!class_index) {
+            return;
+        }
+        scan.classes[*class_index].static_fields.push_back(
             {.name = raw_name,
              .cpp_name = {},
              .type_ref = parse_native_type_text(type, location),
@@ -422,8 +487,8 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         comment_targets.push_back(
             {.depth = depth,
              .kind = CommentTargetKind::StaticField,
-             .primary = class_index,
-             .secondary = scan.classes[class_index].static_fields.size() - 1});
+             .primary = *class_index,
+             .secondary = scan.classes[*class_index].static_fields.size() - 1});
         return;
     }
     if (raw_name == "dudu_probe") {

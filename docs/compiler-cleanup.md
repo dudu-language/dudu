@@ -15,7 +15,7 @@ Measured on July 16, 2026 from `before_cleanup`:
 - tracked hand-written and generated compiler C++: 67,599 lines in 409 files
 - complete `scripts/test_fast.sh`: 56.52 seconds
 - peak RSS during that run: 713,176 KiB
-- all 27 CTest executables and the LSP smoke, recovery, synchronization, and
+- all 28 CTest executables and the LSP smoke, recovery, synchronization, and
   matrix checks passed
 
 Generated protocol sources are tracked separately from hand-written size
@@ -210,6 +210,28 @@ Outcome:
 - reduced `sema_methods.cpp` from 597 to 560 lines and
   `sema_declarations.cpp` from 575 to 549 lines without adding another semantic
   abstraction layer
+- extended the structured native type model for associated member templates
+  and compiler type transforms instead of interpreting dependent C++ spellings
+  during overload matching or emission
+- made partial-specialization matching bind scalar, value, template-template,
+  and variadic pack parameters through one typed binding model, including
+  well-formedness requirements and static constexpr values
+- completed native scan qualification after declaration collection, so types
+  referenced before their declaration receive the same scoped identity as
+  types encountered later in the AST dump
+- canonicalized native `size_type` and `difference_type` aliases to `usize`
+  and `isize` after associated-type resolution; ordinary Dudu integer
+  assignment remains strict
+- restricted Clang-USR deduplication to declarations with the same imported
+  binding, preserving distinct aliases that share a canonical native entity
+- separated native partial-specialization matching, requirement checks,
+  binding substitution, and constexpr value extraction from associated member
+  type resolution; the two semantic units are 290 and 308 lines instead of one
+  602-line mixed implementation
+- split Clang AST-dump ingestion into type spelling/normalization, scan support,
+  declaration extraction, and line orchestration; the former 755-line parser
+  is now a 296-line orchestrator with 185-line type and 291-line support units
+  behind the same internal scan API
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus
@@ -290,10 +312,19 @@ Outcome:
 - reduced `language_server_inlay_type_details.cpp` from 216 to 108 lines;
   inlay serialization remains local while type meaning and presentation live
   with type hover
+- made workspace discovery consume `rootUri` and `workspaceFolders` from the
+  client and manifest roots discovered from open documents
+- stopped configless scratch documents from recursively indexing their parent
+  directory; this removes duplicate unrelated modules from completion and code
+  action queries without making scratch files unavailable
+- added a dedicated workspace fixture covering explicit client roots,
+  manifest-backed sibling discovery, and scratch-parent isolation
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator
-assertions.
+assertions. The complete 28-target CTest suite and `scripts/test_fast.sh`
+remain green; the latest bounded run took 69.65 seconds with 733,856 KiB peak
+RSS.
 
 ### Macros
 

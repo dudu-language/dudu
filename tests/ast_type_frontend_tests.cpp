@@ -352,6 +352,12 @@ void test_native_header_types_split_cpp_templates() {
            "tuple[__decay_and_strip[_Elements].__type...]");
     assert(dudu::dudu_type("typename iterator_traits<_IIter>::difference_type") ==
            "iterator_traits[_IIter].difference_type");
+    assert(dudu::dudu_type(
+               "typename __gnu_cxx::__alloc_traits<_Alloc>::template rebind<_Tp>::other") ==
+           "__gnu_cxx.__alloc_traits[_Alloc].rebind[_Tp].other");
+    assert(dudu::dudu_type(
+               "typename std::pointer_traits<_Ptr>::template rebind<const _Tp>") ==
+           "std.pointer_traits[_Ptr].rebind[const[_Tp]]");
     assert(dudu::dudu_type("int (*)(float, const char *)") == "fn(f32, cstr) -> i32");
     assert(dudu::dudu_type("void (*)(void)") == "fn() -> void");
     assert(dudu::signature_params("int (void)").empty());
@@ -365,6 +371,28 @@ void test_native_header_types_split_cpp_templates() {
     assert(associated.children.front().kind == dudu::TypeKind::Template);
     assert(dudu::type_ref_text(associated) == "meta.Result[T].value_type");
     assert(dudu::lower_cpp_type(associated) == "typename meta::Result<T>::value_type");
+
+    const dudu::TypeRef nested =
+        dudu::parse_type_text("meta.Traits[A].rebind[T].other");
+    assert(nested.kind == dudu::TypeKind::Associated);
+    assert(nested.children.size() == 1);
+    assert(nested.children.front().kind == dudu::TypeKind::AssociatedTemplate);
+    assert(nested.children.front().name == "rebind");
+    assert(nested.children.front().children.size() == 2);
+    assert(dudu::type_ref_text(nested) == "meta.Traits[A].rebind[T].other");
+    assert(dudu::lower_cpp_type(nested) ==
+           "typename meta::Traits<A>::template rebind<T>::other");
+
+    const dudu::TypeRef nested_const =
+        dudu::parse_type_text("std.pointer_traits[Ptr].rebind[const[T]]");
+    assert(nested_const.kind == dudu::TypeKind::AssociatedTemplate);
+    assert(nested_const.name == "rebind");
+    assert(nested_const.children.size() == 2);
+    assert(nested_const.children.front().kind == dudu::TypeKind::Template);
+    assert(nested_const.children[1].kind == dudu::TypeKind::Const);
+    assert(dudu::lower_cpp_type(nested_const) ==
+           "typename std::pointer_traits<Ptr>::template rebind<const T>");
+
 }
 
 void test_native_template_binding_resolves_alias_type_refs() {
@@ -404,7 +432,7 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
     signature.min_params = 0;
     dudu::TypeRef pack_param = dudu::pack_expansion_type_ref(dudu::parse_type_text("T"), {});
     dudu::set_signature_param_types(signature, {pack_param});
-    dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T...]"));
 
     dudu::NativePackBindingMap packs;
     packs["T"] = {dudu::parse_type_text("i32"), dudu::parse_type_text("f32")};
@@ -427,7 +455,7 @@ void test_bound_native_template_substitution_is_per_field() {
     signature.min_params = 0;
     dudu::TypeRef pack_param = dudu::pack_expansion_type_ref(dudu::parse_type_text("T"), {});
     dudu::set_signature_param_types(signature, {pack_param, dudu::parse_type_text("U")});
-    dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T...]"));
 
     dudu::NativeTemplateBindings bindings;
     const dudu::TypeRef messy_native_binding =
@@ -448,6 +476,33 @@ void test_bound_native_template_substitution_is_per_field() {
     assert(return_type.children.size() == 2);
     assert(return_type.children[0].name == "i32");
     assert(return_type.children[1].name == "f32");
+}
+
+void test_native_template_match_infers_nested_type_pack() {
+    dudu::Symbols symbols;
+    dudu::FunctionSignature signature;
+    signature.template_params = {"Index", "T..."};
+    signature.template_param_is_value = {true, false};
+    signature.min_params = 1;
+    dudu::set_signature_param_types(
+        signature, {dudu::parse_type_text("&std.tuple[T...]")});
+    dudu::set_signature_return_type(
+        signature, dudu::parse_type_text("&std._Nth_type[Index, T...].type"));
+    symbols.native_function_signatures["get"] = {signature};
+
+    dudu::FunctionScope scope(symbols);
+    scope.local_type_refs["value"] =
+        dudu::parse_type_text("std.tuple[std.string, i32]");
+    const std::optional<dudu::FunctionSignature> matched =
+        dudu::match_native_signature(
+            scope, "get", {dudu::parse_type_text("1")},
+            {dudu::parse_expr_text("value")}, nullptr);
+    assert(matched.has_value());
+    const std::string return_type =
+        dudu::type_ref_text(dudu::signature_return_type_ref(*matched));
+    if (return_type != "&std._Nth_type[1, std.string, i32].type") {
+        throw std::runtime_error("nested native type pack resolved as " + return_type);
+    }
 }
 
 void test_native_variadic_bare_pack_uses_type_ref_shape() {
@@ -633,6 +688,7 @@ int main() {
         test_native_template_binding_resolves_alias_type_refs();
         test_bound_native_template_pack_substitution_uses_type_refs();
         test_bound_native_template_substitution_is_per_field();
+        test_native_template_match_infers_nested_type_pack();
         test_native_variadic_bare_pack_uses_type_ref_shape();
         test_native_variadic_pack_keeps_leading_template_binding();
         test_explicit_native_template_value_args_use_type_refs();

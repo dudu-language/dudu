@@ -34,6 +34,11 @@ class NativeCursorIdentityIndex {
                                              std::string_view semantic_path) const;
     std::optional<TypeLayout> find_semantic_layout(NativeCursorKind kind,
                                                    std::string_view semantic_path) const;
+    void insert_specialization_arguments(std::string name, SourceLocation location,
+                                         std::vector<std::string> arguments);
+    std::vector<std::string>
+    find_specialization_arguments(std::string_view name,
+                                  const SourceLocation& location) const;
     bool empty() const;
     std::string serialize() const;
     static NativeCursorIdentityIndex deserialize(std::string_view text);

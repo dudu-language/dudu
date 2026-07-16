@@ -52,8 +52,20 @@ std::string render_type(const p::TypeRef& type) {
     switch (type.kind) {
     case p::TypeKind::Named:
     case p::TypeKind::Qualified:
-    case p::TypeKind::Associated:
         return type.name;
+    case p::TypeKind::Associated:
+        return child() + "." + type.name;
+    case p::TypeKind::AssociatedTemplate: {
+        if (type.children.empty())
+            return "?." + type.name + "[]";
+        std::vector<std::string> args;
+        for (std::size_t index = 1; index < type.children.size(); ++index)
+            args.push_back(render_type(type.children[index]));
+        return render_type(type.children.front()) + "." + type.name + "[" +
+               join(args, ", ") + "]";
+    }
+    case p::TypeKind::NativeTransform:
+        return type.name + "(" + child() + ")";
     case p::TypeKind::Value:
         return type.value;
     case p::TypeKind::Template:

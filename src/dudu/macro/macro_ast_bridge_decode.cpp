@@ -182,6 +182,7 @@ ClassDecl from_protocol(const p::ClassDecl& value, const std::string& module_pat
                   .generic_min_args = {},
                   .generic_default_args = {},
                   .native_specialization_args = {},
+                  .native_specialization_requirements = {},
                   .native_partial_specialization = false,
                   .base_class_refs = {},
                   .type_aliases = {},

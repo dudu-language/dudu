@@ -80,6 +80,8 @@ enum class TypeKind {
     Function,
     PackExpansion,
     Shaped,
+    AssociatedTemplate,
+    NativeTransform,
 };
 
 enum class ReferenceKind {
@@ -293,6 +295,9 @@ struct TypeAliasDecl {
     std::string name;
     std::string cpp_name;
     TypeRef type_ref;
+    std::vector<std::string> generic_params{};
+    std::optional<size_t> generic_min_args{};
+    std::vector<TypeRef> generic_default_args{};
     std::string origin_module;
     SourceLocation location;
     std::string doc_comment{};
@@ -442,6 +447,7 @@ struct ClassDecl {
     std::optional<size_t> generic_min_args;
     std::vector<TypeRef> generic_default_args;
     std::vector<TypeRef> native_specialization_args;
+    std::vector<TypeRef> native_specialization_requirements;
     bool native_partial_specialization = false;
     std::vector<BaseClassDecl> base_class_refs;
     std::vector<TypeAliasDecl> type_aliases;

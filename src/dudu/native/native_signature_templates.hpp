@@ -6,10 +6,12 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace dudu {
 
 using NativeTemplateBindings = std::map<std::string, TypeRef>;
+using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
 using NativeTemplateParameterNames = std::set<std::string>;
 
 NativeTemplateParameterNames
@@ -24,5 +26,10 @@ bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expect
                                    const TypeRef& got,
                                    const NativeTemplateParameterNames& template_params,
                                    NativeTemplateBindings& bindings);
+bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
+                                   const TypeRef& got,
+                                   const NativeTemplateParameterNames& template_params,
+                                   NativeTemplateBindings& bindings,
+                                   NativePackBindingMap& pack_bindings);
 
 } // namespace dudu

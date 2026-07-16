@@ -78,6 +78,7 @@ class LanguageServer {
     std::map<std::string, size_t> document_revisions_;
     mutable size_t workspace_cache_revision_ = std::numeric_limits<size_t>::max();
     mutable std::map<std::string, Document> workspace_cache_;
+    std::vector<std::filesystem::path> workspace_roots_;
     InlayHintOptions inlay_hint_options_{};
     bool shutdown_ = false;
     bool exit_ = false;
@@ -227,6 +228,29 @@ class LanguageServer {
     }
 
     void configure_initialize(const Json* params) {
+        workspace_roots_.clear();
+        const auto add_workspace_uri = [&](const Json* value) {
+            const std::string uri = string_value(value);
+            if (uri.starts_with("file://")) {
+                workspace_roots_.emplace_back(file_uri_to_path(uri));
+            }
+        };
+        if (params != nullptr) {
+            if (const JsonArray* folders =
+                    params->get("workspaceFolders") == nullptr
+                        ? nullptr
+                        : params->get("workspaceFolders")->array()) {
+                for (const Json& folder : *folders) {
+                    add_workspace_uri(folder.get("uri"));
+                }
+            }
+            add_workspace_uri(params->get("rootUri"));
+            if (const std::string root_path = string_value(params->get("rootPath"));
+                !root_path.empty()) {
+                workspace_roots_.emplace_back(root_path);
+            }
+        }
+
         const Json* init = params == nullptr ? nullptr : params->get("initializationOptions");
         const Json* hints = init == nullptr ? nullptr : init->get("inlayHints");
         inlay_hint_options_.inferred_types =
@@ -239,6 +263,8 @@ class LanguageServer {
             bool_setting(hints, "parameterNames", inlay_hint_options_.parameter_names);
         inlay_hint_options_.argument_types =
             bool_setting(hints, "argumentTypes", inlay_hint_options_.argument_types);
+        workspace_cache_revision_ = std::numeric_limits<size_t>::max();
+        workspace_cache_.clear();
     }
 
     void did_open(const Json* params) {
@@ -518,7 +544,7 @@ class LanguageServer {
 
     const std::map<std::string, Document>& cached_workspace_documents() const {
         if (workspace_cache_revision_ != documents_revision_) {
-            workspace_cache_ = workspace_documents(documents_);
+            workspace_cache_ = workspace_documents(documents_, workspace_roots_);
             workspace_cache_revision_ = documents_revision_;
         }
         return workspace_cache_;

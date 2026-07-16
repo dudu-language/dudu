@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics_detail.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 
@@ -35,21 +36,6 @@ std::string replace_type_identifier(std::string type, const std::string& name,
         }
     }
     return type;
-}
-
-std::map<std::string, TypeRef>
-explicit_template_type_ref_bindings(const std::vector<std::string>& names,
-                                    const std::vector<TypeRef>& args) {
-    std::map<std::string, TypeRef> out;
-    const size_t count = std::min(names.size(), args.size());
-    for (size_t i = 0; i < count; ++i) {
-        std::string name = names[i];
-        if (name.ends_with("...")) {
-            name.resize(name.size() - 3);
-        }
-        out.emplace(std::move(name), args[i]);
-    }
-    return out;
 }
 
 std::string join_native_type_ref_spellings(const std::vector<TypeRef>& types) {
@@ -161,8 +147,11 @@ bound_pack_placeholder(const TypeRef& type, const NativePackBindingMap& pack_bin
 
 std::optional<std::vector<TypeRef>>
 structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap& pack_bindings) {
+    if (param_type.kind != TypeKind::PackExpansion || param_type.children.size() != 1) {
+        return std::nullopt;
+    }
     const std::optional<std::string> pack_name =
-        bound_pack_placeholder(param_type, pack_bindings);
+        bound_pack_placeholder(param_type.children.front(), pack_bindings);
     if (!pack_name) {
         return std::nullopt;
     }
@@ -170,7 +159,13 @@ structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap&
     if (found == pack_bindings.end()) {
         return std::nullopt;
     }
-    return found->second;
+    std::vector<TypeRef> expanded;
+    expanded.reserve(found->second.size());
+    for (const TypeRef& binding : found->second) {
+        expanded.push_back(substitute_type_ref(
+            param_type.children.front(), {{*pack_name, binding}}));
+    }
+    return expanded;
 }
 
 TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& pack_bindings,
@@ -195,8 +190,8 @@ TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& 
 FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
                                                          FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
-    const std::map<std::string, TypeRef> ref_bindings =
-        explicit_template_type_ref_bindings(signature.template_params, args);
+    const GenericTypeBindings bindings =
+        generic_type_bindings(signature.template_params, args);
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
@@ -204,7 +199,8 @@ FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
             require_signature_type_ref(signature_param_type_ref(signature, i), "parameter");
         param_types.push_back(resolve_associated_type_ref(
             symbols,
-            normalize_cpp_type_artifacts_ref(substitute_type_ref(param_type, ref_bindings))));
+            normalize_cpp_type_artifacts_ref(
+                substitute_generic_type_ref(param_type, bindings))));
     }
     set_signature_param_types(signature, std::move(param_types));
     const TypeRef return_type =
@@ -212,7 +208,8 @@ FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
     set_signature_return_type(
         signature,
         resolve_associated_type_ref(symbols, normalize_cpp_type_artifacts_ref(
-                                                 substitute_type_ref(return_type, ref_bindings))));
+                                                 substitute_generic_type_ref(return_type,
+                                                                             bindings))));
     return signature;
 }
 

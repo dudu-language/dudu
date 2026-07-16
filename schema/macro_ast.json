@@ -4,7 +4,7 @@
   "enums": [
     {"name": "Visibility", "values": ["Default", "Private"]},
     {"name": "DeclarationKind", "values": ["Unknown", "Class", "Enum", "Function", "Field", "Constant", "Implementation"]},
-    {"name": "TypeKind", "values": ["Unknown", "Named", "Qualified", "Value", "Template", "Associated", "Pointer", "Reference", "Const", "Volatile", "Atomic", "Device", "Storage", "Shared", "Static", "FixedArray", "Function", "PackExpansion", "Shaped"]},
+    {"name": "TypeKind", "values": ["Unknown", "Named", "Qualified", "Value", "Template", "Associated", "Pointer", "Reference", "Const", "Volatile", "Atomic", "Device", "Storage", "Shared", "Static", "FixedArray", "Function", "PackExpansion", "Shaped", "AssociatedTemplate", "NativeTransform"]},
     {"name": "ExpressionKind", "values": ["Missing", "Name", "BoolLiteral", "IntLiteral", "FloatLiteral", "StringLiteral", "NoneLiteral", "Unary", "Binary", "Call", "TemplateCall", "Member", "Index", "ListLiteral", "DictLiteral", "DictEntry", "NamedArg", "Slice", "Ellipsis", "NewAxis", "PackExpansion", "SetLiteral", "TupleLiteral", "CppEscape"]},
     {"name": "StatementKind", "values": ["Unknown", "Expression", "Variable", "Assign", "CompoundAssign", "Return", "If", "Elif", "Else", "Match", "Case", "While", "For", "Break", "Continue", "Try", "Except", "Raise", "Delete", "Assert", "DebugAssert", "CppEscape", "Pass"]},
     {"name": "DiagnosticSeverity", "values": ["Note", "Warning", "Error"]},

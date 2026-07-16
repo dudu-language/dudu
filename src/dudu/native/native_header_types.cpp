@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_lower.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <regex>
 #include <string_view>
@@ -91,33 +92,90 @@ size_t matching_angle(std::string_view text, size_t open) {
     return std::string::npos;
 }
 
+std::optional<std::string> lower_compiler_type_transform(const std::string& type) {
+    for (std::string_view name :
+         {"__remove_cv", "__remove_reference", "__remove_cvref", "__underlying_type"}) {
+        if (!starts_with(type, name) || type.size() <= name.size() ||
+            type[name.size()] != '(') {
+            continue;
+        }
+        const size_t close = matching_paren(type, name.size());
+        if (close != type.size() - 1) {
+            continue;
+        }
+        const std::string argument =
+            trim_copy(type.substr(name.size() + 1, close - name.size() - 1));
+        if (argument.empty()) {
+            return std::nullopt;
+        }
+        return std::string(name) + "[" + dudu_type(argument) + "]";
+    }
+    return std::nullopt;
+}
+
+std::string lower_template_type(std::string type);
+
+std::vector<std::string> split_cpp_scope_path(std::string_view type) {
+    std::vector<std::string> parts;
+    int angle_depth = 0;
+    size_t start = 0;
+    for (size_t index = 0; index < type.size(); ++index) {
+        if (type[index] == '<') {
+            ++angle_depth;
+            continue;
+        }
+        if (type[index] == '>') {
+            --angle_depth;
+            continue;
+        }
+        if (angle_depth == 0 && index + 1 < type.size() && type[index] == ':' &&
+            type[index + 1] == ':') {
+            parts.push_back(trim_copy(std::string(type.substr(start, index - start))));
+            start = index + 2;
+            ++index;
+        }
+    }
+    parts.push_back(trim_copy(std::string(type.substr(start))));
+    return parts;
+}
+
 std::string collapse_template_associated_type(std::string type) {
     constexpr std::string_view typename_prefix = "typename ";
     if (starts_with(type, typename_prefix)) {
         type = trim_copy(type.substr(typename_prefix.size()));
     }
-    const size_t open = type.find('<');
-    if (open == std::string::npos) {
+    size_t template_keyword = type.find("::template ");
+    while (template_keyword != std::string::npos) {
+        type.erase(template_keyword + 2, 9);
+        template_keyword = type.find("::template ", template_keyword + 2);
+    }
+
+    const std::vector<std::string> parts = split_cpp_scope_path(type);
+    const auto first_template =
+        std::ranges::find_if(parts, [](const std::string& part) {
+            return part.find('<') != std::string::npos;
+        });
+    if (first_template == parts.end()) {
         return type;
     }
-    const size_t close = matching_angle(type, open);
-    if (close == std::string::npos) {
+    const size_t base_end = static_cast<size_t>(std::distance(parts.begin(), first_template));
+    if (base_end + 1 == parts.size()) {
         return type;
     }
-    std::string suffix = trim_copy(type.substr(close + 1));
-    if (suffix.starts_with("::")) {
-        suffix = trim_copy(suffix.substr(2));
-    } else if (suffix.starts_with(".")) {
-        suffix = trim_copy(suffix.substr(1));
-    } else {
-        return type;
+    std::string base;
+    for (size_t index = 0; index <= base_end; ++index) {
+        if (index != 0) {
+            base += "::";
+        }
+        base += parts[index];
     }
-    if (suffix.empty() || suffix.find_first_not_of(
-                              "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_") !=
-                              std::string::npos) {
-        return type;
+
+    std::string out = lower_template_type(base);
+    for (size_t index = base_end + 1; index < parts.size(); ++index) {
+        out += ".";
+        out += lower_template_type(parts[index]);
     }
-    return dudu_type(trim_copy(type.substr(0, close + 1))) + "." + suffix;
+    return out;
 }
 
 std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
@@ -285,6 +343,9 @@ std::string dudu_type(std::string type) {
     }
     if (type == "const char *")
         return "cstr";
+    if (const auto transform = lower_compiler_type_transform(type)) {
+        return *transform;
+    }
     if (const std::optional<std::string> function_pointer = lower_function_pointer_type(type)) {
         return *function_pointer;
     }
@@ -301,7 +362,6 @@ std::string dudu_type(std::string type) {
             break;
         }
     }
-    type = collapse_template_associated_type(std::move(type));
     bool is_const = false;
     while (starts_with(type, "const ") || ends_with(type, " const")) {
         is_const = true;
@@ -327,6 +387,7 @@ std::string dudu_type(std::string type) {
         }
         return reference_depth == 1 ? "&" + out : out;
     }
+    type = collapse_template_associated_type(std::move(type));
     std::string out = lower_template_type(type);
     if (is_const)
         out = "const[" + out + "]";

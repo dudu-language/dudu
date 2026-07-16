@@ -10,8 +10,6 @@
 
 namespace dudu {
 
-using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
-
 FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
                                                          FunctionSignature signature,
                                                          const std::vector<TypeRef>& args);

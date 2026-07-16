@@ -28,6 +28,7 @@ std::string_view named_type_head(const TypeRef& type) {
     case TypeKind::Qualified:
     case TypeKind::Template:
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
         return type.name.str();
     default:
         return {};

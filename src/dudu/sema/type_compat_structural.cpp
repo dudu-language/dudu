@@ -27,6 +27,8 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Qualified:
     case TypeKind::Template:
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
         if (strip_c_tag_prefix(type_ref_head_name(expected)) !=
             strip_c_tag_prefix(type_ref_head_name(got))) {
             return false;

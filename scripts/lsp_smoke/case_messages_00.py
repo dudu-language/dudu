@@ -1,5 +1,12 @@
 messages.extend([
-    lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"rootUri": Path(repo_root).resolve().as_uri()},
+        }
+    ),
     lsp_message(
         {
             "jsonrpc": "2.0",

@@ -93,6 +93,8 @@ std::string compute_base_type(const TypeRef& type) {
     case TypeKind::Template:
         return type_ref_head_name(type);
     case TypeKind::Associated:
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
         return type.children.empty() ? std::string{} : compute_base_type(type.children.front());
     case TypeKind::Pointer:
     case TypeKind::Reference:
@@ -182,6 +184,14 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
     case TypeKind::Associated:
         if (type.children.size() == 1) {
             return unknown_type_ref(symbols, type.children.front());
+        }
+        return std::nullopt;
+    case TypeKind::AssociatedTemplate:
+    case TypeKind::NativeTransform:
+        for (const TypeRef& child : type.children) {
+            if (const auto unknown = unknown_type_ref(symbols, child)) {
+                return unknown;
+            }
         }
         return std::nullopt;
     case TypeKind::Shaped:
