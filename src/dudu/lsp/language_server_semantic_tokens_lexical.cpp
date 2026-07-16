@@ -1,36 +1,28 @@
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
+#include "dudu/lsp/language_server_semantic_token_wire.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <initializer_list>
 #include <optional>
-#include <sstream>
 #include <string_view>
 #include <vector>
 
 namespace dudu {
 namespace {
 
-struct SemanticToken {
-    int line = 0;
-    int column = 0;
-    int length = 0;
-    int type = 0;
-    int modifiers = 0;
-};
+constexpr int token_type = semantic_token_type::type;
+constexpr int token_class = semantic_token_type::class_;
+constexpr int token_enum = semantic_token_type::enum_;
+constexpr int token_function = semantic_token_type::function;
+constexpr int token_variable = semantic_token_type::variable;
+constexpr int token_macro = semantic_token_type::macro;
+constexpr int token_keyword = semantic_token_type::keyword;
+constexpr int token_number = semantic_token_type::number;
+constexpr int token_string = semantic_token_type::string;
+constexpr int token_operator = semantic_token_type::operator_;
 
-constexpr int token_type = 1;
-constexpr int token_class = 2;
-constexpr int token_enum = 3;
-constexpr int token_function = 4;
-constexpr int token_variable = 6;
-constexpr int token_macro = 10;
-constexpr int token_keyword = 11;
-constexpr int token_number = 12;
-constexpr int token_string = 13;
-constexpr int token_operator = 14;
-
-constexpr int mod_readonly = 4;
+constexpr int mod_readonly = semantic_token_modifier::readonly;
 
 bool word_is(std::string_view word, std::initializer_list<std::string_view> words) {
     for (const std::string_view candidate : words) {
@@ -92,41 +84,6 @@ int token_type_for_word(std::string_view word, std::optional<std::string_view> p
         return all_caps ? token_variable : token_class;
     }
     return token_variable;
-}
-
-std::string encode_tokens(std::vector<SemanticToken> tokens) {
-    std::sort(tokens.begin(), tokens.end(),
-              [](const SemanticToken& left, const SemanticToken& right) {
-                  if (left.line != right.line) {
-                      return left.line < right.line;
-                  }
-                  if (left.column != right.column) {
-                      return left.column < right.column;
-                  }
-                  if (left.length != right.length) {
-                      return left.length < right.length;
-                  }
-                  return left.type < right.type;
-              });
-
-    std::ostringstream out;
-    out << "{\"data\":[";
-    int previous_line = 0;
-    int previous_column = 0;
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        const SemanticToken& token = tokens[i];
-        if (i > 0) {
-            out << ',';
-        }
-        const int delta_line = i == 0 ? token.line : token.line - previous_line;
-        const int delta_column = delta_line == 0 ? token.column - previous_column : token.column;
-        out << delta_line << ',' << delta_column << ',' << token.length << ',' << token.type << ','
-            << token.modifiers;
-        previous_line = token.line;
-        previous_column = token.column;
-    }
-    out << "]}";
-    return out.str();
 }
 
 void collect_string(std::string_view source, size_t& i, int& column,
@@ -264,7 +221,7 @@ std::string lexical_semantic_tokens_json(std::string_view source) {
             previous_keyword.reset();
         }
     }
-    return encode_tokens(std::move(tokens));
+    return encode_semantic_tokens(std::move(tokens));
 }
 
 } // namespace dudu

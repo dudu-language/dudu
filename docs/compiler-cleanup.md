@@ -190,8 +190,24 @@ CLI/project smoke, generated-CMake backend fixtures, `raymarch-dd`,
 - split implementation files by LSP capability when they mix unrelated query
   behavior
 
+Outcome:
+
+- moved semantic-token record layout, legend order, modifiers, source-range
+  insertion, sorting, and LSP delta encoding into one wire-format unit
+- removed the second token record and delta encoder from invalid-source
+  lexical highlighting; semantic and recovery paths now cannot silently drift
+  to different protocol legends
+- separated expression, member, local-binding, type, and statement token
+  inference from module declaration traversal
+- consolidated duplicate top-level and method parameter/body traversal behind
+  one function collector while preserving implicit `self` typing
+- reduced `language_server_semantic_tokens.cpp` from 717 to 272 lines; the
+  expression/body collector is 396 lines and the shared wire implementation is
+  83 lines
+
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
-dogfood latency checks.
+dogfood latency checks, including decoded semantic-token and macro-decorator
+assertions.
 
 ### Macros
 

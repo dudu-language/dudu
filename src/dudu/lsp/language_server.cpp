@@ -15,6 +15,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_references.hpp"
+#include "dudu/lsp/language_server_semantic_token_wire.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbol_results.hpp"
@@ -289,11 +290,9 @@ class LanguageServer {
                "\"referencesProvider\":true,"
                "\"renameProvider\":{\"prepareProvider\":true},"
                "\"codeActionProvider\":true,"
-               "\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"namespace\",\"type\","
-               "\"class\",\"enum\",\"function\",\"method\",\"variable\",\"parameter\","
-               "\"property\",\"enumMember\",\"macro\",\"keyword\",\"number\",\"string\","
-               "\"operator\"],\"tokenModifiers\":[\"declaration\",\"definition\",\"readonly\","
-               "\"static\",\"native\",\"unresolved\"]},\"full\":true},"
+               "\"semanticTokensProvider\":{\"legend\":" +
+               std::string(semantic_token_legend_json()) +
+               ",\"full\":true},"
                "\"hoverProvider\":true,"
                "\"inlayHintProvider\":{\"resolveProvider\":false},"
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
