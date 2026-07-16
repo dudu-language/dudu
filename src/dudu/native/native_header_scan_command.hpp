@@ -4,6 +4,7 @@
 #include "dudu/native/native_headers.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -11,6 +12,8 @@
 namespace dudu {
 
 std::string native_header_unquoted(std::string value);
+std::optional<std::filesystem::path>
+resolve_existing_native_header_path(const ImportDecl& import, const NativeHeaderOptions& options);
 std::string native_header_read_text(const std::filesystem::path& path);
 void native_header_write_text(const std::filesystem::path& path, const std::string& text);
 

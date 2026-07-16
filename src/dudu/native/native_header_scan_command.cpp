@@ -173,6 +173,18 @@ std::string native_header_unquoted(std::string value) {
     return value;
 }
 
+std::optional<std::filesystem::path>
+resolve_existing_native_header_path(const ImportDecl& import, const NativeHeaderOptions& options) {
+    const std::filesystem::path header = native_header_unquoted(import.module_path);
+    const std::filesystem::path path =
+        header.is_absolute() ? header : (options.source_dir / header).lexically_normal();
+    std::error_code error;
+    if (!std::filesystem::exists(path, error) || error) {
+        return std::nullopt;
+    }
+    return path.lexically_normal();
+}
+
 std::string native_header_read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
 }

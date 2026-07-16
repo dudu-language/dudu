@@ -93,6 +93,30 @@ Outcome:
 Validation: native frontend/type compatibility tests, compatibility fixtures,
 GCC/libstdc++ and focused Clang/libc++ probes.
 
+### Native header scanning and import projection
+
+- keep Clang invocation, cache lifecycle, retry policy, and scan assembly in
+  scanner ownership
+- keep direct/aliased import visibility, native-name prefixing, and macro
+  source metadata in import-view ownership
+- remove visibility branches that cannot be reached by any supported import
+  kind
+
+Outcome:
+
+- split the 705-line `native_headers.cpp` into a 380-line scanner/cache unit
+  and a 335-line import-view unit
+- retained the existing source-location matching and scanner retry behavior
+- consolidated repeated six-collection scan merges behind one local helper
+- removed `alias_visible_functions`, whose import-kind guard returned for
+  every foreign import before its filtering branch could run
+- kept aliasing generic; no library, header, or namespace special case was
+  introduced
+
+Validation: native frontend/type compatibility/member tests, native
+compatibility and standard-library fixtures, and complete `scripts/test_fast.sh`
+in 68.75 seconds with 683,636 KiB peak RSS.
+
 ### Parser, semantic analysis, and code generation
 
 - remove duplicate type/expression interpretation and forwarding helpers
