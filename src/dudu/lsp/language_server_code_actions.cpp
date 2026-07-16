@@ -1,6 +1,6 @@
 #include "dudu/lsp/language_server_code_actions.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/format/format_imports.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"

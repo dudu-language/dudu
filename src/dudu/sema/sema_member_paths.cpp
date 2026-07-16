@@ -1,7 +1,7 @@
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index.hpp"
@@ -28,16 +28,6 @@ std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::str
         out.emplace(params[i], args[i]);
     }
     return out;
-}
-
-std::string strip_c_type_tag(std::string type) {
-    type = trim(std::move(type));
-    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        if (type.starts_with(tag)) {
-            return trim(type.substr(tag.size()));
-        }
-    }
-    return type;
 }
 
 TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* location,
@@ -99,7 +89,7 @@ std::string receiver_class_name(const Symbols& symbols, const TypeRef& type) {
         const std::string owner = receiver_class_name(symbols, current.children.front());
         return owner.empty() ? std::string(current.name) : owner + "." + std::string(current.name);
     }
-    return strip_c_type_tag(type_ref_head_name(current));
+    return native_type_name_without_tag(type_ref_head_name(current));
 }
 
 const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& type) {

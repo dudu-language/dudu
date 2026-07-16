@@ -1,7 +1,7 @@
 #include "dudu/native/native_header_scan_command.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/file_io.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/project/project_driver.hpp"
 

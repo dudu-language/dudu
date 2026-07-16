@@ -1,21 +1,11 @@
 #include "dudu/sema/type_compat_structural.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/core/text.hpp"
+#include "dudu/native/native_header_identity.hpp"
 
 namespace dudu {
 namespace {
-
-std::string strip_c_tag_prefix(std::string type) {
-    type = trim_copy(std::move(type));
-    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        if (type.starts_with(tag)) {
-            return trim_copy(type.substr(tag.size()));
-        }
-    }
-    return type;
-}
 
 bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef& got) {
     if (expected.kind != got.kind || expected.reference_kind != got.reference_kind ||
@@ -29,8 +19,8 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Associated:
     case TypeKind::AssociatedTemplate:
     case TypeKind::NativeTransform:
-        if (strip_c_tag_prefix(type_ref_head_name(expected)) !=
-            strip_c_tag_prefix(type_ref_head_name(got))) {
+        if (native_type_name_without_tag(type_ref_head_name(expected)) !=
+            native_type_name_without_tag(type_ref_head_name(got))) {
             return false;
         }
         break;

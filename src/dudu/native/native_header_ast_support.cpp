@@ -1,5 +1,5 @@
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_header_ast_parse_internal.hpp"
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"

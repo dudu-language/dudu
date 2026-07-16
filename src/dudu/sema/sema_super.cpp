@@ -2,14 +2,14 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/source.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
-#include "dudu/core/source.hpp"
 
 namespace dudu {
 

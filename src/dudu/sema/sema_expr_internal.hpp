@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/control_flow.hpp"

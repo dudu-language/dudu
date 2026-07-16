@@ -1,6 +1,5 @@
 #include "dudu/sema/sema_methods.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_common.hpp"

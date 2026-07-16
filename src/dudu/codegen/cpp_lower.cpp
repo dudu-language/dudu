@@ -18,24 +18,6 @@ std::string replace_dots(std::string text) {
     return text;
 }
 
-std::string trim_copy(std::string text) {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
-        text.erase(text.begin());
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
-        text.pop_back();
-    }
-    return text;
-}
-
-bool starts_with(std::string_view text, std::string_view prefix) {
-    return text.substr(0, prefix.size()) == prefix;
-}
-
-bool ends_with(std::string_view text, std::string_view suffix) {
-    return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
-}
-
 bool is_non_type_template_arg(const std::string& text) {
     const std::string trimmed = trim_copy(text);
     if (trimmed.empty()) {
@@ -114,44 +96,6 @@ std::string lower_raw_template_call_arg(const std::string& arg,
         return lower_cpp_function_type(parse_type_text(trimmed), false, namespace_aliases);
     }
     return lower_cpp_type_spelling(trimmed, namespace_aliases);
-}
-
-std::vector<std::string> split_top_level_args(const std::string& args) {
-    std::vector<std::string> out;
-    int depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    size_t start = 0;
-    for (size_t i = 0; i < args.size(); ++i) {
-        const char c = args[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '[' || c == '(' || c == '{') {
-            ++depth;
-        } else if (c == ']' || c == ')' || c == '}') {
-            --depth;
-        } else if (c == ',' && depth == 0) {
-            out.push_back(trim_copy(args.substr(start, i - start)));
-            start = i + 1;
-        }
-    }
-    const std::string last = trim_copy(args.substr(start));
-    if (!last.empty()) {
-        out.push_back(last);
-    }
-    return out;
 }
 
 std::string replace_all(std::string text, std::string_view from, std::string_view to) {

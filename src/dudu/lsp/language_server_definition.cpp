@@ -1,6 +1,5 @@
 #include "dudu/lsp/language_server_definition.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_ast_walk.hpp"

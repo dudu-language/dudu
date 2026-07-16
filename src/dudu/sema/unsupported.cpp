@@ -1,7 +1,6 @@
 #include "dudu/sema/unsupported.hpp"
 
 #include "dudu/core/ast_expr.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <string>

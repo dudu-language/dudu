@@ -1,10 +1,9 @@
 #include "dudu/sema/type_compat.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/shape_value_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat_literals.hpp"

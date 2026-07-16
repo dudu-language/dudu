@@ -1,6 +1,7 @@
 #include "dudu/sema/sema_expr_cpp_escape_infer.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
 #include <utility>

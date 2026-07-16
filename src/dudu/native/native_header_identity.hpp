@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 
 #include <map>
 #include <set>
@@ -32,6 +33,16 @@ inline std::string native_symbol_identity_key(const NativeSymbolId& identity) {
         return "path:" + identity.canonical_path;
     }
     return {};
+}
+
+inline std::string native_type_name_without_tag(std::string name) {
+    name = trim_copy(std::move(name));
+    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+        if (name.starts_with(tag)) {
+            return trim_string(std::string_view(name).substr(tag.size()));
+        }
+    }
+    return name;
 }
 
 inline NativeSymbolId native_class_member_identity(const ClassDecl& klass,

@@ -1,7 +1,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_scope.hpp"

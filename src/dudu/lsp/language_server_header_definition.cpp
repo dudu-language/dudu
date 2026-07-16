@@ -1,6 +1,6 @@
 #include "dudu/lsp/language_server_header_definition.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"

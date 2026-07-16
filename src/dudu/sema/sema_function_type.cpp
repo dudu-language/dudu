@@ -1,6 +1,5 @@
 #include "dudu/sema/sema_function_type.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_context.hpp"
 

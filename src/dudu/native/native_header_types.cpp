@@ -1,6 +1,6 @@
 #include "dudu/native/native_header_types.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/text.hpp"
 
 #include <algorithm>
 #include <optional>

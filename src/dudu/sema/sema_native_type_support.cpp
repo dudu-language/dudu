@@ -16,15 +16,6 @@ namespace {
 using NativeTypesByName = std::map<std::string, std::vector<const NativeTypeDecl*>>;
 using NativeClassesByName = std::map<std::string, std::vector<const ClassDecl*>>;
 
-std::string strip_c_type_tag(std::string name) {
-    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        if (name.starts_with(tag)) {
-            return trim(name.substr(tag.size()));
-        }
-    }
-    return name;
-}
-
 void collect_type_names(const TypeRef& type, std::set<std::string>& names) {
     const std::string name = type_ref_head_name(type);
     if (!name.empty()) {
@@ -178,7 +169,7 @@ void index_native_types(const std::vector<const ModuleAst*>& dependencies, Nativ
                 continue;
             }
             classes[klass.name].push_back(&klass);
-            const std::string untagged = strip_c_type_tag(klass.name);
+            const std::string untagged = native_type_name_without_tag(klass.name);
             if (untagged != klass.name) {
                 classes[untagged].push_back(&klass);
             }
@@ -250,7 +241,7 @@ void add_native_class(Symbols& symbols, const ClassDecl& klass) {
     }
     const std::string identity = require_identity(klass.identity, klass.name, klass.location);
     add_native_class_binding(symbols, klass, klass.name, identity);
-    const std::string untagged = strip_c_type_tag(klass.name);
+    const std::string untagged = native_type_name_without_tag(klass.name);
     if (untagged != klass.name) {
         add_native_class_binding(symbols, klass, untagged, identity);
     }

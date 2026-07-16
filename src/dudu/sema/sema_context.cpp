@@ -1,8 +1,8 @@
 #include "dudu/sema/sema_context.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -51,16 +51,6 @@ TypeRef build_value_type_ref(const std::string& value) {
         return named_type_ref("str");
     }
     return named_type_ref("i32");
-}
-
-std::string strip_c_type_tag(std::string type) {
-    type = trim(std::move(type));
-    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        if (type.starts_with(tag)) {
-            return trim(type.substr(tag.size()));
-        }
-    }
-    return type;
 }
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -437,7 +427,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.native_type_identity_by_binding[klass.name] = identity;
         symbols.native_class_decls_by_identity[identity][klass.name] = &klass;
         symbols.classes[klass.name] = &klass;
-        const std::string untagged = strip_c_type_tag(klass.name);
+        const std::string untagged = native_type_name_without_tag(klass.name);
         if (untagged != klass.name) {
             symbols.types.insert(untagged);
             symbols.native_type_identity_by_binding[untagged] = identity;

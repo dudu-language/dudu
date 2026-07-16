@@ -351,6 +351,19 @@ The command audit also consolidated the input-to-source-root rule shared by
 check, index, emit, and native-cache cleanup. Relative input handling now has
 one frontend owner instead of two private copies.
 
+Project source-stamp persistence and invalidation are now separate from graph
+construction. Canonical paths, file stamps, cache serialization, and change
+detection live behind a private project-index boundary, reducing
+`project_index.cpp` from 566 to 418 lines without leaking filesystem
+implementation into the public index API.
+
+Core dependency direction is clean as well. Shared text and identifier
+operations live in `core/text`; `src/dudu/core` has no upward parser, semantic,
+or code-generation includes, and non-codegen subsystems no longer import the
+code-generation umbrella for generic string helpers. Native tag normalization,
+macro diagnostic source-location conversion, shaped-type rendering, and
+ellipsis parsing each have one owner instead of parallel copies or wrappers.
+
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured
 receiver/type-resolution path in an owned index-hook unit. Duplicate and stale

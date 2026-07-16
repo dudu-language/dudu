@@ -1,8 +1,7 @@
-#include "dudu/native/native_signature_match_internal.hpp"
-
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/native/native_signature_match_internal.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
 #include "dudu/sema/sema_common.hpp"
@@ -18,10 +17,6 @@
 #include <tuple>
 
 namespace dudu::native_match_internal {
-
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
 
 bool native_variadic_pack_param(const TypeRef& type) {
     return type.kind == TypeKind::PackExpansion;
@@ -41,12 +36,10 @@ size_t native_variadic_pack_start(const FunctionSignature& signature) {
 
 std::optional<std::string> native_variadic_pack_placeholder(const FunctionSignature& signature,
                                                             size_t pack_start) {
-    const NativeTemplateParameterNames template_params =
-        native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
     for (size_t i = pack_start; i < signature_param_count(signature); ++i) {
-        if (const std::optional<std::string> pack =
-                native_template_pack_placeholder(signature_param_type_ref(signature, i),
-                                                 template_params)) {
+        if (const std::optional<std::string> pack = native_template_pack_placeholder(
+                signature_param_type_ref(signature, i), template_params)) {
             return pack;
         }
     }
@@ -75,9 +68,9 @@ bool template_param_pack(std::string_view name) {
     return name.ends_with("...");
 }
 
-std::optional<std::string>
-explicit_template_mismatch(const Symbols& symbols, const FunctionSignature& signature,
-                           const std::vector<TypeRef>& explicit_args) {
+std::optional<std::string> explicit_template_mismatch(const Symbols& symbols,
+                                                      const FunctionSignature& signature,
+                                                      const std::vector<TypeRef>& explicit_args) {
     if (explicit_args.empty()) {
         return std::nullopt;
     }
@@ -93,8 +86,7 @@ explicit_template_mismatch(const Symbols& symbols, const FunctionSignature& sign
                " explicit arguments, got " + std::to_string(explicit_args.size());
     }
     for (size_t i = 0; i < explicit_args.size(); ++i) {
-        const size_t param_index =
-            std::min(i, signature.template_param_is_value.size() - 1);
+        const size_t param_index = std::min(i, signature.template_param_is_value.size() - 1);
         const TypeRef& arg = explicit_args[i];
         const bool expects_value = signature.template_param_is_value[param_index];
         const bool is_literal_value = arg.kind == TypeKind::Value;
@@ -136,8 +128,8 @@ bool native_referent_is_const(const TypeRef& type) {
 
 bool native_forwarding_reference(const TypeRef& type,
                                  const NativeTemplateParameterNames& template_params) {
-    return type.kind == TypeKind::Reference &&
-           type.reference_kind == ReferenceKind::Rvalue && type.children.size() == 1 &&
+    return type.kind == TypeKind::Reference && type.reference_kind == ReferenceKind::Rvalue &&
+           type.children.size() == 1 &&
            template_params.contains(type_ref_head_name(type.children.front()));
 }
 
@@ -148,8 +140,7 @@ bool native_arg_is_lvalue(const Expr& arg, const TypeRef& got) {
     return expr_is_lvalue(arg);
 }
 
-bool native_reference_binding_allowed(const TypeRef& expected, const Expr& arg,
-                                      const TypeRef& got,
+bool native_reference_binding_allowed(const TypeRef& expected, const Expr& arg, const TypeRef& got,
                                       const NativeTemplateParameterNames& template_params) {
     if (expected.kind != TypeKind::Reference) {
         return true;
@@ -284,8 +275,7 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     }
 
     std::vector<std::string> reasons;
-    const NativeTemplateParameterNames template_params =
-        native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
     const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const TypeRef& got_ref = arg_type_refs[i];
@@ -294,8 +284,7 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
         if (!native_reference_binding_allowed(expected_ref, args[i], got_ref, template_params)) {
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << type_ref_text(expected_ref) << ", got "
-                << (native_arg_is_lvalue(args[i], got_ref) ? "lvalue " : "rvalue ")
-                << got_display;
+                << (native_arg_is_lvalue(args[i], got_ref) ? "lvalue " : "rvalue ") << got_display;
             reasons.push_back(out.str());
             continue;
         }
@@ -310,12 +299,10 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     return reasons;
 }
 
-std::string native_overload_message_ast(const FunctionScope& scope, const std::string& callee,
-                                        const std::vector<Expr>& args,
-                                        const std::vector<TypeRef>& arg_type_refs,
-                                        const std::vector<FunctionSignature>& candidates,
-                                        const std::vector<std::optional<std::string>>&
-                                            explicit_template_mismatches) {
+std::string native_overload_message_ast(
+    const FunctionScope& scope, const std::string& callee, const std::vector<Expr>& args,
+    const std::vector<TypeRef>& arg_type_refs, const std::vector<FunctionSignature>& candidates,
+    const std::vector<std::optional<std::string>>& explicit_template_mismatches) {
     std::ostringstream out;
     out << "no native overload of " << callee << " accepts " << args.size() << " arguments";
     if (!args.empty()) {
@@ -347,8 +334,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
                                                      const std::vector<TypeRef>& arg_type_refs) {
     NativeTemplateBindings bindings;
     NativePackBindingMap pack_bindings;
-    const NativeTemplateParameterNames template_params =
-        native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
     const size_t param_count = signature_param_count(signature);
     const size_t pack_start = native_variadic_pack_start(signature);
     const bool has_pack_param = pack_start < param_count;
@@ -371,10 +357,9 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
         }
         const TypeRef binding_got =
             native_template_binding_arg(expected_ref, got_ref, args[i], template_params);
-        const TypeRef& binding_pattern =
-            native_forwarding_reference(expected_ref, template_params)
-                ? expected_ref.children.front()
-                : expected_ref;
+        const TypeRef& binding_pattern = native_forwarding_reference(expected_ref, template_params)
+                                             ? expected_ref.children.front()
+                                             : expected_ref;
         const bool bound_template =
             has_type_ref(expected_ref) && has_type_ref(got_ref) &&
             bind_native_template_type_ast(scope.symbols, binding_pattern, binding_got,
@@ -402,8 +387,7 @@ int native_match_conversion_score(const FunctionScope& scope, const FunctionSign
     const size_t count =
         std::min({signature_param_count(signature), args.size(), arg_type_refs.size()});
     for (size_t i = 0; i < count; ++i) {
-        TypeRef expected =
-            resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, i));
+        TypeRef expected = resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, i));
         TypeRef got = resolve_alias_ref(scope.symbols, arg_type_refs[i]);
         if (expected.kind == TypeKind::Reference) {
             const bool lvalue = native_arg_is_lvalue(args[i], got);
@@ -430,12 +414,10 @@ int native_match_conversion_score(const FunctionScope& scope, const FunctionSign
     return score;
 }
 
-int native_match_qualification_score(const FunctionScope& scope,
-                                     const FunctionSignature& signature,
+int native_match_qualification_score(const FunctionScope& scope, const FunctionSignature& signature,
                                      const std::vector<TypeRef>& arg_type_refs) {
     int score = 0;
-    const size_t count =
-        std::min(signature_param_count(signature), arg_type_refs.size());
+    const size_t count = std::min(signature_param_count(signature), arg_type_refs.size());
     for (size_t i = 0; i < count; ++i) {
         const TypeRef expected =
             resolve_alias_ref(scope.symbols, signature_param_type_ref(signature, i));
@@ -461,8 +443,7 @@ bool direct_native_template_placeholder(const TypeRef& type,
 }
 
 int native_template_generality_score(const FunctionSignature& signature) {
-    const NativeTemplateParameterNames template_params =
-        native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
     int score = 0;
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         if (direct_native_template_placeholder(signature_param_type_ref(signature, i),
@@ -473,15 +454,13 @@ int native_template_generality_score(const FunctionSignature& signature) {
     return score;
 }
 
-bool equivalent_matched_signatures(const FunctionSignature& left,
-                                   const FunctionSignature& right) {
+bool equivalent_matched_signatures(const FunctionSignature& left, const FunctionSignature& right) {
     if (left.variadic != right.variadic ||
         signature_param_count(left) != signature_param_count(right)) {
         return false;
     }
-    if (!type_ref_equivalent(
-            normalize_cpp_type_artifacts_ref(signature_return_type_ref(left)),
-            normalize_cpp_type_artifacts_ref(signature_return_type_ref(right)))) {
+    if (!type_ref_equivalent(normalize_cpp_type_artifacts_ref(signature_return_type_ref(left)),
+                             normalize_cpp_type_artifacts_ref(signature_return_type_ref(right)))) {
         return false;
     }
     for (size_t i = 0; i < signature_param_count(left); ++i) {
@@ -515,10 +494,11 @@ std::string ambiguous_native_overload_message(
     return out.str();
 }
 
-NativeCandidateSelection select_native_signature_candidates(
-    const FunctionScope& scope, std::vector<FunctionSignature> candidates,
-    const std::vector<TypeRef>& explicit_template_args, const std::vector<Expr>& args,
-    const SourceLocation* location) {
+NativeCandidateSelection
+select_native_signature_candidates(const FunctionScope& scope,
+                                   std::vector<FunctionSignature> candidates,
+                                   const std::vector<TypeRef>& explicit_template_args,
+                                   const std::vector<Expr>& args, const SourceLocation* location) {
     NativeCandidateSelection result;
     result.mismatches.resize(candidates.size());
     for (size_t i = 0; i < candidates.size(); ++i) {

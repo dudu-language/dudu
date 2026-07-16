@@ -1,6 +1,6 @@
 #include "dudu/core/shape_value_expr.hpp"
 
-#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/core/text.hpp"
 
 #include <cctype>
 #include <limits>

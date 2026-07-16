@@ -2,7 +2,6 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 
 #include <optional>
 

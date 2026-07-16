@@ -1,7 +1,8 @@
 #pragma once
 
-#include "dudu/core/ast.hpp"
 #include "dudu/codegen/cpp_emit_options.hpp"
+#include "dudu/core/ast.hpp"
+#include "dudu/core/text.hpp"
 
 #include <string>
 #include <string_view>
@@ -38,9 +39,5 @@ std::string qualify_namespace_aliases(std::string expr,
                                       const std::vector<std::string>& namespace_aliases);
 std::string replace_all(std::string text, std::string_view from, std::string_view to);
 std::string replace_dots(std::string text);
-std::string trim_copy(std::string text);
-bool starts_with(std::string_view text, std::string_view prefix);
-bool ends_with(std::string_view text, std::string_view suffix);
-std::vector<std::string> split_top_level_args(const std::string& args);
 
 } // namespace dudu

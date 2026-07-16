@@ -1,7 +1,6 @@
 #include "dudu/core/naming.hpp"
 
 #include "dudu/core/decorators.hpp"
-#include "dudu/sema/sema.hpp"
 
 #include <cctype>
 #include <string_view>

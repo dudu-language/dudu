@@ -1,9 +1,7 @@
 #include "dudu/sema/sema_ops.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"

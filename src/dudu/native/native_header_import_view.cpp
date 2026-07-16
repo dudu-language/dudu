@@ -1,7 +1,7 @@
 #include "dudu/native/native_header_import_view.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/native/native_header_scan_command.hpp"
 #include "dudu/native/native_header_scope.hpp"

@@ -1,18 +1,13 @@
 #include "dudu/lsp/language_server_macro_diagnostics.hpp"
 
+#include "dudu/macro/macro_diagnostic_bridge.hpp"
+
 #include <filesystem>
 
 namespace dudu {
 namespace {
 
 namespace p = macro::protocol;
-
-SourceLocation location(const p::SourceRange& range, const p::SourceRange& fallback) {
-    const p::SourceRange& source = range.file.empty() ? fallback : range;
-    return {.file = SourceFileName(source.file),
-            .line = static_cast<int>(source.start.line),
-            .column = static_cast<int>(source.start.column)};
-}
 
 bool same_file(const SourceLocation& location, const std::filesystem::path& path) {
     if (location.file.empty())
@@ -38,7 +33,8 @@ int severity(p::DiagnosticSeverity value) {
 void append_notes(std::vector<DiagnosticRelatedInformation>& out, const p::Diagnostic& diagnostic,
                   const p::SourceRange& fallback) {
     for (const p::Diagnostic& note : diagnostic.notes) {
-        out.push_back({.location = location(note.range, fallback), .message = note.message});
+        out.push_back({.location = macro::source_location_from_macro_range(note.range, fallback),
+                       .message = note.message});
         append_notes(out, note, fallback);
     }
 }
@@ -50,7 +46,8 @@ std::vector<Diagnostic> macro_diagnostics_for_document(const macro::ExpansionRep
     std::vector<Diagnostic> out;
     for (const macro::ExpansionReport::Record& record : report.expansions) {
         for (const p::Diagnostic& source : record.expansion.diagnostics) {
-            const SourceLocation primary = location(source.range, record.invocation);
+            const SourceLocation primary =
+                macro::source_location_from_macro_range(source.range, record.invocation);
             if (!same_file(primary, document.path))
                 continue;
             Diagnostic diagnostic{.location = primary,

@@ -1,8 +1,7 @@
 #include "dudu/core/ast_type.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/shape_value_expr.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
+#include "dudu/core/text.hpp"
 
 #include <sstream>
 #include <utility>
@@ -18,30 +17,6 @@ std::string join_substituted_types(const std::vector<TypeRef>& types, size_t sta
             out << ", ";
         }
         out << substitute_type_ref_text(types[i], substitutions);
-    }
-    return out.str();
-}
-
-std::string join_fixed_array_shape_refs(const TypeRef& type,
-                                        const std::map<std::string, std::string>& substitutions) {
-    std::ostringstream out;
-    for (size_t i = 1; i < type.children.size(); ++i) {
-        if (i > 1) {
-            out << ", ";
-        }
-        out << substitute_type_ref_text(type.children[i], substitutions);
-    }
-    return out.str();
-}
-
-std::string join_shape_refs(const TypeRef& type,
-                            const std::map<std::string, std::string>& substitutions) {
-    std::ostringstream out;
-    for (size_t i = 1; i < type.children.size(); ++i) {
-        if (i > 1) {
-            out << ", ";
-        }
-        out << substitute_type_ref_text(type.children[i], substitutions);
     }
     return out.str();
 }
@@ -312,14 +287,14 @@ std::string substitute_type_ref_text(const TypeRef& type,
                 "malformed structured type node: fixed_array is missing its child type");
         }
         return substitute_type_ref_text(type.children[0], substitutions) + "[" +
-               join_fixed_array_shape_refs(type, substitutions) + "]";
+               join_substituted_types(type.children, 1, substitutions) + "]";
     case TypeKind::Shaped:
         if (type.children.empty()) {
             throw CompileError(type.location,
                                "malformed structured type node: shaped is missing its base type");
         }
         return substitute_type_ref_text(type.children[0], substitutions) + "[" +
-               join_shape_refs(type, substitutions) + "]";
+               join_substituted_types(type.children, 1, substitutions) + "]";
     case TypeKind::Function: {
         const std::string result = type.children.empty()
                                        ? "void"
@@ -588,14 +563,7 @@ TypeRef substitute_type_ref(const TypeRef& type,
     }
     if ((out.kind == TypeKind::FixedArray || out.kind == TypeKind::Shaped) &&
         out.children.size() > 1) {
-        std::ostringstream value;
-        for (size_t i = 1; i < out.children.size(); ++i) {
-            if (i > 1) {
-                value << ", ";
-            }
-            value << substitute_type_ref_text(out.children[i], {});
-        }
-        out.value = value.str();
+        out.value = join_substituted_types(out.children, 1, {});
     }
     return out;
 }

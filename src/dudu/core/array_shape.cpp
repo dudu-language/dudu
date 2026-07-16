@@ -1,6 +1,5 @@
 #include "dudu/core/array_shape.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/shape_value_expr.hpp"
 

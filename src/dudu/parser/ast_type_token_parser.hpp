@@ -33,7 +33,6 @@ class TypeTokenParser {
     template <size_t N> bool at_identifier(const char (&text)[N]) const {
         return !at_end() && token_text_is(current(), TokenKind::Identifier, text);
     }
-    bool at_ellipsis() const;
     bool stop_at(std::initializer_list<TokenKind> stops) const;
     bool match(TokenKind kind);
     bool match_operator(std::string_view op);
@@ -53,7 +52,6 @@ class TypeTokenParser {
         return true;
     }
     bool match_scope_separator();
-    bool match_ellipsis();
 
     SourceRange range_between(size_t begin, size_t end) const;
     std::string text_between(size_t begin, size_t end) const;
@@ -64,7 +62,7 @@ class TypeTokenParser {
     TypeRef parse_primary(std::initializer_list<TokenKind> stops);
     TypeRef parse_function_type(size_t begin, std::vector<TypeRef> params);
     TypeRef parse_fn_type(size_t begin);
-    TypeRef parse_paren_or_function(size_t begin, std::initializer_list<TokenKind> stops);
+    TypeRef parse_paren_or_function(size_t begin);
     TypeRef parse_c_tag_name(size_t begin);
     TypeRef parse_name_or_template(size_t begin);
     std::vector<TypeRef> parse_angle_template_args();

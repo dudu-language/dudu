@@ -1,6 +1,5 @@
 #include "dudu/sema/sema_generics.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"

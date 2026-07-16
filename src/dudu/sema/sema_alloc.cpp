@@ -1,7 +1,6 @@
 #include "dudu/sema/sema_alloc.hpp"
 
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
 
 #include <utility>

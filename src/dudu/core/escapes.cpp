@@ -2,8 +2,6 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/codegen/cpp_lower.hpp"
-#include "dudu/sema/sema.hpp"
 
 #include <cctype>
 #include <utility>

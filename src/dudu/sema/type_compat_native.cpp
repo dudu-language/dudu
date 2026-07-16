@@ -1,7 +1,7 @@
 #include "dudu/sema/type_compat_native.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
 
 #include <optional>

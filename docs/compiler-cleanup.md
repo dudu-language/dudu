@@ -76,6 +76,11 @@ Outcome:
 - consolidated CLI input-to-source-root resolution into one command boundary,
   so check, index, emit, and native-cache cleanup cannot drift on relative
   input handling
+- separated source-stamp persistence and invalidation from project graph
+  construction; canonical paths, file stamps, cache records, and change
+  detection now have one private project-index boundary
+- reduced `project_index.cpp` from 566 to 418 lines without exposing filesystem
+  implementation through the public project index API
 
 Validation: project configuration tests, CLI help/smoke checks, project
 backend tests, and dogfood `dudu build`.
@@ -232,6 +237,19 @@ Outcome:
   declaration extraction, and line orchestration; the former 755-line parser
   is now a 296-line orchestrator with 185-line type and 291-line support units
   behind the same internal scan API
+- consolidated C/C++ `struct`/`class`/`union` tag stripping into one native
+  identity rule used by symbol collection, member lookup, import compatibility,
+  and structural type compatibility
+- moved generic source-text operations such as trimming, identifier checks,
+  prefix/suffix checks, and top-level argument splitting into `core/text`;
+  parser and semantic code no longer import code-generation ownership merely
+  to use string helpers
+- removed all upward parser, semantic-analysis, and code-generation includes
+  from `src/dudu/core`
+- collapsed duplicate fixed-array and shaped-type rendering/substitution onto
+  the shared structured `TypeRef` renderer
+- removed one-use ellipsis parser wrappers and an always-identical unknown-type
+  branch
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus
@@ -319,6 +337,9 @@ Outcome:
   action queries without making scratch files unavailable
 - added a dedicated workspace fixture covering explicit client roots,
   manifest-backed sibling discovery, and scratch-parent isolation
+- made compiler and language-server macro diagnostics share one
+  macro-range-to-source-location conversion instead of maintaining parallel
+  location policy
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator
@@ -346,6 +367,12 @@ compile tests.
 
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
+
+The latest ownership-cleanup milestone passes all 28 fast test executables,
+LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
+matrix in 70.01 seconds with 697,844 KiB peak RSS. `raymarch-dd`,
+`dudu-webserver`, every `duduplayground` native target, and the complete
+`dudu-datascience` target set also build with the cleaned compiler.
 
 ## Completion Gate
 

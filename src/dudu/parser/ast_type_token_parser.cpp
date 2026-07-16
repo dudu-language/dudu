@@ -69,10 +69,6 @@ bool TypeTokenParser::at_identifier(std::string_view text) const {
     return !at_end() && current().kind == TokenKind::Identifier && current().text == text;
 }
 
-bool TypeTokenParser::at_ellipsis() const {
-    return at(TokenKind::Ellipsis);
-}
-
 bool TypeTokenParser::stop_at(std::initializer_list<TokenKind> stops) const {
     if (at_end()) {
         return true;
@@ -110,7 +106,7 @@ bool TypeTokenParser::match_identifier(std::string_view text) {
 }
 
 bool TypeTokenParser::match_scope_separator() {
-    if (at_ellipsis()) {
+    if (at(TokenKind::Ellipsis)) {
         return false;
     }
     if (match(TokenKind::Dot)) {
@@ -122,14 +118,6 @@ bool TypeTokenParser::match_scope_separator() {
         return true;
     }
     return false;
-}
-
-bool TypeTokenParser::match_ellipsis() {
-    if (!at_ellipsis()) {
-        return false;
-    }
-    ++cursor_;
-    return true;
 }
 
 SourceRange TypeTokenParser::range_between(size_t begin, size_t end) const {
@@ -180,7 +168,7 @@ TypeRef TypeTokenParser::make_node(TypeKind kind, size_t begin, size_t end) cons
 TypeRef TypeTokenParser::parse_type(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
     TypeRef type = parse_prefix(stops);
-    if (!stop_at(stops) && match_ellipsis()) {
+    if (!stop_at(stops) && match(TokenKind::Ellipsis)) {
         TypeRef out = make_node(TypeKind::PackExpansion, begin, cursor_);
         out.children.push_back(std::move(type));
         out.range = range_between(begin, cursor_);
@@ -233,7 +221,7 @@ TypeRef TypeTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         return parse_fn_type(begin);
     }
     if (match(TokenKind::LParen)) {
-        return parse_paren_or_function(begin, stops);
+        return parse_paren_or_function(begin);
     }
     if (match_operator("-") || match_operator("+")) {
         if (at(TokenKind::Number)) {
@@ -288,8 +276,7 @@ TypeRef TypeTokenParser::parse_fn_type(size_t begin) {
     return type;
 }
 
-TypeRef TypeTokenParser::parse_paren_or_function(size_t begin,
-                                                 std::initializer_list<TokenKind> stops) {
+TypeRef TypeTokenParser::parse_paren_or_function(size_t begin) {
     std::vector<TypeRef> params = parse_list_until(TokenKind::RParen);
     if (!match(TokenKind::RParen)) {
         return make_node(TypeKind::Unknown, begin, cursor_);
@@ -301,9 +288,6 @@ TypeRef TypeTokenParser::parse_paren_or_function(size_t begin,
         TypeRef type = std::move(params.front());
         type.range = range_between(begin, cursor_);
         return type;
-    }
-    if (!stop_at(stops)) {
-        return make_node(TypeKind::Unknown, begin, cursor_);
     }
     return make_node(TypeKind::Unknown, begin, cursor_);
 }

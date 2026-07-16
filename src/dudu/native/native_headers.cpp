@@ -1,6 +1,6 @@
 #include "dudu/native/native_headers.hpp"
 
-#include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/text.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/native/native_header_cache.hpp"
 #include "dudu/native/native_header_import_view.hpp"

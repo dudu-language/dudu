@@ -1,7 +1,5 @@
-#include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_scope.hpp"
