@@ -397,6 +397,9 @@ LSP hover presentation now has one Markdown fence/serialization owner, native
 identity path lookup lives at the native boundary, and primitive/native-alias
 hover construction lives with type hover. The general hover dispatcher is 469
 lines instead of 588 and no longer owns those independent semantic tables.
+Direct hover and inlay label parts now also share class previews, native and
+primitive type documentation, layouts, and definition locations.
+`language_server_inlay_type_details.cpp` is 108 lines instead of 216.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.

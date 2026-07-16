@@ -284,6 +284,12 @@ Outcome:
 - reduced `language_server_hover.cpp` from 588 to 469 lines; it now dispatches
   hover queries without owning primitive type tables or native alias
   presentation
+- made direct hover and inlay label parts share one type-presentation path for
+  primitive documentation, native aliases, class previews, layouts, docs, and
+  definition locations
+- reduced `language_server_inlay_type_details.cpp` from 216 to 108 lines;
+  inlay serialization remains local while type meaning and presentation live
+  with type hover
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator

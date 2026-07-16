@@ -12,6 +12,7 @@
 #include "dudu/native/native_headers.hpp"
 #include "dudu/sema/sema_context.hpp"
 
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -20,53 +21,13 @@
 namespace dudu {
 namespace {
 
-std::string generic_params_label(const std::vector<std::string>& params) {
-    if (params.empty()) {
-        return {};
-    }
-    std::ostringstream out;
-    out << "[";
-    for (size_t i = 0; i < params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << params[i];
-    }
-    out << "]";
-    return out.str();
-}
+struct PrimitiveTypeDoc {
+    std::string cpp_type;
+    std::string description;
+};
 
-std::string class_header(const ClassDecl& klass, bool native) {
-    return std::string(native ? "native class " : "class ") + klass.name +
-           generic_params_label(klass.generic_params);
-}
-
-std::string class_definition_preview(const ClassDecl& klass, bool native) {
-    std::ostringstream out;
-    out << class_header(klass, native) << ":";
-    constexpr size_t max_fields = 5;
-    size_t shown = 0;
-    for (const FieldDecl& field : klass.fields) {
-        if (shown >= max_fields) {
-            break;
-        }
-        out << "\n    " << field.name << ": " << type_ref_text(field.type_ref);
-        ++shown;
-    }
-    const size_t remaining = klass.fields.size() > shown ? klass.fields.size() - shown : 0;
-    if (remaining > 0) {
-        out << "\n    # ... " << remaining << " more field" << (remaining == 1 ? "" : "s");
-    }
-    if (klass.fields.empty()) {
-        out << "\n    pass";
-    }
-    return out.str();
-}
-
-} // namespace
-
-std::optional<std::string> primitive_type_hover_json(const std::string& word) {
-    static const std::map<std::string, std::pair<std::string, std::string>> primitives = {
+std::optional<PrimitiveTypeDoc> primitive_type_doc(const std::string& word) {
+    static const std::map<std::string, PrimitiveTypeDoc> primitives = {
         {"bool", {"bool", "Boolean value."}},
         {"i8", {"std::int8_t", "Signed 8-bit integer."}},
         {"i16", {"std::int16_t", "Signed 16-bit integer."}},
@@ -111,11 +72,86 @@ std::optional<std::string> primitive_type_hover_json(const std::string& word) {
           "`array_view[T]` for helpers that consume `array[T][...]` slices without copying."}},
     };
     const auto found = primitives.find(word);
-    if (found == primitives.end()) {
+    return found == primitives.end() ? std::nullopt
+                                     : std::optional<PrimitiveTypeDoc>{found->second};
+}
+
+std::string generic_params_label(const std::vector<std::string>& params) {
+    if (params.empty()) {
+        return {};
+    }
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << params[i];
+    }
+    out << "]";
+    return out.str();
+}
+
+std::string class_header(const ClassDecl& klass, bool native) {
+    return std::string(native ? "native class " : "class ") + klass.name +
+           generic_params_label(klass.generic_params);
+}
+
+std::string class_definition_preview(const ClassDecl& klass, bool native) {
+    std::ostringstream out;
+    out << class_header(klass, native) << ":";
+    constexpr size_t max_fields = 5;
+    size_t shown = 0;
+    for (const FieldDecl& field : klass.fields) {
+        if (shown >= max_fields) {
+            break;
+        }
+        out << "\n    " << field.name << ": " << type_ref_text(field.type_ref);
+        ++shown;
+    }
+    const size_t remaining = klass.fields.size() > shown ? klass.fields.size() - shown : 0;
+    if (remaining > 0) {
+        out << "\n    # ... " << remaining << " more field" << (remaining == 1 ? "" : "s");
+    }
+    if (klass.fields.empty()) {
+        out << "\n    pass";
+    }
+    return out.str();
+}
+
+const ClassDecl* class_for_type_name(const Symbols& symbols, const std::string& name,
+                                     bool& native) {
+    const auto found = symbols.classes.find(name);
+    if (found == symbols.classes.end()) {
+        return nullptr;
+    }
+    native = native_class_decl_for_binding(symbols, name) != nullptr &&
+             std::filesystem::path(found->second->location.file.str()).extension() != ".dd";
+    return found->second;
+}
+
+std::string class_type_markdown(const Symbols& symbols, const ClassDecl& klass, bool native) {
+    std::string markdown =
+        fenced_code(native ? "cpp" : "dudu", class_definition_preview(klass, native));
+    if (const std::optional<TypeLayout> layout = resolved_class_layout(symbols, klass)) {
+        markdown += "\n\nsize = " + std::to_string(layout->size) +
+                    " bytes, align = " + std::to_string(layout->alignment) + " bytes";
+    }
+    if (!klass.doc_comment.empty()) {
+        markdown += "\n\n" + klass.doc_comment;
+    }
+    return markdown;
+}
+
+} // namespace
+
+std::optional<std::string> primitive_type_hover_json(const std::string& word) {
+    const std::optional<PrimitiveTypeDoc> doc = primitive_type_doc(word);
+    if (!doc) {
         return std::nullopt;
     }
-    return markdown_hover_json(fenced_code("dudu", "type " + word) + "\n\n" + found->second.second +
-                               "\n\nC++ lowering: `" + found->second.first + "`");
+    return markdown_hover_json(fenced_code("dudu", "type " + word) + "\n\n" + doc->description +
+                               "\n\nC++ lowering: `" + doc->cpp_type + "`");
 }
 
 std::optional<std::string> native_alias_hover_json(const std::string& word,
@@ -167,18 +203,53 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
 }
 
 std::string class_hover_json(const ModuleAst& module, const ClassDecl& klass, bool native) {
-    std::string markdown =
-        fenced_code(native ? "cpp" : "dudu", class_definition_preview(klass, native));
     const Symbols symbols = collect_symbols(module);
-    if (const std::optional<TypeLayout> layout = resolved_class_layout(symbols, klass)) {
+    const std::string markdown = class_type_markdown(symbols, klass, native);
+    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+           "\"},\"range\":" + range_json(klass.location) + "}";
+}
+
+std::string type_name_hover_markdown(const Symbols& symbols, const std::string& name) {
+    bool native = false;
+    if (const ClassDecl* klass = class_for_type_name(symbols, name, native)) {
+        return class_type_markdown(symbols, *klass, native);
+    }
+    if (const NativeTypeDecl* type = native_type_decl_for_binding(symbols, name)) {
+        std::string markdown = fenced_code("cpp", type->native_spelling.empty()
+                                                      ? std::string("native type ") + type->name
+                                                      : "native type " + type->name + " = " +
+                                                            native_type_alias_type_text(*type));
+        if (type->layout) {
+            markdown += "\n\nsize = " + std::to_string(type->layout->size) +
+                        " bytes, align = " + std::to_string(type->layout->alignment) + " bytes";
+        }
+        if (!type->doc_comment.empty()) {
+            markdown += "\n\n" + type->doc_comment;
+        }
+        return markdown;
+    }
+    const std::optional<PrimitiveTypeDoc> doc = primitive_type_doc(name);
+    if (!doc) {
+        return {};
+    }
+    std::string markdown = fenced_code("dudu", "type " + name) + "\n\n" + doc->description +
+                           "\n\nC++ lowering: `" + doc->cpp_type + "`";
+    if (const std::optional<TypeLayout> layout = primitive_type_layout(name)) {
         markdown += "\n\nsize = " + std::to_string(layout->size) +
                     " bytes, align = " + std::to_string(layout->alignment) + " bytes";
     }
-    if (!klass.doc_comment.empty()) {
-        markdown += "\n\n" + klass.doc_comment;
+    return markdown;
+}
+
+SourceLocation type_name_definition_location(const Symbols& symbols, const std::string& name) {
+    bool native = false;
+    if (const ClassDecl* klass = class_for_type_name(symbols, name, native)) {
+        return klass->location;
     }
-    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-           "\"},\"range\":" + range_json(klass.location) + "}";
+    if (const NativeTypeDecl* type = native_type_decl_for_binding(symbols, name)) {
+        return type->location;
+    }
+    return {};
 }
 
 } // namespace dudu
