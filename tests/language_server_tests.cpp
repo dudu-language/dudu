@@ -433,9 +433,16 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    counter = Counter(7)\n"
-                                     "    return add(counter.value, 2)\n"};
+                                     "    return add(counter.value, 2)\n"
+                                     "\n"
+                                     "class ExplicitReceiver:\n"
+                                     "    value: i32\n"
+                                     "\n"
+                                     "    def read(self: &const[Self]) -> i32:\n"
+                                     "        return self.value\n"};
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"label\":\": &Self\"") != std::string::npos);
+    assert(hints.find("\": &const[Self]\"") == std::string::npos);
     assert(hints.find("\"line\":3") != std::string::npos);
     assert(hints.find("\"value\":\"i32\"") != std::string::npos);
     assert(hints.find("size = 4 bytes, align = 4 bytes") != std::string::npos);
@@ -460,15 +467,14 @@ void test_lsp_inlay_hints_show_inferred_types_and_receiver() {
 }
 
 void test_lsp_inlay_hints_show_inferred_collection_types() {
-    const dudu::Document doc{
-        .uri = "file:///collection_inlay_hints.dd",
-        .path = "collection_inlay_hints.dd",
-        .text = "def main() -> i32:\n"
-                "    numbers = [1, 2, 3]\n"
-                "    scores = {\"ada\": 20, \"bob\": 22}\n"
-                "    names = {\"ada\", \"bob\"}\n"
-                "    nested = [[1, 2], [3, 4]]\n"
-                "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n"};
+    const dudu::Document doc{.uri = "file:///collection_inlay_hints.dd",
+                             .path = "collection_inlay_hints.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    numbers = [1, 2, 3]\n"
+                                     "    scores = {\"ada\": 20, \"bob\": 22}\n"
+                                     "    names = {\"ada\", \"bob\"}\n"
+                                     "    nested = [[1, 2], [3, 4]]\n"
+                                     "    return numbers[0] + scores[\"bob\"] + nested[1][0]\n"};
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("list[i32]") != std::string::npos);
     assert(hints.find("dict[str, i32]") != std::string::npos);

@@ -1,19 +1,15 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 
 #include "dudu/codegen/cpp_lower.hpp"
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_scope.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
-#include "dudu/sema/sema_body_helpers.hpp"
-#include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_generics.hpp"
-#include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <filesystem>
@@ -152,77 +148,6 @@ std::optional<std::string> dotted_target_before(const std::vector<Token>& tokens
     return out.empty() ? std::nullopt : std::optional<std::string>{out};
 }
 
-void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_ref) {
-    if (name.empty()) {
-        return;
-    }
-    if (!has_type_ref(type_ref)) {
-        type_ref = named_type_ref("auto");
-    }
-    bind_local(scope, name, type_ref);
-}
-
-TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
-    return infer_expr_type_ast(scope, expr, &diagnostic_location(expr.location, expr));
-}
-
-void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, const Expr& expr) {
-    const TypeRef inferred = infer_lsp_expr_type(scope, expr);
-    lsp_bind_local(scope, name, inferred);
-}
-
-void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
-    const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
-    if (names.empty()) {
-        return;
-    }
-    const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
-        infer_lsp_expr_type(scope, stmt.value_expr), "tuple", scope.symbols.alias_type_refs);
-    if (names.size() != types.size()) {
-        return;
-    }
-    for (size_t i = 0; i < names.size(); ++i) {
-        lsp_bind_local(scope, names[i], types[i]);
-    }
-}
-
-void bind_statement(FunctionScope& scope, const Stmt& stmt) {
-    if (stmt.kind == StmtKind::VarDecl) {
-        if (has_stmt_type_ref(stmt)) {
-            const TypeRef& declared_type = stmt_type_ref(stmt);
-            const ArrayShapeInference inferred =
-                infer_array_literal_shape_type(declared_type, stmt.value_expr);
-            const TypeRef type_ref =
-                inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : declared_type;
-            lsp_bind_local(scope, stmt.name, type_ref);
-            return;
-        }
-        lsp_bind_inferred_local(scope, stmt.name, stmt.value_expr);
-        return;
-    }
-    if (stmt.kind == StmtKind::Assign) {
-        if (!tuple_binding_names(stmt_target_expr(stmt)).empty()) {
-            bind_tuple_names(scope, stmt);
-            return;
-        }
-        if (stmt_target_expr(stmt).kind == ExprKind::Name &&
-            !scope.local_type_refs.contains(stmt_target_expr(stmt).name)) {
-            lsp_bind_inferred_local(scope, stmt_target_expr(stmt).name, stmt.value_expr);
-        }
-    }
-    if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
-        lsp_bind_local(scope, stmt.name, stmt_type_ref(stmt));
-    }
-}
-
-std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    try {
-        return infer_for_binding_type(scope, stmt);
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
 void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& statements,
                           int cursor_line);
 
@@ -231,11 +156,11 @@ void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_l
     if (!stmt.name.empty()) {
         TypeRef binding_type = stmt_type_ref(stmt);
         if (!has_type_ref(binding_type)) {
-            if (const auto inferred = infer_lsp_for_binding_type(scope, stmt)) {
+            if (const auto inferred = infer_lsp_loop_binding_type(scope, stmt)) {
                 binding_type = *inferred;
             }
         }
-        lsp_bind_local(scope, stmt.name, binding_type);
+        bind_lsp_local(scope, stmt.name, binding_type);
     }
     collect_block_locals(scope, stmt.children, cursor_line);
     out = scope.local_type_refs;
@@ -247,7 +172,7 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
         if (!location_before_or_at(stmt.location, cursor_line)) {
             continue;
         }
-        bind_statement(scope, stmt);
+        bind_lsp_statement(scope, stmt);
         if (!range_contains_line(stmt.range, cursor_line)) {
             continue;
         }
@@ -266,30 +191,8 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 }
 
 void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int cursor_line) {
-    for (const ParamDecl& param : fn.params) {
-        if (param.name == "self" && !scope.current_class.empty()) {
-            if (!has_type_ref(param.type_ref)) {
-                lsp_bind_local(scope, param.name,
-                               named_type_ref(scope.current_class, param.location));
-                continue;
-            }
-            lsp_bind_local(scope, param.name,
-                           substitute_type_ref(param.type_ref,
-                                               {{"Self", named_type_ref(scope.current_class,
-                                                                        param.location)}}));
-            continue;
-        }
-        lsp_bind_local(scope, param.name, param.type_ref);
-    }
+    bind_lsp_function_params(scope, fn);
     collect_block_locals(scope, fn.statements, cursor_line);
-}
-
-Symbols symbols_for_lsp_function(Symbols symbols, const FunctionDecl& fn) {
-    if (!fn.generic_params.empty()) {
-        symbols = with_generic_params(std::move(symbols), fn.generic_params,
-                                      generic_value_params_for_function(fn));
-    }
-    return symbols;
 }
 
 } // namespace
@@ -384,10 +287,9 @@ std::set<std::string> type_candidate_names(const TypeRef& type) {
     if (!has_type_ref(type)) {
         return out;
     }
-    if (const auto child =
-            unary_type_child_ref(type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const,
-                                        TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
-                                        TypeKind::Shared, TypeKind::Device})) {
+    if (const auto child = unary_type_child_ref(
+            type, {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const, TypeKind::Volatile,
+                   TypeKind::Atomic, TypeKind::Storage, TypeKind::Shared, TypeKind::Device})) {
         out.merge(type_candidate_names(*child));
     }
     if (const std::string head = type_ref_head_name(type); !head.empty()) {

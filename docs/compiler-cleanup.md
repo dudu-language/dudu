@@ -204,6 +204,23 @@ Outcome:
 - reduced `language_server_semantic_tokens.cpp` from 717 to 272 lines; the
   expression/body collector is 396 lines and the shared wire implementation is
   83 lines
+- moved editor-local binding, tuple destructuring, loop element inference,
+  function generic setup, and `self` substitution into one LSP scope boundary
+  shared by navigation and inlay hints
+- made strict navigation inference and tolerant inlay inference explicit
+  policies on that boundary, preserving native-project retry instead of
+  masking an unresolved foreign call as `auto`
+- removed inlay hints' second partial local type analyzer and made discard
+  bindings follow the same semantic binding rule as other editor queries
+- replaced source-line scanning for explicit variable and loop annotations
+  with AST type presence, and distinguish synthesized `self` from an explicit
+  receiver type through its parser-owned source location
+- moved imported Dudu class projection into an owning presentation-symbol
+  context, so editor type previews and method parameter hints no longer manage
+  copied declaration lifetimes inside the inlay query
+- reduced `language_server_inlay_hints.cpp` from 646 to 520 lines and
+  `language_server_local_context.cpp` from 433 to 336 lines; their shared scope
+  and imported-symbol ownership units are 122 and 61 lines
 
 Validation: deterministic LSP tests plus invalid-edit, incremental, and
 dogfood latency checks, including decoded semantic-token and macro-decorator

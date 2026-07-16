@@ -6,20 +6,19 @@
 #include "dudu/lsp/language_server_inlay_type_details.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_presentation_symbols.hpp"
+#include "dudu/lsp/language_server_scope.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/project/project_index.hpp"
-#include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_context.hpp"
-#include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <deque>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -75,25 +74,6 @@ int hint_line(SourceLocation location) {
 
 int hint_character_after(SourceLocation location, const std::string& name) {
     return std::max(0, location.column - 1 + static_cast<int>(name.size()));
-}
-
-std::vector<std::string> safe_lines(const Document& doc) {
-    return document_lines(doc.text);
-}
-
-bool source_has_explicit_type_after_name(const Document& doc, SourceLocation location,
-                                         const std::string& name) {
-    const std::vector<std::string> lines = safe_lines(doc);
-    const int line = location.line - 1;
-    if (line < 0 || static_cast<size_t>(line) >= lines.size()) {
-        return false;
-    }
-    const std::string& text = lines[static_cast<size_t>(line)];
-    size_t cursor = static_cast<size_t>(std::max(0, location.column - 1)) + name.size();
-    while (cursor < text.size() && text[cursor] == ' ') {
-        ++cursor;
-    }
-    return cursor < text.size() && text[cursor] == ':';
 }
 
 void add_type_hint(std::vector<InlayHint>& hints, const Document& doc, const Symbols& symbols,
@@ -175,36 +155,6 @@ void add_parameter_hint(std::vector<InlayHint>& hints, const Document& doc, cons
                      .label_json = {},
                      .tooltip_json = parameter_hint_tooltip_json(doc, symbols, type),
                      .kind = 2});
-}
-
-void bind_inlay_local(FunctionScope& scope, const std::string& name, TypeRef type) {
-    if (name.empty()) {
-        return;
-    }
-    if (!hintable_type(type)) {
-        type = named_type_ref("auto");
-    }
-    scope.local_type_refs[name] = std::move(type);
-}
-
-TypeRef infer_type(FunctionScope& scope, const Expr& expr) {
-    try {
-        return infer_expr_type_ast(scope, expr, &expr.location);
-    } catch (const std::exception&) {
-        return {};
-    }
-}
-
-TypeRef effective_inlay_var_type(const Stmt& stmt) {
-    if (!has_stmt_type_ref(stmt)) {
-        return {};
-    }
-    const ArrayShapeInference inferred =
-        infer_array_literal_shape_type(stmt_type_ref(stmt), stmt.value_expr);
-    if (inferred.status == ArrayShapeStatus::Inferred) {
-        return inferred.type_ref;
-    }
-    return stmt_type_ref(stmt);
 }
 
 TypeRef unwrap_ref_const(TypeRef type) {
@@ -289,54 +239,6 @@ ParamHints builtin_member_param_hints(const std::string& method_name) {
     return {};
 }
 
-void add_imported_class_symbol(Symbols& symbols, std::deque<ClassDecl>& storage,
-                               const std::string& name, const ClassDecl& klass,
-                               const ModuleAst& imported) {
-    if (name.empty()) {
-        return;
-    }
-    ClassDecl copy = klass;
-    copy.name = name;
-    if (!imported.source_path.empty()) {
-        copy.location.file = SourceFileName(imported.source_path.string());
-    }
-    storage.push_back(std::move(copy));
-    const ClassDecl& stored = storage.back();
-    symbols.types.insert(name);
-    symbols.classes[name] = &stored;
-}
-
-void merge_imported_presentation_symbols(Symbols& symbols, const ProjectIndex& index,
-                                         const ModuleAst& module,
-                                         std::deque<ClassDecl>& imported_class_storage) {
-    for (const ImportDecl& import : module.imports) {
-        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
-            continue;
-        }
-        const ModuleAst* imported = index.imported_unit(module, import);
-        if (imported == nullptr) {
-            continue;
-        }
-        if (import.kind == ImportKind::Module) {
-            const std::string prefix = bound_import_name(import);
-            for (const ClassDecl& klass : imported->classes) {
-                add_imported_class_symbol(symbols, imported_class_storage,
-                                          prefix + "." + klass.name, klass, *imported);
-            }
-            continue;
-        }
-        const std::string bound = bound_import_name(import);
-        for (const ClassDecl& klass : imported->classes) {
-            if (klass.name == import.imported_name) {
-                add_imported_class_symbol(symbols, imported_class_storage, bound, klass, *imported);
-                add_imported_class_symbol(symbols, imported_class_storage,
-                                          import.module_path + "." + klass.name, klass, *imported);
-                break;
-            }
-        }
-    }
-}
-
 ParamHints method_param_hints_for_class(const ClassDecl& klass, const std::string& method_name) {
     for (const FunctionDecl& method : klass.methods) {
         if (method.name == method_name) {
@@ -362,7 +264,8 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
             return {};
         }
         if (callee == "move" && expr.children.size() == 1) {
-            return {.names = {"value"}, .types = {infer_type(scope, expr.children.front())}};
+            return {.names = {"value"},
+                    .types = {try_infer_lsp_expr_type(scope, expr.children.front())}};
         }
         if (ParamHints native =
                 first_native_function_param_hints(scope.symbols, callee, expr.children.size());
@@ -393,7 +296,7 @@ ParamHints param_hints_for_call(FunctionScope& scope, const Expr& expr) {
         }
     }
 
-    const TypeRef receiver_type = infer_type(scope, receiver);
+    const TypeRef receiver_type = try_infer_lsp_expr_type(scope, receiver);
     if (const ClassDecl* klass = class_for_type(scope.symbols, receiver_type)) {
         return method_param_hints_for_class(*klass, callee_expr.name);
     }
@@ -411,7 +314,8 @@ void collect_hints_for_expr(const Document& doc, FunctionScope& scope, const Exp
                 add_parameter_hint(hints, doc, scope.symbols, arg, params.names[i], type);
             }
             if (options.argument_types) {
-                add_argument_type_hint(hints, doc, scope.symbols, arg, infer_type(scope, arg));
+                add_argument_type_hint(hints, doc, scope.symbols, arg,
+                                       try_infer_lsp_expr_type(scope, arg));
             }
         }
     }
@@ -465,63 +369,36 @@ void collect_hints_for_block(const Document& doc, FunctionScope& scope,
                              const std::vector<Stmt>& statements, const InlayHintOptions& options,
                              std::vector<InlayHint>& hints);
 
-std::optional<TypeRef> infer_loop_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    try {
-        return infer_for_binding_type(scope, stmt);
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
-    if (stmt.target_expr == nullptr) {
-        return;
-    }
-    const std::vector<std::string> names = tuple_binding_names(*stmt.target_expr);
-    if (names.empty()) {
-        return;
-    }
-    const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
-        infer_type(scope, stmt.value_expr), "tuple", scope.symbols.alias_type_refs);
-    if (names.size() != types.size()) {
-        return;
-    }
-    for (size_t i = 0; i < names.size(); ++i) {
-        bind_inlay_local(scope, names[i], types[i]);
-    }
-}
-
 void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const Stmt& stmt,
                                 const InlayHintOptions& options, std::vector<InlayHint>& hints) {
     collect_hints_for_statement_exprs(doc, scope, stmt, options, hints);
 
     if (stmt.kind == StmtKind::VarDecl) {
-        TypeRef type = has_stmt_type_ref(stmt) ? effective_inlay_var_type(stmt)
-                                               : infer_type(scope, stmt.value_expr);
+        TypeRef type = has_stmt_type_ref(stmt) ? lsp_variable_type(stmt)
+                                               : try_infer_lsp_expr_type(scope, stmt.value_expr);
         if (options.inferred_types && has_stmt_type_ref(stmt) &&
             type.kind == TypeKind::FixedArray) {
             add_inferred_array_shape_hint(hints, doc, scope.symbols, stmt_type_ref(stmt), type);
         }
-        if (options.inferred_types &&
-            !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
+        if (options.inferred_types && !has_stmt_type_ref(stmt)) {
             add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, type);
         }
-        bind_inlay_local(scope, stmt.name, std::move(type));
+        bind_lsp_local(scope, stmt.name, std::move(type));
         return;
     }
 
     if (stmt.kind == StmtKind::Assign && stmt.target_expr != nullptr) {
         const Expr& target = *stmt.target_expr;
         if (!tuple_binding_names(target).empty()) {
-            bind_tuple_names(scope, stmt);
+            (void)try_bind_lsp_tuple_names(scope, stmt);
             return;
         }
         if (target.kind == ExprKind::Name && !scope.local_type_refs.contains(target.name.str())) {
-            TypeRef type = infer_type(scope, stmt.value_expr);
+            TypeRef type = try_infer_lsp_expr_type(scope, stmt.value_expr);
             if (options.inferred_types) {
                 add_type_hint(hints, doc, scope.symbols, target.location, target.name, type);
             }
-            bind_inlay_local(scope, target.name.str(), std::move(type));
+            bind_lsp_local(scope, target.name.str(), std::move(type));
         }
         return;
     }
@@ -530,21 +407,20 @@ void collect_hint_for_statement(const Document& doc, FunctionScope& scope, const
         FunctionScope body_scope = scope;
         TypeRef binding_type = has_stmt_type_ref(stmt) ? stmt_type_ref(stmt) : TypeRef{};
         if (!hintable_type(binding_type)) {
-            if (const std::optional<TypeRef> inferred = infer_loop_binding_type(scope, stmt)) {
+            if (const std::optional<TypeRef> inferred = infer_lsp_loop_binding_type(scope, stmt)) {
                 binding_type = *inferred;
             }
         }
-        if (options.loop_binding_types &&
-            !source_has_explicit_type_after_name(doc, stmt.location, stmt.name)) {
+        if (options.loop_binding_types && !has_stmt_type_ref(stmt)) {
             add_type_hint(hints, doc, scope.symbols, stmt.location, stmt.name, binding_type);
         }
-        bind_inlay_local(body_scope, stmt.name, std::move(binding_type));
+        bind_lsp_local(body_scope, stmt.name, std::move(binding_type));
         collect_hints_for_block(doc, body_scope, stmt.children, options, hints);
         return;
     }
 
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
-        bind_inlay_local(scope, stmt.name, stmt_type_ref(stmt));
+        bind_lsp_local(scope, stmt.name, stmt_type_ref(stmt));
     }
 
     if (!stmt.children.empty()) {
@@ -564,20 +440,18 @@ void collect_hints_for_block(const Document& doc, FunctionScope& scope,
 void collect_hints_for_function(const Document& doc, const Symbols& symbols, const FunctionDecl& fn,
                                 std::string current_class, const InlayHintOptions& options,
                                 std::vector<InlayHint>& hints) {
-    Symbols function_symbols = symbols;
-    if (!fn.generic_params.empty()) {
-        function_symbols = with_generic_params(std::move(function_symbols), fn.generic_params,
-                                               generic_value_params_for_function(fn));
-    }
+    Symbols function_symbols = symbols_for_lsp_function(symbols, fn);
     FunctionScope scope(function_symbols);
     scope.current_class = std::move(current_class);
     for (const ParamDecl& param : fn.params) {
-        if (options.implicit_self && param.name == "self" &&
-            !source_has_explicit_type_after_name(doc, param.location, param.name)) {
+        const bool implicit_self_type = param.name == "self" &&
+                                        param.type_ref.location.line == param.location.line &&
+                                        param.type_ref.location.column == param.location.column;
+        if (options.implicit_self && implicit_self_type) {
             add_type_hint(hints, doc, symbols, param.location, param.name, param.type_ref);
         }
-        bind_inlay_local(scope, param.name, param.type_ref);
     }
+    bind_lsp_function_params(scope, fn);
     collect_hints_for_block(doc, scope, fn.statements, options, hints);
 }
 
@@ -605,9 +479,8 @@ std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions 
     try {
         const ProjectIndex& index = project_index_for_document(doc, true, false);
         const ModuleAst& module = index.visible_unit_for_path(doc.path);
-        Symbols symbols = collect_symbols(module);
-        std::deque<ClassDecl> imported_class_storage;
-        merge_imported_presentation_symbols(symbols, index, module, imported_class_storage);
+        LspPresentationSymbols presentation = presentation_symbols(index, module);
+        Symbols& symbols = presentation.symbols;
         for (const FunctionDecl& fn : module.functions) {
             collect_hints_for_function(doc, symbols, fn, {}, options, hints);
         }

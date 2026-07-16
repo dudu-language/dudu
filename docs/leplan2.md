@@ -318,6 +318,13 @@ encoding for both semantic and invalid-source lexical highlighting.
 Expression/body inference is separate from module declaration traversal, and
 top-level functions and methods share one parameter/body collector.
 
+Editor-local scope ownership is shared as well. Navigation and inlay hints now
+use one path for inferred locals, tuple bindings, loop elements, generic
+function symbols, and receiver substitution. Inlay hints no longer inspect
+source lines to rediscover declaration syntax, and imported class previews use
+an owning presentation-symbol context instead of query-local declaration
+copies.
+
 The code-generation audit also removed index-operator lowering from the general
 call emitter. Index reads, writes, and compound writes now share one structured
 receiver/type-resolution path in an owned index-hook unit. Duplicate and stale
