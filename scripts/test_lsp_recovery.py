@@ -229,10 +229,27 @@ diagnostic_batches = [
 ]
 assert len(diagnostic_batches) >= 3, diagnostic_batches
 assert diagnostic_batches[0] == [], diagnostic_batches
-assert any(item.get("source") == "dudu/parser" for item in diagnostic_batches[1])
-assert any(item.get("source") == "dudu/sema" for item in diagnostic_batches[1])
+broken_diagnostics = next(
+    batch
+    for batch in diagnostic_batches
+    if any(item.get("source") == "dudu/parser" for item in batch)
+)
+broken_notification_index = next(
+    index
+    for index, item in enumerate(responses)
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item["params"]["uri"] == uri
+    and any(
+        diagnostic.get("source") == "dudu/parser"
+        for diagnostic in item["params"]["diagnostics"]
+    )
+)
+first_editor_response_index = next(
+    index for index, item in enumerate(responses) if item.get("id") == 2
+)
+assert broken_notification_index < first_editor_response_index, responses
 assert not any(
-    "missing_after_broken" in item.get("message", "") for item in diagnostic_batches[1]
+    "missing_after_broken" in item.get("message", "") for item in broken_diagnostics
 )
 assert diagnostic_batches[-1] == [], diagnostic_batches[-1]
 
@@ -274,7 +291,13 @@ for offset in range(0, len(native_data), 5):
     line += delta_line
     character = character + delta_start if delta_line == 0 else delta_start
     decoded.append((line, character, length, legend[token_type], modifiers))
-assert (4, 11, 19, "function", 16) in decoded, decoded
+assert any(
+    token[:4] == (4, 11, 19, "function") and token[4] in (16, 32)
+    for token in decoded
+), decoded
+assert any(
+    item.get("method") == "workspace/semanticTokens/refresh" for item in responses
+), responses
 
 assert response(10)["result"] is None
 print("lsp invalid-edit recovery checks passed")

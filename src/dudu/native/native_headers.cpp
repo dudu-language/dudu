@@ -17,6 +17,7 @@
 #include <chrono>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <regex>
 #include <set>
@@ -429,6 +430,8 @@ NativeHeaderScan scan_headers(std::span<const ImportDecl> imports,
     if (imports.empty()) {
         return {};
     }
+    static std::recursive_mutex scan_mutex;
+    const std::lock_guard lock(scan_mutex);
     static std::map<std::string, NativeHeaderScan> cache;
     const SourceLocation location = imports.front().location;
     const std::string label = native_scan_label(imports);

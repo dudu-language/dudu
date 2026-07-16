@@ -19,9 +19,8 @@ The July 15, 2026 reference measurements show:
 - generated-CMake no-op build: 72.7 ms
 - generated-CMake one-module edit: 331.8 ms, of which about 310 ms is native
   CMake, GCC, and linker work
-- `raymarch-dd` cold workspace usable: 299.6 ms
-- `dudu-webserver` cold workspace usable: 149.9 ms
-- warm dogfood LSP requests: 6-21 ms
+- dogfood workspaces usable: 7.5-8.2 ms, including with an empty native cache
+- cached warm dogfood LSP requests: 0.3-21 ms
 - 1,000-unit mixed Dudu frontend: 127.7 ms
 - 1,000-unit Dudu C++ emission: 219.4 ms
 - generated C++ compile/link: 256.4 ms, versus 264.8 ms for the equivalent
@@ -146,8 +145,20 @@ Reproduce the bounded include-graph matrix with
 
 ### 3. Keep LSP Requests Independent Of Cold Work
 
-The measured dogfood workspaces meet the current targets. Preserve that result
-as projects grow.
+Status: complete for the P0 latency gate. Document open/change/save now
+publishes recovering parser diagnostics immediately. One coalescing background
+worker computes full semantic/native diagnostics from immutable document
+snapshots, discards stale revisions, and requests a standard semantic-token
+refresh when native metadata becomes ready. Semantic tokens use the Dudu-only
+index while that work is pending, and the native scanner serializes its shared
+process cache rather than racing foreground native requests.
+
+Release measurements put both dogfood workspaces at 7.5-8.2 ms through first
+diagnostics. With the native metadata directories physically removed, a
+deliberate first native hover still costs 1.08 seconds in `dudu-webserver` and
+3.65 seconds in SDL-heavy `raymarch-dd`, but unrelated Dudu definition and
+document-symbol requests remain below 3 ms. With metadata populated, native
+hover is 92-220 ms and every measured warm operation is 0.3-21 ms.
 
 Required work:
 
@@ -168,6 +179,11 @@ Completion:
 - warm references/semantic tokens under 100 ms
 - invalid source never causes a long synchronous re-index or removes all
   recoverable editor intelligence
+
+The smoke, recovery, incremental synchronization, and editor matrix fixtures
+assert immediate parser diagnostics, stale-result rejection, semantic-token
+refresh, and useful editor requests during invalid edits. Preserve these
+properties while adding larger editor fixtures under P1.
 
 ### 4. Bound Project-Driver And Native Build Overhead
 

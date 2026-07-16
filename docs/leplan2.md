@@ -126,22 +126,25 @@ wall-clock medians/p95, and process peak RSS. Raw CSV lives under the ignored
 | 50k native-heavy lines | 437.6 ms | 499.0 ms | 157.9 MiB |
 
 The dogfood LSP probe now starts a fresh server for every sample and records
-initialization through first published diagnostics, first native hover,
+initialization through immediate parser diagnostics, first native hover,
 definition, references, completion, semantic tokens, rename, and process peak
 RSS as CSV. Five-sample Release results are:
 
 | Workspace and operation | Median | p95 | Peak RSS |
 | --- | ---: | ---: | ---: |
-| `raymarch-dd` workspace usable | 299.6 ms | 304.7 ms | 216.2 MiB |
-| `raymarch-dd` first native hover | 13.5 ms | 14.5 ms | 216.2 MiB |
-| `raymarch-dd` slowest warm request | 20.3 ms | 20.9 ms | 216.2 MiB |
-| `dudu-webserver` workspace usable | 149.9 ms | 151.5 ms | 142.7 MiB |
-| `dudu-webserver` first native hover | 6.2 ms | 6.7 ms | 142.7 MiB |
-| `dudu-webserver` slowest warm request | 9.9 ms | 11.2 ms | 142.7 MiB |
+| `raymarch-dd` workspace usable | 7.5 ms | 8.0 ms | 280.6 MiB |
+| `raymarch-dd` cached first native hover | 219.5 ms | 222.1 ms | 280.6 MiB |
+| `raymarch-dd` slowest warm request | 21.0 ms | 22.8 ms | 280.6 MiB |
+| `dudu-webserver` workspace usable | 7.5 ms | 7.8 ms | 173.7 MiB |
+| `dudu-webserver` cached first native hover | 91.6 ms | 92.3 ms | 173.7 MiB |
+| `dudu-webserver` slowest warm request | 11.8 ms | 12.3 ms | 173.7 MiB |
 
-The first published diagnostics define workspace usability. Document-symbol
-timing after diagnostics is labeled post-diagnostics rather than cold, because
-the diagnostic pass has already populated the project/native view.
+The server publishes recovering parser diagnostics immediately, builds full
+semantic/native diagnostics on one coalescing background worker, drops stale
+revisions, and asks the client to refresh semantic tokens when native metadata
+is ready. Removing both dogfood native caches still leaves first diagnostics at
+7.6-8.2 ms. The deliberate first native request then exposes the real cold scan:
+1.08 seconds for `dudu-webserver` and 3.65 seconds for SDL-heavy `raymarch-dd`.
 
 The baseline also found 50k class-heavy lines taking 2,651.3 ms. Profiling
 showed declaration and body checking copied the complete `Symbols` graph for
@@ -179,9 +182,8 @@ are recorded in [Generated C++ Boundary Plan](generated-cpp-boundary-plan.md).
 
 ### Work Order
 
-1. Fix cold LSP indexing. The server must build indexes in the background,
-   share `ProjectIndex` and native metadata across requests, and remain useful
-   while indexing. A first request may not block for ten seconds.
+1. Preserve background LSP indexing, immediate parser diagnostics, stale-result
+   rejection, and semantic-token refresh as editor fixtures grow.
 2. Profile native-header cold scan and cached metadata load. Remove redundant
    Clang invocations, deserialization, dependency validation, and graph merges.
 3. Profile no-op and one-file generated-CMake builds. Avoid invoking or

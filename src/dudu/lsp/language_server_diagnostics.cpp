@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -134,6 +135,68 @@ void suppress_damaged_function_bodies(ModuleAst& module,
     }
 }
 
+std::vector<Diagnostic> diagnostics_from_index(const ProjectIndex& index, const Document& doc) {
+    std::vector<Diagnostic> diagnostics;
+    for (const ParseDiagnostic& diagnostic : index.parse_diagnostics()) {
+        if (location_belongs_to_document(diagnostic.location, doc)) {
+            diagnostics.push_back(parser_diagnostic(diagnostic));
+        }
+    }
+    ModuleAst diagnostic_module = index.merged_module();
+    suppress_damaged_function_bodies(diagnostic_module, index.parse_diagnostics());
+    const std::vector<CompileError> semantic =
+        analyze_module_tree_collecting(diagnostic_module, {.check_bodies = true});
+    for (const CompileError& error : semantic) {
+        if (location_belongs_to_document(error.location(), doc)) {
+            diagnostics.push_back(compile_diagnostic(error));
+        }
+    }
+    std::vector<Diagnostic> macro_diagnostics =
+        macro_diagnostics_for_document(index.macro_report(), doc);
+    diagnostics.insert(diagnostics.end(), std::make_move_iterator(macro_diagnostics.begin()),
+                       std::make_move_iterator(macro_diagnostics.end()));
+    std::vector<Diagnostic> lints = ast_lint_diagnostics(diagnostic_module, doc);
+    diagnostics.insert(diagnostics.end(), std::make_move_iterator(lints.begin()),
+                       std::make_move_iterator(lints.end()));
+    return diagnostics;
+}
+
+std::vector<Diagnostic> config_diagnostics(const ProjectConfig& config, const Document& doc) {
+    if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
+        return {{.location = {.file = SourceFileName(doc.path.string()), .line = 1, .column = 1},
+                 .message = "missing pkg-config package: " + *missing,
+                 .source = "dudu/build-config",
+                 .severity = 1,
+                 .code = "",
+                 .data_name = "",
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
+    }
+    return {};
+}
+
+std::vector<Diagnostic> exception_diagnostic(const Document& doc, const CompileError& error) {
+    if (error.code().starts_with("dudu.parser.") || error.code().starts_with("dudu.lexer.")) {
+        const ParseResult recovered = parse_source_recovering(doc.text, doc.path);
+        if (!recovered.diagnostics.empty()) {
+            std::vector<Diagnostic> diagnostics;
+            diagnostics.reserve(recovered.diagnostics.size());
+            for (const ParseDiagnostic& diagnostic : recovered.diagnostics) {
+                diagnostics.push_back(parser_diagnostic(diagnostic));
+            }
+            return diagnostics;
+        }
+    }
+    return {{.location = error.location(),
+             .message = error.what(),
+             .source = diagnostic_source(error.code()),
+             .severity = 1,
+             .code = error.code(),
+             .data_name = error.data_name(),
+             .fix_range = std::nullopt,
+             .related_information = {}}};
+}
+
 } // namespace
 
 std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
@@ -152,10 +215,46 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .fix_range = std::nullopt,
                  .related_information = {}}};
         }
-        if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
+        if (std::vector<Diagnostic> diagnostics = config_diagnostics(config, doc);
+            !diagnostics.empty()) {
+            return diagnostics;
+        }
+        const ProjectIndex& index = project_index_for_document(doc, true, false, false);
+        return diagnostics_from_index(index, doc);
+    } catch (const CompileError& error) {
+        return exception_diagnostic(doc, error);
+    } catch (const std::exception& error) {
+        return {{.location = {.file = SourceFileName(doc.path.string()), .line = 1, .column = 1},
+                 .message = error.what(),
+                 .source = "dudu/lsp",
+                 .severity = 1,
+                 .code = "",
+                 .data_name = "",
+                 .fix_range = std::nullopt,
+                 .related_information = {}}};
+    }
+}
+
+std::vector<Diagnostic> syntax_diagnostics_for_document(const Document& doc) {
+    const ParseResult recovered = parse_source_recovering(doc.text, doc.path);
+    std::vector<Diagnostic> diagnostics;
+    diagnostics.reserve(recovered.diagnostics.size());
+    for (const ParseDiagnostic& diagnostic : recovered.diagnostics) {
+        diagnostics.push_back(parser_diagnostic(diagnostic));
+    }
+    return diagnostics;
+}
+
+std::vector<Diagnostic> diagnostics_for_document_snapshot(
+    const Document& doc, const std::map<std::filesystem::path, std::string>& source_overrides) {
+    try {
+        ProjectIndexOptions options;
+        try {
+            options = project_index_options_for_document(doc, true, false, source_overrides);
+        } catch (const std::exception& error) {
             return {
                 {.location = {.file = SourceFileName(doc.path.string()), .line = 1, .column = 1},
-                 .message = "missing pkg-config package: " + *missing,
+                 .message = error.what(),
                  .source = "dudu/build-config",
                  .severity = 1,
                  .code = "",
@@ -163,50 +262,23 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .fix_range = std::nullopt,
                  .related_information = {}}};
         }
-        const ProjectIndex& index = project_index_for_document(doc, true, false, false);
-        std::vector<Diagnostic> diagnostics;
-        for (const ParseDiagnostic& diagnostic : index.parse_diagnostics()) {
-            if (location_belongs_to_document(diagnostic.location, doc)) {
-                diagnostics.push_back(parser_diagnostic(diagnostic));
+        if (std::vector<Diagnostic> diagnostics = config_diagnostics(options.config, doc);
+            !diagnostics.empty()) {
+            return diagnostics;
+        }
+        try {
+            return diagnostics_from_index(ProjectIndex::load(options), doc);
+        } catch (const std::exception&) {
+            const std::exception_ptr original = std::current_exception();
+            try {
+                options.recover_syntax = true;
+                return diagnostics_from_index(ProjectIndex::load(options), doc);
+            } catch (const std::exception&) {
+                std::rethrow_exception(original);
             }
         }
-        ModuleAst diagnostic_module = index.merged_module();
-        suppress_damaged_function_bodies(diagnostic_module, index.parse_diagnostics());
-        const std::vector<CompileError> semantic =
-            analyze_module_tree_collecting(diagnostic_module, {.check_bodies = true});
-        for (const CompileError& error : semantic) {
-            if (location_belongs_to_document(error.location(), doc)) {
-                diagnostics.push_back(compile_diagnostic(error));
-            }
-        }
-        std::vector<Diagnostic> macro_diagnostics =
-            macro_diagnostics_for_document(index.macro_report(), doc);
-        diagnostics.insert(diagnostics.end(), std::make_move_iterator(macro_diagnostics.begin()),
-                           std::make_move_iterator(macro_diagnostics.end()));
-        std::vector<Diagnostic> lints = ast_lint_diagnostics(diagnostic_module, doc);
-        diagnostics.insert(diagnostics.end(), std::make_move_iterator(lints.begin()),
-                           std::make_move_iterator(lints.end()));
-        return diagnostics;
     } catch (const CompileError& error) {
-        if (error.code().starts_with("dudu.parser.") || error.code().starts_with("dudu.lexer.")) {
-            const ParseResult recovered = parse_source_recovering(doc.text, doc.path);
-            if (!recovered.diagnostics.empty()) {
-                std::vector<Diagnostic> diagnostics;
-                diagnostics.reserve(recovered.diagnostics.size());
-                for (const ParseDiagnostic& diagnostic : recovered.diagnostics) {
-                    diagnostics.push_back(parser_diagnostic(diagnostic));
-                }
-                return diagnostics;
-            }
-        }
-        return {{.location = error.location(),
-                 .message = error.what(),
-                 .source = diagnostic_source(error.code()),
-                 .severity = 1,
-                 .code = error.code(),
-                 .data_name = error.data_name(),
-                 .fix_range = std::nullopt,
-                 .related_information = {}}};
+        return exception_diagnostic(doc, error);
     } catch (const std::exception& error) {
         return {{.location = {.file = SourceFileName(doc.path.string()), .line = 1, .column = 1},
                  .message = error.what(),

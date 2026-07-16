@@ -3,7 +3,10 @@ proc = subprocess.run(
     input="".join(messages).encode(),
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
-    timeout=10,
+    # The comprehensive Debug smoke sends more than 100 requests and exercises
+    # native indexing. Keep a hard hang guard without treating Debug overhead
+    # as a shipped LSP latency budget.
+    timeout=30,
     check=True,
 )
 if proc.stderr:

@@ -113,20 +113,26 @@ dudu bench compiler -- --suite core --samples 5
 ## Editor Latency
 
 The LSP benchmark starts a fresh server for each sample. Workspace usability is
-measured through the first published diagnostics. Warm requests run afterward
-against the populated project and native indexes.
+measured through immediate recovering parser diagnostics. Full semantic and
+native diagnostics continue on one coalescing background worker. Warm requests
+run afterward against populated project and native indexes.
 
 | Workspace and operation | Median | p95 | Peak RSS |
 | --- | ---: | ---: | ---: |
-| `raymarch-dd` workspace usable | 299.6 ms | 304.7 ms | 216.2 MiB |
-| `raymarch-dd` first native hover | 13.5 ms | 14.5 ms | 216.2 MiB |
-| `raymarch-dd` slowest warm request | 20.3 ms | 20.9 ms | 216.2 MiB |
-| `dudu-webserver` workspace usable | 149.9 ms | 151.5 ms | 142.7 MiB |
-| `dudu-webserver` first native hover | 6.2 ms | 6.7 ms | 142.7 MiB |
-| `dudu-webserver` slowest warm request | 9.9 ms | 11.2 ms | 142.7 MiB |
+| `raymarch-dd` workspace usable | 7.5 ms | 8.0 ms | 280.6 MiB |
+| `raymarch-dd` cached first native hover | 219.5 ms | 222.1 ms | 280.6 MiB |
+| `raymarch-dd` slowest warm request | 21.0 ms | 22.8 ms | 280.6 MiB |
+| `dudu-webserver` workspace usable | 7.5 ms | 7.8 ms | 173.7 MiB |
+| `dudu-webserver` cached first native hover | 91.6 ms | 92.3 ms | 173.7 MiB |
+| `dudu-webserver` slowest warm request | 11.8 ms | 12.3 ms | 173.7 MiB |
 
 The probe covers definition, hover, references, completion, semantic tokens,
-rename, native-aware hover, and process RSS.
+rename, native-aware hover, and process RSS. A separate one-sample run with the
+native metadata directories removed measured workspace usability at 8.2 ms for
+`raymarch-dd` and 7.6 ms for `dudu-webserver`; the deliberately native hover
+then paid the actual background scan at 3.65 seconds and 1.08 seconds. That
+native cost is visible, but no longer blocks parser diagnostics or unrelated
+Dudu editor requests.
 
 ## Declaration Macro Compilation
 

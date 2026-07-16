@@ -144,10 +144,15 @@ diagnostics = [
     for item in responses
     if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == uri
 ]
-assert len(diagnostics) == 3, diagnostics
-assert any(item.get("source") == "dudu/parser" for item in diagnostics[1]), diagnostics[1]
-assert all(item["range"]["start"]["line"] == 2 for item in diagnostics[1]), diagnostics[1]
-assert diagnostics[2] == [], diagnostics[2]
+assert len(diagnostics) >= 3, diagnostics
+parser_diagnostics = next(
+    batch
+    for batch in diagnostics
+    if any(item.get("source") == "dudu/parser" for item in batch)
+)
+assert all(item["range"]["start"]["line"] == 2 for item in parser_diagnostics), parser_diagnostics
+assert diagnostics[0] == [], diagnostics[0]
+assert diagnostics[-1] == [], diagnostics[-1]
 
 assert response(2)["result"]["data"], response(2)
 assert "i32" in json.dumps(response(3)["result"]), response(3)

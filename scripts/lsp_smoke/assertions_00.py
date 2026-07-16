@@ -23,16 +23,26 @@ assert "position.line" in missing_position_definition["error"]["message"], (
     missing_position_definition
 )
 
-diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
+def published_diagnostics(uri, contains=None):
+    for item in reversed(responses):
+        if item.get("method") != "textDocument/publishDiagnostics":
+            continue
+        if item["params"]["uri"] != uri:
+            continue
+        diagnostics = item["params"]["diagnostics"]
+        if contains is None or any(contains(diagnostic) for diagnostic in diagnostics):
+            return item
+    raise AssertionError(f"missing diagnostics for {uri}")
+
+
+diagnostics = published_diagnostics(uri, lambda item: item.get("source") == "dudu/sema")
 diag = diagnostics["params"]["diagnostics"][0]
 assert diag["source"] == "dudu/sema"
 assert "return type mismatch" in diag["message"]
 
-unknown_identifier_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics"
-    and item["params"]["uri"] == unknown_identifier_uri
+unknown_identifier_diagnostics = published_diagnostics(
+    unknown_identifier_uri,
+    lambda item: item.get("code") == "dudu.sema.unknown_identifier",
 )
 missing_helper_diag = next(
     item
@@ -43,11 +53,9 @@ missing_helper_diag = next(
 assert missing_helper_diag["code"] == "dudu.sema.unknown_identifier"
 assert missing_helper_diag["data"]["name"] == "missing_helper"
 
-missing_native_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics"
-    and item["params"]["uri"] == missing_native_uri
+missing_native_diagnostics = published_diagnostics(
+    missing_native_uri,
+    lambda item: item.get("code") == "dudu.native_header.scan_failed",
 )
 missing_native_diag = missing_native_diagnostics["params"]["diagnostics"][0]
 assert missing_native_diag["source"] == "dudu/native-header"
@@ -56,10 +64,9 @@ assert missing_native_diag["data"]["name"] == "./native_headers/does_not_exist.h
 assert "could not scan native header" in missing_native_diag["message"]
 assert "hint: add the header directory" in missing_native_diag["message"]
 
-lint_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == lint_uri
+lint_diagnostics = published_diagnostics(
+    lint_uri,
+    lambda item: item.get("code") == "dudu.lint.unreachable",
 )
 lint_diag = next(
     item
@@ -71,10 +78,9 @@ assert lint_diag["severity"] == 2
 assert lint_diag["code"] == "dudu.lint.unreachable"
 assert lint_diag["range"]["start"]["line"] == 2
 
-unused_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == unused_uri
+unused_diagnostics = published_diagnostics(
+    unused_uri,
+    lambda item: item.get("code") == "dudu.lint.unused",
 )
 unused_messages = [item["message"] for item in unused_diagnostics["params"]["diagnostics"]]
 assert "unused local: unused_value" in unused_messages
@@ -92,10 +98,9 @@ assert unused_fix_range["start"]["character"] == 0
 assert unused_fix_range["end"]["line"] == 2
 assert unused_fix_range["end"]["character"] == 0
 
-shadow_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == shadow_uri
+shadow_diagnostics = published_diagnostics(
+    shadow_uri,
+    lambda item: item.get("code") == "dudu.lint.shadow",
 )
 shadow_messages = [item["message"] for item in shadow_diagnostics["params"]["diagnostics"]]
 assert "local shadows outer binding: value" in shadow_messages
@@ -104,10 +109,9 @@ shadow_codes = {
 }
 assert shadow_codes["local shadows outer binding: value"] == "dudu.lint.shadow"
 
-hazard_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == hazard_uri
+hazard_diagnostics = published_diagnostics(
+    hazard_uri,
+    lambda item: item.get("code") == "dudu.lint.cpp_escape",
 )
 hazard_messages = [item["message"] for item in hazard_diagnostics["params"]["diagnostics"]]
 assert "suspicious narrowing cast: i32(wide) from i64" in hazard_messages
@@ -118,11 +122,9 @@ hazard_codes = {
 assert hazard_codes["suspicious narrowing cast: i32(wide) from i64"] == "dudu.lint.suspicious_cast"
 assert hazard_codes["native interop hazard: raw cpp escape hatch"] == "dudu.lint.cpp_escape"
 
-build_config_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics"
-    and item["params"]["uri"] == bad_config_uri
+build_config_diagnostics = published_diagnostics(
+    bad_config_uri,
+    lambda item: item.get("source") == "dudu/build-config",
 )
 build_config_diag = build_config_diagnostics["params"]["diagnostics"][0]
 assert build_config_diag["source"] == "dudu/build-config", build_config_diag
@@ -133,11 +135,9 @@ assert "error" in bad_config_definition, bad_config_definition
 assert bad_config_definition["error"]["code"] == -32603, bad_config_definition
 assert "invalid [target] kind" in bad_config_definition["error"]["message"], bad_config_definition
 
-missing_pkg_diagnostics = next(
-    item
-    for item in responses
-    if item.get("method") == "textDocument/publishDiagnostics"
-    and item["params"]["uri"] == missing_pkg_uri
+missing_pkg_diagnostics = published_diagnostics(
+    missing_pkg_uri,
+    lambda item: item.get("source") == "dudu/build-config",
 )
 missing_pkg_diag = missing_pkg_diagnostics["params"]["diagnostics"][0]
 assert missing_pkg_diag["source"] == "dudu/build-config"

@@ -19,6 +19,9 @@ ProjectConfig config_for_file(const std::filesystem::path& file);
 const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
                                                bool check_semantics = false,
                                                bool allow_last_good = true);
+ProjectIndexOptions project_index_options_for_document(
+    const Document& doc, bool include_native_headers, bool check_semantics,
+    const std::map<std::filesystem::path, std::string>& source_overrides = {});
 ProjectIndexCacheStats language_server_project_index_cache_stats();
 void set_language_server_open_documents(const std::map<std::string, Document>& documents);
 void clear_language_server_module_cache();

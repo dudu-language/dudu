@@ -1,10 +1,9 @@
 #include "dudu/lsp/language_server.hpp"
 
-#include "dudu/core/version.hpp"
-
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/core/version.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/lsp/language_server_code_actions.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
@@ -29,6 +28,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -36,11 +36,13 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace dudu {
@@ -50,6 +52,18 @@ class LanguageServer {
   public:
     LanguageServer(std::istream& in, std::ostream& out, std::ostream& err)
         : in_(in), out_(out), err_(err) {
+        diagnostics_worker_ = std::thread([this] { diagnostics_worker_loop(); });
+    }
+
+    ~LanguageServer() {
+        {
+            const std::lock_guard lock(diagnostics_mutex_);
+            diagnostics_stopping_ = true;
+        }
+        diagnostics_cv_.notify_one();
+        if (diagnostics_worker_.joinable()) {
+            diagnostics_worker_.join();
+        }
     }
 
     int run() {
@@ -72,11 +86,25 @@ class LanguageServer {
     std::ostream& err_;
     std::map<std::string, Document> documents_;
     size_t documents_revision_ = 0;
+    std::map<std::string, size_t> document_revisions_;
     mutable size_t workspace_cache_revision_ = std::numeric_limits<size_t>::max();
     mutable std::map<std::string, Document> workspace_cache_;
     InlayHintOptions inlay_hint_options_{};
     bool shutdown_ = false;
     bool exit_ = false;
+    struct DiagnosticsJob {
+        Document document;
+        std::map<std::filesystem::path, std::string> source_overrides;
+        size_t revision = 0;
+    };
+    mutable std::mutex output_mutex_;
+    mutable std::mutex diagnostics_mutex_;
+    std::condition_variable diagnostics_cv_;
+    std::map<std::string, DiagnosticsJob> pending_diagnostics_;
+    std::map<std::string, size_t> native_ready_revisions_;
+    bool diagnostics_stopping_ = false;
+    size_t server_request_sequence_ = 0;
+    std::thread diagnostics_worker_;
 
     std::optional<std::string> read_message() {
         std::string line;
@@ -105,6 +133,7 @@ class LanguageServer {
     }
 
     void write_message(const std::string& body) {
+        const std::lock_guard lock(output_mutex_);
         out_ << "Content-Length: " << body.size() << "\r\n\r\n" << body;
         out_.flush();
     }
@@ -125,6 +154,13 @@ class LanguageServer {
     void notify(std::string_view method, const std::string& params) {
         std::ostringstream body;
         body << "{\"jsonrpc\":\"2.0\",\"method\":\"" << method << "\",\"params\":" << params << "}";
+        write_message(body.str());
+    }
+
+    void request_client_refresh(std::string_view method) {
+        std::ostringstream body;
+        body << "{\"jsonrpc\":\"2.0\",\"id\":\"dudu-refresh-" << ++server_request_sequence_
+             << "\",\"method\":\"" << method << "\",\"params\":null}";
         write_message(body.str());
     }
 
@@ -302,8 +338,9 @@ class LanguageServer {
         documents_[uri] = {.uri = uri,
                            .path = file_uri_to_path(uri),
                            .text = string_value(text_document->get("text"))};
-        invalidate_workspace_cache();
-        publish_diagnostics(uri);
+        invalidate_workspace_cache(uri);
+        publish_syntax_diagnostics(uri);
+        queue_full_diagnostics(uri);
     }
 
     void did_change(const Json* params) {
@@ -318,8 +355,9 @@ class LanguageServer {
         doc.uri = uri;
         doc.path = file_uri_to_path(uri);
         apply_lsp_content_changes(doc.text, *array);
-        invalidate_workspace_cache();
-        publish_diagnostics(uri);
+        invalidate_workspace_cache(uri);
+        publish_syntax_diagnostics(uri);
+        queue_full_diagnostics(uri);
     }
 
     void did_save(const Json* params) {
@@ -327,18 +365,23 @@ class LanguageServer {
         if (text_document == nullptr) {
             return;
         }
-        invalidate_workspace_cache();
-        publish_diagnostics(string_value(text_document->get("uri")));
+        const std::string uri = string_value(text_document->get("uri"));
+        invalidate_workspace_cache(uri);
+        publish_syntax_diagnostics(uri);
+        queue_full_diagnostics(uri);
     }
 
-    void publish_diagnostics(const std::string& uri) {
+    void publish_syntax_diagnostics(const std::string& uri) {
         const auto found = documents_.find(uri);
         if (found == documents_.end()) {
             return;
         }
+        publish_diagnostics(uri, syntax_diagnostics_for_document(found->second));
+    }
+
+    void publish_diagnostics(const std::string& uri, const std::vector<Diagnostic>& diagnostics) {
         std::ostringstream params;
         params << "{\"uri\":\"" << json_escape(uri) << "\",\"diagnostics\":[";
-        const std::vector<Diagnostic> diagnostics = diagnostics_for_document(found->second);
         for (size_t i = 0; i < diagnostics.size(); ++i) {
             if (i > 0) {
                 params << ',';
@@ -347,6 +390,59 @@ class LanguageServer {
         }
         params << "]}";
         notify("textDocument/publishDiagnostics", params.str());
+    }
+
+    void queue_full_diagnostics(const std::string& uri) {
+        const auto found = documents_.find(uri);
+        if (found == documents_.end()) {
+            return;
+        }
+        DiagnosticsJob job{.document = found->second,
+                           .source_overrides = {},
+                           .revision = document_revisions_[uri]};
+        for (const auto& [document_uri, document] : documents_) {
+            (void)document_uri;
+            job.source_overrides[document.path] = document.text;
+        }
+        {
+            const std::lock_guard lock(diagnostics_mutex_);
+            pending_diagnostics_.insert_or_assign(uri, std::move(job));
+        }
+        diagnostics_cv_.notify_one();
+    }
+
+    void diagnostics_worker_loop() {
+        while (true) {
+            DiagnosticsJob job;
+            {
+                std::unique_lock lock(diagnostics_mutex_);
+                diagnostics_cv_.wait(
+                    lock, [&] { return diagnostics_stopping_ || !pending_diagnostics_.empty(); });
+                if (diagnostics_stopping_ && pending_diagnostics_.empty()) {
+                    return;
+                }
+                auto next = pending_diagnostics_.begin();
+                job = std::move(next->second);
+                pending_diagnostics_.erase(next);
+            }
+            const std::vector<Diagnostic> diagnostics =
+                diagnostics_for_document_snapshot(job.document, job.source_overrides);
+            const std::lock_guard lock(diagnostics_mutex_);
+            const auto revision = document_revisions_.find(job.document.uri);
+            if (revision != document_revisions_.end() && job.revision == revision->second) {
+                native_ready_revisions_[job.document.uri] = job.revision;
+                publish_diagnostics(job.document.uri, diagnostics);
+                request_client_refresh("workspace/semanticTokens/refresh");
+            }
+        }
+    }
+
+    bool full_diagnostics_ready(const std::string& uri) const {
+        const std::lock_guard lock(diagnostics_mutex_);
+        const auto ready = native_ready_revisions_.find(uri);
+        const auto current = document_revisions_.find(uri);
+        return ready != native_ready_revisions_.end() && current != document_revisions_.end() &&
+               ready->second == current->second;
     }
 
     std::string semantic_tokens_result(const Json* params) const {
@@ -360,9 +456,12 @@ class LanguageServer {
         try {
             const ProjectIndex& index =
                 project_index_for_document(found->second, false, false, false);
-            const ProjectIndex& native_index =
-                project_index_for_document(found->second, true, false, false);
-            return semantic_tokens_json(index, found->second.path, native_index);
+            if (full_diagnostics_ready(uri)) {
+                const ProjectIndex& native_index =
+                    project_index_for_document(found->second, true, false, false);
+                return semantic_tokens_json(index, found->second.path, native_index);
+            }
+            return semantic_tokens_json(index, found->second.path, index);
         } catch (const std::exception&) {
             const ParseResult recovered =
                 parse_source_recovering(found->second.text, found->second.path);
@@ -494,8 +593,12 @@ class LanguageServer {
         return found == documents_.end() ? nullptr : &found->second;
     }
 
-    void invalidate_workspace_cache() {
-        ++documents_revision_;
+    void invalidate_workspace_cache(const std::string& uri) {
+        {
+            const std::lock_guard lock(diagnostics_mutex_);
+            ++documents_revision_;
+            ++document_revisions_[uri];
+        }
         workspace_cache_revision_ = std::numeric_limits<size_t>::max();
         workspace_cache_.clear();
         set_language_server_open_documents(documents_);

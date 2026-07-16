@@ -88,19 +88,8 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
         .manifest_path = canonical_overlay_path(project_config_path(doc.path)).string(),
         .include_native_headers = include_native_headers,
     };
-    ProjectIndexOptions options;
-    options.entry_path = doc.path;
-    options.entry_source = doc.text;
-    options.source_overrides = open_document_sources;
-    options.source_overrides[canonical_overlay_path(doc.path)] = doc.text;
-    options.source_dir = doc.path.parent_path();
-    options.allow_module_tree =
-        doc.path.has_parent_path() && std::filesystem::exists(doc.path.parent_path());
-    options.include_native_headers = include_native_headers;
-    options.include_native_headers_in_merged_module = false;
-    options.check_semantics = check_semantics;
-    options.semantic_options = {.check_bodies = true};
-    options.config = config_for_file(doc.path);
+    ProjectIndexOptions options = project_index_options_for_document(
+        doc, include_native_headers, check_semantics, open_document_sources);
     try {
         const ProjectIndex& index = project_index_cache.get(options);
         if (!check_semantics) {
@@ -125,6 +114,25 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
         }
         std::rethrow_exception(current_error);
     }
+}
+
+ProjectIndexOptions project_index_options_for_document(
+    const Document& doc, bool include_native_headers, bool check_semantics,
+    const std::map<std::filesystem::path, std::string>& source_overrides) {
+    ProjectIndexOptions options;
+    options.entry_path = doc.path;
+    options.entry_source = doc.text;
+    options.source_overrides = source_overrides;
+    options.source_overrides[canonical_overlay_path(doc.path)] = doc.text;
+    options.source_dir = doc.path.parent_path();
+    options.allow_module_tree =
+        doc.path.has_parent_path() && std::filesystem::exists(doc.path.parent_path());
+    options.include_native_headers = include_native_headers;
+    options.include_native_headers_in_merged_module = false;
+    options.check_semantics = check_semantics;
+    options.semantic_options = {.check_bodies = true};
+    options.config = config_for_file(doc.path);
+    return options;
 }
 
 ProjectIndexCacheStats language_server_project_index_cache_stats() {
