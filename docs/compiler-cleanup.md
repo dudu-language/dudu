@@ -193,6 +193,12 @@ Outcome:
   artifact sections rather than implementing declaration policy
 - reduced `cpp_emit.cpp` from 553 to 272 lines; the free-function emission unit
   is 286 lines and the class layout unit is 265 lines
+- moved function/class decorator lookup and test-function classification into
+  core decorator support, where sema, codegen, module ABI projection, and test
+  discovery now consume the same declaration facts
+- removed five subsystem-local decorator forwarding wrappers and two duplicate
+  test classifiers, including the codegen-prefixed APIs that exposed no
+  code-generation policy
 
 Validation: parser ranges, AST/type/shape, inference, module, emission,
 negative, code-generation shape, and canonical fixture suites, plus

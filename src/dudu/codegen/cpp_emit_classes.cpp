@@ -104,10 +104,6 @@ std::string decorator_arg(const ClassDecl& klass, std::string_view name) {
     return {};
 }
 
-bool class_has_decorator(const ClassDecl& klass, std::string_view name) {
-    return has_decorator(klass.decorators, name);
-}
-
 std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases,
                           const CppEmitOptions& options) {
     const std::string& class_name = emitted_name(klass, options);
@@ -125,7 +121,7 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
         }
         return opening;
     };
-    const bool packed = class_has_decorator(klass, "packed");
+    const bool packed = has_decorator(klass, "packed");
     const std::string alignment = decorator_arg(klass, "align");
     if (packed && !alignment.empty()) {
         return with_bases("struct __attribute__((packed, aligned(" + alignment + "))) " +

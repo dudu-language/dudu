@@ -25,7 +25,7 @@ std::string function_decorator_args(const FunctionDecl& fn, std::string_view nam
 }
 
 bool emit_before_constants(const FunctionDecl& fn) {
-    return cpp_emit_function_has_decorator(fn, "constexpr");
+    return has_decorator(fn, "constexpr");
 }
 
 bool generic_function(const FunctionDecl& fn) {
@@ -39,19 +39,19 @@ bool should_emit_function(const FunctionDecl& fn, bool test_source) {
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
                              const std::vector<std::string>& aliases,
                              const CppEmitOptions& options) {
-    if (cpp_emit_function_has_decorator(fn, "extern_c")) {
+    if (has_decorator(fn, "extern_c")) {
         out << "extern \"C\" ";
     }
-    if (cpp_emit_function_has_decorator(fn, "cuda.global")) {
+    if (has_decorator(fn, "cuda.global")) {
         out << "DUDU_CUDA_GLOBAL ";
     }
-    if (cpp_emit_function_has_decorator(fn, "cuda.device")) {
+    if (has_decorator(fn, "cuda.device")) {
         out << "DUDU_CUDA_DEVICE ";
     }
-    if (cpp_emit_function_has_decorator(fn, "cuda.host")) {
+    if (has_decorator(fn, "cuda.host")) {
         out << "DUDU_CUDA_HOST ";
     }
-    if (cpp_emit_function_has_decorator(fn, "shader.compute")) {
+    if (has_decorator(fn, "shader.compute")) {
         out << "DUDU_SHADER_COMPUTE ";
     }
     const std::string section = cpp_emit_function_decorator_arg(fn, "section");
@@ -62,15 +62,14 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (!workgroup.empty()) {
         out << "DUDU_WORKGROUP_SIZE(" << workgroup << ") ";
     }
-    if (cpp_emit_function_has_decorator(fn, "inline")) {
+    if (has_decorator(fn, "inline")) {
         out << "inline ";
     }
-    if (cpp_emit_function_has_decorator(fn, "constexpr")) {
+    if (has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    const std::string& name = cpp_emit_function_has_decorator(fn, "extern_c")
-                                  ? fn.name
-                                  : emitted_value_name(fn.name, options);
+    const std::string& name =
+        has_decorator(fn, "extern_c") ? fn.name : emitted_value_name(fn.name, options);
     out << lower_cpp_type(function_return_type_ref(fn), aliases, options) << ' ' << name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
@@ -107,21 +106,6 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
 }
 
 } // namespace
-
-bool cpp_emit_function_has_decorator(const FunctionDecl& fn, std::string_view name) {
-    return has_decorator(fn.decorators, name);
-}
-
-bool cpp_emit_function_is_test(const FunctionDecl& fn) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
-            decorator_matches(decorator, "test.should_panic") ||
-            decorator_call_matches(decorator, "test.should_panic")) {
-            return true;
-        }
-    }
-    return false;
-}
 
 std::string cpp_emit_string_literal(std::string text) {
     std::string out = "\"";
@@ -183,7 +167,7 @@ std::map<std::string, TypeRef> cpp_function_return_types(const ModuleAst& module
 
 bool cpp_function_visible_in_header(const FunctionDecl& fn, const CppEmitOptions& options) {
     return visible_in_cpp_header(fn.visibility) &&
-           (options.expose_test_functions || !cpp_emit_function_is_test(fn));
+           (options.expose_test_functions || !is_test_function(fn));
 }
 
 void emit_cpp_function_declarations(std::ostringstream& out, const ModuleAst& module,
@@ -262,8 +246,7 @@ void emit_cpp_module_function_bodies(std::ostringstream& out, const ModuleAst& m
 
 void emit_c_function_declarations(std::ostringstream& out, const ModuleAst& module) {
     for (const FunctionDecl& fn : module.functions) {
-        if (!cpp_emit_function_has_decorator(fn, "extern_c") ||
-            !cpp_function_visible_in_header(fn)) {
+        if (!has_decorator(fn, "extern_c") || !cpp_function_visible_in_header(fn)) {
             continue;
         }
         out << lower_cpp_type(function_return_type_ref(fn)) << ' ' << fn.name << '(';

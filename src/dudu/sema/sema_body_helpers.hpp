@@ -18,8 +18,6 @@ struct EffectiveVarType {
 
 bool freestanding_like(const FunctionScope& scope);
 bool is_array_literal(const Expr& expr);
-bool function_has_decorator(const FunctionDecl& fn, std::string_view name);
-
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                           const SourceLocation& location, std::string_view mismatch_label = {});
 void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_type,

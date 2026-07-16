@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/decorators.hpp"
 
 #include <optional>
 #include <string_view>
@@ -12,7 +13,7 @@ namespace dudu {
 namespace {
 
 bool public_abi_function(const FunctionDecl& fn, bool test_source) {
-    return fn.visibility != Visibility::Private && (test_source || !cpp_emit_function_is_test(fn));
+    return fn.visibility != Visibility::Private && (test_source || !is_test_function(fn));
 }
 
 std::string module_target_kind(const ModuleAst& module) {
@@ -52,7 +53,7 @@ void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, b
         }
         for (const FunctionDecl& method : klass.methods) {
             if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-                !cpp_emit_function_has_decorator(method, "operator")) {
+                !has_decorator(method, "operator")) {
                 options.generated_value_names[klass.name + "." + method.name] = method.cpp_name;
                 if (!klass.cpp_name.empty()) {
                     options.generated_value_names[klass.cpp_name + "." + method.name] =
@@ -69,7 +70,7 @@ void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, b
     for (const FunctionDecl& fn : unit.functions) {
         if (!fn.cpp_name.empty()) {
             options.generated_value_names[fn.name] =
-                cpp_emit_function_has_decorator(fn, "extern_c") ||
+                has_decorator(fn, "extern_c") ||
                         (public_abi && public_abi_function(fn, test_source))
                     ? fn.name
                     : fn.cpp_name;
@@ -81,7 +82,7 @@ void add_reserved_method_generated_names(CppEmitOptions& options, const std::str
                                          const ClassDecl& klass) {
     for (const FunctionDecl& method : klass.methods) {
         if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-            !cpp_emit_function_has_decorator(method, "operator")) {
+            !has_decorator(method, "operator")) {
             options.generated_value_names[type_name + "." + method.name] = method.cpp_name;
         }
     }
@@ -184,7 +185,7 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
             options.generated_value_names[expose(klass.name)] = klass.cpp_name;
             for (const FunctionDecl& method : klass.methods) {
                 if (!method.cpp_name.empty() && cpp_reserved_identifier(method.name) &&
-                    !cpp_emit_function_has_decorator(method, "operator")) {
+                    !has_decorator(method, "operator")) {
                     options.generated_value_names[expose(klass.name) + "." + method.name] =
                         method.cpp_name;
                     options.generated_value_names[klass.cpp_name + "." + method.name] =
@@ -206,7 +207,7 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
     for (const FunctionDecl& fn : dependency.functions) {
         if ((!selective || fn.name == import.imported_name) && !fn.cpp_name.empty()) {
             options.generated_value_names[expose(fn.name)] =
-                cpp_emit_function_has_decorator(fn, "extern_c") ||
+                has_decorator(fn, "extern_c") ||
                         (public_abi && public_abi_function(fn, test_source))
                     ? fn.name
                     : fn.cpp_name;

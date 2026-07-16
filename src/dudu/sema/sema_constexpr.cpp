@@ -10,7 +10,7 @@ namespace dudu {
 namespace {
 
 bool has_constexpr_decorator(const FunctionDecl& fn) {
-    return has_decorator(fn.decorators, "constexpr");
+    return has_decorator(fn, "constexpr");
 }
 
 void check_expr_call(const Expr& expr, const std::set<std::string>& constexpr_functions,

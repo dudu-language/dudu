@@ -33,20 +33,6 @@ void check_supported_type_shape(const SourceLocation& location, const TypeRef& t
     }
 }
 
-bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    return dudu::has_decorator(fn.decorators, name);
-}
-
-bool is_test_decorator(const FunctionDecl& fn) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
-            decorator_matches(decorator, "test.should_panic") ||
-            decorator_call_matches(decorator, "test.should_panic"))
-            return true;
-    }
-    return false;
-}
-
 bool is_virtual_like(const FunctionDecl& fn) {
     return has_decorator(fn, "virtual") || has_decorator(fn, "abstract");
 }
@@ -340,7 +326,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 has_decorator(method, "abstract")) {
                 fail(method.location, "inheritance decorators are not valid on enum methods");
             }
-            if (has_decorator(method, "extern_c") || is_test_decorator(method)) {
+            if (has_decorator(method, "extern_c") || is_test_function(method)) {
                 fail(method.location, "@extern_c and @test are only valid on free functions");
             }
             check_variadic_params(method);
@@ -523,7 +509,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (has_decorator(method, "extern_c")) {
                 fail(method.location, "@extern_c is only valid on free functions");
             }
-            if (is_test_decorator(method)) {
+            if (is_test_function(method)) {
                 fail(method.location, "@test is only valid on free functions");
             }
             check_variadic_params(method);
@@ -558,7 +544,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         if (has_decorator(fn, "extern_c")) {
             check_extern_c_signature(fn);
         }
-        if (is_test_decorator(fn)) {
+        if (is_test_function(fn)) {
             const TypeRef return_type = function_return_type_ref(fn);
             if (!fn.params.empty()) {
                 fail(fn.location, "@test functions cannot take parameters");

@@ -27,10 +27,6 @@ std::string class_lookup_name(const Symbols& symbols, TypeRef type) {
     return type_ref_head_name(type);
 }
 
-bool method_has_decorator(const FunctionDecl& method, std::string_view name) {
-    return has_decorator(method.decorators, name);
-}
-
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
         if (const std::optional<std::string> arg =
@@ -172,7 +168,7 @@ bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
     }
     for (const FunctionDecl& method : klass.methods) {
         if (method_is_instance(method) &&
-            (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
+            (has_decorator(method, "virtual") || has_decorator(method, "abstract"))) {
             return true;
         }
     }
@@ -230,7 +226,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
             out << "static ";
         }
         if (!qualified_definition && first_param == 1 &&
-            (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
+            (has_decorator(method, "virtual") || has_decorator(method, "abstract"))) {
             out << "virtual ";
         }
         const std::string lowered_name = method_emit_name(source_class_name, method, options);
@@ -285,10 +281,10 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         self_receiver_is_const(method, class_name)) {
         out << " const";
     }
-    if (!qualified_definition && method_has_decorator(method, "override")) {
+    if (!qualified_definition && has_decorator(method, "override")) {
         out << " override";
     }
-    if (method_has_decorator(method, "abstract")) {
+    if (has_decorator(method, "abstract")) {
         out << " = 0;\n";
         return;
     }
@@ -357,7 +353,7 @@ void emit_out_of_line_class_methods(std::ostringstream& out, const ClassDecl& kl
     }
     bool emitted = false;
     for (const FunctionDecl& method : klass.methods) {
-        if (inline_method_body(klass, method) || method_has_decorator(method, "abstract")) {
+        if (inline_method_body(klass, method) || has_decorator(method, "abstract")) {
             continue;
         }
         emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols,

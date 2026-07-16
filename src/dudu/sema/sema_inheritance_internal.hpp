@@ -22,9 +22,8 @@ struct MethodRecord {
 };
 
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
-bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type,
-                       const std::string& base, std::set<std::string>& seen);
-bool has_decorator(const FunctionDecl& fn, std::string_view name);
+bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type, const std::string& base,
+                       std::set<std::string>& seen);
 FunctionSignature inherited_method_signature_without_self(const FunctionDecl& method);
 FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& owner,
                                                             const TypeRef& receiver_type,
@@ -35,8 +34,7 @@ FunctionSignature resolve_signature_aliases(const Symbols& symbols, FunctionSign
 bool contains_method_identity(const std::vector<MethodIdentity>& identities,
                               const MethodIdentity& candidate);
 MethodRecord method_record_for_class_type(const Symbols& symbols, const ClassDecl& owner,
-                                          const TypeRef& receiver_type,
-                                          const FunctionDecl& method);
+                                          const TypeRef& receiver_type, const FunctionDecl& method);
 MethodIdentity method_identity_without_self(const Symbols& symbols, const FunctionDecl& method);
 const ClassDecl* dudu_class_for_base(const Symbols& symbols, const TypeRef& base);
 bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass);

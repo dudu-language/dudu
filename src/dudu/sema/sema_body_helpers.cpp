@@ -105,10 +105,6 @@ bool is_array_literal(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral;
 }
 
-bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
-    return dudu::has_decorator(fn.decorators, name);
-}
-
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                           const SourceLocation& location, std::string_view mismatch_label) {
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {

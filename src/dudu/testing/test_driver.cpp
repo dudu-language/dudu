@@ -49,19 +49,8 @@ bool ignored_test_dir(const std::filesystem::path& path) {
     return name == ".git" || name == "build";
 }
 
-bool function_is_test(const FunctionDecl& fn) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
-            decorator_matches(decorator, "test.should_panic") ||
-            decorator_call_matches(decorator, "test.should_panic")) {
-            return true;
-        }
-    }
-    return false;
-}
-
 bool unit_has_tests(const ModuleAst& module) {
-    return std::any_of(module.functions.begin(), module.functions.end(), function_is_test);
+    return std::any_of(module.functions.begin(), module.functions.end(), is_test_function);
 }
 
 bool module_has_tests(const ModuleAst& module) {

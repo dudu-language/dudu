@@ -30,10 +30,6 @@ bool is_reserved_dunder_name(const std::string& name) {
     throw CompileError(location, std::string(rule) + ": " + name);
 }
 
-bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    return dudu::has_decorator(fn.decorators, name);
-}
-
 } // namespace
 
 bool is_dudu_snake_case(const std::string& name) {

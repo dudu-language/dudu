@@ -38,6 +38,19 @@ bool has_decorator(const std::vector<Decorator>& decorators, std::string_view na
     return false;
 }
 
+bool has_decorator(const FunctionDecl& function, std::string_view name) {
+    return has_decorator(function.decorators, name);
+}
+
+bool has_decorator(const ClassDecl& klass, std::string_view name) {
+    return has_decorator(klass.decorators, name);
+}
+
+bool is_test_function(const FunctionDecl& function) {
+    return has_decorator(function, "test") || has_decorator(function, "test.ignore") ||
+           has_decorator(function, "test.should_panic");
+}
+
 bool decorator_call_matches(const Decorator& decorator, std::string_view name) {
     return decorator.expr.kind == ExprKind::Call && decorator_matches(decorator, name);
 }

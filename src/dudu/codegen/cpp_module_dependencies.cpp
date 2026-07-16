@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
 #include <set>
@@ -106,8 +107,7 @@ void collect_signature_names(const FunctionDecl& fn, Names& names) {
 }
 
 bool header_owned_body(const FunctionDecl& fn) {
-    return cpp_emit_function_has_decorator(fn, "constexpr") ||
-           !generic_cpp_params_for_function(fn).empty();
+    return has_decorator(fn, "constexpr") || !generic_cpp_params_for_function(fn).empty();
 }
 
 bool collect_decorator_names(const std::vector<Decorator>& decorators, Names& names) {
@@ -180,7 +180,7 @@ PublicSurface public_surface(const ModuleAst& module) {
         surface.opaque_native_use |= collect_expr_names(constant.value_expr, names);
     }
     for (const FunctionDecl& fn : module.functions) {
-        if (fn.visibility == Visibility::Private || cpp_emit_function_is_test(fn)) {
+        if (fn.visibility == Visibility::Private || is_test_function(fn)) {
             continue;
         }
         collect_signature_names(fn, names);

@@ -4,6 +4,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/control_flow.hpp"
+#include "dudu/core/decorators.hpp"
 #include "dudu/core/escapes.hpp"
 #include "dudu/core/naming.hpp"
 #include "dudu/core/source.hpp"
@@ -417,7 +418,7 @@ void check_bodies_impl(const ModuleAst& module, const Symbols& symbols,
                                          generic_value_params_for_class(klass));
         class_symbols.set_self_type(klass.name);
         for (const FunctionDecl& method : klass.methods) {
-            if (method.body_syntax_damaged || function_has_decorator(method, "abstract")) {
+            if (method.body_syntax_damaged || has_decorator(method, "abstract")) {
                 continue;
             }
             check_body_region(diagnostics, [&] {

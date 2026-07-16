@@ -15,8 +15,8 @@ std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     return receiver_class_name(symbols, type);
 }
 
-bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type,
-                       const std::string& base, std::set<std::string>& seen) {
+bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type, const std::string& base,
+                       std::set<std::string>& seen) {
     const std::string derived = unwrap_type(symbols, derived_type);
     if (derived == base)
         return true;
@@ -30,10 +30,6 @@ bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type,
             return true;
     }
     return false;
-}
-
-bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    return dudu::has_decorator(fn.decorators, name);
 }
 
 std::map<std::string, TypeRef> class_type_ref_substitutions(const ClassDecl& owner,
@@ -181,7 +177,7 @@ bool class_has_abstract_method(const Symbols& symbols, const ClassDecl& klass,
         return false;
     }
     for (const FunctionDecl& method : klass.methods) {
-        if (has_decorator(method, "abstract")) {
+        if (dudu::has_decorator(method, "abstract")) {
             return true;
         }
     }
@@ -228,7 +224,7 @@ void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
     }
     for (const FunctionDecl& method : klass.methods) {
         const bool is_static = method.params.empty() || method.params.front().name != "self";
-        if (!is_static && !has_decorator(method, "abstract")) {
+        if (!is_static && !dudu::has_decorator(method, "abstract")) {
             methods.push_back(method_record_for_class_type(symbols, klass, receiver_type, method));
         }
     }
@@ -271,7 +267,7 @@ std::vector<MethodRecord> unresolved_abstract_method_records_impl(const Symbols&
             continue;
         }
         const MethodRecord record = method_record_for_class_type(symbols, *klass, type, method);
-        if (has_decorator(method, "abstract")) {
+        if (dudu::has_decorator(method, "abstract")) {
             const auto existing =
                 std::find_if(unresolved.begin(), unresolved.end(), [&](const MethodRecord& entry) {
                     return same_method_identity(entry.identity, record.identity);

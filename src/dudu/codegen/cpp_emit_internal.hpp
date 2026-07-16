@@ -1,7 +1,7 @@
 #pragma once
 
-#include "dudu/core/ast.hpp"
 #include "dudu/codegen/cpp_emit_options.hpp"
+#include "dudu/core/ast.hpp"
 
 #include <iosfwd>
 #include <string>
@@ -10,8 +10,6 @@
 
 namespace dudu {
 
-bool cpp_emit_function_has_decorator(const FunctionDecl& fn, std::string_view name);
-bool cpp_emit_function_is_test(const FunctionDecl& fn);
 std::string cpp_emit_string_literal(std::string text);
 std::string cpp_emit_function_decorator_arg(const FunctionDecl& fn, std::string_view name);
 bool cpp_emit_concrete_variadic_param(const FunctionDecl& fn, const ParamDecl& param);

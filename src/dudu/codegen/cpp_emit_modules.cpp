@@ -6,6 +6,7 @@
 #include "dudu/codegen/cpp_module_dependencies.hpp"
 #include "dudu/codegen/cpp_module_emit_context.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/decorators.hpp"
 #include "dudu/core/file_io.hpp"
 
 #include <fstream>
@@ -199,7 +200,7 @@ ModuleAst test_harness_module(const ModuleAst& module) {
     ModuleAst out;
     for (const ModuleAst& unit : module_units(module)) {
         for (const FunctionDecl& fn : unit.functions) {
-            if (cpp_emit_function_is_test(fn)) {
+            if (is_test_function(fn)) {
                 out.functions.push_back(fn);
             }
         }

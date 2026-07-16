@@ -1,5 +1,6 @@
 #include "dudu/sema/sema_inheritance.hpp"
 
+#include "dudu/core/decorators.hpp"
 #include "dudu/sema/sema_inheritance_internal.hpp"
 
 #include <algorithm>

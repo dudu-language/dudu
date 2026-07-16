@@ -1,4 +1,5 @@
 #include "dudu/codegen/cpp_emit_internal.hpp"
+#include "dudu/core/decorators.hpp"
 
 #include <sstream>
 
@@ -82,16 +83,16 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
            "    int passed = 0;\n"
            "    int ignored = 0;\n";
     for (const FunctionDecl& fn : module.functions) {
-        if (!cpp_emit_function_is_test(fn)) {
+        if (!is_test_function(fn)) {
             continue;
         }
         if (!filter.empty() && fn.name.find(filter) == std::string::npos) {
             continue;
         }
-        if (cpp_emit_function_has_decorator(fn, "test.ignore")) {
+        if (has_decorator(fn, "test.ignore")) {
             out << "    ++ignored;\n"
                 << "    std::cout << \"ignored " << fn.name << "\\n\";\n";
-        } else if (cpp_emit_function_has_decorator(fn, "test.should_panic") ||
+        } else if (has_decorator(fn, "test.should_panic") ||
                    !cpp_emit_function_decorator_arg(fn, "test.should_panic").empty()) {
             const std::string expected = cpp_emit_function_decorator_arg(fn, "test.should_panic");
             out << "    ++total;\n"

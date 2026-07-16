@@ -374,6 +374,10 @@ as well. Class forward declarations moved into class emission, so
 `cpp_emit.cpp` only assembles generated header, source, module, and test
 artifacts. It is now 272 lines; the free-function unit is 286 lines, the class
 layout unit is 265 lines, and the class-method unit is 373 lines.
+Function/class decorator lookup and test-function classification are core
+declaration facts now. Semantic analysis, code generation, module ABI
+projection, and test discovery no longer maintain subsystem-prefixed wrappers
+or independent definitions of what constitutes a test.
 
 Run this work opportunistically alongside latency and native fixes. Do not stop
 all product work for a cosmetic repository rewrite.

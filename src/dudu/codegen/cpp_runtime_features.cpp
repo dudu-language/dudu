@@ -156,10 +156,9 @@ void inspect_function(const FunctionDecl& fn, CppRuntimeFeatures& features) {
     for (const Decorator& decorator : fn.decorators) {
         inspect_expr(decorator.expr, features);
     }
-    if (has_decorator(fn.decorators, "shader.compute") ||
-        has_decorator(fn.decorators, "cuda.global") ||
-        has_decorator(fn.decorators, "cuda.device") || has_decorator(fn.decorators, "cuda.host") ||
-        has_decorator(fn.decorators, "workgroup_size")) {
+    if (has_decorator(fn, "shader.compute") || has_decorator(fn, "cuda.global") ||
+        has_decorator(fn, "cuda.device") || has_decorator(fn, "cuda.host") ||
+        has_decorator(fn, "workgroup_size")) {
         features.shader = true;
     }
     for (const Stmt& stmt : fn.statements) {
