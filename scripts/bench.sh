@@ -44,6 +44,10 @@ fi
 "$repo_root/build/duc" emit "$repo_root/benchmarks/tuple_accum.dd" -o "$bench_dir/tuple_accum_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/callback_accum.dd" \
     -o "$bench_dir/callback_accum_dudu.cpp"
+"$repo_root/build/duc" emit "$repo_root/benchmarks/particle_update.dd" \
+    -o "$bench_dir/particle_update_dudu.cpp"
+"$repo_root/build/duc" emit "$repo_root/benchmarks/threaded_accum.dd" \
+    -o "$bench_dir/threaded_accum_dudu.cpp"
 
 cat >"$bench_dir/scalar_driver.cpp" <<'CPP'
 #include <chrono>
@@ -211,6 +215,56 @@ int main(int argc, char** argv) {
 }
 CPP
 
+cat >"$bench_dir/particle_driver.cpp" <<'CPP'
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+
+double particle_update(int32_t count, int32_t steps);
+
+int main(int argc, char** argv) {
+    const int32_t operations = argc > 1 ? int32_t(std::atoi(argv[1])) : 10000000;
+    const int32_t steps = 10;
+    const int32_t count = std::max<int32_t>(1, operations / steps);
+    volatile double result = 0.0;
+    const auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 5; ++i) {
+        result = particle_update(count, steps);
+    }
+    const auto end = std::chrono::steady_clock::now();
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << micros << " us result=" << result << '\n';
+    return 0;
+}
+CPP
+
+cat >"$bench_dir/threaded_driver.cpp" <<'CPP'
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+
+int64_t threaded_accum(int32_t worker_count, int32_t n);
+
+int main(int argc, char** argv) {
+    const int32_t operations = argc > 1 ? int32_t(std::atoi(argv[1])) : 10000000;
+    const int32_t workers = 8;
+    const int32_t per_worker = std::max<int32_t>(1, operations / workers);
+    volatile int64_t result = 0;
+    const auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 5; ++i) {
+        result = threaded_accum(workers, per_worker);
+    }
+    const auto end = std::chrono::steady_clock::now();
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << micros << " us result=" << result << '\n';
+    return 0;
+}
+CPP
+
 cxx="${CXX:-c++}"
 flags=(-std=c++20 -O3 -DNDEBUG)
 "$cxx" "${flags[@]}" "$bench_dir/scalar_sum_dudu.cpp" "$bench_dir/scalar_driver.cpp" \
@@ -241,6 +295,14 @@ flags=(-std=c++20 -O3 -DNDEBUG)
     -o "$bench_dir/callback_accum_dudu"
 "$cxx" "${flags[@]}" "$repo_root/benchmarks/callback_accum.cpp" "$bench_dir/callback_driver.cpp" \
     -o "$bench_dir/callback_accum_cpp"
+"$cxx" "${flags[@]}" "$bench_dir/particle_update_dudu.cpp" \
+    "$bench_dir/particle_driver.cpp" -o "$bench_dir/particle_update_dudu"
+"$cxx" "${flags[@]}" "$repo_root/benchmarks/particle_update.cpp" \
+    "$bench_dir/particle_driver.cpp" -o "$bench_dir/particle_update_cpp"
+"$cxx" "${flags[@]}" "$bench_dir/threaded_accum_dudu.cpp" \
+    "$bench_dir/threaded_driver.cpp" -pthread -o "$bench_dir/threaded_accum_dudu"
+"$cxx" "${flags[@]}" "$repo_root/benchmarks/threaded_accum.cpp" \
+    "$bench_dir/threaded_driver.cpp" -pthread -o "$bench_dir/threaded_accum_cpp"
 
 run_bench() {
     local label="$1"
@@ -274,6 +336,10 @@ run_bench "tuple dudu" "$bench_dir/tuple_accum_dudu"
 run_bench "tuple cpp" "$bench_dir/tuple_accum_cpp"
 run_bench "callback dudu" "$bench_dir/callback_accum_dudu"
 run_bench "callback cpp" "$bench_dir/callback_accum_cpp"
+run_bench "particle dudu" "$bench_dir/particle_update_dudu"
+run_bench "particle cpp" "$bench_dir/particle_update_cpp"
+run_bench "threaded dudu" "$bench_dir/threaded_accum_dudu"
+run_bench "threaded cpp" "$bench_dir/threaded_accum_cpp"
 
 summarize_label() {
     local label="$1"
@@ -317,6 +383,10 @@ summarize_label "tuple dudu"
 summarize_label "tuple cpp"
 summarize_label "callback dudu"
 summarize_label "callback cpp"
+summarize_label "particle dudu"
+summarize_label "particle cpp"
+summarize_label "threaded dudu"
+summarize_label "threaded cpp"
 
 bench_micros() {
     local label="$1"
@@ -363,6 +433,10 @@ tuple_dudu_micros="$(bench_micros "tuple dudu")"
 tuple_cpp_micros="$(bench_micros "tuple cpp")"
 callback_dudu_micros="$(bench_micros "callback dudu")"
 callback_cpp_micros="$(bench_micros "callback cpp")"
+particle_dudu_micros="$(bench_micros "particle dudu")"
+particle_cpp_micros="$(bench_micros "particle cpp")"
+threaded_dudu_micros="$(bench_micros "threaded dudu")"
+threaded_cpp_micros="$(bench_micros "threaded cpp")"
 scalar_ratio="$(bench_ratio "$scalar_dudu_micros" "$scalar_cpp_micros")"
 pointer_ratio="$(bench_ratio "$pointer_dudu_micros" "$pointer_cpp_micros")"
 field_ratio="$(bench_ratio "$field_dudu_micros" "$field_cpp_micros")"
@@ -370,6 +444,8 @@ fixed_array_ratio="$(bench_ratio "$fixed_array_dudu_micros" "$fixed_array_cpp_mi
 list_ratio="$(bench_ratio "$list_dudu_micros" "$list_cpp_micros")"
 tuple_ratio="$(bench_ratio "$tuple_dudu_micros" "$tuple_cpp_micros")"
 callback_ratio="$(bench_ratio "$callback_dudu_micros" "$callback_cpp_micros")"
+particle_ratio="$(bench_ratio "$particle_dudu_micros" "$particle_cpp_micros")"
+threaded_ratio="$(bench_ratio "$threaded_dudu_micros" "$threaded_cpp_micros")"
 check_ratio scalar "$scalar_ratio"
 check_ratio pointer "$pointer_ratio"
 check_ratio field "$field_ratio"
@@ -377,6 +453,8 @@ check_ratio fixed_array "$fixed_array_ratio"
 check_ratio list "$list_ratio"
 check_ratio tuple "$tuple_ratio"
 check_ratio callback "$callback_ratio"
+check_ratio particle "$particle_ratio"
+check_ratio threaded "$threaded_ratio"
 
 if [[ -n "$report_path" ]]; then
     mkdir -p "$(dirname "$report_path")"
@@ -410,19 +488,25 @@ if [[ -n "$report_path" ]]; then
             "$list_dudu_micros" "$list_cpp_micros" "$list_ratio"
         printf '    {"name": "tuple", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
             "$tuple_dudu_micros" "$tuple_cpp_micros" "$tuple_ratio"
-        printf '    {"name": "callback", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s}\n' \
+        printf '    {"name": "callback", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
             "$callback_dudu_micros" "$callback_cpp_micros" "$callback_ratio"
+        printf '    {"name": "particle", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
+            "$particle_dudu_micros" "$particle_cpp_micros" "$particle_ratio"
+        printf '    {"name": "threaded", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s}\n' \
+            "$threaded_dudu_micros" "$threaded_cpp_micros" "$threaded_ratio"
         printf '  ],\n'
-        printf '  "generated": ["%s", "%s", "%s", "%s", "%s", "%s", "%s"],\n' \
+        printf '  "generated": ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"],\n' \
             "$bench_dir/scalar_sum_dudu.cpp" "$bench_dir/pointer_sum_dudu.cpp" \
             "$bench_dir/field_dot_dudu.cpp" "$bench_dir/fixed_array_mix_dudu.cpp" \
             "$bench_dir/list_accum_dudu.cpp" "$bench_dir/tuple_accum_dudu.cpp" \
-            "$bench_dir/callback_accum_dudu.cpp"
-        printf '  "comparison_sources": ["%s", "%s", "%s", "%s", "%s", "%s", "%s"]\n' \
+            "$bench_dir/callback_accum_dudu.cpp" "$bench_dir/particle_update_dudu.cpp" \
+            "$bench_dir/threaded_accum_dudu.cpp"
+        printf '  "comparison_sources": ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"]\n' \
             "$repo_root/benchmarks/scalar_sum.cpp" "$repo_root/benchmarks/pointer_sum.cpp" \
             "$repo_root/benchmarks/field_dot.cpp" "$repo_root/benchmarks/fixed_array_mix.cpp" \
             "$repo_root/benchmarks/list_accum.cpp" "$repo_root/benchmarks/tuple_accum.cpp" \
-            "$repo_root/benchmarks/callback_accum.cpp"
+            "$repo_root/benchmarks/callback_accum.cpp" "$repo_root/benchmarks/particle_update.cpp" \
+            "$repo_root/benchmarks/threaded_accum.cpp"
         printf '}\n'
     } >"$report_path"
 fi

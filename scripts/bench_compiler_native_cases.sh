@@ -1,5 +1,59 @@
 # shellcheck shell=bash
 
+prepare_scaled_inheritance_case() {
+    local requested_lines="$1"
+    local project="$scale_root/inheritance_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local classes=$((requested_lines / 12))
+    if [[ "$classes" -lt 1 ]]; then
+        classes=1
+    fi
+    cat >"$entry" <<'EOF'
+class BenchRoot:
+    id: i32
+
+    def init(self, id: i32):
+        self.id = id
+
+
+class BenchScored:
+    @abstract
+    def score(self) -> i32:
+
+
+EOF
+    for ((i = 0; i < classes; ++i)); do
+        cat >>"$entry" <<EOF
+class BenchDerived$i(BenchRoot, BenchScored):
+    def init(self, id: i32):
+        super.init(id)
+
+    @override
+    def score(self) -> i32:
+        return self.id + $i
+
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$classes"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    item_%d = BenchDerived%d(%d)\n' "$i" "$i" "$i"
+            printf '    total += item_%d.score()\n' "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 prepare_scaled_generics_case() {
     local requested_lines="$1"
     local project="$scale_root/generics_$requested_lines"

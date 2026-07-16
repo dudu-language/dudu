@@ -1,10 +1,10 @@
 #include "dudu/project/cmake_backend.hpp"
 
-#include "dudu/project/cmake_emit.hpp"
 #include "dudu/core/file_io.hpp"
-#include "dudu/native/native_build.hpp"
-#include "dudu/project/project_driver.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/native/native_build.hpp"
+#include "dudu/project/cmake_emit.hpp"
+#include "dudu/project/project_driver.hpp"
 
 #include <chrono>
 #include <fstream>
@@ -132,8 +132,10 @@ void configure_user_cmake(const UserCMakeBackendOptions& options,
     }
     print_project_step(options.stream_output, "configure", build_dir);
     if (configure_is_current(build_dir, configure_command_log, configure_command)) {
+        print_project_step(options.timings, "cmake.configure", "cached");
         return;
     }
+    print_project_step(options.timings, "cmake.configure", "run");
     const int status = options.stream_output
                            ? run_shell_command_streaming(configure_command, configure_log)
                            : run_shell_command(configure_command, configure_log);
@@ -158,6 +160,7 @@ void build_user_cmake(const UserCMakeBackendOptions& options,
         std::cerr << build_command << '\n';
     }
     print_project_step(options.stream_output, "compile", build_dir);
+    print_project_step(options.timings, "cmake.build", "dependency-check");
     const int status = options.stream_output ? run_shell_command_streaming(build_command, build_log)
                                              : run_shell_command(build_command, build_log);
     if (status != 0) {
@@ -234,6 +237,8 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
     print_project_step(options.stream_output, "generate", cmake_lists);
     const bool cmake_lists_changed = write_text_file(cmake_lists, options.cmake_lists);
+    print_project_step(options.timings, "cmake.generate",
+                       cmake_lists_changed ? "changed" : "cached");
 
     std::string configure_command =
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
@@ -248,6 +253,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     print_project_step(options.stream_output, "configure", build_dir);
     if (cmake_lists_changed ||
         !configure_is_current(build_dir, configure_command_log, configure_command)) {
+        print_project_step(options.timings, "cmake.configure", "run");
         const int configure_status =
             options.stream_output ? run_shell_command_streaming(configure_command, configure_log)
                                   : run_shell_command(configure_command, configure_log);
@@ -255,6 +261,8 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
             fail(command_failure_message("CMake configure", configure_command, configure_log));
         }
         record_configure_command(configure_command_log, configure_command);
+    } else {
+        print_project_step(options.timings, "cmake.configure", "cached");
     }
 
     const std::string build_command = "cmake --build " + shell_quote_path(build_dir) +
@@ -264,6 +272,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         std::cerr << build_command << '\n';
     }
     print_project_step(options.stream_output, "compile", build_dir);
+    print_project_step(options.timings, "cmake.build", "dependency-check");
     const int build_status = options.stream_output
                                  ? run_shell_command_streaming(build_command, build_log)
                                  : run_shell_command(build_command, build_log);
@@ -322,6 +331,7 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
         return run_user_cmake_backend({.config = options.config,
                                        .root = default_user_cmake_backend_root(options.config),
                                        .stream_output = options.stream_output,
+                                       .timings = options.timings,
                                        .verbose = options.verbose});
     }
     const std::string target =

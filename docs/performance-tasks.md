@@ -16,9 +16,11 @@ The July 15, 2026 reference measurements show:
 
 - `duc check` on a tiny program: 20.9 ms
 - Dudu-only no-op or changed-module emission: about 22 ms
-- generated-CMake no-op build: 72.7 ms
-- generated-CMake one-module edit: 331.8 ms, of which about 310 ms is native
-  CMake, GCC, and linker work
+- generated-CMake no-op build: 72.6 ms
+- generated-CMake private dependency edit: 131.0 ms
+- generated-CMake public interface edit: 159.0 ms
+- generated-CMake native-header edit: 130.4 ms
+- generated-CMake build-config edit: 422.1 ms
 - dogfood workspaces usable: 7.5-8.2 ms, including with an empty native cache
 - cached warm dogfood LSP requests: 0.3-21 ms
 - 1,000-unit mixed Dudu frontend: 127.7 ms
@@ -187,9 +189,10 @@ properties while adding larger editor fixtures under P1.
 
 ### 4. Bound Project-Driver And Native Build Overhead
 
-Dudu's changed-module work is already about 22 ms. Most of the 332 ms edit
-cycle belongs to native build tools, but the driver must not invoke them when
-nothing changed.
+Dudu's changed-module work is already about 22 ms. The driver must avoid
+unnecessary analysis, emission, configuration, compilation, and linking. It
+must still let the selected native build backend check its own dependency graph
+so edits to arbitrary user C/C++ sources and headers are not missed.
 
 Required work:
 
@@ -207,6 +210,17 @@ Completion:
 - no-op build under 250 ms
 - one-module Dudu analyze/emit under 200 ms
 - every invoked native phase has an observable reason
+
+Status: complete on the reference machine. Five-sample Release medians are
+20.7 ms for project `check`, 72.6 ms for no-op `build`, 72.6 ms for no-op
+`run`, and 72.4 ms for warm no-op `test`. A private imported-module edit takes
+131.0 ms, a public interface edit 159.0 ms, a native-header edit 130.4 ms, and
+a build configuration edit 422.1 ms. The latter correctly pays regeneration,
+configuration, compilation, and linking. Generated file mtimes remain stable
+when content is unchanged. The retained no-op `cmake --build` invocation is the
+native dependency check and prevents Dudu from missing edits outside `.dd`
+files; Dudu does not reimplement that graph. `--timings` now distinguishes
+cached generation/configuration from this dependency check.
 
 ## P1: Compiler Scaling And Generated Output
 
@@ -239,6 +253,17 @@ Completion:
 - no whole-symbol-table, whole-module, or whole-graph copy in an inner loop
 - memory growth is approximately linear for bounded semantic workloads
 
+Current bounded evidence: the Release harness now includes inheritance and
+abstract dispatch in addition to functions, classes, expressions, modules,
+calls, control flow, arrays, multidimensional indexing, generics, payload
+matches, operators, native declarations, STL, and mixed projects. Three-sample
+10k/50k measurements and representative 100k measurements remain
+approximately linear. At about 100k source-line equivalents, inheritance takes
+180.4 ms, expressions 589.6 ms, indexing 502.9 ms, operators 375.5 ms,
+native-heavy code 870.3 ms, and a mixed nine-module graph 289.3 ms. Keep the
+larger 250k-1M and malformed/error-heavy sweeps explicit; they are not part of
+the routine validation loop.
+
 ### 6. Profile Ordinary C++ Emission
 
 The known quadratic emitter paths are fixed. The remaining difference between
@@ -260,6 +285,16 @@ Completion:
 - emission remains linear through the largest bounded fixtures
 - no repeated parsing or semantic reconstruction from rendered C++ text
 - optimization stops when emission is not material in dogfood edit latency
+
+Current bounded evidence: `--emit-scaling` performs clean per-module emission
+for every selected generated shape and records generated C++ file, line, and
+byte counts. Representative 10k/50k/100k curves are approximately linear for
+inheritance, expressions, indexing, operators, native declarations, and a
+mixed nine-module graph. At about 100k source-line equivalents, medians range
+from 378.4 ms for the mixed graph to 1,490.6 ms for native-heavy declarations.
+Generated lines and bytes scale proportionally. The expression fixture reaches
+about 1 GiB peak RSS at 100k lines, so larger memory-focused experiments stay
+outside the routine loop.
 
 ### 7. Keep Generated Native Dependencies Precise
 
@@ -359,6 +394,14 @@ Completion:
   feature or fixed as a lowering defect
 - no hidden allocation, copy, heap indirection, or dynamic dispatch caused by
   surface syntax alone
+
+Current matrix: nine paired Dudu/C++ programs cover scalar and pointer loops,
+struct fields, fixed arrays, `list`/`std::vector`, tuple returns, callbacks,
+particle updates through mutable container iteration, and eight native C++
+threads. The five-sample 10-million-operation ratios range from 0.942 to 1.026,
+with matching results. Continue adding semantic classes from the list above;
+the current matrix establishes parity for the covered forms rather than
+claiming that all lowering is proven.
 
 ### 11. Guard Compile-Time Features Against Runtime Cost
 

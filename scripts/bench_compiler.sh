@@ -7,16 +7,17 @@ csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
-shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,mixed"
+shapes="functions,classes,inheritance,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,mixed"
 suite="default"
 macro_scales="1,100,1000"
 macro_node_scales="1000,10000"
 compare=""
 check_macro_budgets=0
+measure_emission=0
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--suite default|macros|all] [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--macro-scales list] [--macro-node-scales list] [--compare list] [--check-budgets] [--no-build]
+usage: scripts/bench_compiler.sh [--suite default|macros|all] [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--emit-scaling] [--macro-scales list] [--macro-node-scales list] [--compare list] [--check-budgets] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
@@ -26,13 +27,16 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,stdlib,mixed
+  functions,classes,inheritance,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,native,stdlib,mixed
 
 The stdlib shape is intentionally not in the default set because real C++
 standard-library header scanning is much slower than pure Dudu frontend
 shapes. The native shape uses small local fixture headers and stays in the
 default set to catch native interop frontend regressions without turning every
 run into a libstdc++ scan benchmark.
+
+--emit-scaling also performs clean per-module C++ emission for every requested
+shape and records generated file, line, and byte counts next to the main CSV.
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
@@ -84,6 +88,10 @@ while [[ $# -gt 0 ]]; do
         --compare)
             compare="${2:?--compare requires a comma-separated list}"
             shift 2
+            ;;
+        --emit-scaling)
+            measure_emission=1
+            shift
             ;;
         --check-budgets)
             check_macro_budgets=1
@@ -142,6 +150,10 @@ case "$suite" in
         exit 1
         ;;
 esac
+if [[ "$measure_emission" -eq 1 && "$suite" == "macros" ]]; then
+    echo "--emit-scaling requires --suite default or --suite all" >&2
+    exit 1
+fi
 
 tool_build_dir="$repo_root/build"
 if [[ "$build_type" != "Debug" ]]; then
@@ -317,7 +329,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules|calls|control|arrays|indexing|generics|matches|operators|native|stdlib|mixed)
+            functions|classes|inheritance|expressions|modules|calls|control|arrays|indexing|generics|matches|operators|native|stdlib|mixed)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -332,6 +344,7 @@ validate_shapes
 source "$repo_root/scripts/bench_compiler_project_cases.sh"
 source "$repo_root/scripts/bench_compiler_core_cases.sh"
 source "$repo_root/scripts/bench_compiler_native_cases.sh"
+source "$repo_root/scripts/bench_compiler_scaling_cases.sh"
 source "$repo_root/scripts/bench_compiler_macro_cases.sh"
 source "$repo_root/scripts/bench_macro_compare_rust.sh"
 source "$repo_root/scripts/bench_macro_compare_csharp.sh"
@@ -369,8 +382,33 @@ prepare_incremental_project
 run_case "dudu_build_cmake_modules_noop" "cmake_noop_build" "$incremental_project" \
     "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
+run_case "dudu_check_modules_noop" "project_check_noop" "$incremental_project" \
+    "$tool_build_dir/dudu" check "$incremental_entry" --quiet
+
+run_case "dudu_run_cmake_modules_noop" "project_run_noop" "$incremental_project" \
+    "$tool_build_dir/dudu" run "$incremental_entry" --quiet
+
+"$tool_build_dir/dudu" test "$incremental_entry" --quiet >/dev/null
+run_case "dudu_test_cmake_modules_noop" "project_test_noop" "$incremental_project" \
+    "$tool_build_dir/dudu" test "$incremental_entry" --quiet
+
 run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_build" \
     "$incremental_project" touch_incremental_dep \
+    "$tool_build_dir/dudu" build "$incremental_entry" --quiet
+
+run_case_prepared "dudu_build_cmake_public_interface_changed" \
+    "cmake_public_interface_changed_build" "$incremental_project" \
+    touch_incremental_public_interface \
+    "$tool_build_dir/dudu" build "$incremental_entry" --quiet
+
+run_case_prepared "dudu_build_cmake_native_header_changed" \
+    "cmake_native_header_changed_build" "$incremental_project" \
+    touch_incremental_native_header \
+    "$tool_build_dir/dudu" build "$incremental_entry" --quiet
+
+run_case_prepared "dudu_build_cmake_config_changed" \
+    "cmake_build_config_changed_build" "$incremental_project" \
+    touch_incremental_build_config \
     "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
 incremental_generated="$incremental_project/build/cmake-backend/build/generated"
@@ -391,92 +429,7 @@ prepare_synthetic_project
 run_case "duc_check_synthetic" "frontend_synthetic" "$synthetic_project" \
     "$tool_build_dir/duc" check "$synthetic_entry"
 
-IFS=',' read -r -a requested_line_scales <<<"$line_scales"
-for requested_lines in "${requested_line_scales[@]}"; do
-    requested_lines="$(printf '%s' "$requested_lines" | tr -d '[:space:]')"
-    if [[ -z "$requested_lines" ]]; then
-        continue
-    fi
-    case "$requested_lines" in
-        ''|*[!0-9]*)
-            echo "invalid --line-scales entry: $requested_lines" >&2
-            exit 1
-            ;;
-    esac
-    if shape_enabled "functions"; then
-        scaled_entry="$(prepare_scaled_functions_case "$requested_lines")"
-        run_case "duc_check_functions_${requested_lines}" "frontend_functions" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "classes"; then
-        scaled_entry="$(prepare_scaled_classes_case "$requested_lines")"
-        run_case "duc_check_classes_${requested_lines}" "frontend_classes" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "expressions"; then
-        scaled_entry="$(prepare_scaled_expressions_case "$requested_lines")"
-        run_case "duc_check_expressions_${requested_lines}" "frontend_expressions" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "modules"; then
-        scaled_entry="$(prepare_scaled_modules_case "$requested_lines")"
-        scaled_project="$(dirname "$scaled_entry")"
-        run_case "duc_check_modules_${requested_lines}" "frontend_modules" "$scaled_project" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "calls"; then
-        scaled_entry="$(prepare_scaled_calls_case "$requested_lines")"
-        run_case "duc_check_calls_${requested_lines}" "frontend_calls" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "control"; then
-        scaled_entry="$(prepare_scaled_control_case "$requested_lines")"
-        run_case "duc_check_control_${requested_lines}" "frontend_control" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "arrays"; then
-        scaled_entry="$(prepare_scaled_arrays_case "$requested_lines")"
-        run_case "duc_check_arrays_${requested_lines}" "frontend_arrays" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "indexing"; then
-        scaled_entry="$(prepare_scaled_indexing_case "$requested_lines")"
-        run_case "duc_check_indexing_${requested_lines}" "frontend_indexing" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "generics"; then
-        scaled_entry="$(prepare_scaled_generics_case "$requested_lines")"
-        run_case "duc_check_generics_${requested_lines}" "frontend_generics" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "matches"; then
-        scaled_entry="$(prepare_scaled_matches_case "$requested_lines")"
-        run_case "duc_check_matches_${requested_lines}" "frontend_matches" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "operators"; then
-        scaled_entry="$(prepare_scaled_operators_case "$requested_lines")"
-        run_case "duc_check_operators_${requested_lines}" "frontend_operators" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "native"; then
-        scaled_entry="$(prepare_scaled_native_case "$requested_lines")"
-        scaled_project="$(dirname "$scaled_entry")"
-        run_case "duc_check_native_${requested_lines}" "frontend_native" "$scaled_project" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "stdlib"; then
-        scaled_entry="$(prepare_scaled_stdlib_case "$requested_lines")"
-        run_case "duc_check_stdlib_${requested_lines}" "frontend_stdlib" "$scaled_entry" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-    if shape_enabled "mixed"; then
-        scaled_entry="$(prepare_scaled_mixed_case "$requested_lines")"
-        scaled_project="$(dirname "$scaled_entry")"
-        run_case "duc_check_mixed_${requested_lines}" "frontend_mixed" "$scaled_project" \
-            "$tool_build_dir/duc" check "$scaled_entry"
-    fi
-done
+run_scaling_benchmarks
 fi
 
 echo
@@ -503,6 +456,9 @@ END {
 
 echo
 echo "csv: $csv_path"
+if [[ "$measure_emission" -eq 1 ]]; then
+    echo "emission sizes: $emission_sizes_path"
+fi
 if [[ "$suite" == "macros" || "$suite" == "all" ]]; then
     echo "macro metrics: $macro_metrics_path"
     report_args=("$csv_path" "$macro_metrics_path")

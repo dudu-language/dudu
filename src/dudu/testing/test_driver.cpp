@@ -144,6 +144,7 @@ int run_user_owned_cmake_project_tests(const ProjectConfig& config,
     return run_user_cmake_tests({.config = config,
                                  .root = root,
                                  .stream_output = project_output,
+                                 .timings = options.timings,
                                  .verbose = options.verbose});
 }
 

@@ -428,6 +428,15 @@ if printf '%s\n' "$cmake_cached_output" | grep -q '^-- Configuring done'; then
     echo "cached generated-CMake build reran configure" >&2
     exit 1
 fi
+# The first timed build may reconfigure when the preceding build used
+# DUDU_TIMINGS=OFF. Assert the steady timed path on the second invocation.
+"$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/project_backend_cmake" --timings >/dev/null 2>&1
+cmake_timing_output="$("$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/project_backend_cmake" --timings 2>&1)"
+printf '%s\n' "$cmake_timing_output" | grep -Fq 'cmake.generate cached'
+printf '%s\n' "$cmake_timing_output" | grep -Fq 'cmake.configure cached'
+printf '%s\n' "$cmake_timing_output" | grep -Fq 'cmake.build dependency-check'
 default_cmake_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/simple_program.dd" 2>&1)"
 printf '%s\n' "$default_cmake_output" | grep -Eq '^backend cmake$'

@@ -118,8 +118,10 @@ wall-clock medians/p95, and process peak RSS. Raw CSV lives under the ignored
 | tiny `duc check` | 20.9 ms | 22.2 ms | 54.4 MiB |
 | cold small native scan | 47.4 ms | 50.9 ms | 78.1 MiB |
 | cached small native metadata | 21.5 ms | 22.2 ms | 54.8 MiB |
-| generated-CMake no-op build | 72.7 ms | 74.7 ms | 53.8 MiB |
-| generated-CMake one-module edit | 331.8 ms | 340.7 ms | 109.8 MiB |
+| generated-CMake no-op build | 72.6 ms | 75.5 ms | 56.3 MiB |
+| generated-CMake private dependency edit | 131.0 ms | 134.1 ms | 57.7 MiB |
+| generated-CMake public interface edit | 159.0 ms | 165.1 ms | 57.8 MiB |
+| generated-CMake native-header edit | 130.4 ms | 134.0 ms | 56.1 MiB |
 | Dudu-only module no-op emit | 21.5 ms | 23.0 ms | 57.9 MiB |
 | Dudu-only one-module changed emit | 22.0 ms | 22.1 ms | 58.1 MiB |
 | 50k indexing-heavy lines | 264.6 ms | 267.2 ms | 146.4 MiB |
@@ -154,12 +156,14 @@ three-sample medians are 84.8 ms at 50k generated lines, 155.3 ms at 100k, and
 306.9 ms at 200k. The path is now approximately linear. The fast C++ suite and
 the complete LSP smoke/recovery/synchronization/matrix suite remain green.
 
-The changed-module build aggregate was also split at the Dudu/native boundary.
-Both a no-op module emit and a guaranteed one-file Dudu edit complete in about
-22 ms. The remaining roughly 310 ms in the aggregate changed build is CMake,
-GCC compilation, and linking. Existing incremental fixtures assert that a
-no-op does not load source modules and that an edit rewrites only the affected
-generated artifacts.
+The project-driver matrix is now explicit. Five-sample Release medians are 20.7
+ms for no-op `check`, 72.6 ms for no-op `build`, 72.6 ms for no-op `run`, and
+72.4 ms for warm no-op `test`. Private imported-module, public-interface,
+native-header, and build-config edits take 131.0, 159.0, 130.4, and 422.1 ms
+respectively.
+The retained no-op `cmake --build` call is the native dependency check; Dudu
+skips module analysis, emission, configure, compile, and link when they are not
+needed. `--timings` reports the cache and dependency-check decisions.
 
 The initial macro baseline put a cold 1,000-type project at 987.0 ms, with a
 cached run at 50.6 ms. A content-addressed shared SDK precompiled header,
@@ -180,25 +184,32 @@ external GCC phase fell from 487.7 ms and 156.6 MiB to 256.4 ms and 90.7 MiB.
 Clean builds of all four dogfood projects pass. Details and boundary fixtures
 are recorded in [Generated C++ Boundary Plan](generated-cpp-boundary-plan.md).
 
+The bounded scaling matrix now covers fourteen frontend shapes, including
+inheritance/abstract dispatch. Representative 100k-line-equivalent Release
+times are 180.4 ms for inheritance, 589.6 ms for expressions, 502.9 ms for
+indexing, 375.5 ms for operators, 870.3 ms for native-heavy code, and 289.3 ms
+for a mixed module graph. Clean emission over six representative shapes is also
+approximately linear through 100k lines, ranging from 378.4 ms for the mixed
+graph to 1,490.6 ms for native-heavy declarations. Generated line and byte
+growth is recorded beside the timing CSV. The runtime parity matrix has nine
+paired Dudu/C++ programs; five-sample ratios range from 0.942 to 1.026.
+
 ### Work Order
 
-1. Preserve background LSP indexing, immediate parser diagnostics, stale-result
-   rejection, and semantic-token refresh as editor fixtures grow.
-2. Profile native-header cold scan and cached metadata load. Remove redundant
-   Clang invocations, deserialization, dependency validation, and graph merges.
-3. Profile no-op and one-file generated-CMake builds. Avoid invoking or
-   configuring native tools when source stamps prove nothing changed; when a
-   native tool must run, preserve its normal output.
-4. Continue measuring native backend fixed cost after the completed generated
-   C++ boundary and feature-runtime work. Preserve the stable runtime PCH,
-   public/private dependency fixtures, and separate cold, changed-module,
-   native-header-edit, and no-op measurements.
-5. Reduce macro package compilation. Build the macro SDK during toolchain
-   installation where toolchain compatibility permits, parallelize independent
-   bootstrap units, and profile generated package/launcher C++ separately.
-6. Profile compiler startup and allocation only after the end-to-end cases
-   identify frontend cost as material. Continue the compact/arena AST work only
-   with broad benchmark proof.
+1. Complete: background LSP indexing, immediate parser diagnostics,
+   stale-result rejection, and semantic-token refresh are covered by fixtures.
+2. Complete for the current gate: direct native imports use one ordered Clang
+   translation unit with isolated conflict fallback and deterministic cached
+   metadata.
+3. Complete for the current gate: no-op and mutation-specific generated-CMake
+   paths are measured, correctly invalidated, and observable under `--timings`.
+4. Complete: generated native dependencies, stable runtime PCH ownership, and
+   public/private include boundaries have dedicated fixtures.
+5. Complete for the current budget: macro modules compile independently in
+   parallel and cold/cached 1,000-type projects meet their targets.
+6. Evidence gate only: startup is material for tiny programs, but broad
+   frontend curves remain linear. Do not change the AST representation without
+   a measured workload that justifies it.
 
 ### Completion Gate
 
@@ -363,8 +374,9 @@ Do not make GitHub Actions part of the normal patch/test loop.
 ## Execution Order
 
 1. P0 user-visible latency and current benchmark budgets from
-   [Dudu Performance Tasks](performance-tasks.md)
-2. Native template/header correctness exposed by real programs
+   [Dudu Performance Tasks](performance-tasks.md) (complete for the current
+   bounded gate)
+2. Native template/header correctness exposed by real programs (next)
 3. Architecture/readability cleanup encountered during that work
 4. Editor/diagnostic polish after cold indexing is fixed
 5. `serdd`-driven external-conformance decision

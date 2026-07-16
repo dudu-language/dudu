@@ -23,6 +23,7 @@ struct UserCMakeBackendOptions {
     ProjectConfig config;
     std::filesystem::path root;
     bool stream_output = false;
+    bool timings = false;
     bool verbose = false;
 };
 

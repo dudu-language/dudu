@@ -11,6 +11,12 @@ build_dir = "build"
 
 [cc]
 include_dirs = ["."]
+defines = ["BENCH_DRIVER=1"]
+EOF
+    cat >>"$incremental_project/dep.dd" <<'EOF'
+
+def public_probe() -> i32:
+    return 1
 EOF
 }
 
@@ -19,6 +25,34 @@ touch_incremental_dep() {
         perl -0pi -e 's/native\.add\(20, 22\)/native.add(21, 21)/g' "$incremental_project/dep.dd"
     else
         perl -0pi -e 's/native\.add\(21, 21\)/native.add(20, 22)/g' "$incremental_project/dep.dd"
+    fi
+}
+
+touch_incremental_public_interface() {
+    if grep -Fq 'def public_probe()' "$incremental_project/dep.dd"; then
+        perl -0pi -e 's/def public_probe\(\)/def public_probe_renamed()/g' \
+            "$incremental_project/dep.dd"
+    else
+        perl -0pi -e 's/def public_probe_renamed\(\)/def public_probe()/g' \
+            "$incremental_project/dep.dd"
+    fi
+}
+
+touch_incremental_native_header() {
+    if grep -Fq 'return a + b;' "$incremental_project/native_dep.hpp"; then
+        perl -0pi -e 's/return a \+ b;/return (a + b);/g' \
+            "$incremental_project/native_dep.hpp"
+    else
+        perl -0pi -e 's/return \(a \+ b\);/return a + b;/g' \
+            "$incremental_project/native_dep.hpp"
+    fi
+}
+
+touch_incremental_build_config() {
+    if grep -Fq 'BENCH_DRIVER=1' "$incremental_project/dudu.toml"; then
+        perl -0pi -e 's/BENCH_DRIVER=1/BENCH_DRIVER=2/g' "$incremental_project/dudu.toml"
+    else
+        perl -0pi -e 's/BENCH_DRIVER=2/BENCH_DRIVER=1/g' "$incremental_project/dudu.toml"
     fi
 }
 
@@ -119,9 +153,17 @@ def timed_request(proc, case, phase, request, validator):
 def timed_diagnostics(proc, case, phase, request, validator):
     start = time.perf_counter()
     send_message(proc, request)
-    response = wait_diagnostics(proc)
+    while True:
+        response = wait_diagnostics(proc)
+        try:
+            validator(response)
+            break
+        except RuntimeError:
+            # Parser diagnostics are intentionally published before the
+            # background semantic/native pass. This benchmark measures the
+            # requested full diagnostic result.
+            continue
     elapsed = (time.perf_counter() - start) * 1000.0
-    validator(response)
     record_detail(case, phase, elapsed)
     return response
 
