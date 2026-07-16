@@ -402,12 +402,24 @@ compile tests.
 - remove stale generated build trees and untracked artifacts from audits
 - keep heavyweight native/performance tests outside the fast default loop
 
+Outcome:
+
+- replaced separate test-target, strict-warning, warning-as-error, and CTest
+  registration lists with one `dudu_add_test` helper
+- retained target-specific fixture definitions beside the targets that consume
+  them instead of hiding those differences in the helper
+- registered `dudu_macro_expansion_render_tests`, which the old duplicated
+  lists built but accidentally omitted from CTest
+- the default CTest inventory is now 29 targets, and adding a normal C++ test
+  has one registration point instead of four synchronized edits
+
 Validation: complete fast suite, canonical fixture execution, negative tests,
 site checks, and relevant packaging/build probes.
 
-The latest ownership-cleanup milestone passes all 28 fast test executables,
+The latest ownership-cleanup milestone passes all 29 fast test executables,
 LSP smoke, invalid-edit recovery, incremental synchronization, and the LSP
-matrix in 70.01 seconds with 697,844 KiB peak RSS. `raymarch-dd`,
+matrix in 51.91 seconds with 623,188 KiB peak RSS. Representative frontend and
+macro targets also build under strict warnings with `-Werror`. `raymarch-dd`,
 `dudu-webserver`, every `duduplayground` native target, and the complete
 `dudu-datascience` target set also build with the cleaned compiler.
 

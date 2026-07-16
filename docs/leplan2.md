@@ -368,7 +368,14 @@ Project configuration ownership is explicit too. Manifest syntax and value
 parsing live in one parser unit, while target application, upward discovery,
 and project-relative path policy remain separate. Root and named targets share
 one native-build entry parser, and always-constant or renaming helpers are
-removed instead of retained as compatibility surface.
+gone.
+
+Test build ownership is explicit as well. One CMake helper owns executable
+creation, linking, the C++ language level, strict warnings, warning-as-error
+policy, and CTest registration. This removed three duplicated target lists and
+exposed an expansion-render test that had been built but never registered.
+Target-specific fixture definitions remain local to their tests.
+
 Running-executable and `PATH` lookup are now shared support operations rather
 than separate CLI, standard-library, macro, and native-scanner platform
 implementations. Each caller still owns its toolchain identity and layout
