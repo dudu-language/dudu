@@ -20,4 +20,10 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
                        const std::vector<TypeRef>& explicit_template_args,
                        const std::vector<Expr>& args, const SourceLocation* location);
 
+std::optional<FunctionSignature> match_native_method_signature(
+    const FunctionScope& scope, const std::string& callee,
+    const std::vector<FunctionSignature>& candidates,
+    const std::vector<TypeRef>& explicit_template_args, const Expr& receiver,
+    const std::vector<Expr>& args, const SourceLocation* location);
+
 } // namespace dudu

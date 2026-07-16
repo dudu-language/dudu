@@ -15,10 +15,6 @@ std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     return receiver_class_name(symbols, type);
 }
 
-bool ref_like(const TypeRef& type) {
-    return type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference;
-}
-
 bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type,
                        const std::string& base, std::set<std::string>& seen) {
     const std::string derived = unwrap_type(symbols, derived_type);

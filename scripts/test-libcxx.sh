@@ -35,14 +35,15 @@ exec clang++ -stdlib=libc++ "$@"
 EOF
 chmod +x "$clangxx_wrapper"
 
-CLANGXX="$clangxx_wrapper" ctest --test-dir "$build_dir" --output-on-failure
+CLANGXX="$clangxx_wrapper" CXX="$clangxx_wrapper" \
+    ctest --test-dir "$build_dir" --output-on-failure
 libcxx_tmp="$build_dir/libcxx-tmp"
 rm -rf "$libcxx_tmp"
 mkdir -p "$libcxx_tmp"
-TMPDIR="$libcxx_tmp" CLANGXX="$clangxx_wrapper" \
+TMPDIR="$libcxx_tmp" CLANGXX="$clangxx_wrapper" CXX="$clangxx_wrapper" \
     "$build_dir/dudu" "$repo_root/examples/cpp_library.dd" --check
 allocators_cpp="$libcxx_tmp/allocators.cpp"
-TMPDIR="$libcxx_tmp" CLANGXX="$clangxx_wrapper" \
+TMPDIR="$libcxx_tmp" CLANGXX="$clangxx_wrapper" CXX="$clangxx_wrapper" \
     "$build_dir/dudu" "$repo_root/examples/allocators.dd" --emit-cpp "$allocators_cpp"
 "$clangxx_wrapper" -std=c++20 -c "$allocators_cpp" -o "$libcxx_tmp/allocators.o"
 

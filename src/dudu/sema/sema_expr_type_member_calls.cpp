@@ -1,5 +1,6 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 
@@ -75,7 +76,24 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         }
         return named_type_ref("auto", expr.location);
     }
-    const bool foreign_receiver = foreign_cpp_type_name(scope.symbols, receiver_type_ref);
+    const bool foreign_receiver = foreign_cpp_class_type(scope.symbols, receiver_type_ref);
+    if (foreign_receiver) {
+        const std::vector<FunctionSignature> signatures =
+            method_signatures_for_type(scope.symbols, receiver_type_ref, method_name, {});
+        if (!signatures.empty()) {
+            if (const std::optional<FunctionSignature> matched = match_native_method_signature(
+                    scope, callee, signatures, method_args, receiver_expr, expr.children,
+                    location)) {
+                check_call_args_ast(scope, callee, *matched, expr.children, location);
+                return signature_return_type_ref(*matched);
+            }
+            return std::nullopt;
+        }
+        for (const Expr& arg : expr.children) {
+            check_expr_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
+    }
     const std::vector<DuduMethodInstantiation> dudu_methods = dudu_method_instantiations_for_type(
         scope.symbols, receiver_type_ref, method_name, method_args);
     if (!dudu_methods.empty()) {
@@ -103,12 +121,6 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
     }
-    if (foreign_receiver) {
-        for (const Expr& arg : expr.children) {
-            check_expr_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
-    }
     return std::nullopt;
 }
 
@@ -129,7 +141,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
         static_class_receiver_type_ref(scope, receiver_expr).has_value();
     if (!bare_nonlocal_receiver && !static_class_receiver) {
         const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
-        const bool foreign_receiver = foreign_cpp_type_name(scope.symbols, receiver_type_ref);
+        const bool foreign_receiver = foreign_cpp_class_type(scope.symbols, receiver_type_ref);
         if (!foreign_receiver) {
             if (const auto inferred = inferred_dudu_method_instantiation_for_type(
                     scope, receiver_type_ref, member.name, expr.children, location)) {

@@ -352,17 +352,6 @@ void add_native_path_prefix(Symbols& symbols, const std::string& name) {
 
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
-    for (const ImportDecl& import : module.imports) {
-        if (import.kind == ImportKind::ForeignCpp && !import.alias.empty() &&
-            import.module_path.find('/') == std::string::npos &&
-            import.module_path.find('\\') == std::string::npos) {
-            // Standard and system headers often expose callable templates that
-            // Clang reports incompletely through the scanner. Keep this limited
-            // to explicit template-call syntax so ordinary calls still require
-            // scanner metadata.
-            symbols.native_explicit_template_prefixes.insert(import.alias);
-        }
-    }
     for (const std::string& prefix : module.module_import_prefixes) {
         symbols.module_import_prefixes.insert(prefix);
     }
@@ -477,14 +466,15 @@ Symbols collect_symbols(const ModuleAst& module) {
             require_native_identity(fn.identity, "function", fn.name, fn.location);
         FunctionSignature signature;
         signature.template_params = fn.template_params;
+        signature.template_param_is_value = fn.template_param_is_value;
         set_signature_param_types(signature, native_function_param_type_refs(fn));
         set_signature_return_type(signature, native_function_return_type_ref(fn));
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
+        signature.deleted = fn.deleted;
         if (signature.variadic && signature_param_count(signature) > 0) {
             signature.variadic_param_index = static_cast<int>(signature_param_count(signature) - 1);
         }
-        signature.has_native_template_return_spelling = !fn.return_native_spelling.empty();
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
         symbols.native_function_identities_by_binding[fn.name].push_back(identity);
         symbols.native_function_decls_by_identity[identity][fn.name] = &fn;

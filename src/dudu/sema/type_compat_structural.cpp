@@ -18,7 +18,8 @@ std::string strip_c_tag_prefix(std::string type) {
 }
 
 bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef& got) {
-    if (expected.kind != got.kind || expected.children.size() != got.children.size()) {
+    if (expected.kind != got.kind || expected.reference_kind != got.reference_kind ||
+        expected.children.size() != got.children.size()) {
         return false;
     }
     switch (expected.kind) {

@@ -52,6 +52,10 @@ bool contains_equivalent_method(const std::vector<FunctionDecl>& methods,
                                 const FunctionDecl& candidate) {
     return std::ranges::any_of(methods, [&](const FunctionDecl& method) {
         if (method.name != candidate.name ||
+            method.deleted != candidate.deleted ||
+            method.generic_params != candidate.generic_params ||
+            method.generic_param_is_value != candidate.generic_param_is_value ||
+            !type_ref_equivalent(method.receiver_type_ref, candidate.receiver_type_ref) ||
             !type_ref_equivalent(function_return_type_ref(method),
                                  function_return_type_ref(candidate)) ||
             method.params.size() != candidate.params.size()) {
@@ -88,7 +92,9 @@ bool type_ref_lists_equivalent(const std::vector<TypeRef>& lhs, const std::vecto
 
 bool native_function_equivalent(const NativeFunctionDecl& lhs, const NativeFunctionDecl& rhs) {
     return lhs.name == rhs.name && lhs.variadic == rhs.variadic &&
-           lhs.min_params == rhs.min_params &&
+           lhs.deleted == rhs.deleted &&
+           lhs.min_params == rhs.min_params && lhs.template_params == rhs.template_params &&
+           lhs.template_param_is_value == rhs.template_param_is_value &&
            type_ref_equivalent(native_function_return_type_ref(lhs),
                                native_function_return_type_ref(rhs)) &&
            type_ref_lists_equivalent(native_function_param_type_refs(lhs),

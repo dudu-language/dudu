@@ -22,7 +22,6 @@ struct MethodRecord {
 };
 
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
-bool ref_like(const TypeRef& type);
 bool derives_from_impl(const Symbols& symbols, const TypeRef& derived_type,
                        const std::string& base, std::set<std::string>& seen);
 bool has_decorator(const FunctionDecl& fn, std::string_view name);

@@ -227,6 +227,20 @@ std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const
     for (const Expr& arg : expr.children) {
         arg_types.push_back(infer_expr_type_ast(scope, arg, location));
     }
+    if (foreign_cpp_class_type(scope.symbols, receiver_type) && has_expr_callee(expr) &&
+        !expr_callee(expr).empty()) {
+        const std::vector<FunctionSignature> signatures =
+            method_signatures_for_type(scope.symbols, receiver_type, "operator()", {});
+        if (!signatures.empty()) {
+            if (const std::optional<FunctionSignature> matched = match_native_method_signature(
+                    scope, callee, signatures, {}, expr_callee(expr).front(), expr.children,
+                    location)) {
+                check_call_args_ast(scope, callee, *matched, expr.children, location);
+                return signature_return_type_ref(*matched);
+            }
+            return std::nullopt;
+        }
+    }
     if (const auto signature = dudu_operator_signature_for_args(scope.symbols, "()", receiver_type,
                                                                 expr.children, arg_types)) {
         check_call_args_ast(scope, callee, *signature, expr.children, location);

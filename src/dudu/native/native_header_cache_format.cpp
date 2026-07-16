@@ -22,6 +22,7 @@ void append_string(std::string& out, const std::string& value) {
 
 void append_type_ref(std::string& out, const TypeRef& type) {
     append_number(out, static_cast<size_t>(type.kind));
+    append_number(out, static_cast<size_t>(type.reference_kind));
     append_number(out, type.malformed ? 1 : 0);
     append_string(out, type.name);
     append_string(out, type.value);
@@ -60,15 +61,17 @@ std::optional<std::string> read_string(std::string_view text, size_t& offset) {
 std::optional<TypeRef> read_type_ref(std::string_view text, size_t& offset,
                                      const SourceLocation& location, const bool root) {
     const std::optional<size_t> kind = read_number(text, offset);
+    const std::optional<size_t> reference_kind = read_number(text, offset);
     const std::optional<size_t> malformed = read_number(text, offset);
     const std::optional<std::string> name = read_string(text, offset);
     const std::optional<std::string> value = read_string(text, offset);
     const std::optional<size_t> child_count = read_number(text, offset);
-    if (!kind || !malformed || !name || !value || !child_count) {
+    if (!kind || !reference_kind || !malformed || !name || !value || !child_count) {
         return std::nullopt;
     }
     TypeRef type;
     type.kind = static_cast<TypeKind>(*kind);
+    type.reference_kind = static_cast<ReferenceKind>(*reference_kind);
     type.malformed = *malformed != 0;
     type.name = *name;
     type.value = *value;

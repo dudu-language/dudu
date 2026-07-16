@@ -39,6 +39,19 @@ bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type) {
            symbols.native_types.contains(base_type(resolved_type));
 }
 
+bool foreign_cpp_class_type(const Symbols& symbols, const TypeRef& type) {
+    TypeRef resolved_type = resolve_alias_ref(symbols, type);
+    while (const auto inner = unary_type_child_ref(
+               resolved_type,
+               {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const, TypeKind::Volatile,
+                TypeKind::Atomic, TypeKind::Storage, TypeKind::Shared, TypeKind::Device})) {
+        resolved_type = resolve_alias_ref(symbols, *inner);
+    }
+    const auto found = symbols.classes.find(type_ref_head_name(resolved_type));
+    return found != symbols.classes.end() && found->second != nullptr &&
+           found->second->native_declaration;
+}
+
 bool is_native_path_prefix(const Symbols& symbols, const std::string& path) {
     const size_t dot = path.find('.');
     if (dot == std::string::npos) {

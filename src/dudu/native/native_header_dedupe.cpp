@@ -63,6 +63,11 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, std::stri
 }
 
 void add_unique_function(std::vector<NativeFunctionDecl>& out, NativeFunctionDecl value) {
+    if (!has_type_ref(value.return_type_ref) ||
+        std::ranges::any_of(value.param_type_refs,
+                            [](const TypeRef& type) { return !has_type_ref(type); })) {
+        return;
+    }
     if (!contains_equivalent_native_function(out, value)) {
         out.push_back(std::move(value));
     }

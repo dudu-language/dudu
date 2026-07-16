@@ -1442,6 +1442,43 @@ void test_native_scan_imports_using_shadow_function_overloads() {
     }));
 }
 
+void test_native_scan_preserves_callable_and_static_methods() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-CXXRecordDecl 0x1 <test.hpp:1:1, line:5:1> line:1:8 struct Callable definition\n"
+        "  |-CXXMethodDecl 0x2 <line:2:5, col:40> col:9 operator() 'int (int) const'\n"
+        "  | `-ParmVarDecl 0x3 <col:20, col:24> col:24 value 'int'\n"
+        "  |-CXXMethodDecl 0x4 <line:3:5, col:29> col:16 now 'int ()' static\n"
+        "  `-CXXMethodDecl 0x5 <line:4:5, col:31> col:14 clone 'Callable () const'\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto klass = std::ranges::find_if(scan.classes, [](const dudu::ClassDecl& item) {
+        return item.name == "Callable";
+    });
+    assert(klass != scan.classes.end());
+    const auto call = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
+        return method.name == "operator()";
+    });
+    assert(call != klass->methods.end());
+    assert(dudu::type_ref_text(call->receiver_type_ref) == "const[Self]");
+    assert(call->params.size() == 1);
+    assert(dudu::type_ref_text(call->params.front().type_ref) == "i32");
+
+    const auto now = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
+        return method.name == "now";
+    });
+    assert(now != klass->methods.end());
+    assert(!dudu::has_type_ref(now->receiver_type_ref));
+
+    const auto clone = std::ranges::find_if(klass->methods, [](const dudu::FunctionDecl& method) {
+        return method.name == "clone";
+    });
+    assert(clone != klass->methods.end());
+    assert(dudu::type_ref_text(clone->return_type_ref) == "Callable");
+}
+
 void test_native_scan_merges_reopened_namespaces() {
     dudu::NativeHeaderScan scan;
     for (const std::string source : {"first.hpp", "second.hpp"}) {
@@ -1499,6 +1536,7 @@ int main() {
         test_native_scan_preserves_scoped_enum_owners();
         test_native_scan_preserves_namespace_value_owners();
         test_native_scan_imports_using_shadow_function_overloads();
+        test_native_scan_preserves_callable_and_static_methods();
         test_native_scan_merges_reopened_namespaces();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

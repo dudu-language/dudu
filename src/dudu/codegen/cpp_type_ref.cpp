@@ -128,7 +128,8 @@ std::string lower_cpp_type(const TypeRef& type) {
         if (type.children.empty()) {
             malformed_type_ref(type);
         }
-        return lower_cpp_type(type.children[0]) + "&";
+        return lower_cpp_type(type.children[0]) +
+               (type.reference_kind == ReferenceKind::Rvalue ? "&&" : "&");
     case TypeKind::Const:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -207,7 +208,8 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         if (type.children.empty()) {
             malformed_type_ref(type);
         }
-        return lower_cpp_type(type.children[0], namespace_aliases) + "&";
+        return lower_cpp_type(type.children[0], namespace_aliases) +
+               (type.reference_kind == ReferenceKind::Rvalue ? "&&" : "&");
     case TypeKind::Const:
         if (type.children.empty()) {
             malformed_type_ref(type);
@@ -291,7 +293,8 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         if (type.children.empty()) {
             malformed_type_ref(type);
         }
-        return lower_cpp_type(type.children[0], namespace_aliases, options) + "&";
+        return lower_cpp_type(type.children[0], namespace_aliases, options) +
+               (type.reference_kind == ReferenceKind::Rvalue ? "&&" : "&");
     case TypeKind::Const:
         if (type.children.empty()) {
             malformed_type_ref(type);

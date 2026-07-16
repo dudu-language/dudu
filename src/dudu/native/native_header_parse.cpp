@@ -24,6 +24,7 @@ struct TemplateContext {
     int depth = 0;
     Kind kind = Kind::Function;
     std::vector<std::string> params;
+    std::vector<bool> param_is_value;
     std::vector<bool> param_has_default;
     std::vector<TypeRef> param_defaults;
     int last_param_depth = -1;
@@ -399,12 +400,15 @@ size_t append_native_function(NativeHeaderScan& scan,
                               const NativeCursorIdentityIndex& identities, std::string raw_name,
                               const std::string& signature, const SourceLocation& location,
                               const std::string& current_file,
-                              const std::vector<std::string>& template_params = {}) {
+                              const std::vector<std::string>& template_params = {},
+                              const std::vector<bool>& template_param_is_value = {},
+                              bool deleted = false) {
     NativeFunctionDecl fn;
     fn.name = join_scope(namespaces, raw_name);
     fn.identity = scanned_identity(identities, NativeCursorKind::Function, raw_name, location,
                                    fn.name, current_file);
     fn.template_params = template_params;
+    fn.template_param_is_value = template_param_is_value;
     fn.param_native_spellings = qualify_scoped_types(scan, namespaces, signature_params(signature));
     fn.param_names.resize(fn.param_native_spellings.size());
     fn.return_native_spelling =
@@ -416,6 +420,7 @@ size_t append_native_function(NativeHeaderScan& scan,
     fn.return_type_ref = parse_native_type_text(fn.return_native_spelling, location);
     fn.min_params = static_cast<int>(fn.param_native_spellings.size());
     fn.variadic = signature.find("...") != std::string::npos;
+    fn.deleted = deleted;
     fn.location = location;
     scan.functions.push_back(std::move(fn));
     return scan.functions.size() - 1;
@@ -452,7 +457,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex using_shadow_function(
         R"(UsingShadowDecl.*\bFunction 0x[0-9A-Fa-f]+ '([A-Za-z_][A-Za-z0-9_]*)' '([^']*)')");
-    static const std::regex method_decl(R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex method_decl(
+        R"(CXXMethodDecl.*\b((?:operator(?:\(\)|\[\]|[^\s']+))|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex ctor_decl(
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -500,6 +506,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Alias,
                              .params = {},
+                             .param_is_value = {},
                              .param_has_default = {},
                              .param_defaults = {},
                              .last_param_depth = -1,
@@ -508,6 +515,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Class,
                              .params = {},
+                             .param_is_value = {},
                              .param_has_default = {},
                              .param_defaults = {},
                              .last_param_depth = -1,
@@ -516,6 +524,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         templates.push_back({.depth = depth,
                              .kind = TemplateContext::Kind::Function,
                              .params = {},
+                             .param_is_value = {},
                              .param_has_default = {},
                              .param_defaults = {},
                              .last_param_depth = -1,
@@ -534,6 +543,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         if (!name.empty()) {
             templates.back().params.push_back(std::move(name));
+            templates.back().param_is_value.push_back(false);
             templates.back().param_has_default.push_back(false);
             templates.back().param_defaults.emplace_back();
             templates.back().last_param_depth = depth;
@@ -548,6 +558,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         if (!name.empty()) {
             templates.back().params.push_back(std::move(name));
+            templates.back().param_is_value.push_back(true);
             templates.back().param_has_default.push_back(false);
             templates.back().param_defaults.emplace_back();
             templates.back().last_param_depth = depth;
@@ -813,12 +824,15 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         const std::string signature = match[2].str();
         std::vector<std::string> template_params;
+        std::vector<bool> template_param_is_value;
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             template_params = templates.back().params;
+            template_param_is_value = templates.back().param_is_value;
         }
         const size_t function_index =
             append_native_function(scan, namespaces, identities, raw_name, signature, decl_location,
-                                   current_file, template_params);
+                                   current_file, template_params, template_param_is_value,
+                                   line.find(" delete", line.rfind('\'')) != std::string::npos);
         functions.push_back({depth, function_index});
         param_targets.push_back(
             {.depth = depth, .kind = ParamTargetKind::Function, .primary = function_index});
@@ -834,6 +848,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             current_file);
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             method.generic_params = templates.back().params;
+            method.generic_param_is_value = templates.back().param_is_value;
+        }
+        if (line.find(" static", line.rfind('\'')) == std::string::npos) {
+            method.receiver_type_ref =
+                parse_native_type_text(signature_receiver_type(match[2].str()), decl_location);
         }
         method.return_type_ref = parse_native_type_text(
             qualify_scoped_type(scan, namespaces, classes, signature_return_type(match[2].str())),
@@ -846,6 +865,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
+        method.deleted = line.find(" delete", line.rfind('\'')) != std::string::npos;
         method.location = decl_location;
         const size_t class_index = classes.back().second;
         scan.classes[class_index].methods.push_back(std::move(method));

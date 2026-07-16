@@ -215,6 +215,22 @@ void set_expr_callee(Expr& expr, std::vector<Expr> callee) {
     expr.callee = std::make_unique<std::vector<Expr>>(std::move(callee));
 }
 
+bool expr_is_lvalue(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::Name:
+        return true;
+    case ExprKind::Member:
+    case ExprKind::Index:
+        return !expr.children.empty() && expr_is_lvalue(expr.children.front());
+    case ExprKind::Unary:
+        return expr.op == "*";
+    case ExprKind::NamedArg:
+        return expr.children.size() == 1 && expr_is_lvalue(expr.children.front());
+    default:
+        return false;
+    }
+}
+
 bool has_expr_template_type_args(const Expr& expr) {
     return expr.template_type_args != nullptr && !expr.template_type_args->empty();
 }

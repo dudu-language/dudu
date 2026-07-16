@@ -211,6 +211,13 @@ TypeRef TypeTokenParser::parse_type(std::initializer_list<TokenKind> stops) {
 
 TypeRef TypeTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
+    if (match_operator("&&")) {
+        TypeRef type = make_node(TypeKind::Reference, begin, cursor_);
+        type.reference_kind = ReferenceKind::Rvalue;
+        type.children.push_back(parse_type(stops));
+        type.range = range_between(begin, cursor_);
+        return type;
+    }
     if (match_operator("*")) {
         TypeRef type = make_node(TypeKind::Pointer, begin, cursor_);
         type.children.push_back(parse_type(stops));

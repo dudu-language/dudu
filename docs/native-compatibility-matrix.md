@@ -29,6 +29,19 @@ Last targeted Eigen probe run: 2026-07-12 with
 alias construction, inherited `dot`, inherited `operator+`, and `sum` on the
 result without wrappers.
 
+Last targeted native compatibility run: 2026-07-16. The executable
+`native_compat_stress.dd` fixture passed with GCC/libstdc++ and Clang/libc++.
+It covers explicit specialization, constrained overloads, default arguments,
+variadic packs, concrete parameters beside deduced parameters, lvalue/const/
+rvalue reference overloads, ref-qualified methods, deleted declarations,
+callable objects, forwarding through `std::invoke`, move-only values,
+inherited generic methods, declaration-generating macros, and chained methods
+whose intermediate result is the owning native class. The real
+`cpp_stdlib_interop.dd`, `cpp_chrono_timer.dd`, and
+`cpp_filesystem_path.dd` consumers also passed. The fast suite additionally
+proves that a structurally specialized `Box[T]` overload outranks a bare `T`
+overload.
+
 Last local dogfood run: 2026-07-12 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
@@ -89,6 +102,7 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |
 | Native C++ templates | C++ templates | explicit template calls, method templates, dependent fields and returns, nested and namespace alias templates, dependent type/non-type defaults, omitted-argument materialization, partial and concrete class specialization selection, warm scan cache | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd`, `native_dependent_alias_metadata.dd`, `native_associated_type.dd`, `cpp_stdlib_interop.dd` | no |
 | Modern C++ template mix | C++ templates | concepts on callable templates, leading template parameters before variadic packs, defaulted function arguments, inherited constructors and methods, method templates, cv/ref parameters, move-only values | fixture | `tests/fixtures/native_modern_templates.dd` | no |
+| Native overload and value-category stress | C++ templates / overloads | specialization and structural template ordering, constrained overloads, default and variadic arguments, deleted candidates, cv/ref-qualified methods, callable objects, forwarding references, move-only values, inherited generic methods, macro declarations, and native self-return chains | fixture | `tests/fixtures/native_compat_stress.dd`, `native_template_specificity.dd`, `bad_native_*.dd`, `cpp_chrono_timer.dd`, `cpp_filesystem_path.dd` | no |
 
 ## External Dogfood Repos
 

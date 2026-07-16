@@ -1,0 +1,5 @@
+from cpp.path import native_headers/native_ambiguous_overload.hpp
+
+
+def main() -> i32:
+    return dudu_ambiguity.choose(1)

@@ -39,6 +39,13 @@ class_scoped_type_name(const NativeHeaderScan& scan,
         if (std::ranges::find(klass.generic_params, name) != klass.generic_params.end()) {
             return name;
         }
+        const size_t class_dot = klass.name.rfind('.');
+        const std::string_view class_short_name =
+            class_dot == std::string::npos ? std::string_view{klass.name}
+                                           : std::string_view{klass.name}.substr(class_dot + 1);
+        if (name == class_short_name) {
+            return klass.name;
+        }
         const size_t dot = name.find('.');
         const std::string_view first =
             dot == std::string::npos ? std::string_view{name}

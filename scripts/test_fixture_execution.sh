@@ -44,6 +44,7 @@ compile_and_expect native_dependent_template_return 42
 compile_and_expect native_dependent_alias_metadata 42
 compile_and_expect native_associated_type 42
 compile_and_expect native_modern_templates 47
+compile_and_expect native_compat_stress 42
 compile_and_expect generic_non_type_param 42
 compile_and_expect generic_value_arithmetic 42
 compile_and_expect generics_reference 42

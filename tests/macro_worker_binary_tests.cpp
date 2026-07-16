@@ -5,6 +5,7 @@
 #include "dudu/sema/sema.hpp"
 
 #include <cassert>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -34,11 +35,14 @@ void test_build_launch_and_cache() {
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "macros.dd");
     dudu::analyze_module_tree(module);
     const dudu::macro::Plan plan = dudu::macro::build_plan(module);
+    const char* environment_cxx = std::getenv("CXX");
+    const std::string compiler =
+        environment_cxx == nullptr || *environment_cxx == '\0' ? DUDU_TEST_CXX : environment_cxx;
     const dudu::macro::WorkerBuildOptions options = {.cache_dir = dir / "cache",
                                                      .sdk_cache_dir = dir / "sdk-cache",
                                                      .project_root = dir,
                                                      .package = "fixture",
-                                                     .compiler = DUDU_TEST_CXX,
+                                                     .compiler = compiler,
                                                      .cpp_standard = "c++20",
                                                      .toolchain_identity = "test-toolchain",
                                                      .dudu_toolchain_identity = "test-dudu",

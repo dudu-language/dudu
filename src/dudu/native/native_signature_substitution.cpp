@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <set>
 
 namespace dudu {
 namespace {
@@ -38,63 +37,17 @@ std::string replace_type_identifier(std::string type, const std::string& name,
     return type;
 }
 
-void append_placeholder(std::vector<std::string>& out, std::set<std::string>& seen,
-                        const std::string& name, bool only_index) {
-    if (!native_template_placeholder(name) || native_index_placeholder(name) != only_index) {
-        return;
-    }
-    if (seen.insert(name).second) {
-        out.push_back(name);
-    }
-}
-
-void append_placeholders(std::vector<std::string>& out, std::set<std::string>& seen,
-                         const TypeRef& type, bool only_index) {
-    if (!has_type_ref(type)) {
-        return;
-    }
-    append_placeholder(out, seen, type_ref_head_name(type), only_index);
-    if (!type.value.empty()) {
-        append_placeholder(out, seen, type.value, only_index);
-    }
-    for (const TypeRef& child : type.children) {
-        append_placeholders(out, seen, child, only_index);
-    }
-}
-
-std::vector<std::string> native_signature_placeholders(const FunctionSignature& signature) {
-    std::vector<std::string> out;
-    std::set<std::string> seen;
-    append_placeholders(out, seen, signature_return_type_ref(signature), true);
-    append_placeholders(out, seen, signature_return_type_ref(signature), false);
-    const size_t param_count = signature_param_count(signature);
-    for (size_t i = 0; i < param_count; ++i) {
-        append_placeholders(out, seen, signature_param_type_ref(signature, i), false);
-    }
-    return out;
-}
-
-bool numeric_template_arg_ref(const TypeRef& arg) {
-    if (arg.kind == TypeKind::Value) {
-        return numeric_template_arg(arg.value);
-    }
-    return false;
-}
-
 std::map<std::string, TypeRef>
 explicit_template_type_ref_bindings(const std::vector<std::string>& names,
                                     const std::vector<TypeRef>& args) {
     std::map<std::string, TypeRef> out;
-    size_t arg_index = 0;
-    for (const std::string& name : names) {
-        if (arg_index >= args.size()) {
-            break;
+    const size_t count = std::min(names.size(), args.size());
+    for (size_t i = 0; i < count; ++i) {
+        std::string name = names[i];
+        if (name.ends_with("...")) {
+            name.resize(name.size() - 3);
         }
-        if (native_index_placeholder(name) && !numeric_template_arg_ref(args[arg_index])) {
-            continue;
-        }
-        out.emplace(name, args[arg_index]);
-        ++arg_index;
+        out.emplace(std::move(name), args[i]);
     }
     return out;
 }
@@ -178,29 +131,38 @@ structured_type_ref_bindings(const NativeTemplateBindings& bindings) {
 }
 
 bool structured_substitution_allowed(const TypeRef& type, const NativeTemplateBindings& bindings) {
+    (void)bindings;
     if (!structured_binding_type_ref(type)) {
         return false;
     }
     if (type_ref_contains_kind(type, TypeKind::PackExpansion)) {
         return false;
     }
+    return true;
+}
 
-    std::vector<std::string> placeholders;
-    std::set<std::string> seen;
-    append_placeholders(placeholders, seen, type, true);
-    append_placeholders(placeholders, seen, type, false);
-    for (const std::string& placeholder : placeholders) {
-        const auto found = bindings.find(placeholder);
-        if (found != bindings.end() && !structured_binding_type_ref(found->second)) {
-            return false;
+std::optional<std::string>
+bound_pack_placeholder(const TypeRef& type, const NativePackBindingMap& pack_bindings) {
+    if (type.kind == TypeKind::PackExpansion && type.children.size() == 1) {
+        return bound_pack_placeholder(type.children.front(), pack_bindings);
+    }
+    const std::string name = type_ref_head_name(type);
+    if (pack_bindings.contains(name)) {
+        return name;
+    }
+    for (const TypeRef& child : type.children) {
+        if (const std::optional<std::string> found =
+                bound_pack_placeholder(child, pack_bindings)) {
+            return found;
         }
     }
-    return true;
+    return std::nullopt;
 }
 
 std::optional<std::vector<TypeRef>>
 structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap& pack_bindings) {
-    const std::optional<std::string> pack_name = native_template_pack_placeholder(param_type);
+    const std::optional<std::string> pack_name =
+        bound_pack_placeholder(param_type, pack_bindings);
     if (!pack_name) {
         return std::nullopt;
     }
@@ -230,28 +192,11 @@ TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& 
 
 } // namespace
 
-bool native_index_placeholder(const std::string& name) {
-    const size_t qualifier = name.find_last_of(".:");
-    if (qualifier != std::string::npos && qualifier + 1 < name.size()) {
-        return native_index_placeholder(name.substr(qualifier + 1));
-    }
-    return name == "__i" || name == "__j" || name == "_Int" || name == "_Index" || name == "_Nm" ||
-           name == "_Np";
-}
-
-bool numeric_template_arg(std::string_view arg) {
-    arg = trim_copy(std::string(arg));
-    return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
-}
-
 FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
                                                          FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
-    const std::vector<std::string> names = signature.template_params.empty()
-                                               ? native_signature_placeholders(signature)
-                                               : signature.template_params;
     const std::map<std::string, TypeRef> ref_bindings =
-        explicit_template_type_ref_bindings(names, args);
+        explicit_template_type_ref_bindings(signature.template_params, args);
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {

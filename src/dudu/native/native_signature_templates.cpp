@@ -5,8 +5,7 @@
 #include "dudu/sema/type_compat_native.hpp"
 #include "dudu/sema/type_compat_structural.hpp"
 
-#include <cctype>
-#include <set>
+#include <stdexcept>
 
 namespace dudu {
 namespace {
@@ -44,26 +43,48 @@ std::string strip_forwarding_suffix(std::string type) {
 }
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
+                            const NativeTemplateParameterNames& template_params,
                             NativeTemplateBindings& bindings);
 
-std::optional<std::string> native_template_pack_placeholder_spelling(std::string type) {
+std::string normalized_template_param_name(std::string name) {
+    const size_t qualifier = name.find_last_of(".:");
+    if (qualifier != std::string::npos && qualifier + 1 < name.size()) {
+        name = name.substr(qualifier + 1);
+    }
+    if (name.ends_with("...")) {
+        name.resize(name.size() - 3);
+    }
+    return name;
+}
+
+bool declared_template_param(std::string name,
+                             const NativeTemplateParameterNames& template_params) {
+    return template_params.contains(normalized_template_param_name(std::move(name)));
+}
+
+std::optional<std::string>
+native_template_pack_placeholder_spelling(std::string type,
+                                          const NativeTemplateParameterNames& template_params) {
     type = strip_forwarding_suffix(std::move(type));
     if (type.ends_with("...")) {
         type.erase(type.size() - 3);
         type = trim_copy(type);
     }
-    if (native_template_placeholder(type)) {
+    type = normalized_template_param_name(std::move(type));
+    if (template_params.contains(type)) {
         return type;
     }
     return std::nullopt;
 }
 
 bool bind_template_pack_child(const TypeRef& expected, const std::vector<TypeRef>& got,
+                              const NativeTemplateParameterNames& template_params,
                               NativeTemplateBindings& bindings) {
     if (expected.kind != TypeKind::PackExpansion || expected.children.size() != 1) {
         return false;
     }
-    const std::optional<std::string> pack_name = native_template_pack_placeholder(expected);
+    const std::optional<std::string> pack_name =
+        native_template_pack_placeholder(expected, template_params);
     if (!pack_name) {
         return false;
     }
@@ -74,16 +95,19 @@ bool bind_template_pack_child(const TypeRef& expected, const std::vector<TypeRef
 }
 
 bool bind_same_shape_children(const TypeRef& expected, const TypeRef& got,
+                              const NativeTemplateParameterNames& template_params,
                               NativeTemplateBindings& bindings) {
     if (expected.children.size() == 1 &&
-        bind_template_pack_child(expected.children.front(), got.children, bindings)) {
+        bind_template_pack_child(expected.children.front(), got.children, template_params,
+                                 bindings)) {
         return true;
     }
     if (expected.children.size() != got.children.size()) {
         return false;
     }
     for (size_t i = 0; i < expected.children.size(); ++i) {
-        if (!bind_template_type_ref(expected.children[i], got.children[i], bindings)) {
+        if (!bind_template_type_ref(expected.children[i], got.children[i], template_params,
+                                    bindings)) {
             return false;
         }
     }
@@ -95,22 +119,25 @@ bool same_native_template_name(const std::string& expected, const std::string& g
 }
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
+                            const NativeTemplateParameterNames& template_params,
                             NativeTemplateBindings& bindings) {
     if (got.kind == TypeKind::Shaped && expected.kind != TypeKind::Shaped &&
         !got.children.empty()) {
-        return bind_template_type_ref(expected, got.children.front(), bindings);
+        return bind_template_type_ref(expected, got.children.front(), template_params, bindings);
     }
 
     const std::string expected_name = type_ref_head_name(expected);
     if ((expected.kind == TypeKind::Named || expected.kind == TypeKind::Qualified ||
          expected.kind == TypeKind::Value) &&
-        native_template_placeholder(expected_name)) {
-        return bind_template_placeholder(expected_name, got, bindings);
+        declared_template_param(expected_name, template_params)) {
+        return bind_template_placeholder(normalized_template_param_name(expected_name), got,
+                                         bindings);
     }
     if (expected.kind == TypeKind::Pointer) {
         return got.kind == TypeKind::Pointer && expected.children.size() == 1 &&
                got.children.size() == 1 &&
-               bind_template_type_ref(expected.children.front(), got.children.front(), bindings);
+               bind_template_type_ref(expected.children.front(), got.children.front(),
+                                      template_params, bindings);
     }
     if (expected.kind == TypeKind::Reference) {
         if (expected.children.size() != 1) {
@@ -118,8 +145,9 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         }
         return got.kind == TypeKind::Reference && got.children.size() == 1
                    ? bind_template_type_ref(expected.children.front(), got.children.front(),
-                                            bindings)
-                   : bind_template_type_ref(expected.children.front(), got, bindings);
+                                            template_params, bindings)
+                   : bind_template_type_ref(expected.children.front(), got, template_params,
+                                            bindings);
     }
     if (expected.kind == TypeKind::Const || expected.kind == TypeKind::Volatile ||
         expected.kind == TypeKind::Atomic || expected.kind == TypeKind::Storage ||
@@ -129,79 +157,82 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         }
         return got.kind == expected.kind && got.children.size() == 1
                    ? bind_template_type_ref(expected.children.front(), got.children.front(),
-                                            bindings)
-                   : bind_template_type_ref(expected.children.front(), got, bindings);
+                                            template_params, bindings)
+                   : bind_template_type_ref(expected.children.front(), got, template_params,
+                                            bindings);
     }
     if (expected.kind == TypeKind::Template && got.kind == TypeKind::Template &&
         same_native_template_name(expected.name, got.name)) {
-        return bind_same_shape_children(expected, got, bindings);
+        return bind_same_shape_children(expected, got, template_params, bindings);
     }
     if ((expected.kind == TypeKind::FixedArray || expected.kind == TypeKind::Shaped) &&
         expected.kind == got.kind) {
-        return bind_same_shape_children(expected, got, bindings);
+        return bind_same_shape_children(expected, got, template_params, bindings);
     }
     return false;
 }
 
 } // namespace
 
-bool native_template_placeholder(const std::string& type) {
-    const size_t qualifier = type.find_last_of(".:");
-    if (qualifier != std::string::npos && qualifier + 1 < type.size()) {
-        return native_template_placeholder(type.substr(qualifier + 1));
+NativeTemplateParameterNames
+native_type_template_parameters(const FunctionSignature& signature) {
+    if (signature.template_params.size() != signature.template_param_is_value.size()) {
+        throw std::logic_error("native function template parameter metadata is incomplete");
     }
-    static const std::set<std::string> simple = {
-        "T", "U", "V", "A", "B", "L", "Q", "Key", "Value", "__i", "__j", "_Int", "_Index", "_Nm"};
-    if (simple.contains(type)) {
-        return true;
+    NativeTemplateParameterNames out;
+    for (size_t i = 0; i < signature.template_params.size(); ++i) {
+        if (!signature.template_param_is_value[i]) {
+            out.insert(normalized_template_param_name(signature.template_params[i]));
+        }
     }
-    if (!type.empty() && std::isupper(static_cast<unsigned char>(type.front())) != 0) {
-        return true;
-    }
-    return type.size() > 1 && type.front() == '_' &&
-           std::isupper(static_cast<unsigned char>(type[1])) != 0;
+    return out;
 }
 
-std::optional<std::string> native_template_pack_placeholder(const TypeRef& type) {
+std::optional<std::string>
+native_template_pack_placeholder(const TypeRef& type,
+                                 const NativeTemplateParameterNames& template_params) {
     if (type.kind == TypeKind::PackExpansion && type.children.size() == 1) {
-        return native_template_pack_placeholder(type.children.front());
+        return native_template_pack_placeholder(type.children.front(), template_params);
     }
     if (type.kind == TypeKind::Named) {
-        return native_template_pack_placeholder_spelling(type.name);
+        return native_template_pack_placeholder_spelling(type.name, template_params);
     }
     if ((type.kind == TypeKind::Template || type.kind == TypeKind::Associated) &&
         type.children.size() == 1) {
-        return native_template_pack_placeholder(type.children.front());
+        return native_template_pack_placeholder(type.children.front(), template_params);
     }
     if ((type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference ||
          type.kind == TypeKind::Const || type.kind == TypeKind::Volatile ||
          type.kind == TypeKind::Atomic || type.kind == TypeKind::Storage ||
          type.kind == TypeKind::Shared || type.kind == TypeKind::Device) &&
         type.children.size() == 1) {
-        return native_template_pack_placeholder(type.children.front());
+        return native_template_pack_placeholder(type.children.front(), template_params);
     }
     if (const std::optional<std::string> placeholder =
-            native_template_pack_placeholder_spelling(type_ref_head_name(type))) {
+            native_template_pack_placeholder_spelling(type_ref_head_name(type), template_params)) {
         return placeholder;
     }
     return std::nullopt;
 }
 
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
+                                   const NativeTemplateParameterNames& template_params,
                                    NativeTemplateBindings& bindings) {
-    return bind_template_type_ref(expected, got, bindings);
+    return bind_template_type_ref(expected, got, template_params, bindings);
 }
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
-                                   const TypeRef& got, NativeTemplateBindings& bindings) {
+                                   const TypeRef& got,
+                                   const NativeTemplateParameterNames& template_params,
+                                   NativeTemplateBindings& bindings) {
     NativeTemplateBindings direct_bindings = bindings;
-    if (bind_template_type_ref(expected, got, direct_bindings)) {
+    if (bind_template_type_ref(expected, got, template_params, direct_bindings)) {
         bindings = std::move(direct_bindings);
         return true;
     }
     TypeRef resolved_expected = resolve_alias_ref(symbols, expected);
     TypeRef resolved_got = resolve_alias_ref(symbols, got);
-    return bind_template_type_ref(resolved_expected, resolved_got, bindings);
+    return bind_template_type_ref(resolved_expected, resolved_got, template_params, bindings);
 }
 
 } // namespace dudu

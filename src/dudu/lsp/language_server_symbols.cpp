@@ -109,23 +109,24 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
 }
 
 std::optional<std::string> native_function_signature_doc(const NativeFunctionDecl& fn) {
-    const bool has_concrete_return =
-        !fn.return_native_spelling.empty() && fn.return_native_spelling != "auto";
+    const TypeRef return_type = native_function_return_type_ref(fn);
+    const std::vector<TypeRef> param_types = native_function_param_type_refs(fn);
+    const bool has_concrete_return = has_type_ref(return_type) && !type_ref_is_auto(return_type);
     const bool has_concrete_param =
-        std::ranges::any_of(fn.param_native_spellings, [](const std::string& param) {
-            return !param.empty() && param != "auto";
+        std::ranges::any_of(param_types, [](const TypeRef& param) {
+            return has_type_ref(param) && !type_ref_is_auto(param);
         });
     const bool has_native_signature = has_concrete_return || has_concrete_param;
     if (!has_native_signature) {
         return std::nullopt;
     }
     std::ostringstream out;
-    out << "Native signature: `native " << fn.return_native_spelling << "(";
-    for (size_t i = 0; i < fn.param_native_spellings.size(); ++i) {
+    out << "Native signature: `native " << type_ref_text(return_type) << "(";
+    for (size_t i = 0; i < param_types.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << fn.param_native_spellings[i];
+        out << type_ref_text(param_types[i]);
     }
     if (fn.variadic) {
         if (!fn.param_native_spellings.empty()) {

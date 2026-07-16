@@ -36,6 +36,10 @@ def main() -> i32:
     maybe: std.optional[i32] = std.optional[i32](40)
     if not maybe.has_value():
         return 1
+    moving: std.optional[i32] = std.optional[i32](2)
+    moved_value = move(moving).value()
+    if moved_value != 2:
+        return 18
 
     label: std.string_view = std.string_view("dudu")
     if label.size() != 4:
@@ -89,6 +93,10 @@ def main() -> i32:
     callback: std.function[fn(i32) -> i32] = std.function[fn(i32) -> i32](add_one)
     if callback(41) != 42:
         return 11
+
+    less: std.less[i32] = std.less[i32]()
+    if not less(1, 2):
+        return 19
 
     owned: std.shared_ptr[Counter] = std.make_shared[Counter](Counter(value=42))
     weak: std.weak_ptr[Counter] = std.weak_ptr[Counter](owned)

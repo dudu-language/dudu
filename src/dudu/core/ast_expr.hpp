@@ -66,6 +66,7 @@ void set_stmt_pattern_expr(Stmt& stmt, Expr expr);
 bool has_stmt_guard_expr(const Stmt& stmt);
 const Expr& stmt_guard_expr(const Stmt& stmt);
 void set_stmt_guard_expr(Stmt& stmt, Expr expr);
+bool expr_is_lvalue(const Expr& expr);
 std::string display_expr(const Expr& expr);
 
 } // namespace dudu

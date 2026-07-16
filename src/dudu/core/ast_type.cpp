@@ -204,7 +204,8 @@ std::string substitute_type_ref_text(const TypeRef& type,
                 type.location,
                 "malformed structured type node: reference is missing its child type");
         }
-        return "&" + substitute_type_ref_text(type.children[0], substitutions);
+        return (type.reference_kind == ReferenceKind::Rvalue ? "&&" : "&") +
+               substitute_type_ref_text(type.children[0], substitutions);
     case TypeKind::Const:
         return substitute_wrapper("const", type, substitutions);
     case TypeKind::Volatile:
@@ -330,7 +331,8 @@ bool type_ref_is_void(const TypeRef& type) {
 
 bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
     if (left.kind != right.kind || left.children.size() != right.children.size() ||
-        left.malformed != right.malformed || left.name != right.name) {
+        left.reference_kind != right.reference_kind || left.malformed != right.malformed ||
+        left.name != right.name) {
         return false;
     }
     if (left.kind == TypeKind::Value && !shape_value_expr_equivalent(left.value, right.value)) {
@@ -345,7 +347,8 @@ bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
 }
 
 bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
-    if (left.kind != right.kind || left.children.size() != right.children.size()) {
+    if (left.kind != right.kind || left.reference_kind != right.reference_kind ||
+        left.children.size() != right.children.size()) {
         return false;
     }
 

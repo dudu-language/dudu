@@ -63,6 +63,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.functions.push_back(
                 {.name = name,
                  .template_params = {},
+                 .template_param_is_value = {},
                  .param_names = std::vector<std::string>(static_cast<size_t>(params.arity)),
                  .param_native_spellings =
                      std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),

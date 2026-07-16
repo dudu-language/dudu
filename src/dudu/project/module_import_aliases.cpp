@@ -87,6 +87,8 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
+    alias.template_param_is_value =
+        std::vector<bool>(alias.template_params.size(), false);
     alias.identity =
         module_symbol_identity(fn.origin_module.empty() ? name : fn.origin_module + "." + fn.name);
     alias.return_type_ref = function_has_return_type(fn)

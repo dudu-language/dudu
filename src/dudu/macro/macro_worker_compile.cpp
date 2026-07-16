@@ -47,7 +47,7 @@ const CppModuleArtifact& require_artifact(const std::vector<CppModuleArtifact>& 
 std::string sdk_identity(const std::vector<CppModuleArtifact>& artifacts,
                          const WorkerBuildOptions& options) {
     StableHash hash;
-    hash.add("dudu-macro-sdk-v3-pch");
+    hash.add("dudu-macro-sdk-v4-final-path-pch");
     hash.add(options.compiler);
     hash.add(options.cpp_standard);
     hash.add(options.toolchain_identity);
@@ -155,20 +155,17 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
                     shell_quote_path(staging / "macro_sdk_bridge_generated.cpp") + " -o " +
                     shell_quote_path(staging / "dudu_sdk_bridge.o"),
          .log = staging / "bridge.log",
-         .description = "macro SDK bridge"},
-        {.command = compile_prefix(options, staging, "-O0") + " -x c++-header " +
-                    shell_quote_path(staging / "dudu_macro_sdk.hpp") + " -o " +
-                    shell_quote_path(staging / "dudu_macro_sdk.hpp.gch"),
-         .log = staging / "pch.log",
-         .description = "macro SDK precompiled header"}};
+         .description = "macro SDK bridge"}};
     std::vector<int> statuses(units.size(), 0);
-    std::vector<std::jthread> workers;
+    std::vector<std::thread> workers;
     workers.reserve(units.size());
     for (std::size_t index = 0; index < units.size(); ++index) {
         workers.emplace_back(
             [&, index] { statuses[index] = run_shell_command(units[index].command, units[index].log); });
     }
-    workers.clear();
+    for (std::thread& worker : workers) {
+        worker.join();
+    }
     for (std::size_t index = 0; index < units.size(); ++index) {
         if (statuses[index] == 0) {
             continue;
@@ -189,6 +186,35 @@ std::filesystem::path prepare_sdk(const std::vector<CppModuleArtifact>& artifact
     }
     if (error) {
         std::filesystem::remove_all(staging);
+    }
+
+    if (!std::filesystem::is_regular_file(precompiled_header)) {
+        const std::filesystem::path temporary_pch =
+            entry / ("dudu_macro_sdk.hpp.gch.tmp." + std::to_string(::getpid()) + "." +
+                     std::to_string(sdk_staging_counter.fetch_add(1, std::memory_order_relaxed)));
+        const std::filesystem::path pch_log = temporary_pch.string() + ".log";
+        const std::string pch_command =
+            compile_prefix(options, entry, "-O0") + " -x c++-header " +
+            shell_quote_path(entry / "dudu_macro_sdk.hpp") + " -o " +
+            shell_quote_path(temporary_pch);
+        const int pch_status = run_shell_command(pch_command, pch_log);
+        if (pch_status != 0) {
+            const std::optional<std::string> detail = try_read_text_file(pch_log);
+            std::filesystem::remove(temporary_pch);
+            std::filesystem::remove(pch_log);
+            throw std::runtime_error(
+                "could not compile macro SDK precompiled header\ncommand: " + pch_command + "\n" +
+                detail.value_or("macro SDK precompiled header compiler failed"));
+        }
+        std::filesystem::rename(temporary_pch, precompiled_header, error);
+        if (error && !std::filesystem::is_regular_file(precompiled_header)) {
+            std::filesystem::remove(temporary_pch);
+            std::filesystem::remove(pch_log);
+            throw std::runtime_error("could not publish macro SDK precompiled header: " +
+                                     error.message());
+        }
+        std::filesystem::remove(temporary_pch);
+        std::filesystem::remove(pch_log);
     }
     return entry;
 }
@@ -233,7 +259,7 @@ void compile_units_parallel(const std::filesystem::path& dir, const std::filesys
     std::atomic<std::size_t> next{0};
     const unsigned available = std::max(1U, std::thread::hardware_concurrency());
     const std::size_t worker_count = std::min<std::size_t>(available, units.size());
-    std::vector<std::jthread> workers;
+    std::vector<std::thread> workers;
     workers.reserve(worker_count);
     for (std::size_t worker = 0; worker < worker_count; ++worker) {
         workers.emplace_back([&] {
@@ -252,7 +278,9 @@ void compile_units_parallel(const std::filesystem::path& dir, const std::filesys
             }
         });
     }
-    workers.clear();
+    for (std::thread& worker : workers) {
+        worker.join();
+    }
 
     for (std::size_t index = 0; index < units.size(); ++index) {
         if (statuses[index] == 0) {

@@ -158,8 +158,8 @@ void test_native_base_assignable_uses_type_ast() {
                                         dudu::parse_type_text("*Derived")));
     assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("&Base"),
                                         dudu::parse_type_text("&Derived")));
-    assert(!dudu::native_base_assignable(symbols, dudu::parse_type_text("Base"),
-                                         dudu::parse_type_text("Derived")));
+    assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("Base"),
+                                        dudu::parse_type_text("Derived")));
 }
 
 void test_native_base_assignable_resolves_alias_type_refs() {

@@ -14,12 +14,14 @@ namespace dudu {
 
 struct FunctionSignature {
     std::vector<std::string> template_params;
+    std::vector<bool> template_param_is_value;
+    TypeRef receiver_type_ref;
     std::vector<TypeRef> param_type_refs;
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;
+    bool deleted = false;
     int variadic_param_index = -1;
-    bool has_native_template_return_spelling = false;
 };
 
 struct Symbols {
@@ -39,7 +41,6 @@ struct Symbols {
         native_function_decls_by_identity;
     std::set<std::string> native_path_prefixes;
     std::set<std::string> module_import_prefixes;
-    std::set<std::string> native_explicit_template_prefixes;
     std::set<std::string> native_types;
     std::map<std::string, std::string> native_type_identity_by_binding;
     std::map<std::string, std::map<std::string, const NativeTypeDecl*>>

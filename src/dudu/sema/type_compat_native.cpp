@@ -182,10 +182,30 @@ TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
     return out;
 }
 
+TypeRef collapse_cpp_references(TypeRef type) {
+    for (TypeRef& child : type.children) {
+        child = collapse_cpp_references(std::move(child));
+    }
+    while (type.kind == TypeKind::Reference && type.children.size() == 1 &&
+           type.children.front().kind == TypeKind::Reference &&
+           type.children.front().children.size() == 1) {
+        TypeRef inner = std::move(type.children.front());
+        if (type.reference_kind == ReferenceKind::Lvalue ||
+            inner.reference_kind == ReferenceKind::Lvalue) {
+            type.reference_kind = ReferenceKind::Lvalue;
+        } else {
+            type.reference_kind = ReferenceKind::Rvalue;
+        }
+        type.children = std::move(inner.children);
+    }
+    return type;
+}
+
 } // namespace
 
 TypeRef normalize_cpp_type_artifacts_ref(const TypeRef& type) {
-    return normalize_cpp_primitive_type_ref(normalize_tuple_element(type));
+    return collapse_cpp_references(
+        normalize_cpp_primitive_type_ref(normalize_tuple_element(type)));
 }
 
 bool native_associated_type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {

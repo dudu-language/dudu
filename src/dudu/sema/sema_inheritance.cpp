@@ -11,8 +11,6 @@ namespace dudu {
 using namespace sema_inheritance_detail;
 
 bool native_base_assignable(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
-    if (!ref_like(expected) && !ref_like(got))
-        return false;
     const std::string base = unwrap_type(symbols, expected);
     const std::string derived = unwrap_type(symbols, got);
     std::set<std::string> seen;

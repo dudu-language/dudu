@@ -7,6 +7,7 @@
 #include <optional>
 #include <stdexcept>
 #include <system_error>
+#include <vector>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -84,8 +85,23 @@ std::filesystem::path resolve_executable(std::string_view command) {
     return direct;
 }
 
+std::string configured_compiler(const ProjectConfig& config) {
+    if (!config.compiler.empty()) {
+        return config.compiler;
+    }
+    if (const char* compiler = std::getenv("CXX"); compiler != nullptr && *compiler != '\0') {
+        return compiler;
+    }
+    return "c++";
+}
+
+std::string file_time_identity(const std::filesystem::file_time_type& timestamp) {
+    const auto ticks = timestamp.time_since_epoch().count();
+    return std::to_string(static_cast<long long>(ticks));
+}
+
 std::string compiler_identity(const ProjectConfig& config) {
-    const std::string compiler = config.compiler.empty() ? "c++" : config.compiler;
+    const std::string compiler = configured_compiler(config);
     const std::filesystem::path resolved = resolve_executable(compiler);
     std::error_code error;
     const auto timestamp = std::filesystem::last_write_time(resolved, error);
@@ -93,7 +109,7 @@ std::string compiler_identity(const ProjectConfig& config) {
         return compiler + ":unresolved";
     const std::uintmax_t size = std::filesystem::file_size(resolved, error);
     return resolved.lexically_normal().string() + ":" +
-           std::to_string(timestamp.time_since_epoch().count()) + ":" +
+           file_time_identity(timestamp) + ":" +
            (error ? std::string("unknown-size") : std::to_string(size));
 }
 
@@ -106,7 +122,7 @@ std::string file_identity(const std::filesystem::path& path) {
         return effective.lexically_normal().string() + ":unresolved";
     const std::uintmax_t size = std::filesystem::file_size(effective, error);
     return effective.lexically_normal().string() + ":" +
-           std::to_string(timestamp.time_since_epoch().count()) + ":" +
+           file_time_identity(timestamp) + ":" +
            (error ? std::string("unknown-size") : std::to_string(size));
 }
 
@@ -149,15 +165,25 @@ RuntimeLayout find_runtime_layout() {
             std::filesystem::path library;
             std::filesystem::path bridge;
         };
-        const std::array<Candidate, 4> candidates = {
-            Candidate{bin / "../src", bin / "libdudu_macro_runtime.a",
-                      bin / "../src/dudu/macro/macro_sdk_bridge_generated.cpp"},
+        std::vector<Candidate> candidates;
+        for (std::filesystem::path ancestor = bin; !ancestor.empty();
+             ancestor = ancestor.parent_path()) {
+            candidates.push_back(
+                Candidate{ancestor / "src", bin / "libdudu_macro_runtime.a",
+                          ancestor / "src/dudu/macro/macro_sdk_bridge_generated.cpp"});
+            if (ancestor == ancestor.parent_path()) {
+                break;
+            }
+        }
+        const std::array<Candidate, 3> installed_candidates = {
             Candidate{bin / "../include", bin / "../lib/libdudu_macro_runtime.a",
                       bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"},
             Candidate{bin / "../include", bin / "../lib64/libdudu_macro_runtime.a",
                       bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"},
             Candidate{bin / "../include", bin / "../lib/dudu/libdudu_macro_runtime.a",
                       bin / "../share/dudu/macro/macro_sdk_bridge_generated.cpp"}};
+        candidates.insert(candidates.end(), installed_candidates.begin(),
+                          installed_candidates.end());
         for (const auto& [include, library, bridge] : candidates) {
             const std::filesystem::path resolved_include = header_root(include.lexically_normal());
             const std::filesystem::path resolved_library = regular_file(library.lexically_normal());
@@ -183,7 +209,7 @@ WorkerBuildOptions worker_build_options(const ProjectConfig& config, const Runti
     options.sdk_cache_dir = default_macro_sdk_cache(cache_dir);
     options.project_root = config.project_dir;
     options.package = std::move(package);
-    options.compiler = config.compiler.empty() ? "c++" : config.compiler;
+    options.compiler = configured_compiler(config);
     options.cpp_standard = config.cpp_std;
     options.toolchain_identity = compiler_identity(config);
     const std::optional<std::filesystem::path> dudu_executable = executable_path();

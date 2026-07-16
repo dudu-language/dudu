@@ -202,7 +202,7 @@ class Lexer {
         const std::string_view two = source_.substr(cursor_, 2);
         if (two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "+=" ||
             two == "-=" || two == "*=" || two == "/=" || two == "%=" || two == "&=" ||
-            two == "|=" || two == "^=" || two == "<<" || two == ">>") {
+            two == "|=" || two == "^=" || two == "<<" || two == ">>" || two == "&&") {
             const size_t start = cursor_;
             take();
             take();

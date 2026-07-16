@@ -21,6 +21,10 @@ namespace dudu {
 namespace {
 
 bool method_is_static(const FunctionDecl& method) {
+    if (!method.native_identity.canonical_path.empty() ||
+        !method.native_identity.usr.empty()) {
+        return !has_type_ref(method.receiver_type_ref);
+    }
     return method.params.empty() || method.params.front().name != "self";
 }
 
@@ -33,6 +37,12 @@ TypeRef self_type_ref_for_method(const ClassDecl& klass, const std::vector<TypeR
     type.kind = TypeKind::Template;
     type.children = receiver_args;
     return type;
+}
+
+TypeRef instantiated_base_type_ref(const ClassDecl& klass,
+                                   const std::vector<TypeRef>& receiver_args,
+                                   const BaseClassDecl& base) {
+    return substitute_generic_type_ref(klass.generic_params, receiver_args, base.type_ref);
 }
 
 TypeRef instantiate_method_type_ref(const Symbols& symbols, const ClassDecl& klass,
@@ -55,6 +65,13 @@ TypeRef instantiate_enum_method_type_ref(const EnumDecl& en, const FunctionDecl&
 FunctionSignature instantiate_enum_method_signature(const EnumDecl& en, const FunctionDecl& method,
                                                     const std::vector<TypeRef>& method_args) {
     FunctionSignature signature;
+    signature.template_params = method.generic_params;
+    signature.template_param_is_value = method.generic_param_is_value;
+    if (has_type_ref(method.receiver_type_ref)) {
+        signature.receiver_type_ref =
+            instantiate_enum_method_type_ref(en, method, method.receiver_type_ref, method_args);
+    }
+    signature.deleted = method.deleted;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     std::vector<TypeRef> params;
@@ -120,7 +137,8 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        if (method_signature_for_type_impl(symbols, base_decl.type_ref, lookup_name, method_args,
+        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
+        if (method_signature_for_type_impl(symbols, base_type, lookup_name, method_args,
                                            display_name, signature, nullptr)) {
             return true;
         }
@@ -167,8 +185,9 @@ method_signatures_for_type_impl(const Symbols& symbols, const TypeRef& receiver_
             instantiate_method_signature(symbols, *klass, method, receiver_args, method_args));
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
+        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
         std::vector<FunctionSignature> base_signatures =
-            method_signatures_for_type_impl(symbols, base_decl.type_ref, lookup_name, method_args);
+            method_signatures_for_type_impl(symbols, base_type, lookup_name, method_args);
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
     }
     return out;
@@ -215,8 +234,7 @@ dudu_method_instantiations_for_type_impl(const Symbols& symbols, const TypeRef& 
                                                                  receiver_args, method_args)});
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        const TypeRef base_type =
-            substitute_generic_type_ref(klass->generic_params, receiver_args, base_decl.type_ref);
+        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
         std::vector<DuduMethodInstantiation> base =
             dudu_method_instantiations_for_type_impl(symbols, base_type, method_name, method_args);
         out.insert(out.end(), base.begin(), base.end());
@@ -266,7 +284,8 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        if (static_method_signature_for_type_impl(symbols, base_decl.type_ref, lookup_name,
+        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
+        if (static_method_signature_for_type_impl(symbols, base_type, lookup_name,
                                                   method_args, display_name, signature, nullptr)) {
             return true;
         }
@@ -287,6 +306,14 @@ FunctionSignature instantiate_method_signature(const Symbols& symbols, const Cla
                                                const std::vector<TypeRef>& receiver_args,
                                                const std::vector<TypeRef>& method_args) {
     FunctionSignature signature;
+    signature.template_params = method.generic_params;
+    signature.template_param_is_value = method.generic_param_is_value;
+    if (has_type_ref(method.receiver_type_ref)) {
+        signature.receiver_type_ref =
+            instantiate_method_type_ref(symbols, klass, method, method.receiver_type_ref,
+                                        receiver_args, method_args);
+    }
+    signature.deleted = method.deleted;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     std::vector<TypeRef> param_types;

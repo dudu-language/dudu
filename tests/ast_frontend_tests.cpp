@@ -184,6 +184,7 @@ void test_native_semantic_tokens() {
     native_symbols.native_functions.push_back(
         {.name = "dudu_native_add",
          .template_params = {},
+         .template_param_is_value = {},
          .param_names = {"left", "right"},
          .param_native_spellings = {"i32", "i32"},
          .param_type_refs = {dudu::parse_type_text("i32"), dudu::parse_type_text("i32")},

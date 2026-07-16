@@ -82,8 +82,14 @@ enum class TypeKind {
     Shaped,
 };
 
+enum class ReferenceKind {
+    Lvalue,
+    Rvalue,
+};
+
 struct TypeRef {
     TypeKind kind = TypeKind::Unknown;
+    ReferenceKind reference_kind = ReferenceKind::Lvalue;
     bool malformed = false;
     SourceTextAtom name;
     SourceTextAtom value;
@@ -328,6 +334,7 @@ struct NativeValueDecl {
 struct NativeFunctionDecl {
     std::string name;
     std::vector<std::string> template_params;
+    std::vector<bool> template_param_is_value;
     std::vector<std::string> param_names;
     std::vector<std::string> param_native_spellings;
     std::vector<TypeRef> param_type_refs;
@@ -335,6 +342,7 @@ struct NativeFunctionDecl {
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;
+    bool deleted = false;
     NativeSymbolId identity{};
     SourceLocation location;
     std::string doc_comment{};
@@ -394,11 +402,13 @@ struct FunctionDecl {
     NativeSymbolId native_identity{};
     TypeRef receiver_type_ref;
     std::vector<std::string> generic_params;
+    std::vector<bool> generic_param_is_value;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
     TypeRef return_type_ref;
     std::string origin_module;
     std::vector<Stmt> statements;
+    bool deleted = false;
     bool body_syntax_damaged = false;
     SourceLocation location;
     SourceRange range;

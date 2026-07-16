@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_lower.hpp"
 
 #include <optional>
+#include <regex>
 #include <string_view>
 #include <vector>
 
@@ -288,13 +289,13 @@ std::string dudu_type(std::string type) {
         return *function_pointer;
     }
     int pointer_depth = 0;
-    bool reference = false;
+    int reference_depth = 0;
     while (!type.empty()) {
         if (type.back() == '*') {
             ++pointer_depth;
             type = trim_copy(type.substr(0, type.size() - 1));
         } else if (type.back() == '&') {
-            reference = true;
+            ++reference_depth;
             type = trim_copy(type.substr(0, type.size() - 1));
         } else {
             break;
@@ -321,14 +322,20 @@ std::string dudu_type(std::string type) {
         if (is_const) {
             out = "const[" + out + "]";
         }
-        return reference ? "&" + out : out;
+        if (reference_depth >= 2) {
+            return "&&" + out;
+        }
+        return reference_depth == 1 ? "&" + out : out;
     }
     std::string out = lower_template_type(type);
     if (is_const)
         out = "const[" + out + "]";
     for (int i = 0; i < pointer_depth; ++i)
         out = "*" + out;
-    return reference ? "&" + out : out;
+    if (reference_depth >= 2) {
+        return "&&" + out;
+    }
+    return reference_depth == 1 ? "&" + out : out;
 }
 
 std::vector<std::string> signature_params(const std::string& signature) {
@@ -351,6 +358,28 @@ std::vector<std::string> signature_params(const std::string& signature) {
 std::string signature_return_type(const std::string& signature) {
     const size_t open = signature.find('(');
     return dudu_type(open == std::string::npos ? signature : signature.substr(0, open));
+}
+
+std::string signature_receiver_type(const std::string& signature) {
+    const size_t open = signature.find('(');
+    const size_t close =
+        open == std::string::npos ? std::string::npos : matching_paren(signature, open);
+    const std::string suffix =
+        close == std::string::npos ? "" : trim_copy(signature.substr(close + 1));
+    const bool is_const =
+        std::regex_search(suffix, std::regex(R"((^|\s)const(\s|$))"));
+    const bool rvalue =
+        std::regex_search(suffix, std::regex(R"((^|\s)&&(\s|$))"));
+    const bool lvalue =
+        !rvalue && std::regex_search(suffix, std::regex(R"((^|\s)&(\s|$))"));
+    std::string receiver = is_const ? "const[Self]" : "Self";
+    if (rvalue) {
+        return "&&" + receiver;
+    }
+    if (lvalue) {
+        return "&" + receiver;
+    }
+    return receiver;
 }
 
 } // namespace dudu

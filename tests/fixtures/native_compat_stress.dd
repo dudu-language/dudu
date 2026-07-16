@@ -1,0 +1,59 @@
+from cpp.path import native_headers/native_compat_stress.hpp
+
+
+def main() -> i32:
+    specialized = dudu_compat.specialized(4)
+    integral = dudu_compat.constrained_kind(1)
+    floating = dudu_compat.constrained_kind(1.0)
+    defaulted = dudu_compat.defaulted(3)
+    packed = dudu_compat.packed_sum(1, 2, 3)
+    concrete = dudu_compat.concrete_from(7)
+    consumed = dudu_compat.consume_concrete(concrete, 1)
+
+    target = dudu_compat.ReferenceTarget()
+    lvalue_reference = dudu_compat.reference_kind(target)
+    rvalue_reference = dudu_compat.reference_kind(move(target))
+    undeleted = dudu_compat.ignores_deleted_candidate(1)
+
+    ref_qualified = dudu_compat.RefQualified(5)
+    read = ref_qualified.read()
+    const_read = dudu_compat.const_ref(ref_qualified).read()
+    rvalue_read = move(dudu_compat.RefQualified(5)).read()
+
+    multiplier = dudu_compat.Multiplier()
+    multiplier.factor = 2
+    direct_invoked = multiplier(3)
+    invoked = dudu_compat.invoke_with(multiplier, 3)
+    nested_return = dudu_compat.Chain(7).child().read()
+
+    movable = dudu_compat.make_move_only(4)
+    moved = move(movable)
+
+    derived = dudu_compat.Derived[i32](2)
+    inherited = derived.get()
+    doubled = derived.doubled()
+
+    macro_value = dudu_compat.macro_declared(1)
+    return (
+        specialized
+        + integral
+        + floating
+        + defaulted
+        + packed
+        + concrete.value
+        + consumed
+        + lvalue_reference
+        + rvalue_reference
+        + undeleted
+        + read
+        + const_read
+        + rvalue_read
+        + direct_invoked
+        + invoked
+        + nested_return
+        + moved.get()
+        + inherited
+        + doubled
+        + macro_value
+        - 79
+    )

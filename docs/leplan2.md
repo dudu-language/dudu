@@ -243,6 +243,43 @@ library-specific branches. Wrapper headers are acceptable only for C/C++
 facilities that also require wrappers in ordinary C++ practice, such as
 partial-syntax or declaration-generating preprocessor macros.
 
+### 2026-07-16 Compatibility Milestone
+
+The neutral native compatibility fixture now executes under both
+GCC/libstdc++ and Clang/libc++. It covers:
+
+- explicit function specialization and constrained overload selection
+- structural template ordering, including nested `Box[T]` patterns versus
+  unconstrained `T`
+- type and non-type template parameter metadata
+- defaulted arguments and variadic template packs
+- reference binding and overload ranking across lvalues, const references,
+  rvalues, forwarding references, and ref-qualified methods
+- deleted free functions and methods with candidate diagnostics
+- callable objects through direct `operator()` calls and `std::invoke`
+- move-only construction and transfer
+- inherited methods from instantiated generic bases
+- declarations produced by normal preprocessor expansion
+- methods returning their owning native class, including chained calls
+
+The corresponding real standard-library consumers cover `std.less`,
+`std::chrono::steady_clock::now`, and
+`std.filesystem.path.filename().string()`. Scanner fixes were made in generic
+template, static-method, operator-method, and injected-class-name handling;
+none branch on a library or header name. Native scan cache format version 43
+invalidates metadata produced before these rules.
+
+The canonical executable and negative fixture suites pass. Focused libc++
+validation passes for the native compatibility fixture, filesystem consumer,
+and member type tests. The complete libc++ suite remains an explicit
+portability job because its native scanner tests are intentionally heavy.
+
+Remaining work in this phase is driven by concrete matrix failures: richer
+diagnostics when constraints are unavailable in scanner metadata, additional
+template-heavy real-library probes, and native metadata/LSP polish where a
+real consumer exposes missing identity or documentation. Do not add speculative
+surface syntax or library-specific compatibility code.
+
 Completion is a compatibility-matrix improvement, not a claim that all C++ is
 finished. Every fixed class of failure needs a neutral fixture plus at least one
 real library consumer.
