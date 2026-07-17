@@ -20,8 +20,10 @@ std::string scalar_dudu_type(const std::string& type) {
         return "f32";
     if (type == "double")
         return "f64";
-    if (type == "size_t")
+    if (type == "size_t" || type == "std::size_t")
         return "usize";
+    if (type == "ptrdiff_t" || type == "std::ptrdiff_t")
+        return "isize";
     if (type == "char")
         return "char";
     if (type == "int8_t" || type == "signed char")
@@ -77,6 +79,21 @@ size_t matching_paren(std::string_view text, size_t open) {
     return std::string::npos;
 }
 
+size_t signature_parameter_open(std::string_view signature) {
+    size_t search_end = signature.size();
+    for (std::string_view suffix : {" noexcept", " requires ", " throw(", " -> "}) {
+        const size_t position = signature.find(suffix);
+        if (position != std::string_view::npos) {
+            search_end = std::min(search_end, position);
+        }
+    }
+    size_t open = signature.rfind(" (", search_end);
+    if (open != std::string_view::npos) {
+        return open + 1;
+    }
+    return signature.find('(');
+}
+
 size_t matching_angle(std::string_view text, size_t open) {
     int depth = 0;
     for (size_t i = open; i < text.size(); ++i) {
@@ -93,8 +110,9 @@ size_t matching_angle(std::string_view text, size_t open) {
 }
 
 std::optional<std::string> lower_compiler_type_transform(const std::string& type) {
-    for (std::string_view name :
-         {"__remove_cv", "__remove_reference", "__remove_cvref", "__underlying_type"}) {
+    for (std::string_view name : {"__remove_const", "__remove_volatile", "__remove_cv",
+                                  "__remove_reference", "__remove_cvref",
+                                  "__underlying_type"}) {
         if (!starts_with(type, name) || type.size() <= name.size() ||
             type[name.size()] != '(') {
             continue;
@@ -338,6 +356,9 @@ std::string dudu_type(std::string type) {
     type = erase_all(std::move(type), "__restrict");
     type = erase_all(std::move(type), " restrict");
     type = trim_string(std::move(type));
+    if (type == "decltype(auto)") {
+        return "auto";
+    }
     if (type.ends_with("...")) {
         return dudu_type(trim_string(type.substr(0, type.size() - 3))) + "...";
     }
@@ -400,7 +421,7 @@ std::string dudu_type(std::string type) {
 }
 
 std::vector<std::string> signature_params(const std::string& signature) {
-    const size_t open = signature.find('(');
+    const size_t open = signature_parameter_open(signature);
     const size_t close =
         open == std::string::npos ? std::string::npos : matching_paren(signature, open);
     if (open == std::string::npos || close == std::string::npos || close <= open + 1)
@@ -417,12 +438,12 @@ std::vector<std::string> signature_params(const std::string& signature) {
 }
 
 std::string signature_return_type(const std::string& signature) {
-    const size_t open = signature.find('(');
+    const size_t open = signature_parameter_open(signature);
     return dudu_type(open == std::string::npos ? signature : signature.substr(0, open));
 }
 
 std::string signature_receiver_type(const std::string& signature) {
-    const size_t open = signature.find('(');
+    const size_t open = signature_parameter_open(signature);
     const size_t close =
         open == std::string::npos ? std::string::npos : matching_paren(signature, open);
     const std::string suffix =

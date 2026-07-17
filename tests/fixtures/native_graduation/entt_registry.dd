@@ -1,0 +1,29 @@
+from cpp import entt/entt.hpp
+
+
+class Position:
+    x: f32
+    y: f32
+
+
+def main() -> i32:
+    registry = entt.registry()
+    first: entt.entity = registry.create()
+    second: entt.entity = registry.create()
+    registry.emplace[Position](first, Position(x=1.0, y=2.0))
+    registry.emplace[Position](second, Position(x=3.0, y=4.0))
+
+    positions = registry.view[Position]()
+    total = 0.0
+    for entity in positions:
+        position = positions.get[Position](entity)
+        total += position.x + position.y
+
+    registry.remove[Position](first)
+    if registry.all_of[Position](first):
+        return 1
+    if not registry.all_of[Position](second):
+        return 2
+    if i32(total) != 10:
+        return 3
+    return 0

@@ -237,7 +237,7 @@ void parse_ast_line(AstParseState& state, const std::string& line) {
         if (!default_text.empty()) {
             default_text = qualify_scoped_type(scan, namespaces, classes, default_text);
             templates.back().param_defaults.back() =
-                parse_native_type_text(default_text, decl_location);
+                parse_native_type_text(default_text, decl_location, templates.back().params);
         }
     }
     if (!templates.empty() && !templates.back().param_has_default.empty() &&
@@ -247,13 +247,25 @@ void parse_ast_line(AstParseState& state, const std::string& line) {
         (std::regex_search(line, match, template_integer_default) ||
          std::regex_search(line, match, template_bool_default))) {
         templates.back().param_defaults.back() =
-            parse_native_type_text(match[1].str(), decl_location);
+            parse_native_type_text(match[1].str(), decl_location, templates.back().params);
     }
     if (!functions.empty() && line.find("ParmVarDecl") != std::string::npos &&
         line.find(" cinit") != std::string::npos) {
         NativeFunctionDecl& fn = scan.functions[functions.back().second];
         if (fn.min_params > 0) {
             --fn.min_params;
+        }
+    }
+    if (!param_targets.empty() && param_targets.back().kind == ParamTargetKind::Method &&
+        line.find("ParmVarDecl") != std::string::npos &&
+        line.find(" cinit") != std::string::npos) {
+        const ParamTarget& target = param_targets.back();
+        if (target.primary < scan.classes.size() &&
+            target.secondary < scan.classes[target.primary].methods.size()) {
+            FunctionDecl& method = scan.classes[target.primary].methods[target.secondary];
+            if (method.min_params > 0) {
+                --method.min_params;
+            }
         }
     }
     if (!param_targets.empty() && line.find("ParmVarDecl") != std::string::npos) {

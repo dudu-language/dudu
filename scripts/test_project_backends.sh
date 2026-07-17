@@ -122,11 +122,13 @@ rm -f "$repo_root/build/project_cc_bin" "$repo_root/build/project_cc_bin.cpp"
         2>"$repo_root/build/project_cc_verbose.err"
 )
 project_cc_cmake="$repo_root/tests/fixtures/project_cc/build/cmake-backend/source/CMakeLists.txt"
+project_cc_configure="$repo_root/tests/fixtures/project_cc/build/cmake-backend/configure.command"
 grep -q "target_include_directories(main PRIVATE" "$project_cc_cmake"
 grep -Eq "project_cc/include" "$project_cc_cmake"
 grep -q 'target_compile_definitions(main PRIVATE "DUDU_PROJECT_CC=40")' "$project_cc_cmake"
 grep -q 'target_compile_options(main PRIVATE "-DDUDU_PROJECT_CC_FLAG=2")' "$project_cc_cmake"
 grep -Eq "project_cc/lib" "$project_cc_cmake"
+grep -q -- '-DCMAKE_CXX_COMPILER='"'c++'" "$project_cc_configure"
 set +e
 "$repo_root/build/project_cc_bin"
 project_cc_status=$?

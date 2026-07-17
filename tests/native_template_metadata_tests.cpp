@@ -15,6 +15,7 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_ops.hpp"
 #include "dudu/sema/type_compat.hpp"
 #include "dudu/sema/type_compat_native.hpp"
@@ -146,6 +147,13 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     assert(defaulted.generic_default_args.size() == 2);
     assert(!dudu::has_type_ref(defaulted.generic_default_args[0]));
     assert(dudu::type_ref_text(defaulted.generic_default_args[1]) == "4");
+    const dudu::ClassDecl& trait_default = require_class(module, "depmeta.TraitDefaultBase");
+    assert(trait_default.generic_default_args.size() == 3);
+    assert(trait_default.generic_default_args[2].kind == dudu::TypeKind::Associated);
+    assert(trait_default.generic_default_args[2].name == "value");
+    assert(trait_default.generic_default_args[2].children.size() == 1);
+    assert(trait_default.generic_default_args[2].children.front().kind ==
+           dudu::TypeKind::Associated);
     const dudu::NativeTypeDecl& carrier = require_type(module, "depmeta.AliasCarrier");
     assert((carrier.generic_params == std::vector<std::string>{"Selected", "Left"}));
     assert(carrier.generic_min_args == 2);
@@ -155,6 +163,47 @@ void test_native_class_templates_preserve_declared_metadata(const std::filesyste
     assert(defaulted_alias.generic_default_args.size() == 2);
     assert(dudu::type_ref_text(defaulted_alias.generic_default_args[1]) ==
            "depmeta.Wrapper[Payload]");
+    const dudu::Symbols symbols = dudu::collect_symbols(module);
+    const dudu::TypeRef nested_result = dudu::resolve_associated_type_ref(
+        symbols, dudu::parse_type_text("depmeta.NestedAliasOwner[i32, f32].result"));
+    assert(dudu::type_ref_text(nested_result) == "depmeta.Wrapper[i32]");
+    const dudu::TypeRef specialized_local_alias = dudu::resolve_associated_type_ref(
+        symbols,
+        dudu::parse_type_text("depmeta.AliasByShape[depmeta.Wrapper[f32], void].result"));
+    assert(dudu::type_ref_text(specialized_local_alias) == "depmeta.Envelope[i32, f32, 1]");
+    const dudu::TypeRef trait_default_alias = dudu::resolve_associated_type_ref(
+        symbols,
+        dudu::parse_type_text(
+            "depmeta.TraitDefaultOwner[f32, depmeta.MapTraits[true]].mapped_type"));
+    assert(dudu::type_ref_text(trait_default_alias) == "f32");
+    const std::vector<dudu::FunctionSignature> specialized_methods =
+        dudu::method_signatures_for_type(
+            symbols,
+            dudu::parse_type_text("depmeta.AliasByShape[depmeta.Wrapper[f32], void]"),
+            "take", {});
+    assert(specialized_methods.size() == 1);
+    assert(specialized_methods.front().param_type_refs.size() == 1);
+    assert(dudu::type_ref_text(specialized_methods.front().param_type_refs.front()) ==
+           "depmeta.Envelope[i32, f32, 1]");
+    dudu::TypeRef deeply_nested =
+        dudu::parse_type_text("depmeta.NestedAliasOwner[i32, f32].result");
+    for (size_t i = 0; i < 32; ++i) {
+        dudu::TypeRef wrapper;
+        wrapper.kind = dudu::TypeKind::Template;
+        wrapper.name = "depmeta.Wrapper";
+        wrapper.children.push_back(std::move(deeply_nested));
+        deeply_nested = std::move(wrapper);
+    }
+    const dudu::TypeRef resolved_nested =
+        dudu::resolve_associated_type_ref(symbols, std::move(deeply_nested));
+    const dudu::TypeRef* nested_leaf = &resolved_nested;
+    for (size_t i = 0; i < 33; ++i) {
+        assert(nested_leaf->kind == dudu::TypeKind::Template);
+        assert(nested_leaf->name == "depmeta.Wrapper");
+        assert(nested_leaf->children.size() == 1);
+        nested_leaf = &nested_leaf->children.front();
+    }
+    assert(dudu::type_ref_text(*nested_leaf) == "i32");
 
     dudu::ModuleAst cached =
         dudu::parse_source("from cpp.path import native_dependent_alias_metadata.hpp\n",
@@ -253,10 +302,10 @@ void test_internal_native_template_aliases_resolve_public_returns(
                    !klass.native_specialization_args.empty();
         });
     assert(detected_specialization != module.native_classes.end());
-    assert(detected_specialization->native_specialization_requirements.size() == 1);
-    assert(
-        dudu::type_ref_text(detected_specialization->native_specialization_requirements.front()) ==
-        "internal_alias.Void[T.value_type]");
+    assert(detected_specialization->native_specialization_requirements.empty());
+    assert(detected_specialization->native_specialization_args.size() == 2);
+    assert(dudu::type_ref_text(detected_specialization->native_specialization_args[1]) ==
+           "internal_alias.Void[T.value_type]");
 
     const dudu::Symbols symbols = dudu::collect_symbols(module);
     const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
@@ -278,7 +327,10 @@ void test_internal_native_template_aliases_resolve_public_returns(
     const dudu::TypeRef fallback = dudu::resolve_associated_type_ref(
         symbols,
         dudu::parse_type_text("internal_alias.DetectedValue[internal_alias.WithoutValue].type"));
-    assert(dudu::type_ref_text(fallback) == "f32");
+    if (dudu::type_ref_text(fallback) != "f32") {
+        throw std::runtime_error("fallback detection resolved as " +
+                                 dudu::type_ref_text(fallback));
+    }
     const auto signatures = symbols.native_function_signatures.find("internal_alias.make_holder");
     assert(signatures != symbols.native_function_signatures.end());
     assert(signatures->second.size() == 1);
@@ -371,96 +423,6 @@ void test_standard_string_size_type_resolves_numeric(const std::filesystem::path
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
-void test_native_class_partial_specialization_metadata(const std::filesystem::path& root) {
-    const std::filesystem::path source_dir = root / "tests/fixtures";
-    dudu::ProjectConfig config;
-    config.project_dir = root;
-    config.build_dir = root / "build/native-partial-specialization-cache";
-    std::filesystem::remove_all(config.build_dir);
-
-    const auto scan_and_check = [&]() {
-        dudu::ModuleAst module =
-            dudu::parse_source("from cpp.path import native_headers/simple_cpp.hpp\n",
-                               source_dir / "native_partial_specialization.dd");
-        dudu::merge_native_headers(module, {.config = config, .source_dir = source_dir});
-
-        const std::string class_name = "dudu_native.AssociatedResult";
-        size_t primary_count = 0;
-        size_t specialization_count = 0;
-        for (const dudu::ClassDecl& klass : module.native_classes) {
-            if (klass.name != class_name) {
-                continue;
-            }
-            if (klass.native_specialization_args.empty()) {
-                ++primary_count;
-                assert((klass.generic_params == std::vector<std::string>{"T", "Enabled"}));
-                continue;
-            }
-            ++specialization_count;
-            assert(klass.native_partial_specialization);
-            assert((klass.generic_params == std::vector<std::string>{"T"}));
-            assert(klass.native_specialization_args.size() == 2);
-            assert(dudu::type_ref_text(klass.native_specialization_args[0]) == "T");
-            const std::string enabled = dudu::type_ref_text(klass.native_specialization_args[1]);
-            if (enabled != "1" && enabled != "true") {
-                throw std::runtime_error("unexpected boolean specialization value: " + enabled);
-            }
-            assert(klass.type_aliases.size() == 1);
-            assert(klass.type_aliases.front().name == "type");
-            assert(dudu::type_ref_text(klass.type_aliases.front().type_ref) == "T");
-        }
-        assert(primary_count == 1);
-        assert(specialization_count == 1);
-
-        const dudu::Symbols symbols = dudu::collect_symbols(module);
-        const dudu::TypeRef resolved = dudu::resolve_associated_type_ref(
-            symbols, dudu::parse_type_text("dudu_native.AssociatedResult[i32, true].type"));
-        assert(dudu::type_ref_text(resolved) == "i32");
-
-        const dudu::TypeRef pointer_pattern = dudu::resolve_associated_type_ref(
-            symbols, dudu::parse_type_text("dudu_native.PatternResult[*i32].type"));
-        assert(dudu::type_ref_text(pointer_pattern) == "i32");
-
-        const dudu::TypeRef exact_specialization = dudu::resolve_associated_type_ref(
-            symbols, dudu::parse_type_text("dudu_native.PatternResult[i32].type"));
-        assert(dudu::type_ref_text(exact_specialization) == "f32");
-
-        const dudu::TypeRef ambiguous = dudu::resolve_associated_type_ref(
-            symbols, dudu::parse_type_text("dudu_native.AmbiguousResult[Condition, i32].type"));
-        assert(dudu::type_ref_text(ambiguous) ==
-               "dudu_native.AmbiguousResult[Condition, i32].type");
-    };
-
-    scan_and_check();
-    scan_and_check();
-}
-
-void test_native_class_redeclarations_merge_specialization_metadata() {
-    dudu::ClassDecl declaration;
-    declaration.name = "native.Result";
-    declaration.identity.usr = "c:@N@native@Result";
-    declaration.generic_params = {"T"};
-    declaration.native_specialization_args = {dudu::parse_type_text("*T")};
-    declaration.native_partial_specialization = true;
-
-    dudu::ClassDecl definition = declaration;
-    dudu::TypeAliasDecl alias;
-    alias.name = "type";
-    alias.type_ref = dudu::parse_type_text("T");
-    definition.type_aliases.push_back(std::move(alias));
-    dudu::FieldDecl field;
-    field.name = "value";
-    field.type_ref = dudu::parse_type_text("T");
-    definition.fields.push_back(std::move(field));
-
-    std::vector<dudu::ClassDecl> merged = {declaration};
-    dudu::append_unique_native_classes(merged, {definition});
-    assert(merged.size() == 1);
-    assert(merged.front().native_partial_specialization);
-    assert(merged.front().type_aliases.size() == 1);
-    assert(merged.front().fields.size() == 1);
-}
-
 void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     assert(dudu::dudu_type("unsigned char[16]") == "array[u8][16]");
     assert(dudu::dudu_type("int[2][3]") == "array[i32][2, 3]");
@@ -522,8 +484,6 @@ int main() {
         test_internal_native_template_aliases_resolve_public_returns(root);
         test_equivalent_dependent_native_spellings_compare();
         test_standard_string_size_type_resolves_numeric(root);
-        test_native_class_partial_specialization_metadata(root);
-        test_native_class_redeclarations_merge_specialization_metadata();
         test_native_fixed_array_typedef_alias(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

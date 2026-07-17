@@ -193,8 +193,10 @@ std::vector<std::string> specialization_arguments(CXTranslationUnit unit, CXCurs
     std::vector<std::pair<std::string, CXTokenKind>> tokens;
     tokens.reserve(token_count);
     for (unsigned i = 0; i < token_count; ++i) {
-        tokens.emplace_back(cx_string(clang_getTokenSpelling(unit, raw_tokens[i])),
-                            clang_getTokenKind(raw_tokens[i]));
+        const CXTokenKind kind = clang_getTokenKind(raw_tokens[i]);
+        if (kind != CXToken_Comment) {
+            tokens.emplace_back(cx_string(clang_getTokenSpelling(unit, raw_tokens[i])), kind);
+        }
     }
     clang_disposeTokens(unit, raw_tokens, token_count);
 

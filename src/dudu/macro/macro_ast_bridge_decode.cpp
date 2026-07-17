@@ -100,6 +100,7 @@ FunctionDecl from_protocol(const p::FunctionDecl& function, const std::string& m
                      .receiver_type_ref = {},
                      .generic_params = generic_parameters(function.generic_parameters),
                      .generic_param_is_value = {},
+                     .generic_default_args = {},
                      .decorators = attributes(function.attributes, range.start),
                      .params = {},
                      .return_type_ref = {},

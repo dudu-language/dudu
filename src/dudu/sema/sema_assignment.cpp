@@ -134,6 +134,17 @@ std::optional<TypeRef> map_like_index_assignment_type(const Symbols& symbols,
     return type.children[1];
 }
 
+std::optional<TypeRef> native_index_assignment_type(
+    const FunctionScope& scope, const TypeRef& receiver_type, const Expr& receiver,
+    const Expr& index_expr, const SourceLocation& location) {
+    const std::vector<Expr> index_args = index_arg_exprs(index_expr);
+    if (const auto signature =
+            native_subscript_signature(scope, receiver_type, receiver, index_args, &location)) {
+        return signature_return_type_ref(*signature);
+    }
+    return std::nullopt;
+}
+
 void reject_const_member_assignment(const FunctionScope& scope, const Expr& target,
                                     const SourceLocation& location) {
     if (target.kind != ExprKind::Member || target.children.size() != 1) {
@@ -199,6 +210,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             }
             check_declared_index_assignment_operator_if_any(scope, receiver_type, "[]=", name, args,
                                                             target_location);
+            if (const auto target_type = native_index_assignment_type(
+                    scope, receiver_type, stmt_target_expr(stmt).children[0],
+                    stmt_target_expr(stmt).children[1], target_location)) {
+                return *target_type;
+            }
             if (const auto map_target = map_like_index_assignment_type(
                     scope.symbols, receiver_type, args, target_location, name)) {
                 return *map_target;
@@ -243,6 +259,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             check_declared_index_assignment_operator_if_any(
                 scope, receiver_type, target.write_operator, indexed_assignment_label(receiver),
                 args, target_location);
+            if (const auto target_type = native_index_assignment_type(
+                    scope, receiver_type, hook_receiver, stmt_target_expr(stmt).children[1],
+                    target_location)) {
+                return *target_type;
+            }
             if (const auto map_target = map_like_index_assignment_type(
                     scope.symbols, receiver_type, args, target_location,
                     indexed_assignment_label(receiver))) {
@@ -281,6 +302,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             check_declared_index_assignment_operator_if_any(
                 scope, inferred_receiver_type, target.write_operator,
                 indexed_assignment_label(receiver), args, target_location);
+            if (const auto target_type = native_index_assignment_type(
+                    scope, inferred_receiver_type, hook_receiver,
+                    stmt_target_expr(stmt).children[1], target_location)) {
+                return *target_type;
+            }
             if (const auto map_target = map_like_index_assignment_type(
                     scope.symbols, inferred_receiver_type, args, target_location,
                     indexed_assignment_label(receiver))) {

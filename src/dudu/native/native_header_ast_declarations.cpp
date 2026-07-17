@@ -4,6 +4,7 @@
 #include "dudu/native/native_header_scope.hpp"
 #include "dudu/native/native_header_types.hpp"
 
+#include <algorithm>
 #include <regex>
 
 namespace dudu::native_ast_parse {
@@ -61,13 +62,13 @@ std::vector<std::string> dependent_type_names(
 void parse_ast_declaration(AstParseState& state, const std::string& line, int depth,
                            const SourceLocation& location) {
     static const std::regex typedef_decl(
-        R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+        R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)'(?:\s*:\s*'([^']*)')?)");
     static const std::regex record_decl(
         R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex specialization_decl(
         R"((ClassTemplate(Partial)?SpecializationDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex enum_decl(
-        R"(EnumDecl.*(?:line:[0-9]+:[0-9]+|col:[0-9]+)(?: referenced)? (?:(class|struct) )?([A-Za-z_][A-Za-z0-9_]*)(?: '[^']*')?$)");
+        R"(EnumDecl.*(?:line:[0-9]+:[0-9]+|col:[0-9]+)(?: referenced)? (?:(class|struct) )?([A-Za-z_][A-Za-z0-9_]*)(?: '[^']*'(?:\s*:\s*'[^']*')?)?$)");
     static const std::regex namespace_decl(
         R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)(?: inline)?$)");
     static const std::regex function_decl(
@@ -123,8 +124,15 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         const std::string raw_name = match[2].str();
         const std::string name = join_scope(namespaces, raw_name);
         const std::string underlying_type = trim_string(match[3].str());
+        const std::vector<std::string> dependent_names =
+            dependent_type_names(scan, classes, templates);
+        const std::string semantic_type =
+            match[4].matched && dependent_names.empty() ? trim_string(match[4].str())
+                                                        : underlying_type;
         const std::string lowered_type =
             qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
+        std::string semantic_lowered_type =
+            qualify_scoped_type(scan, namespaces, classes, dudu_type(semantic_type));
         const bool useful_alias = (lowered_type != raw_name && lowered_type != name) ||
                                   (lowered_type == raw_name && dudu_primitive_name(raw_name) &&
                                    underlying_type != raw_name);
@@ -132,12 +140,15 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             return;
         }
 
-        const TypeRef type_ref =
-            useful_alias ? parse_native_type_text(lowered_type, location,
-                                                   dependent_type_names(scan, classes, templates))
-                         : TypeRef{};
         const std::string visible_name =
             classes.empty() ? name : classes.back().name + "." + raw_name;
+        if (semantic_lowered_type == raw_name || semantic_lowered_type == name ||
+            semantic_lowered_type == visible_name) {
+            semantic_lowered_type = lowered_type;
+        }
+        const TypeRef type_ref =
+            useful_alias ? parse_native_type_text(semantic_lowered_type, location, dependent_names)
+                         : TypeRef{};
         NativeTypeDecl native_type{
             .name = visible_name,
             .native_spelling = useful_alias ? lowered_type : "",
@@ -166,6 +177,17 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Type, .primary = scan.types.size() - 1});
+        return;
+    }
+
+    if (line.find("ClassTemplateSpecializationDecl") != std::string::npos &&
+        line.find("implicit_instantiation") != std::string::npos &&
+        std::regex_search(line, match, specialization_decl)) {
+        const std::string raw_name = match[4].str();
+        classes.push_back({.depth = depth,
+                           .name = class_name(scan, namespaces, classes, raw_name),
+                           .declaration_index = std::nullopt,
+                           .specialization_source_args = {}});
         return;
     }
 
@@ -205,10 +227,9 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         const bool public_record = !starts_with(raw_name, "__");
-        const bool internal_template_definition =
-            !public_record && line.find(" definition") != std::string::npos && !templates.empty() &&
-            templates.back().kind == TemplateContext::Kind::Class;
-        if (!public_record && !internal_template_definition) {
+        const bool internal_definition =
+            !public_record && line.find(" definition") != std::string::npos;
+        if (!public_record && !internal_definition) {
             if (line.find(" definition") != std::string::npos) {
                 classes.push_back(
                     {.depth = depth,
@@ -221,19 +242,34 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
 
         const bool is_union = match[2].str() == "union";
         if (public_record) {
-            scan.types.push_back(
-                {.name = name,
-                 .native_spelling = is_union ? "union " + raw_name : "",
-                 .type_ref = is_union ? named_type_ref(name, location) : TypeRef{},
-                 .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                              location, name, current_file),
-                 .layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, location),
-                 .location = location});
+            NativeTypeDecl native_type{
+                .name = name,
+                .native_spelling = is_union ? "union " + raw_name : "",
+                .type_ref = is_union ? named_type_ref(name, location) : TypeRef{},
+                .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                             location, name, current_file),
+                .layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, location),
+                .location = location};
+            if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Class) {
+                apply_generic_metadata(native_type, templates.back());
+            }
+            scan.types.push_back(std::move(native_type));
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
                                        .primary = scan.types.size() - 1});
         }
         if (line.find(" definition") == std::string::npos) {
+            if (public_record && !templates.empty() &&
+                templates.back().kind == TemplateContext::Kind::Class) {
+                ClassDecl klass;
+                klass.name = name;
+                klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
+                                                   location, name, current_file);
+                klass.native_declaration = true;
+                klass.location = location;
+                apply_generic_metadata(klass, templates.back());
+                scan.classes.push_back(std::move(klass));
+            }
             return;
         }
 
@@ -269,6 +305,7 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             {.name = name,
              .native_spelling = "",
              .type_ref = {},
+             .enum_type = true,
              .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name, location,
                                           name, current_file),
              .layout = scanned_layout(identities, NativeCursorKind::Type, raw_name, location),
@@ -308,13 +345,16 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
         std::vector<std::string> template_params;
         std::vector<bool> template_param_is_value;
+        std::vector<TypeRef> template_default_args;
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             template_params = templates.back().params;
             template_param_is_value = templates.back().param_is_value;
+            template_default_args = templates.back().param_defaults;
         }
         const size_t function_index =
             append_native_function(scan, namespaces, identities, raw_name, match[2].str(), location,
                                    current_file, template_params, template_param_is_value,
+                                   template_default_args,
                                    line.find(" delete", line.rfind('\'')) != std::string::npos);
         functions.push_back({depth, function_index});
         param_targets.push_back(
@@ -339,6 +379,7 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             method.generic_params = templates.back().params;
             method.generic_param_is_value = templates.back().param_is_value;
+            method.generic_default_args = templates.back().param_defaults;
         }
         if (line.find(" static", line.rfind('\'')) == std::string::npos) {
             method.receiver_type_ref =
@@ -352,8 +393,14 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             decl.name = "arg" + std::to_string(method.params.size());
             decl.type_ref = parse_native_type_text(
                 qualify_scoped_type(scan, namespaces, classes, param), location);
+            decl.variadic = type_ref_contains_kind(decl.type_ref, TypeKind::PackExpansion);
             decl.location = location;
             method.params.push_back(std::move(decl));
+        }
+        method.min_params = static_cast<int>(method.params.size());
+        if (std::ranges::any_of(method.params,
+                                [](const ParamDecl& param) { return param.variadic; })) {
+            --method.min_params;
         }
         method.deleted = line.find(" delete", line.rfind('\'')) != std::string::npos;
         method.location = location;
@@ -386,8 +433,14 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             ParamDecl decl;
             decl.name = "arg" + std::to_string(constructor.params.size());
             decl.type_ref = parse_native_type_text(param, location);
+            decl.variadic = type_ref_contains_kind(decl.type_ref, TypeKind::PackExpansion);
             decl.location = location;
             constructor.params.push_back(std::move(decl));
+        }
+        constructor.min_params = static_cast<int>(constructor.params.size());
+        if (std::ranges::any_of(constructor.params,
+                                [](const ParamDecl& param) { return param.variadic; })) {
+            --constructor.min_params;
         }
         constructor.location = location;
         scan.classes[*class_index].methods.push_back(std::move(constructor));

@@ -197,7 +197,6 @@ std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const
                                                const std::string& callee,
                                                const SourceLocation* location) {
     const TypeRef* value_type = local_type_ref_ptr(scope, callee);
-    const bool local_value = value_type != nullptr;
     if (value_type == nullptr) {
         const auto native = scope.symbols.native_value_type_refs.find(callee);
         if (native != scope.symbols.native_value_type_refs.end()) {
@@ -214,9 +213,6 @@ std::optional<TypeRef> callable_value_type_ref(const FunctionScope& scope, const
         return signature_return_type_ref(function_signature);
     }
 
-    if (!local_value) {
-        return std::nullopt;
-    }
     const TypeRef& receiver_type = *value_type;
     std::vector<TypeRef> arg_types;
     arg_types.reserve(expr.children.size());

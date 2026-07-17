@@ -317,6 +317,7 @@ struct NativeTypeDecl {
     std::string name;
     std::string native_spelling;
     TypeRef type_ref;
+    bool enum_type = false;
     NativeSymbolId identity{};
     std::optional<TypeLayout> layout{};
     SourceLocation location;
@@ -340,6 +341,7 @@ struct NativeFunctionDecl {
     std::string name;
     std::vector<std::string> template_params;
     std::vector<bool> template_param_is_value;
+    std::vector<TypeRef> template_default_args;
     std::vector<std::string> param_names;
     std::vector<std::string> param_native_spellings;
     std::vector<TypeRef> param_type_refs;
@@ -408,12 +410,14 @@ struct FunctionDecl {
     TypeRef receiver_type_ref;
     std::vector<std::string> generic_params;
     std::vector<bool> generic_param_is_value;
+    std::vector<TypeRef> generic_default_args;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
     TypeRef return_type_ref;
     std::string origin_module;
     std::vector<Stmt> statements;
     bool deleted = false;
+    int min_params = -1;
     bool body_syntax_damaged = false;
     SourceLocation location;
     SourceRange range;

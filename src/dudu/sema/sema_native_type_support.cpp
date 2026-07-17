@@ -209,6 +209,9 @@ void add_native_type(Symbols& symbols, const NativeTypeDecl& type) {
     bind_native_identity(symbols, type.name, identity, type.location);
     symbols.types.insert(type.name);
     symbols.native_types.insert(type.name);
+    if (type.enum_type) {
+        symbols.native_enum_types.insert(type.name);
+    }
     symbols.native_type_decls_by_identity[identity][type.name] = &type;
     add_path_prefix(symbols, type.name);
     if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&

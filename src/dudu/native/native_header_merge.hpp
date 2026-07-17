@@ -9,6 +9,7 @@ namespace dudu {
 bool native_function_equivalent(const NativeFunctionDecl& lhs, const NativeFunctionDecl& rhs);
 bool contains_equivalent_native_function(const std::vector<NativeFunctionDecl>& functions,
                                          const NativeFunctionDecl& candidate);
+void merge_native_type_declaration(NativeTypeDecl& target, const NativeTypeDecl& source);
 void merge_native_class_declaration(ClassDecl& target, const ClassDecl& source);
 void append_unique_native_functions(std::vector<NativeFunctionDecl>& target,
                                     const std::vector<NativeFunctionDecl>& source);

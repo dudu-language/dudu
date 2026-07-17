@@ -254,6 +254,8 @@ if(DUDU_BUILD_TESTS)
         tests/language_server_workspace_tests.cpp dudu_frontend)
     dudu_add_test(dudu_member_type_substitution_tests
         tests/member_type_substitution_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_specialization_consensus_tests
+        tests/native_specialization_consensus_tests.cpp dudu_frontend)
     dudu_add_test(dudu_member_type_lookup_tests tests/member_type_lookup_tests.cpp dudu_frontend)
     dudu_add_test(dudu_module_loader_tests tests/module_loader_tests.cpp dudu_frontend)
     dudu_add_test(dudu_project_index_module_tests tests/project_index_module_tests.cpp dudu_frontend)
@@ -271,6 +273,8 @@ if(DUDU_BUILD_TESTS)
         tests/native_header_cache_tests.cpp dudu_frontend)
     dudu_add_test(dudu_native_template_metadata_tests
         tests/native_template_metadata_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_native_template_redeclaration_tests
+        tests/native_template_redeclaration_tests.cpp dudu_frontend)
     dudu_add_test(dudu_native_import_projection_tests
         tests/native_import_projection_tests.cpp dudu_frontend)
     target_compile_definitions(
@@ -283,6 +287,8 @@ if(DUDU_BUILD_TESTS)
         dudu_native_header_cache_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
     target_compile_definitions(
         dudu_native_template_metadata_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(
+        dudu_native_template_redeclaration_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
     target_compile_definitions(
         dudu_native_import_projection_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 

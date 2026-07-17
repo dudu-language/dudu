@@ -42,7 +42,10 @@ struct DetectedValue {
 };
 
 template <typename T>
-struct DetectedValue<T, Void<typename T::value_type>> {
+struct DetectedValue<
+    T,
+    // Comments, including quotes like "value", are not specialization arguments.
+    Void<typename T::value_type>> {
     using type = typename T::value_type;
 };
 

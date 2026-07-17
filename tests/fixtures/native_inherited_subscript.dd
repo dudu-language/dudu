@@ -1,0 +1,7 @@
+from cpp.path import native_headers/native_compat_stress.hpp
+
+
+def main() -> i32:
+    values: dudu_compat.IndexedDerived[i32, i32]
+    values[1] = 42
+    return values[1]

@@ -431,6 +431,9 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
 
 bool assignment_type_allowed(const Symbols& symbols, const TypeRef& expected, const Expr& expr,
                              const TypeRef& got) {
+    if (assignment_type_allowed(expected, expr, got)) {
+        return true;
+    }
     const TypeRef resolved_expected = resolve_associated_type_ref(symbols, expected);
     const TypeRef resolved_got = resolve_associated_type_ref(symbols, got);
     const TypeRef canonical_expected = canonical_native_type_ref(symbols, resolved_expected);

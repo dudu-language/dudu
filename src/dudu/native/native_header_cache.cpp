@@ -16,7 +16,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v46";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v72";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -119,9 +119,12 @@ void write_function_record(std::ostream& out, std::string_view tag, const Functi
                                        fn.native_identity.canonical_path,
                                        native_cache_join_strings(fn.generic_params),
                                        cache_bool_vector(fn.generic_param_is_value),
+                                       native_cache_join_strings(cached_type_texts(
+                                           fn.generic_default_args)),
                                        cached_type_text(fn.receiver_type_ref),
                                        cached_type_text(fn.return_type_ref),
                                        fn.deleted ? "1" : "0",
+                                       std::to_string(fn.min_params),
                                        fn.doc_comment};
     append_location_fields(fields, fn.location);
     fields.push_back(std::to_string(fn.params.size()));
@@ -134,28 +137,30 @@ void write_function_record(std::ostream& out, std::string_view tag, const Functi
 
 std::optional<FunctionDecl> read_function_record(const std::vector<std::string>& fields,
                                                  const SourceLocation& location) {
-    if (fields.size() < 14) {
+    if (fields.size() < 16) {
         return std::nullopt;
     }
-    const SourceLocation function_location = cached_location(fields, 10, location);
+    const SourceLocation function_location = cached_location(fields, 12, location);
     FunctionDecl fn;
     fn.name = fields[0];
     fn.cpp_name = fields[1];
     fn.native_identity = symbol_id(fields, 2, 3);
     fn.generic_params = native_cache_split_strings(fields[4]);
     fn.generic_param_is_value = cached_bool_vector(fields[5]);
-    fn.receiver_type_ref = cached_type_ref(fields[6], function_location);
-    fn.return_type_ref = cached_type_ref(fields[7], function_location);
-    fn.deleted = fields[8] == "1";
-    fn.doc_comment = fields[9];
+    fn.generic_default_args = cached_type_refs(fields[6], function_location);
+    fn.receiver_type_ref = cached_type_ref(fields[7], function_location);
+    fn.return_type_ref = cached_type_ref(fields[8], function_location);
+    fn.deleted = fields[9] == "1";
+    fn.min_params = std::stoi(fields[10]);
+    fn.doc_comment = fields[11];
     fn.location = function_location;
-    const size_t param_count = static_cast<size_t>(std::stoull(fields[13]));
-    if (fields.size() != 14 + param_count * 2) {
+    const size_t param_count = static_cast<size_t>(std::stoull(fields[15]));
+    if (fields.size() != 16 + param_count * 2) {
         return std::nullopt;
     }
     for (size_t i = 0; i < param_count; ++i) {
         fn.params.push_back(
-            cached_param(fields[14 + i * 2], fields[15 + i * 2], function_location));
+            cached_param(fields[16 + i * 2], fields[17 + i * 2], function_location));
     }
     return fn;
 }
@@ -253,20 +258,21 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
         }
         const std::string& tag = parsed->first;
         const std::vector<std::string>& fields = parsed->second;
-        if (tag == "NT" && fields.size() == 14) {
-            const SourceLocation decl_location = cached_location(fields, 6, location);
+        if (tag == "NT" && fields.size() == 15) {
+            const SourceLocation decl_location = cached_location(fields, 7, location);
             NativeTypeDecl type{.name = fields[0],
                                 .native_spelling = fields[1],
                                 .type_ref = cached_type_ref(fields[2], decl_location),
-                                .identity = symbol_id(fields, 3, 4),
-                                .layout = cached_layout(fields, 12),
+                                .enum_type = fields[3] == "1",
+                                .identity = symbol_id(fields, 4, 5),
+                                .layout = cached_layout(fields, 13),
                                 .location = decl_location,
-                                .doc_comment = fields[5]};
-            type.generic_params = native_cache_split_strings(fields[9]);
-            if (!fields[10].empty()) {
-                type.generic_min_args = static_cast<size_t>(std::stoull(fields[10]));
+                                .doc_comment = fields[6]};
+            type.generic_params = native_cache_split_strings(fields[10]);
+            if (!fields[11].empty()) {
+                type.generic_min_args = static_cast<size_t>(std::stoull(fields[11]));
             }
-            type.generic_default_args = cached_type_refs(fields[11], decl_location);
+            type.generic_default_args = cached_type_refs(fields[12], decl_location);
             scan.types.push_back(std::move(type));
         } else if (tag == "NV" && fields.size() == 10) {
             const SourceLocation decl_location = cached_location(fields, 7, location);
@@ -277,23 +283,24 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                    .identity = symbol_id(fields, 4, 5),
                                    .location = decl_location,
                                    .doc_comment = fields[6]});
-        } else if (tag == "NF" && fields.size() == 17) {
-            const SourceLocation decl_location = cached_location(fields, 14, location);
+        } else if (tag == "NF" && fields.size() == 18) {
+            const SourceLocation decl_location = cached_location(fields, 15, location);
             scan.functions.push_back(
                 {.name = fields[0],
                  .template_params = native_cache_split_strings(fields[1]),
                  .template_param_is_value = cached_bool_vector(fields[2]),
-                 .param_names = native_cache_split_strings(fields[3]),
-                 .param_native_spellings = native_cache_split_strings(fields[4]),
-                 .param_type_refs = cached_type_refs(fields[5], decl_location),
-                 .return_native_spelling = fields[6],
-                 .return_type_ref = cached_type_ref(fields[7], decl_location),
-                 .min_params = std::stoi(fields[8]),
-                 .variadic = fields[9] == "1",
-                 .deleted = fields[10] == "1",
-                 .identity = symbol_id(fields, 11, 12),
+                 .template_default_args = cached_type_refs(fields[3], decl_location),
+                 .param_names = native_cache_split_strings(fields[4]),
+                 .param_native_spellings = native_cache_split_strings(fields[5]),
+                 .param_type_refs = cached_type_refs(fields[6], decl_location),
+                 .return_native_spelling = fields[7],
+                 .return_type_ref = cached_type_ref(fields[8], decl_location),
+                 .min_params = std::stoi(fields[9]),
+                 .variadic = fields[10] == "1",
+                 .deleted = fields[11] == "1",
+                 .identity = symbol_id(fields, 12, 13),
                  .location = decl_location,
-                 .doc_comment = fields[13]});
+                 .doc_comment = fields[14]});
         } else if (tag == "NM" && fields.size() == 9) {
             const SourceLocation decl_location = cached_location(fields, 6, location);
             scan.macros.push_back({.name = fields[0],
@@ -388,8 +395,13 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
     out << kScanCacheVersion << '\n';
     for (const NativeTypeDecl& item : scan.types) {
         std::vector<std::string> fields = {
-            item.name,         item.native_spelling,         cached_type_text(item.type_ref),
-            item.identity.usr, item.identity.canonical_path, item.doc_comment};
+            item.name,
+            item.native_spelling,
+            cached_type_text(item.type_ref),
+            item.enum_type ? "1" : "0",
+            item.identity.usr,
+            item.identity.canonical_path,
+            item.doc_comment};
         append_location_fields(fields, item.location);
         fields.push_back(native_cache_join_strings(item.generic_params));
         fields.push_back(item.generic_min_args ? std::to_string(*item.generic_min_args) : "");
@@ -413,6 +425,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
             item.name,
             native_cache_join_strings(item.template_params),
             cache_bool_vector(item.template_param_is_value),
+            native_cache_join_strings(cached_type_texts(item.template_default_args)),
             native_cache_join_strings(item.param_names),
             native_cache_join_strings(item.param_native_spellings),
             native_cache_join_strings(cached_type_texts(item.param_type_refs)),

@@ -15,6 +15,7 @@ namespace dudu {
 struct FunctionSignature {
     std::vector<std::string> template_params;
     std::vector<bool> template_param_is_value;
+    std::vector<TypeRef> template_default_args;
     TypeRef receiver_type_ref;
     std::vector<TypeRef> param_type_refs;
     TypeRef return_type_ref;
@@ -42,6 +43,7 @@ struct Symbols {
     std::set<std::string> native_path_prefixes;
     std::set<std::string> module_import_prefixes;
     std::set<std::string> native_types;
+    std::set<std::string> native_enum_types;
     std::map<std::string, std::string> native_type_identity_by_binding;
     std::map<std::string, std::map<std::string, const NativeTypeDecl*>>
         native_type_decls_by_identity;

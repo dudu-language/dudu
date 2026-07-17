@@ -1,0 +1,7 @@
+from cpp.path import native_headers/native_compat_stress.hpp
+
+
+def main() -> i32:
+    converter = dudu_compat.DefaultTemplateMethod()
+    value = converter.convert(41)
+    return value + converter.count(value)

@@ -2,7 +2,10 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_scope.hpp"
+#include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/type_compat.hpp"
 
 #include <optional>
@@ -67,6 +70,41 @@ std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type) {
     return std::nullopt;
 }
 
+std::optional<TypeRef> iterable_type_ref_from_type(const Symbols& symbols, TypeRef type) {
+    if (const std::optional<TypeRef> element = iterable_type_ref_from_type(type)) {
+        return element;
+    }
+    type = unwrap_reference_and_const(std::move(type));
+    TypeRef associated;
+    associated.kind = TypeKind::Associated;
+    associated.name = "value_type";
+    associated.children.push_back(type);
+    associated.location = type.location;
+    TypeRef resolved = resolve_associated_type_ref(symbols, associated);
+    if (!type_ref_equivalent(resolved, associated)) {
+        return resolved;
+    }
+
+    std::optional<TypeRef> inferred;
+    for (const FunctionSignature& begin :
+         method_signatures_for_type(symbols, type, "begin", {})) {
+        const TypeRef iterator =
+            resolve_associated_type_ref(symbols, signature_return_type_ref(begin));
+        for (const FunctionSignature& dereference :
+             method_signatures_for_type(symbols, iterator, "operator*", {})) {
+            TypeRef element = resolve_associated_type_ref(
+                symbols, signature_return_type_ref(dereference));
+            element = unwrap_reference_and_const(std::move(element));
+            if (!inferred) {
+                inferred = std::move(element);
+            } else if (!type_ref_equivalent(*inferred, element)) {
+                return std::nullopt;
+            }
+        }
+    }
+    return inferred;
+}
+
 std::optional<TypeRef>
 iterable_value_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                         const std::string& name) {
@@ -75,6 +113,17 @@ iterable_value_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
         return std::nullopt;
     }
     return iterable_type_ref_from_type(type_ref);
+}
+
+std::optional<TypeRef>
+iterable_value_type_ref(const Symbols& symbols,
+                        const std::map<std::string, TypeRef>& local_type_refs,
+                        const std::string& name) {
+    const TypeRef type_ref = local_type_ref(local_type_refs, name);
+    if (type_ref.kind == TypeKind::Unknown) {
+        return std::nullopt;
+    }
+    return iterable_type_ref_from_type(symbols, type_ref);
 }
 
 void check_iterable_binding(const Symbols& symbols,
@@ -91,7 +140,8 @@ void check_iterable_binding(const Symbols& symbols,
     if (!local_type_refs.contains(name)) {
         throw CompileError(location, "iteration over unknown local: " + name);
     }
-    const std::optional<TypeRef> element_type = iterable_value_type_ref(local_type_refs, name);
+    const std::optional<TypeRef> element_type =
+        iterable_value_type_ref(symbols, local_type_refs, name);
     if (!element_type) {
         throw CompileError(location, "cannot iterate non-container: " + name);
     }

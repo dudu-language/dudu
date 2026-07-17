@@ -42,7 +42,15 @@ whose intermediate result is the owning native class. The real
 proves that a structurally specialized `Box[T]` overload outranks a bare `T`
 overload.
 
-Last local dogfood run: 2026-07-12 with `scripts/test_dogfood.sh`.
+Last native-library graduation run: 2026-07-17 with
+`scripts/probe_native_graduation.sh`. Wrapper-free executable consumers of
+nlohmann/json, Boost.Asio, range-v3, generated protobuf APIs, EnTT, and Abseil
+passed check, C++ emission, native compilation, linking, and runtime validation
+with GCC/libstdc++ and Clang/libstdc++. The four header-only consumers also
+passed with Clang/libc++. The installed protobuf and Abseil binaries use the
+libstdc++ ABI, so they are deliberately not linked into the libc++ lane.
+
+Last local dogfood run: 2026-07-17 with `scripts/test_dogfood.sh`.
 `raymarch-dd` built through the generated CMake backend, and
 `dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
 `/echo`, and `/routes`. `dudu-datascience` built and its target API
@@ -103,6 +111,12 @@ graduation checker passed with 5 graduated specs and 0 pending specs.
 | Native C++ templates | C++ templates | explicit template calls, method templates, dependent fields and returns, nested and namespace alias templates, dependent type/non-type defaults, omitted-argument materialization, partial and concrete class specialization selection, warm scan cache | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd`, `native_dependent_alias_metadata.dd`, `native_associated_type.dd`, `cpp_stdlib_interop.dd` | no |
 | Modern C++ template mix | C++ templates | concepts on callable templates, leading template parameters before variadic packs, defaulted function arguments, inherited constructors and methods, method templates, cv/ref parameters, move-only values | fixture | `tests/fixtures/native_modern_templates.dd` | no |
 | Native overload and value-category stress | C++ templates / overloads | specialization and structural template ordering, constrained overloads, default and variadic arguments, deleted candidates, cv/ref-qualified methods, callable objects, forwarding references, move-only values, inherited generic methods, macro declarations, and native self-return chains | fixture | `tests/fixtures/native_compat_stress.dd`, `native_template_specificity.dd`, `bad_native_*.dd`, `cpp_chrono_timer.dd`, `cpp_filesystem_path.dd` | no |
+| nlohmann/json | JSON / template-heavy C++ | parse, string-key indexing, explicit `get[T]`, collection conversion, mutation, serialization, and returned `std.string` methods | pass | `scripts/probe_native_graduation.sh gcc\|clang\|libcxx` / `native_graduation/nlohmann_json.dd` | no |
+| Boost.Asio | networking / template-heavy C++ | `io_context`, free-function callback dispatch through `post`, member execution, and native count return | pass | `scripts/probe_native_graduation.sh gcc\|clang\|libcxx` / `native_graduation/boost_asio.dd` | no |
+| range-v3 | ranges / template-heavy C++ | lazy iota, transform and filter adaptors, pipe composition, callable deduction, and accumulation | pass | `scripts/probe_native_graduation.sh gcc\|clang\|libcxx` / `native_graduation/range_v3.dd` | no |
+| protobuf generated C++ | serialization / generated C++ | generated class construction, scalar and repeated-field accessors, serialization, parse, and linked runtime | pass | `scripts/probe_native_graduation.sh gcc\|clang` / `native_graduation/protobuf.dd` | no |
+| EnTT | ECS / template-heavy C++ | registry creation, entity aliases, templated emplace/view/get/remove/all-of calls, and range iteration | pass | `scripts/probe_native_graduation.sh gcc\|clang\|libcxx` / `native_graduation/entt_registry.dd` | no |
+| Abseil | containers / utility C++ | `flat_hash_map`, defaulted template parameters, mutation, lookup, iteration metadata, and variadic `StrCat` conversion | pass | `scripts/probe_native_graduation.sh gcc\|clang` / `native_graduation/abseil.dd` | no |
 
 ## External Dogfood Repos
 

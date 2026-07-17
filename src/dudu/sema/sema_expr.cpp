@@ -297,6 +297,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                         }
                         return signature_return_type_ref(*signature);
                     }
+                    if (const auto signature = native_subscript_signature(
+                            scope, receiver_type, hook_receiver, args, location)) {
+                        return signature_return_type_ref(*signature);
+                    }
                     check_declared_index_operator_if_any(scope, receiver_type, target.read_operator,
                                                          index_receiver_label(receiver), args,
                                                          location);
@@ -326,6 +330,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                     }
                     return signature_return_type_ref(*signature);
                 }
+                if (const auto signature = native_subscript_signature(
+                        scope, receiver_member_type, hook_receiver, args, location)) {
+                    return signature_return_type_ref(*signature);
+                }
                 check_declared_index_operator_if_any(
                     scope, receiver_member_type, target.read_operator,
                     index_receiver_label(receiver), args, location);
@@ -346,6 +354,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                         check_instantiated_dudu_operator_body(
                             scope, target.read_operator, receiver_type, args, arg_types, *location);
                     }
+                    return signature_return_type_ref(*signature);
+                }
+                if (const auto signature = native_subscript_signature(
+                        scope, receiver_type, hook_receiver, args, location)) {
                     return signature_return_type_ref(*signature);
                 }
                 check_declared_index_operator_if_any(scope, receiver_type, target.read_operator,

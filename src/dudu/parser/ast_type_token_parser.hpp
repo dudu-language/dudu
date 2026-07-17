@@ -66,6 +66,7 @@ class TypeTokenParser {
     TypeRef parse_c_tag_name(size_t begin);
     TypeRef parse_name_or_template(size_t begin);
     std::vector<TypeRef> parse_angle_template_args();
+    std::vector<TypeRef> parse_template_list_until(TokenKind close);
     std::vector<TypeRef> parse_list_until(TokenKind close);
     TypeRef parse_shape_dim(size_t begin, size_t end) const;
     std::vector<TypeRef> parse_shape_list_until(TokenKind close);

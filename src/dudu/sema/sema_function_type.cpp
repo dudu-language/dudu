@@ -62,6 +62,9 @@ size_t signature_param_count(const FunctionSignature& signature) {
 
 size_t signature_min_arg_count(const FunctionSignature& signature) {
     const size_t param_count = signature_param_count(signature);
+    if (signature.min_params >= 0) {
+        return std::min(param_count, static_cast<size_t>(signature.min_params));
+    }
     return signature.variadic && param_count > 0 ? param_count - 1 : param_count;
 }
 

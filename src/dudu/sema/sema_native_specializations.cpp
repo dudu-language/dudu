@@ -21,14 +21,25 @@ bool specialization_values_equivalent(std::string_view pattern, std::string_view
            (pattern == "0" && actual == "false") || (pattern == "false" && actual == "0");
 }
 
-std::optional<std::string> native_literal_value(const TypeRef& type) {
-    if (type.kind == TypeKind::Value) {
-        return std::string(type.value);
+bool opaque_native_value_expression(const TypeRef& type) {
+    if (type.kind == TypeKind::Value || type.kind == TypeKind::Associated ||
+        type.kind == TypeKind::AssociatedTemplate) {
+        return true;
     }
     if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+        return false;
+    }
+    const std::string_view text = type_ref_head_name(type);
+    return text.find_first_of("()!<>=&|+-*/%") != std::string_view::npos;
+}
+
+std::optional<std::string> native_literal_value(const TypeRef& type) {
+    if (type.kind != TypeKind::Value && type.kind != TypeKind::Named &&
+        type.kind != TypeKind::Qualified) {
         return std::nullopt;
     }
-    std::string text = type_ref_head_name(type);
+    std::string text = type.kind == TypeKind::Value ? std::string(type.value)
+                                                   : type_ref_head_name(type);
     if (text == "true" || text == "false") {
         return text;
     }
@@ -75,15 +86,30 @@ bool specialization_packs_equivalent(const std::vector<TypeRef>& left,
 }
 
 bool bind_specialization_pattern(const TypeRef& pattern, const TypeRef& actual,
+                                 const Symbols& symbols,
                                  const std::set<std::string>& params,
                                  const std::set<std::string>& pack_params,
-                                 GenericTypeBindings& bindings, int& score);
+                                 GenericTypeBindings& bindings, int& score,
+                                 bool permit_opaque_values);
+
+bool specialization_requirement_well_formed(TypeRef type, const Symbols& symbols,
+                                            const GenericTypeBindings& bindings,
+                                            size_t depth = 0);
+
+bool incomplete_native_specialization(const ClassDecl& candidate) {
+    return !candidate.layout && candidate.base_class_refs.empty() &&
+           candidate.type_aliases.empty() && candidate.fields.empty() &&
+           candidate.constants.empty() && candidate.static_fields.empty() &&
+           candidate.methods.empty();
+}
 
 bool bind_specialization_children(const std::vector<TypeRef>& patterns,
                                   const std::vector<TypeRef>& actuals,
+                                  const Symbols& symbols,
                                   const std::set<std::string>& params,
                                   const std::set<std::string>& pack_params,
-                                  GenericTypeBindings& bindings, int& score) {
+                                  GenericTypeBindings& bindings, int& score,
+                                  bool permit_opaque_values) {
     size_t actual_index = 0;
     for (size_t pattern_index = 0; pattern_index < patterns.size(); ++pattern_index) {
         std::string pack_name;
@@ -109,8 +135,9 @@ bool bind_specialization_children(const std::vector<TypeRef>& patterns,
             continue;
         }
         if (actual_index >= actuals.size() ||
-            !bind_specialization_pattern(patterns[pattern_index], actuals[actual_index], params,
-                                         pack_params, bindings, score)) {
+            !bind_specialization_pattern(patterns[pattern_index], actuals[actual_index], symbols,
+                                         params, pack_params, bindings, score,
+                                         permit_opaque_values)) {
             return false;
         }
         ++actual_index;
@@ -119,9 +146,11 @@ bool bind_specialization_children(const std::vector<TypeRef>& patterns,
 }
 
 bool bind_specialization_pattern(const TypeRef& pattern, const TypeRef& actual,
+                                 const Symbols& symbols,
                                  const std::set<std::string>& params,
                                  const std::set<std::string>& pack_params,
-                                 GenericTypeBindings& bindings, int& score) {
+                                 GenericTypeBindings& bindings, int& score,
+                                 bool permit_opaque_values) {
     const std::string pattern_name = type_ref_head_name(pattern);
     if ((pattern.kind == TypeKind::Named || pattern.kind == TypeKind::Qualified) &&
         params.contains(pattern_name)) {
@@ -136,13 +165,40 @@ bool bind_specialization_pattern(const TypeRef& pattern, const TypeRef& actual,
         if (!bind_specialization_scalar(pattern_name, constructor, bindings)) {
             return false;
         }
-        return bind_specialization_children(pattern.children, actual.children, params, pack_params,
-                                            bindings, score);
+        return bind_specialization_children(pattern.children, actual.children, symbols, params,
+                                            pack_params, bindings, score, permit_opaque_values);
     }
-    if (pattern.kind == TypeKind::Value) {
+    TypeRef bound_pattern = substitute_native_specialization_type(pattern, bindings);
+    if (bound_pattern.kind == TypeKind::Template &&
+        symbols.alias_type_refs.contains(bound_pattern.name)) {
+        for (const TypeRef& argument : bound_pattern.children) {
+            if (!specialization_requirement_well_formed(argument, symbols, {}, 0)) {
+                return false;
+            }
+        }
+    }
+    TypeRef resolved_pattern = resolve_associated_type_ref(symbols, bound_pattern);
+    if (type_ref_text(resolved_pattern) != type_ref_text(bound_pattern)) {
+        return bind_specialization_pattern(resolved_pattern, actual, symbols, params, pack_params,
+                                           bindings, score, permit_opaque_values);
+    }
+    const std::optional<std::string> pattern_value = native_literal_value(pattern);
+    const std::optional<std::string> actual_value = native_literal_value(actual);
+    if (pattern_value || actual_value) {
         ++score;
-        const std::optional<std::string> actual_value = native_literal_value(actual);
-        return actual_value && specialization_values_equivalent(pattern.value, *actual_value);
+        if (permit_opaque_values && pattern_value && !actual_value &&
+            opaque_native_value_expression(actual)) {
+            return true;
+        }
+        return pattern_value && actual_value &&
+               specialization_values_equivalent(*pattern_value, *actual_value);
+    }
+    if (permit_opaque_values &&
+        (pattern.kind == TypeKind::Associated ||
+         pattern.kind == TypeKind::AssociatedTemplate ||
+         pattern.kind == TypeKind::NativeTransform)) {
+        ++score;
+        return true;
     }
     if (pattern.kind != actual.kind) {
         return false;
@@ -158,16 +214,84 @@ bool bind_specialization_pattern(const TypeRef& pattern, const TypeRef& actual,
         pattern.kind == TypeKind::AssociatedTemplate) {
         ++score;
     }
-    return bind_specialization_children(pattern.children, actual.children, params, pack_params,
-                                        bindings, score);
+    return bind_specialization_children(pattern.children, actual.children, symbols, params,
+                                        pack_params, bindings, score, permit_opaque_values);
+}
+
+std::vector<NativeSpecializationMatch>
+specialization_candidates(const Symbols& symbols, const TypeRef& owner,
+                          bool permit_opaque_values) {
+    const std::string owner_name = receiver_class_name(symbols, owner);
+    const auto found = symbols.native_class_specializations.find(owner_name);
+    if (found == symbols.native_class_specializations.end()) {
+        return {};
+    }
+    std::vector<TypeRef> actual_args = template_arg_refs_from_type(owner);
+    const ClassDecl* primary = class_for_receiver_type(symbols, owner);
+    if (primary != nullptr && !primary->generic_params.empty()) {
+        actual_args = generic_args_with_defaults(primary->generic_params,
+                                                 primary->generic_default_args, actual_args);
+    }
+    for (TypeRef& actual : actual_args) {
+        actual = resolve_associated_type_ref(symbols, std::move(actual));
+    }
+
+    std::vector<NativeSpecializationMatch> selected;
+    int selected_score = -1;
+    for (const ClassDecl& candidate : found->second) {
+        if (incomplete_native_specialization(candidate)) {
+            continue;
+        }
+        std::set<std::string> params;
+        std::set<std::string> pack_params;
+        for (const std::string& param : candidate.generic_params) {
+            const std::string name = generic_param_base_name(param);
+            params.insert(name);
+            if (generic_param_is_pack(param)) {
+                pack_params.insert(name);
+            }
+        }
+        GenericTypeBindings candidate_bindings;
+        int score = candidate.native_partial_specialization ? 0 : 1000;
+        std::vector<TypeRef> specialization_args = candidate.native_specialization_args;
+        if (primary != nullptr && specialization_args.size() < actual_args.size()) {
+            specialization_args = generic_args_with_defaults(
+                primary->generic_params, primary->generic_default_args, specialization_args);
+        }
+        bool matches = bind_specialization_children(
+            specialization_args, actual_args, symbols, params, pack_params, candidate_bindings,
+            score, permit_opaque_values);
+        if (matches && std::ranges::any_of(candidate.native_specialization_requirements,
+                                           [&](const TypeRef& requirement) {
+                                               return !specialization_requirement_well_formed(
+                                                   requirement, symbols, candidate_bindings);
+                                           })) {
+            matches = false;
+        }
+        if (!matches || score < selected_score) {
+            continue;
+        }
+        if (score > selected_score) {
+            selected.clear();
+            selected_score = score;
+        }
+        selected.push_back({.declaration = &candidate,
+                            .bindings = std::move(candidate_bindings)});
+    }
+    return selected;
 }
 
 bool specialization_requirement_well_formed(TypeRef type, const Symbols& symbols,
-                                            const GenericTypeBindings& bindings, size_t depth = 0) {
+                                            const GenericTypeBindings& bindings, size_t depth) {
     if (depth > 16) {
         return false;
     }
     type = substitute_native_specialization_type(type, bindings);
+    TypeRef resolved = resolve_associated_type_ref(symbols, type);
+    if (type_ref_text(resolved) != type_ref_text(type)) {
+        return specialization_requirement_well_formed(std::move(resolved), symbols,
+                                                      GenericTypeBindings{}, depth + 1);
+    }
     for (TypeRef& child : type.children) {
         if (!specialization_requirement_well_formed(child, symbols, bindings, depth + 1)) {
             return false;
@@ -197,60 +321,18 @@ TypeRef substitute_native_specialization_type(const TypeRef& type,
 
 const ClassDecl* native_specialized_class_for_owner(const Symbols& symbols, const TypeRef& owner,
                                                     GenericTypeBindings& bindings) {
-    const std::string owner_name = receiver_class_name(symbols, owner);
-    const auto found = symbols.native_class_specializations.find(owner_name);
-    if (found == symbols.native_class_specializations.end()) {
+    std::vector<NativeSpecializationMatch> matches =
+        specialization_candidates(symbols, owner, false);
+    if (matches.size() != 1) {
         return nullptr;
     }
-    std::vector<TypeRef> actual_args = template_arg_refs_from_type(owner);
-    if (const ClassDecl* primary = class_for_receiver_type(symbols, owner);
-        primary != nullptr && !primary->generic_params.empty()) {
-        actual_args = generic_args_with_defaults(primary->generic_params,
-                                                 primary->generic_default_args, actual_args);
-    }
-    const ClassDecl* selected = nullptr;
-    int selected_score = -1;
-    bool ambiguous = false;
-    GenericTypeBindings selected_bindings;
-    for (const ClassDecl& candidate : found->second) {
-        std::set<std::string> params;
-        std::set<std::string> pack_params;
-        for (const std::string& param : candidate.generic_params) {
-            const std::string name = generic_param_base_name(param);
-            params.insert(name);
-            if (generic_param_is_pack(param)) {
-                pack_params.insert(name);
-            }
-        }
-        GenericTypeBindings candidate_bindings;
-        int score = candidate.native_partial_specialization ? 0 : 1000;
-        bool matches =
-            bind_specialization_children(candidate.native_specialization_args, actual_args, params,
-                                         pack_params, candidate_bindings, score);
-        if (matches && std::ranges::any_of(candidate.native_specialization_requirements,
-                                           [&](const TypeRef& requirement) {
-                                               return !specialization_requirement_well_formed(
-                                                   requirement, symbols, candidate_bindings);
-                                           })) {
-            matches = false;
-        }
-        if (!matches || score < selected_score) {
-            continue;
-        }
-        if (score == selected_score) {
-            ambiguous = true;
-            continue;
-        }
-        selected = &candidate;
-        selected_score = score;
-        selected_bindings = std::move(candidate_bindings);
-        ambiguous = false;
-    }
-    if (ambiguous) {
-        return nullptr;
-    }
-    bindings = std::move(selected_bindings);
-    return selected;
+    bindings = std::move(matches.front().bindings);
+    return matches.front().declaration;
+}
+
+std::vector<NativeSpecializationMatch>
+native_specialization_candidates_for_opaque_values(const Symbols& symbols, const TypeRef& owner) {
+    return specialization_candidates(symbols, owner, true);
 }
 
 std::optional<TypeRef>

@@ -271,7 +271,7 @@ compiler type transforms, declarations referenced before their AST-dump
 definition, and C++ index aliases used by `std.string.substr`. Scanner fixes
 were made in generic template, static-method, operator-method,
 injected-class-name, scope qualification, and native identity handling; none
-branch on a library or header name. Native scan cache format version 46
+branch on a library or header name. Native scan cache format version 72
 invalidates metadata produced before these rules.
 
 The canonical executable and negative fixture suites pass. All three dogfood
@@ -290,6 +290,39 @@ surface syntax or library-specific compatibility code.
 Completion is a compatibility-matrix improvement, not a claim that all C++ is
 finished. Every fixed class of failure needs a neutral fixture plus at least one
 real library consumer.
+
+### 2026-07-17 Real-Library Graduation
+
+Six wrapper-free Dudu programs now pass check, readable C++ emission, native
+compilation, linking, and runtime validation against real template-heavy APIs:
+
+- nlohmann/json: parse, indexing, `get[T]`, collection conversion, mutation,
+  serialization, and returned string methods
+- Boost.Asio: `io_context`, callback dispatch through `post`, and execution
+- range-v3: lazy views, callable adaptors, pipe composition, and accumulation
+- protobuf: generated message setters, repeated fields, serialization, and parse
+- EnTT: registry/entity aliases, component templates, views, iteration, and removal
+- Abseil: `flat_hash_map`, defaulted template parameters, and variadic `StrCat`
+
+All six pass under GCC/libstdc++ and Clang/libstdc++. The four header-only
+programs pass under Clang/libc++; protobuf and Abseil are omitted from that lane
+because the installed system binaries use the libstdc++ ABI. This is an
+environment linkage boundary, not a Dudu source or scanner limitation.
+
+The fixes are generic and covered by neutral fixtures. They include declaration
+metadata merging across forward declarations and definitions, dependent and
+non-type defaults, associated alias substitution, internal callable records,
+variadic template packs, inherited native methods and iteration, conservative
+consensus across unresolved SFINAE-like specializations, and canonical alias
+spellings that refer back to the alias itself. No compiler source branches on a
+target library or header name. Template defaults come from Clang declaration
+metadata and merged redeclarations; the scanner does not search header source
+text to recover missing semantic values.
+
+Validation completed with the focused native suites, all 54 CTest targets, the
+canonical executable/negative fixture suite, project-backend tests, and all
+three external dogfood projects. The matrix remains periodic and heavyweight;
+it is not added to the default fast loop.
 
 ## 3. Compiler Architecture And Readability
 

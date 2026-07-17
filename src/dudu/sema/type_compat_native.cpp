@@ -139,6 +139,12 @@ std::string normalize_cpp_primitive_type(std::string type) {
     if (type == "double") {
         return "f64";
     }
+    if (type == "size_t" || type == "std.size_t" || type == "std::size_t") {
+        return "usize";
+    }
+    if (type == "ptrdiff_t" || type == "std.ptrdiff_t" || type == "std::ptrdiff_t") {
+        return "isize";
+    }
     return type;
 }
 

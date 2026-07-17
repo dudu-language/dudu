@@ -15,6 +15,13 @@ TypeRef remove_top_level_cv(TypeRef type) {
     return type;
 }
 
+TypeRef remove_top_level_qualifier(TypeRef type, TypeKind qualifier) {
+    if (type.kind == qualifier && type.children.size() == 1) {
+        return std::move(type.children.front());
+    }
+    return type;
+}
+
 TypeRef remove_reference(TypeRef type) {
     if (type.kind == TypeKind::Reference && type.children.size() == 1) {
         return std::move(type.children.front());
@@ -30,6 +37,12 @@ TypeRef resolve_native_type_transform(const Symbols& symbols, TypeRef type) {
     }
 
     TypeRef argument = resolve_alias_ref(symbols, std::move(type.children.front()));
+    if (type.name == "__remove_const") {
+        return remove_top_level_qualifier(std::move(argument), TypeKind::Const);
+    }
+    if (type.name == "__remove_volatile") {
+        return remove_top_level_qualifier(std::move(argument), TypeKind::Volatile);
+    }
     if (type.name == "__remove_cv") {
         return remove_top_level_cv(std::move(argument));
     }

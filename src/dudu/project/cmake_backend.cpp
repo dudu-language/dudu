@@ -88,6 +88,12 @@ std::string command_failure_message(const std::string& label, const std::string&
     return message;
 }
 
+void append_cmake_compiler(std::string& command, const ProjectConfig& config) {
+    if (!config.compiler.empty()) {
+        command += " -DCMAKE_CXX_COMPILER=" + shell_quote_arg(config.compiler);
+    }
+}
+
 std::filesystem::path generated_target_artifact(const std::filesystem::path& build_dir) {
     const std::filesystem::path manifest = build_dir / "dudu-target-artifact.txt";
     const std::string artifact_text = read_text_file(manifest);
@@ -125,6 +131,7 @@ void configure_user_cmake(const UserCMakeBackendOptions& options,
     if (!options.config.cmake_config.empty()) {
         configure_command += " -DCMAKE_BUILD_TYPE=" + shell_quote_arg(options.config.cmake_config);
     }
+    append_cmake_compiler(configure_command, options.config);
     const std::filesystem::path configure_log = options.root / "configure.log";
     const std::filesystem::path configure_command_log = options.root / "configure.command";
     if (options.verbose) {
@@ -244,6 +251,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
         " -DDUC_EXECUTABLE=" +
         shell_quote_path(std::filesystem::absolute(options.compiler_executable));
+    append_cmake_compiler(configure_command, options.config);
     configure_command += options.timings ? " -DDUDU_TIMINGS=ON" : " -DDUDU_TIMINGS=OFF";
     const std::filesystem::path configure_log = options.root / "configure.log";
     const std::filesystem::path configure_command_log = options.root / "configure.command";

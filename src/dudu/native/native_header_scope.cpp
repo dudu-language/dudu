@@ -195,13 +195,26 @@ void qualify_completed_type_ref(TypeRef& type, const NativeHeaderScan& scan,
     for (TypeRef& child : type.children) {
         qualify_completed_type_ref(child, scan, scopes, protected_names);
     }
-    if (type.kind != TypeKind::Named && type.kind != TypeKind::Template) {
+    if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified &&
+        type.kind != TypeKind::Template) {
         return;
     }
     const std::string name = trim_string(type.name);
+    for (const std::string& protected_name : protected_names) {
+        if (name == protected_name) {
+            return;
+        }
+        for (const std::string& scope : scopes) {
+            if (name == scope + "." + protected_name) {
+                type.kind = TypeKind::Named;
+                type.name = protected_name;
+                return;
+            }
+        }
+    }
     if (name.empty() || name.find('.') != std::string::npos ||
         name.find("::") != std::string::npos || dudu_builtin_type(name) ||
-        protected_names.contains(name) || scan_has_type(scan, name)) {
+        scan_has_type(scan, name)) {
         return;
     }
     for (const std::string& scope : scopes) {
@@ -225,6 +238,7 @@ void qualify_function(FunctionDecl& fn, const NativeHeaderScan& scan,
                       const std::vector<std::string>& scopes,
                       std::set<std::string> protected_names) {
     add_generic_params(protected_names, fn.generic_params);
+    qualify_default_args(fn.generic_default_args, scan, scopes, protected_names);
     qualify_completed_type_ref(fn.receiver_type_ref, scan, scopes, protected_names);
     qualify_completed_type_ref(fn.return_type_ref, scan, scopes, protected_names);
     for (ParamDecl& param : fn.params) {
@@ -299,6 +313,7 @@ void qualify_completed_native_scan(NativeHeaderScan& scan) {
         std::set<std::string> protected_names;
         add_generic_params(protected_names, fn.template_params);
         const std::vector<std::string> scopes = enclosing_scopes(fn.name, false);
+        qualify_default_args(fn.template_default_args, scan, scopes, protected_names);
         qualify_completed_type_ref(fn.return_type_ref, scan, scopes, protected_names);
         for (TypeRef& param : fn.param_type_refs) {
             qualify_completed_type_ref(param, scan, scopes, protected_names);

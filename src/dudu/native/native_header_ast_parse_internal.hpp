@@ -122,6 +122,7 @@ size_t append_native_function(NativeHeaderScan& scan,
                               const std::string& current_file,
                               const std::vector<std::string>& template_params = {},
                               const std::vector<bool>& template_param_is_value = {},
+                              const std::vector<TypeRef>& template_default_args = {},
                               bool deleted = false);
 
 void parse_ast_declaration(AstParseState& state, const std::string& line, int depth,

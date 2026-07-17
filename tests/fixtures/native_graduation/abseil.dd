@@ -1,0 +1,19 @@
+from cpp import absl/container/flat_hash_map.h
+from cpp import absl/strings/str_cat.h
+from cpp import string
+
+
+def main() -> i32:
+    scores: absl.flat_hash_map[std.string, i32]
+    scores.insert_or_assign(std.string("dudu"), 40)
+    scores.insert_or_assign(std.string("cpp"), 2)
+
+    label: std.string = absl.StrCat(
+        absl.AlphaNum("entries="),
+        absl.AlphaNum(scores.size()),
+    )
+    if label != "entries=2":
+        return 1
+    if not scores.contains(std.string("cpp")):
+        return 2
+    return 0

@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 
 #include <optional>
@@ -93,6 +94,16 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
             continue;
         }
         break;
+    }
+    const auto klass = symbols.classes.find(type_ref_head_name(type));
+    if (klass != symbols.classes.end() && !klass->second->generic_params.empty()) {
+        const std::vector<TypeRef> args = generic_args_with_defaults(
+            klass->second->generic_params, klass->second->generic_default_args,
+            type.kind == TypeKind::Template ? type.children : std::vector<TypeRef>{});
+        if (!args.empty()) {
+            type.kind = TypeKind::Template;
+            type.children = args;
+        }
     }
     return type;
 }

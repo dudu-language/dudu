@@ -33,6 +33,10 @@ def main() -> i32:
     inherited = derived.get()
     doubled = derived.doubled()
 
+    alias_method = dudu_compat.DefaultedAliasMethod[i32, i32]()
+    assigned = alias_method.insert_or_assign(4, 5)
+    dependent_size = dudu_compat.DependentDefaultUse().size()
+
     macro_value = dudu_compat.macro_declared(1)
     return (
         specialized
@@ -54,6 +58,8 @@ def main() -> i32:
         + moved.get()
         + inherited
         + doubled
+        + assigned
+        + i32(dependent_size)
         + macro_value
-        - 79
+        - 90
     )

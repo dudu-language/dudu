@@ -333,7 +333,7 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
             if (shape_args) {
                 args = parse_shape_list_until(TokenKind::RBracket);
             } else {
-                args = parse_list_until(TokenKind::RBracket);
+                args = parse_template_list_until(TokenKind::RBracket);
             }
             const size_t inner_end = cursor_;
             if (!match(TokenKind::RBracket)) {
@@ -452,6 +452,46 @@ std::vector<TypeRef> TypeTokenParser::parse_angle_template_args() {
         }
         TypeTokenParser parser(tokens_.subspan(begin, cursor_ - begin));
         out.push_back(parser.parse());
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+        }
+    }
+    return out;
+}
+
+std::vector<TypeRef> TypeTokenParser::parse_template_list_until(TokenKind close) {
+    std::vector<TypeRef> out;
+    while (!at_end() && !at(close)) {
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+            continue;
+        }
+        const size_t begin = cursor_;
+        int paren_depth = 0;
+        int bracket_depth = 0;
+        while (!at_end()) {
+            if (paren_depth == 0 && bracket_depth == 0 &&
+                (at(TokenKind::Comma) || at(close))) {
+                break;
+            }
+            if (at(TokenKind::LParen)) {
+                ++paren_depth;
+            } else if (at(TokenKind::RParen) && paren_depth > 0) {
+                --paren_depth;
+            } else if (at(TokenKind::LBracket)) {
+                ++bracket_depth;
+            } else if (at(TokenKind::RBracket) && bracket_depth > 0) {
+                --bracket_depth;
+            }
+            ++cursor_;
+        }
+        TypeTokenParser parser(tokens_.subspan(begin, cursor_ - begin));
+        TypeRef argument = parser.parse();
+        if (argument.kind == TypeKind::Unknown) {
+            argument = make_node(TypeKind::Value, begin, cursor_);
+            argument.value = trim_string(text_between(begin, cursor_));
+        }
+        out.push_back(std::move(argument));
         if (at(TokenKind::Comma)) {
             ++cursor_;
         }

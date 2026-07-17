@@ -16,6 +16,7 @@
 #include "dudu/sema/sema_alloc.hpp"
 #include "dudu/sema/sema_expr_cpp_escape_calls.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
+#include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_ops.hpp"
@@ -421,6 +422,32 @@ void test_result_constructor_inference_uses_type_ast() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_cpp_range_inference_uses_begin_and_dereference() {
+    dudu::ClassDecl iterator;
+    iterator.name = "native.Iterator";
+    iterator.native_declaration = true;
+    dudu::FunctionDecl dereference;
+    dereference.name = "operator*";
+    dereference.return_type_ref = dudu::parse_type_text("&const[i32]");
+    iterator.methods.push_back(std::move(dereference));
+
+    dudu::ClassDecl range;
+    range.name = "native.Range";
+    range.native_declaration = true;
+    dudu::FunctionDecl begin;
+    begin.name = "begin";
+    begin.return_type_ref = dudu::parse_type_text("native.Iterator");
+    range.methods.push_back(std::move(begin));
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace(iterator.name, &iterator);
+    symbols.classes.emplace(range.name, &range);
+    const std::optional<dudu::TypeRef> element = dudu::iterable_type_ref_from_type(
+        symbols, dudu::parse_type_text("native.Range"));
+    assert(element);
+    assert(dudu::type_ref_text(*element) == "i32");
+}
+
 } // namespace
 
 int main() {
@@ -435,6 +462,7 @@ int main() {
         test_fixed_array_literal_inference_and_numeric_context();
         test_tuple_expression_inference_uses_type_ast();
         test_result_constructor_inference_uses_type_ast();
+        test_cpp_range_inference_uses_begin_and_dereference();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

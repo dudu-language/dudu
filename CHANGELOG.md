@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+- Graduated wrapper-free nlohmann/json, Boost.Asio, range-v3, protobuf, EnTT,
+  and Abseil programs through check, C++ emission, native build, link, and run
+  under GCC/libstdc++ and Clang/libstdc++. The four header-only programs also
+  pass under Clang/libc++.
+- Made native template metadata merge correctly across forward declarations,
+  redeclarations, and definitions, including renamed parameters, dependent and
+  non-type defaults, specialization constraints, inherited members, and
+  internal callable records. Template defaults are derived from Clang metadata,
+  without semantic recovery by searching header source text.
+- Made associated alias resolution conservative across scanner-incomplete
+  SFINAE-like specializations: an opaque condition resolves only when multiple
+  viable branches agree on the result type.
+- Ignored self-referential canonical alias spellings from Clang when the written
+  underlying type carries the useful concrete structure, preserving libc++
+  aliases such as `std.string` without implementation-specific rules.
 - Reduced a 1,000-expansion cold macro benchmark from 4.12 seconds to 1.04
   seconds by caching generated SDK objects across projects and compiling
   project macro units in parallel. Added comparable Rust, C#, Swift, and Nim

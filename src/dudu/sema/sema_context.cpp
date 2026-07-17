@@ -360,6 +360,9 @@ Symbols collect_symbols(const ModuleAst& module) {
             require_native_identity(type.identity, "type", type.name, type.location);
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
+        if (type.enum_type) {
+            symbols.native_enum_types.insert(type.name);
+        }
         symbols.native_type_identity_by_binding[type.name] = identity;
         symbols.native_type_decls_by_identity[identity][type.name] = &type;
         add_native_path_prefix(symbols, type.name);
@@ -457,6 +460,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         FunctionSignature signature;
         signature.template_params = fn.template_params;
         signature.template_param_is_value = fn.template_param_is_value;
+        signature.template_default_args = fn.template_default_args;
         set_signature_param_types(signature, native_function_param_type_refs(fn));
         set_signature_return_type(signature, native_function_return_type_ref(fn));
         signature.min_params = fn.min_params;

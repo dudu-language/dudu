@@ -4,9 +4,12 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/shape_value_expr.hpp"
+#include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_index_type_ref.hpp"
+#include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_native.hpp"
 #include "dudu/sema/sema_scope.hpp"
 
 #include <algorithm>
@@ -321,6 +324,22 @@ std::optional<TypeRef> indexed_array_view_type_ref(const SourceLocation& locatio
 IndexOperatorTarget index_operator_target(const Expr& receiver) {
     return IndexOperatorTarget{
         .receiver = &receiver, .read_operator = "[]", .write_operator = "[]="};
+}
+
+std::optional<FunctionSignature>
+native_subscript_signature(const FunctionScope& scope, const TypeRef& receiver_type,
+                           const Expr& receiver, const std::vector<Expr>& args,
+                           const SourceLocation* location) {
+    if (!foreign_cpp_class_type(scope.symbols, receiver_type)) {
+        return std::nullopt;
+    }
+    const std::vector<FunctionSignature> candidates =
+        method_signatures_for_type(scope.symbols, receiver_type, "operator[]", {});
+    if (candidates.empty()) {
+        return std::nullopt;
+    }
+    return match_native_method_signature(scope, expr_label(receiver) + "[]", candidates, {},
+                                         receiver, args, location);
 }
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,

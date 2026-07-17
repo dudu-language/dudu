@@ -132,7 +132,8 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
         return;
     const size_t param_count = signature_param_count(signature);
     const size_t min_arg_count = signature_min_arg_count(signature);
-    if ((!signature.variadic && args.size() != param_count) ||
+    if ((!signature.variadic &&
+         (args.size() < min_arg_count || args.size() > param_count)) ||
         (signature.variadic && args.size() < min_arg_count)) {
         sema_expr_fail(*location, "function " + callee + " expects " + std::to_string(param_count) +
                                       " arguments, got " + std::to_string(args.size()));
@@ -210,7 +211,8 @@ bool call_args_match_with_types(const FunctionScope& scope, const FunctionSignat
                                 const std::vector<TypeRef>& arg_types) {
     const size_t param_count = signature_param_count(signature);
     const size_t min_arg_count = signature_min_arg_count(signature);
-    if ((!signature.variadic && args.size() != param_count) ||
+    if ((!signature.variadic &&
+         (args.size() < min_arg_count || args.size() > param_count)) ||
         (signature.variadic && args.size() < min_arg_count)) {
         return false;
     }

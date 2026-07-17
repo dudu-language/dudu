@@ -69,22 +69,10 @@ void finalize_class_scope(AstParseState& state, const NativeClassScope& scope) {
     }
     for (size_t i = 0; i < scope.specialization_source_args.size(); ++i) {
         TypeRef written = std::move(written_args[i]);
-        const std::string written_head = type_ref_head_name(written);
-        const bool restored_template_parameter =
-            klass.native_specialization_args[i].kind == TypeKind::Template &&
-            type_ref_head_name(klass.native_specialization_args[i]) == "auto" &&
-            std::ranges::any_of(klass.generic_params, [&](const std::string& param) {
-                return param == written_head || (param.ends_with("...") &&
-                                                 param.substr(0, param.size() - 3) == written_head);
-            });
-        if (restored_template_parameter) {
-            klass.native_specialization_args[i] = std::move(written);
-            continue;
-        }
-        if (!type_ref_equivalent(written, klass.native_specialization_args[i]) &&
-            type_ref_text(written) != type_ref_text(klass.native_specialization_args[i])) {
-            klass.native_specialization_requirements.push_back(std::move(written));
-        }
+        // Clang may collapse a dependent source argument such as void_t<T::value_type> to
+        // void in the AST. The written argument preserves the SFINAE condition needed when
+        // Dudu later matches a concrete specialization.
+        klass.native_specialization_args[i] = std::move(written);
     }
 }
 
@@ -264,13 +252,15 @@ size_t append_native_function(NativeHeaderScan& scan,
                               const std::string& signature, const SourceLocation& location,
                               const std::string& current_file,
                               const std::vector<std::string>& template_params,
-                              const std::vector<bool>& template_param_is_value, bool deleted) {
+                              const std::vector<bool>& template_param_is_value,
+                              const std::vector<TypeRef>& template_default_args, bool deleted) {
     NativeFunctionDecl fn;
     fn.name = join_scope(namespaces, raw_name);
     fn.identity = scanned_identity(identities, NativeCursorKind::Function, raw_name, location,
                                    fn.name, current_file);
     fn.template_params = template_params;
     fn.template_param_is_value = template_param_is_value;
+    fn.template_default_args = template_default_args;
     fn.param_native_spellings = qualify_scoped_types(scan, namespaces, signature_params(signature));
     fn.param_names.resize(fn.param_native_spellings.size());
     fn.return_native_spelling =

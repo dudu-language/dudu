@@ -1,0 +1,25 @@
+from cpp import nlohmann/json.hpp
+from cpp import string
+from cpp import vector
+
+
+def main() -> i32:
+    document = nlohmann.json.parse(
+        "{\"name\":\"dudu\",\"scores\":[10,20,12],\"active\":true}"
+    )
+    name: std.string = document["name"].get[std.string]()
+    scores: std.vector[i32] = document["scores"].get[std.vector[i32]]()
+    document["answer"] = 42
+    encoded: std.string = document.dump()
+
+    if name != "dudu":
+        return 1
+    if scores.size() != 3:
+        return 2
+    if scores[1] != 20:
+        return 3
+    if document["answer"].get[i32]() != 42:
+        return 4
+    if encoded.empty():
+        return 5
+    return 0

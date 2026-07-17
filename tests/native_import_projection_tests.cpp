@@ -243,6 +243,78 @@ void test_native_scan_preserves_callable_and_static_methods() {
     assert(dudu::type_ref_text(clone->return_type_ref) == "Callable");
 }
 
+void test_native_scan_preserves_internal_callable_value_receiver() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-NamespaceDecl 0x1 <test.hpp:1:1, line:6:1> line:1:11 api\n"
+        "  |-CXXRecordDecl 0x2 <line:2:1, line:4:1> line:2:8 struct __Callable definition\n"
+        "  | `-CXXMethodDecl 0x3 <line:3:5, col:40> col:9 operator() 'int (int) const'\n"
+        "  |   `-ParmVarDecl 0x4 <col:20, col:24> col:24 value 'int'\n"
+        "  `-VarDecl 0x5 <line:5:1, col:29> col:29 run 'const __Callable' constexpr\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    dudu::qualify_completed_native_scan(scan);
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    assert(std::ranges::none_of(scan.types, [](const dudu::NativeTypeDecl& type) {
+        return type.name == "api.__Callable";
+    }));
+    const auto klass = std::ranges::find_if(scan.classes, [](const dudu::ClassDecl& item) {
+        return item.name == "api.__Callable";
+    });
+    assert(klass != scan.classes.end());
+    assert(std::ranges::any_of(klass->methods, [](const dudu::FunctionDecl& method) {
+        return method.name == "operator()";
+    }));
+    const auto value = std::ranges::find_if(scan.values, [](const dudu::NativeValueDecl& item) {
+        return item.name == "api.run";
+    });
+    assert(value != scan.values.end());
+    assert(dudu::type_ref_text(value->type_ref) == "const[api.__Callable]");
+}
+
+void test_native_scan_uses_canonical_concrete_alias_type() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-CXXRecordDecl 0x1 <test.hpp:1:1, line:3:1> line:1:8 struct Holder definition\n"
+        "  `-TypeAliasDecl 0x2 <line:2:5, col:42> col:11 value_type "
+        "'typename Traits<int>::value_type':'int'\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto klass = std::ranges::find_if(
+        scan.classes, [](const dudu::ClassDecl& item) { return item.name == "Holder"; });
+    assert(klass != scan.classes.end());
+    assert(klass->type_aliases.size() == 1);
+    assert(dudu::type_ref_text(klass->type_aliases.front().type_ref) == "i32");
+    const auto type = std::ranges::find_if(scan.types, [](const dudu::NativeTypeDecl& item) {
+        return item.name == "Holder.value_type";
+    });
+    assert(type != scan.types.end());
+    assert(type->native_spelling == "Traits[i32].value_type");
+    assert(dudu::type_ref_text(type->type_ref) == "i32");
+}
+
+void test_native_scan_ignores_self_referential_canonical_alias_type() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-NamespaceDecl 0x1 <test.hpp:1:1, line:4:1> line:1:11 std\n"
+        "  |-CXXRecordDecl 0x2 <line:2:5, col:42> col:11 class basic_string definition\n"
+        "  `-TypeAliasDecl 0x3 <line:3:5, col:42> col:11 string "
+        "'basic_string<char>':'std::string'\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    const auto type = std::ranges::find_if(scan.types, [](const dudu::NativeTypeDecl& item) {
+        return item.name == "std.string";
+    });
+    assert(type != scan.types.end());
+    assert(type->native_spelling == "std.basic_string[char]");
+    assert(dudu::type_ref_text(type->type_ref) == "std.basic_string[char]");
+}
+
 void test_native_scan_merges_reopened_namespaces() {
     dudu::NativeHeaderScan scan;
     for (const std::string source : {"first.hpp", "second.hpp"}) {
@@ -291,6 +363,26 @@ void test_native_scan_keeps_internal_generic_class_aliases_scoped() {
     }));
 }
 
+void test_native_scan_keeps_implicit_instantiation_children_scoped() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(
+        scan,
+        "`-NamespaceDecl 0x1 <test.hpp:1:1, line:9:1> line:1:11 ns\n"
+        "  |-ClassTemplateSpecializationDecl 0x2 <line:2:1, line:5:1> line:2:7 class Outer "
+        "definition implicit_instantiation\n"
+        "  | `-CXXRecordDecl 0x3 <line:3:5, line:4:5> line:3:12 struct Nested definition\n"
+        "  `-CXXRecordDecl 0x4 <line:7:1, line:8:1> line:7:8 struct Nested definition\n",
+        {.file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+
+    assert(std::ranges::any_of(scan.classes, [](const dudu::ClassDecl& klass) {
+        return klass.name == "ns.Outer.Nested";
+    }));
+    assert(std::ranges::any_of(scan.classes, [](const dudu::ClassDecl& klass) {
+        return klass.name == "ns.Nested";
+    }));
+}
+
 void test_completed_native_scan_qualifies_forward_visible_types() {
     const dudu::SourceLocation location{
         .file = dudu::SourceFileName("test.hpp"), .line = 1, .column = 1};
@@ -305,6 +397,7 @@ void test_completed_native_scan_qualifies_forward_visible_types() {
         .name = "std.make_late",
         .template_params = {"T"},
         .template_param_is_value = {false},
+        .template_default_args = {},
         .param_names = {"value"},
         .param_native_spellings = {"T"},
         .param_type_refs = {dudu::named_type_ref("T", location)},
@@ -331,8 +424,12 @@ int main() {
         test_native_scan_preserves_namespace_value_owners();
         test_native_scan_imports_using_shadow_function_overloads();
         test_native_scan_preserves_callable_and_static_methods();
+        test_native_scan_preserves_internal_callable_value_receiver();
+        test_native_scan_uses_canonical_concrete_alias_type();
+        test_native_scan_ignores_self_referential_canonical_alias_type();
         test_native_scan_merges_reopened_namespaces();
         test_native_scan_keeps_internal_generic_class_aliases_scoped();
+        test_native_scan_keeps_implicit_instantiation_children_scoped();
         test_completed_native_scan_qualifies_forward_visible_types();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

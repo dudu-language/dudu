@@ -192,6 +192,11 @@ FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
                                                          const std::vector<TypeRef>& args) {
     const GenericTypeBindings bindings =
         generic_type_bindings(signature.template_params, args);
+    for (TypeRef& default_arg : signature.template_default_args) {
+        if (has_type_ref(default_arg)) {
+            default_arg = substitute_generic_type_ref(default_arg, bindings);
+        }
+    }
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {

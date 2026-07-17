@@ -205,7 +205,8 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
     }
     if (stmt_iterable_expr(stmt).kind == ExprKind::Name) {
         const std::optional<TypeRef> element =
-            iterable_value_type_ref(scope.local_type_refs, stmt_iterable_expr(stmt).name);
+            iterable_value_type_ref(scope.symbols, scope.local_type_refs,
+                                    stmt_iterable_expr(stmt).name);
         if (element) {
             return *element;
         }
@@ -214,7 +215,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
     if (!has_type_ref(iterable_type)) {
         return std::nullopt;
     }
-    if (const auto element = iterable_type_ref_from_type(iterable_type)) {
+    if (const auto element = iterable_type_ref_from_type(scope.symbols, iterable_type)) {
         return *element;
     }
     return std::nullopt;

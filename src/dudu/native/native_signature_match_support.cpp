@@ -5,9 +5,11 @@
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
 #include "dudu/sema/sema_common.hpp"
+#include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
+#include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat.hpp"
 #include "dudu/sema/type_compat_native.hpp"
 
@@ -68,6 +70,36 @@ bool template_param_pack(std::string_view name) {
     return name.ends_with("...");
 }
 
+std::string template_param_name(std::string name) {
+    if (name.ends_with("...")) {
+        name.resize(name.size() - 3);
+    }
+    return name;
+}
+
+void bind_default_template_args(const FunctionSignature& signature,
+                                NativeTemplateBindings& bindings) {
+    const size_t count =
+        std::min(signature.template_params.size(), signature.template_default_args.size());
+    for (size_t i = 0; i < count; ++i) {
+        const std::string name = template_param_name(signature.template_params[i]);
+        if (bindings.contains(name) || !has_type_ref(signature.template_default_args[i])) {
+            continue;
+        }
+        bindings.emplace(
+            name, substitute_type_ref(signature.template_default_args[i], bindings));
+    }
+}
+
+TypeRef parameter_with_available_defaults(const Symbols& symbols,
+                                          const FunctionSignature& signature,
+                                          const TypeRef& parameter,
+                                          const NativeTemplateBindings& bindings) {
+    NativeTemplateBindings available = bindings;
+    bind_default_template_args(signature, available);
+    return resolve_associated_type_ref(symbols, substitute_type_ref(parameter, available));
+}
+
 std::optional<std::string> explicit_template_mismatch(const Symbols& symbols,
                                                       const FunctionSignature& signature,
                                                       const std::vector<TypeRef>& explicit_args) {
@@ -118,6 +150,18 @@ bool native_const_reference(const TypeRef& type) {
 const TypeRef& native_referent(const TypeRef& type) {
     if (type.kind == TypeKind::Reference && type.children.size() == 1) {
         return type.children.front();
+    }
+    return type;
+}
+
+TypeRef concrete_native_argument_type_ref(const Symbols& symbols, TypeRef type) {
+    type = resolve_associated_type_ref(symbols, std::move(type));
+    if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
+        type.kind == TypeKind::Template) {
+        return receiver_template_type_ref(symbols, std::move(type));
+    }
+    for (TypeRef& child : type.children) {
+        child = concrete_native_argument_type_ref(symbols, std::move(child));
     }
     return type;
 }
@@ -239,11 +283,16 @@ bool native_arg_assignable(const FunctionScope& scope, const Expr& arg, const Ty
         native_referent_is_const(got_ref)) {
         return false;
     }
-    const TypeRef& expected_value = native_referent(expected_ref);
-    const TypeRef& got_value = native_referent(got_ref);
-    if (native_fixed_array_alias_decay_allowed(scope, expected_value, got_ref)) {
+    if (native_fixed_array_alias_decay_allowed(scope, native_referent(expected_ref), got_ref)) {
         return true;
     }
+    if (can_assign_ast(scope, native_referent(expected_ref), arg, native_referent(got_ref))) {
+        return true;
+    }
+    const TypeRef expected_value =
+        concrete_native_argument_type_ref(scope.symbols, native_referent(expected_ref));
+    const TypeRef got_value =
+        concrete_native_argument_type_ref(scope.symbols, native_referent(got_ref));
     if (type_assignment_allowed(expected_value, got_value)) {
         return true;
     }
@@ -364,8 +413,12 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
             has_type_ref(expected_ref) && has_type_ref(got_ref) &&
             bind_native_template_type_ast(scope.symbols, binding_pattern, binding_got,
                                           template_params, bindings, pack_bindings);
+        const TypeRef concrete_expected =
+            parameter_with_available_defaults(scope.symbols, signature, expected_ref, bindings);
         if (!native_arg_assignable(scope, args[i], got_ref, expected_ref) &&
-            !native_numeric_promotion(expected_ref, got_ref) && !bound_template) {
+            !native_numeric_promotion(expected_ref, got_ref) && !bound_template &&
+            !native_arg_assignable(scope, args[i], got_ref, concrete_expected) &&
+            !native_numeric_promotion(concrete_expected, got_ref)) {
             return std::nullopt;
         }
     }
@@ -376,6 +429,12 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
             types.push_back(arg_type_refs[i]);
         }
         pack_bindings[pack_name] = std::move(types);
+    }
+    bind_default_template_args(signature, bindings);
+    for (const std::string& param : signature.template_params) {
+        if (template_param_pack(param)) {
+            pack_bindings.try_emplace(template_param_name(param));
+        }
     }
     return substitute_bound_template_signature(scope.symbols, signature, bindings, pack_bindings);
 }
@@ -444,7 +503,7 @@ bool direct_native_template_placeholder(const TypeRef& type,
 
 int native_template_generality_score(const FunctionSignature& signature) {
     const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
-    int score = 0;
+    int score = signature.template_params.empty() ? 0 : 1;
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         if (direct_native_template_placeholder(signature_param_type_ref(signature, i),
                                                template_params)) {

@@ -1,0 +1,6 @@
+from cpp.path import native_headers/native_compat_stress.hpp
+
+
+def main() -> i32:
+    value: dudu_compat.parameter_scope.Identity[i32] = 42
+    return value

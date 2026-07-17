@@ -131,6 +131,25 @@ struct Multiplier {
     }
 };
 
+struct GenericMultiplier {
+    int factor = 1;
+
+    template <typename Value>
+    Value operator()(Value value) const {
+        return static_cast<Value>(factor) * value;
+    }
+};
+
+inline constexpr GenericMultiplier multiply_by_three{3};
+
+struct __InternalCallable {
+    int operator()(int value) const {
+        return value + 2;
+    }
+};
+
+inline constexpr __InternalCallable internal_add_two{};
+
 struct Chain {
     int value = 0;
 
@@ -186,6 +205,135 @@ struct Derived : Base<T> {
 
     T doubled() const {
         return this->value * T{2};
+    }
+};
+
+template <typename Key, typename Value>
+struct IndexedBase {
+    Value values[4]{};
+
+    Value& operator[](const Key& key) {
+        return values[static_cast<unsigned>(key) % 4];
+    }
+
+    const Value& operator[](const Key& key) const {
+        return values[static_cast<unsigned>(key) % 4];
+    }
+};
+
+template <typename Key, typename Value>
+struct IndexedDerived : IndexedBase<Key, Value> {
+    using IndexedBase<Key, Value>::operator[];
+};
+
+struct DefaultTemplateMethod {
+    template <typename Input, typename Result = Input>
+    Result convert(Input value) const {
+        return static_cast<Result>(value);
+    }
+
+    template <typename Input, typename... Extra>
+    int count(Input, Extra...) const {
+        return 1 + sizeof...(Extra);
+    }
+};
+
+template <bool>
+struct DefaultedKeyArgument {
+    template <typename Candidate, typename>
+    using type = Candidate;
+};
+
+template <typename Key, typename Mapped>
+struct DefaultedAliasMethod {
+    using key_type = Key;
+    using mapped_type = Mapped;
+    using key_argument = DefaultedKeyArgument<false>;
+
+    template <typename Candidate>
+    using key_arg = key_argument::type<Candidate, key_type>;
+
+    template <typename Candidate = key_type, typename Value = mapped_type>
+    int insert_or_assign(key_arg<Candidate>&&, Value&& value) {
+        return static_cast<int>(value);
+    }
+};
+
+namespace parameter_scope {
+
+struct Value {};
+
+template <typename Value>
+using Identity = Value;
+
+} // namespace parameter_scope
+
+template <typename T, typename = void>
+struct ForwardTraits;
+
+template <typename T>
+struct ForwardTraits<T, std::enable_if_t<std::is_integral_v<T>>> {
+    using value_type = T;
+};
+
+struct ForwardDefault {
+    using value_type = typename ForwardTraits<int>::value_type;
+
+    value_type get() const {
+        return 42;
+    }
+};
+
+template <typename T>
+struct DefaultBox {
+    using value_type = T;
+};
+
+template <typename T, typename = void>
+struct OmittedDefaultTraits;
+
+template <typename T>
+struct OmittedDefaultTraits<DefaultBox<T>> {
+    using value_type = T;
+};
+
+struct OmittedDefaultUse {
+    using value_type = typename OmittedDefaultTraits<DefaultBox<int>>::value_type;
+
+    value_type get() const {
+        return 7;
+    }
+};
+
+template <typename T>
+struct HasSizeType {
+    static constexpr bool value = false;
+};
+
+struct SizeAwareAllocator {
+    using size_type = unsigned long;
+};
+
+template <>
+struct HasSizeType<SizeAwareAllocator> {
+    static constexpr bool value = true;
+};
+
+template <typename Alloc, typename Difference, bool = HasSizeType<Alloc>::value>
+struct DependentDefaultSize {
+    using type = std::make_unsigned_t<Difference>;
+};
+
+template <typename Alloc, typename Difference>
+struct DependentDefaultSize<Alloc, Difference, true> {
+    using type = typename Alloc::size_type;
+};
+
+struct DependentDefaultUse {
+    using size_type = typename DependentDefaultSize<SizeAwareAllocator, long>::type;
+
+    size_type size() const {
+        return 6;
     }
 };
 

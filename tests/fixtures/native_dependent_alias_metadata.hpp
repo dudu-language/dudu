@@ -43,10 +43,64 @@ struct DefaultedEnvelope {
     }
 };
 
+template <typename Allocator>
+struct RebindTraits {
+    template <typename Value>
+    using rebind = Wrapper<Value>;
+};
+
+template <typename Value, typename Allocator>
+struct NestedAliasOwner {
+    using traits = RebindTraits<Allocator>;
+    using result = typename traits::template rebind<Value>;
+};
+
 template <typename Selected, typename Left>
 using AliasCarrier = Envelope<Left, Selected, 4>;
 
 template <typename Payload, typename Holder = Wrapper<Payload>>
 using DefaultedAlias = Holder;
+
+template <typename Payload, typename Tag>
+struct AliasByShape {
+    using base_type = Wrapper<Payload>;
+    using result = typename AliasByShape::base_type;
+
+    result take(result value) const {
+        return value;
+    }
+};
+
+template <typename Payload>
+struct AliasByShape<Wrapper<Payload>, void> {
+    using base_type = Envelope<int, Payload, 1>;
+    using result = typename AliasByShape::base_type;
+
+    result take(result value) const {
+        return value;
+    }
+};
+
+template <bool Value>
+struct BoolConstant {
+    static constexpr bool value = Value;
+};
+
+template <bool Unique>
+struct MapTraits {
+    using unique_keys = BoolConstant<Unique>;
+};
+
+template <typename Value, typename Traits,
+          bool Unique = Traits::unique_keys::value>
+struct TraitDefaultBase {};
+
+template <typename Value, typename Traits>
+struct TraitDefaultBase<Value, Traits, true> {
+    using mapped_type = Value;
+};
+
+template <typename Value, typename Traits>
+struct TraitDefaultOwner : TraitDefaultBase<Value, Traits> {};
 
 } // namespace depmeta

@@ -12,13 +12,12 @@ namespace {
 
 TypeRef normalize_native_type_ref(TypeRef type);
 
-TypeRef
-structure_dependent_associated_templates(TypeRef type,
-                                         const std::set<std::string>& dependent_type_names) {
+TypeRef structure_dependent_associated_paths(
+    TypeRef type, const std::set<std::string>& dependent_type_names) {
     for (TypeRef& child : type.children) {
-        child = structure_dependent_associated_templates(std::move(child), dependent_type_names);
+        child = structure_dependent_associated_paths(std::move(child), dependent_type_names);
     }
-    if (type.kind != TypeKind::Template) {
+    if (type.kind != TypeKind::Qualified && type.kind != TypeKind::Template) {
         return type;
     }
     const size_t dot = type.name.find(".");
@@ -40,16 +39,19 @@ structure_dependent_associated_templates(TypeRef type,
         next = type.name.find(".", start);
     }
 
-    TypeRef associated_template;
-    associated_template.kind = TypeKind::AssociatedTemplate;
-    associated_template.name = type.name.substr(start);
-    associated_template.children.push_back(std::move(owner));
-    associated_template.children.insert(associated_template.children.end(),
-                                        std::make_move_iterator(type.children.begin()),
-                                        std::make_move_iterator(type.children.end()));
-    associated_template.location = type.location;
-    associated_template.range = type.range;
-    return associated_template;
+    TypeRef associated;
+    associated.kind = type.kind == TypeKind::Template ? TypeKind::AssociatedTemplate
+                                                      : TypeKind::Associated;
+    associated.name = type.name.substr(start);
+    associated.children.push_back(std::move(owner));
+    if (type.kind == TypeKind::Template) {
+        associated.children.insert(associated.children.end(),
+                                   std::make_move_iterator(type.children.begin()),
+                                   std::make_move_iterator(type.children.end()));
+    }
+    associated.location = type.location;
+    associated.range = type.range;
+    return associated;
 }
 
 bool childless_native_wrapper(const TypeRef& type) {
@@ -66,8 +68,9 @@ bool native_dot_marker_type(const TypeRef& type) {
 }
 
 bool native_type_transform_name(std::string_view name) {
-    return name == "__remove_cv" || name == "__remove_reference" || name == "__remove_cvref" ||
-           name == "__underlying_type";
+    return name == "__remove_const" || name == "__remove_volatile" ||
+           name == "__remove_cv" || name == "__remove_reference" ||
+           name == "__remove_cvref" || name == "__underlying_type";
 }
 
 TypeRef normalize_native_type_ref(TypeRef type) {
@@ -150,7 +153,7 @@ TypeRef parse_native_type_text(std::string text, const SourceLocation& location,
         }
         names.insert(std::move(name));
     }
-    return structure_dependent_associated_templates(
+    return structure_dependent_associated_paths(
         parse_native_type_text(std::move(text), location), names);
 }
 

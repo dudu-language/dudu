@@ -9,6 +9,7 @@
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
+#include "dudu/sema/sema_native_methods.hpp"
 
 #include <algorithm>
 #include <map>
@@ -50,6 +51,14 @@ TypeRef instantiate_method_type_ref(const Symbols& symbols, const ClassDecl& kla
     TypeRef out = substitute_generic_type_ref(method.generic_params, method_args, type);
     out = substitute_type_ref(
         out, {{"Self", self_type_ref_for_method(klass, receiver_args, type.location)}});
+    if (klass.native_declaration) {
+        out = structure_owner_alias_templates(
+            std::move(out), klass,
+            self_type_ref_for_method(klass, receiver_args, type.location));
+    }
+    if (klass.native_declaration && !method.generic_params.empty() && method_args.empty()) {
+        return substitute_receiver_template_type(out, klass, receiver_args);
+    }
     return substitute_receiver_template_type(out, symbols, klass, receiver_args);
 }
 
@@ -65,6 +74,10 @@ FunctionSignature instantiate_enum_method_signature(const EnumDecl& en, const Fu
     FunctionSignature signature;
     signature.template_params = method.generic_params;
     signature.template_param_is_value = method.generic_param_is_value;
+    for (const TypeRef& default_arg : method.generic_default_args) {
+        signature.template_default_args.push_back(
+            instantiate_enum_method_type_ref(en, method, default_arg, method_args));
+    }
     if (has_type_ref(method.receiver_type_ref)) {
         signature.receiver_type_ref =
             instantiate_enum_method_type_ref(en, method, method.receiver_type_ref, method_args);
@@ -72,6 +85,9 @@ FunctionSignature instantiate_enum_method_signature(const EnumDecl& en, const Fu
     signature.deleted = method.deleted;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    if (method.min_params >= 0) {
+        signature.min_params = std::max(0, method.min_params - static_cast<int>(first_param));
+    }
     std::vector<TypeRef> params;
     for (size_t i = first_param; i < method.params.size(); ++i) {
         params.push_back(
@@ -119,23 +135,34 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
     if (klass == nullptr) {
         return false;
     }
+    const NativeMethodOwner native_owner =
+        native_method_owner_for_type(symbols, templated_receiver, *klass);
+    const ClassDecl& method_owner = *native_owner.declaration;
     bool saw_name = false;
     size_t expected_type_args = 0;
-    for (const FunctionDecl& method : klass->methods) {
+    for (const FunctionDecl& method : method_owner.methods) {
         if (method.name != lookup_name) {
             continue;
         }
         saw_name = true;
         expected_type_args = generic_min_arity(method.generic_params);
-        if (!generic_arity_matches(method.generic_params, method_args.size())) {
+        if (!(klass->native_declaration && method_args.empty()) &&
+            !generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
-        signature =
-            instantiate_method_signature(symbols, *klass, method, receiver_args, method_args);
+        signature = native_owner.specialized
+                        ? instantiate_native_specialized_method_signature(
+                              symbols, native_owner, method, method_args)
+                        : instantiate_method_signature(symbols, *klass, method, receiver_args,
+                                                       method_args);
         return true;
     }
-    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
+    const std::vector<TypeRef> owner_bases = native_method_owner_base_types(native_owner);
+    for (size_t i = 0; i < owner_bases.size(); ++i) {
+        const TypeRef base_type = native_owner.specialized
+                                      ? owner_bases[i]
+                                      : instantiated_base_type_ref(
+                                            *klass, receiver_args, klass->base_class_refs[i]);
         if (method_signature_for_type_impl(symbols, base_type, lookup_name, method_args,
                                            display_name, signature, nullptr)) {
             return true;
@@ -172,18 +199,29 @@ method_signatures_for_type_impl(const Symbols& symbols, const TypeRef& receiver_
     if (klass == nullptr) {
         return out;
     }
-    for (const FunctionDecl& method : klass->methods) {
+    const NativeMethodOwner native_owner =
+        native_method_owner_for_type(symbols, templated_receiver, *klass);
+    const ClassDecl& method_owner = *native_owner.declaration;
+    for (const FunctionDecl& method : method_owner.methods) {
         if (method.name != lookup_name) {
             continue;
         }
-        if (!generic_arity_matches(method.generic_params, method_args.size())) {
+        if (!(klass->native_declaration && method_args.empty()) &&
+            !generic_arity_matches(method.generic_params, method_args.size())) {
             continue;
         }
-        out.push_back(
-            instantiate_method_signature(symbols, *klass, method, receiver_args, method_args));
+        out.push_back(native_owner.specialized
+                          ? instantiate_native_specialized_method_signature(
+                                symbols, native_owner, method, method_args)
+                          : instantiate_method_signature(symbols, *klass, method, receiver_args,
+                                                         method_args));
     }
-    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        const TypeRef base_type = instantiated_base_type_ref(*klass, receiver_args, base_decl);
+    const std::vector<TypeRef> owner_bases = native_method_owner_base_types(native_owner);
+    for (size_t i = 0; i < owner_bases.size(); ++i) {
+        const TypeRef base_type = native_owner.specialized
+                                      ? owner_bases[i]
+                                      : instantiated_base_type_ref(
+                                            *klass, receiver_args, klass->base_class_refs[i]);
         std::vector<FunctionSignature> base_signatures =
             method_signatures_for_type_impl(symbols, base_type, lookup_name, method_args);
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
@@ -303,21 +341,36 @@ FunctionSignature instantiate_method_signature(const Symbols& symbols, const Cla
                                                const FunctionDecl& method,
                                                const std::vector<TypeRef>& receiver_args,
                                                const std::vector<TypeRef>& method_args) {
+    const std::vector<TypeRef> concrete_receiver_args = generic_args_with_defaults(
+        klass.generic_params, klass.generic_default_args, receiver_args);
     FunctionSignature signature;
     signature.template_params = method.generic_params;
     signature.template_param_is_value = method.generic_param_is_value;
+    for (const TypeRef& default_arg : method.generic_default_args) {
+        TypeRef instantiated = instantiate_method_type_ref(
+            symbols, klass, method, default_arg, concrete_receiver_args, method_args);
+        if (klass.native_declaration) {
+            instantiated = resolve_associated_type_ref(symbols, std::move(instantiated));
+        }
+        signature.template_default_args.push_back(std::move(instantiated));
+    }
     if (has_type_ref(method.receiver_type_ref)) {
         signature.receiver_type_ref = instantiate_method_type_ref(
-            symbols, klass, method, method.receiver_type_ref, receiver_args, method_args);
+            symbols, klass, method, method.receiver_type_ref, concrete_receiver_args,
+            method_args);
     }
     signature.deleted = method.deleted;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    if (method.min_params >= 0) {
+        signature.min_params = std::max(0, method.min_params - static_cast<int>(first_param));
+    }
     std::vector<TypeRef> param_types;
     param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
         TypeRef param_type = instantiate_method_type_ref(
-            symbols, klass, method, method.params[i].type_ref, receiver_args, method_args);
+            symbols, klass, method, method.params[i].type_ref, concrete_receiver_args,
+            method_args);
         if (method.params[i].variadic &&
             generic_pack_param_named(method.generic_params,
                                      type_ref_head_name(method.params[i].type_ref))) {
@@ -336,7 +389,7 @@ FunctionSignature instantiate_method_signature(const Symbols& symbols, const Cla
     set_signature_return_type(
         signature, function_has_return_type(method)
                        ? instantiate_method_type_ref(symbols, klass, method, method.return_type_ref,
-                                                     receiver_args, method_args)
+                                                     concrete_receiver_args, method_args)
                        : void_type_ref(method.location));
     return signature;
 }

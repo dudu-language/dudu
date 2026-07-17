@@ -12,6 +12,7 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/native/native_header_types.hpp"
+#include "dudu/native/native_header_ast_parse_internal.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
@@ -61,9 +62,22 @@ void test_native_header_types_split_cpp_templates() {
            "std.pointer_traits[_Ptr].rebind[const[_Tp]]");
     assert(dudu::dudu_type("int (*)(float, const char *)") == "fn(f32, cstr) -> i32");
     assert(dudu::dudu_type("void (*)(void)") == "fn() -> void");
+    assert(dudu::dudu_type("std::size_t") == "usize");
+    assert(dudu::dudu_type("std::ptrdiff_t") == "isize");
+    assert(dudu::dudu_type("__remove_const(const _Tp)") == "__remove_const[const[_Tp]]");
+    assert(dudu::dudu_type("__remove_volatile(_Tp)") == "__remove_volatile[_Tp]");
     assert(dudu::signature_params("int (void)").empty());
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
+    assert(dudu::signature_params("decltype(auto) (const entity_type, Args &&...)") ==
+           std::vector<std::string>({"const[entity_type]", "&&Args..."}));
+    assert(dudu::signature_return_type("decltype(auto) (const entity_type, Args &&...)") ==
+           "auto");
+    const std::string nested_noexcept =
+        "auto (_Tp *, _Args &&...) noexcept(noexcept(new _Tp())) -> decltype(new _Tp())";
+    assert(dudu::signature_params(nested_noexcept) ==
+           std::vector<std::string>({"*_Tp", "&&_Args..."}));
+    assert(dudu::signature_return_type(nested_noexcept) == "auto");
 
     const dudu::TypeRef associated = dudu::parse_type_text("meta.Result[T].value_type");
     assert(associated.kind == dudu::TypeKind::Associated);
@@ -93,6 +107,16 @@ void test_native_header_types_split_cpp_templates() {
     assert(nested_const.children[1].kind == dudu::TypeKind::Const);
     assert(dudu::lower_cpp_type(nested_const) ==
            "typename std::pointer_traits<Ptr>::template rebind<const T>");
+
+    const dudu::TypeRef dependent_value =
+        dudu::native_ast_parse::parse_native_type_text(
+            "Traits.unique_keys.value", {}, {"Traits"});
+    assert(dependent_value.kind == dudu::TypeKind::Associated);
+    assert(dependent_value.name == "value");
+    assert(dependent_value.children.size() == 1);
+    assert(dependent_value.children.front().kind == dudu::TypeKind::Associated);
+    assert(dependent_value.children.front().name == "unique_keys");
+    assert(dudu::type_ref_text(dependent_value) == "Traits.unique_keys.value");
 
 }
 
@@ -177,6 +201,17 @@ void test_bound_native_template_substitution_is_per_field() {
     assert(return_type.children.size() == 2);
     assert(return_type.children[0].name == "i32");
     assert(return_type.children[1].name == "f32");
+}
+
+void test_template_value_expression_stays_one_argument() {
+    const dudu::TypeRef type = dudu::parse_type_text(
+        "std.conditional_t[Policy == deletion_policy.in_place, Fast, Slow]");
+    assert(type.kind == dudu::TypeKind::Template);
+    assert(type.children.size() == 3);
+    assert(type.children[0].kind == dudu::TypeKind::Value);
+    assert(type.children[0].value == "Policy == deletion_policy.in_place");
+    assert(type.children[1].name == "Fast");
+    assert(type.children[2].name == "Slow");
 }
 
 void test_native_template_match_infers_nested_type_pack() {
@@ -306,6 +341,29 @@ void test_explicit_native_template_keeps_unbound_pack_params() {
     assert(dudu::type_ref_text(dudu::signature_return_type_ref(substituted)) == "Box[Node]");
 }
 
+void test_native_match_finalizes_unbound_packs_as_empty() {
+    dudu::Symbols symbols;
+    dudu::FunctionSignature signature;
+    signature.template_params = {"T", "Other...", "Exclude..."};
+    signature.template_param_is_value = {false, false, false};
+    signature.min_params = 0;
+    dudu::set_signature_return_type(
+        signature,
+        dudu::parse_type_text("View[Get[T, Other...], Without[Exclude...]]"));
+    symbols.native_function_signatures["make_view"] = {signature};
+
+    dudu::FunctionScope scope(symbols);
+    const std::optional<dudu::FunctionSignature> matched = dudu::match_native_signature(
+        scope, "make_view", {dudu::parse_type_text("Position")}, {}, nullptr);
+    assert(matched.has_value());
+    const std::string result =
+        dudu::type_ref_text(dudu::signature_return_type_ref(*matched));
+    assert(result.find("Position") != std::string::npos);
+    assert(result.find("Other") == std::string::npos);
+    assert(result.find("Exclude") == std::string::npos);
+    assert(result.find("...") == std::string::npos);
+}
+
 void test_native_reference_and_deleted_overload_ranking() {
     dudu::Symbols symbols;
     symbols.types.insert("Widget");
@@ -382,11 +440,13 @@ int main() {
         test_native_template_binding_resolves_alias_type_refs();
         test_bound_native_template_pack_substitution_uses_type_refs();
         test_bound_native_template_substitution_is_per_field();
+        test_template_value_expression_stays_one_argument();
         test_native_template_match_infers_nested_type_pack();
         test_native_variadic_bare_pack_uses_type_ref_shape();
         test_native_variadic_pack_keeps_leading_template_binding();
         test_explicit_native_template_value_args_use_type_refs();
         test_explicit_native_template_keeps_unbound_pack_params();
+        test_native_match_finalizes_unbound_packs_as_empty();
         test_native_reference_and_deleted_overload_ranking();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

@@ -39,6 +39,17 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen,
         }
         throw CompileError(value.location, std::move(message));
     }
+    if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+        if (!collision) {
+            merge_native_type_declaration(existing->second, value);
+            for (NativeTypeDecl& declaration : out) {
+                if (declaration.name == value.name) {
+                    merge_native_type_declaration(declaration, value);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 template <typename T>
