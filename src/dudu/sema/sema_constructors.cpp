@@ -1,5 +1,6 @@
 #include "dudu/sema/sema_constructors.hpp"
 
+#include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_common.hpp"
@@ -17,8 +18,42 @@ namespace {
     throw CompileError(location, message, "dudu.sema.error");
 }
 
+bool array_elements_assignable(const FunctionScope& scope, const TypeRef& expected,
+                               const Expr& value) {
+    if (value.kind == ExprKind::ListLiteral) {
+        return std::ranges::all_of(value.children, [&](const Expr& child) {
+            return array_elements_assignable(scope, expected, child);
+        });
+    }
+    const TypeRef got = infer_expr_type_ast(scope, value, nullptr);
+    return type_assignment_allowed(scope.symbols, expected, got) ||
+           can_assign_ast(scope, expected, value, got);
+}
+
+bool fixed_array_literal_assignable(const FunctionScope& scope, const TypeRef& expected,
+                                    const Expr& value) {
+    if (expected.kind != TypeKind::FixedArray || value.kind != ExprKind::ListLiteral ||
+        expected.children.empty()) {
+        return false;
+    }
+    const ArrayShapeInference actual =
+        infer_array_literal_shape_type(expected.children.front(), value);
+    if (actual.status != ArrayShapeStatus::Inferred) {
+        return false;
+    }
+    const std::vector<size_t> shape = explicit_array_shape(expected);
+    if (!shape.empty() && shape != actual.shape) {
+        return false;
+    }
+    const TypeRef element = explicit_array_element_type_ref(expected);
+    return has_type_ref(element) && array_elements_assignable(scope, element, value);
+}
+
 bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorParam& expected,
                                 const Expr& value, const TypeRef& got_ref) {
+    if (fixed_array_literal_assignable(scope, expected.type_ref, value)) {
+        return true;
+    }
     if (has_type_ref(expected.type_ref) && has_type_ref(got_ref) &&
         type_assignment_allowed(scope.symbols, expected.type_ref, got_ref)) {
         return true;

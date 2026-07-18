@@ -397,6 +397,43 @@ void test_typed_for_emission() {
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
 }
 
+void test_read_only_dict_iteration_emits_key_binding() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "def keys(values: &const[dict[str, i32]]) -> list[str]:\n"
+        "    result: list[str] = []\n"
+        "    for key in values:\n"
+        "        result.append(key)\n"
+        "    return result\n",
+        "dict_iteration_codegen.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto&& [key, dudu_internal_discard_") != std::string::npos);
+    assert(cpp.find("for (auto&& key : values)") == std::string::npos);
+}
+
+void test_named_aggregate_emission_orders_fields_and_lowers_fixed_arrays() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "class MatrixOwner:\n"
+        "    first: i32\n"
+        "    matrix: array[i32][2, 2]\n"
+        "    last: i32\n"
+        "\n"
+        "def make_owner() -> MatrixOwner:\n"
+        "    return MatrixOwner(last=9, matrix=[[1, 2], [3, 4]], first=7)\n",
+        "aggregate_fixed_array_codegen.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    const size_t first = cpp.find(".first = 7");
+    const size_t matrix = cpp.find(
+        ".matrix = std::array<std::array<int32_t, 2>, 2>{"
+        "std::array<int32_t, 2>{1, 2}, std::array<int32_t, 2>{3, 4}}");
+    const size_t last = cpp.find(".last = 9");
+    assert(first != std::string::npos);
+    assert(matrix != std::string::npos);
+    assert(last != std::string::npos);
+    assert(first < matrix && matrix < last);
+}
+
 void test_class_field_defaults_and_static_fields() {
     const dudu::ModuleAst module = dudu::parse_source("class Counter:\n"
                                                       "    value: i32 = 7\n"
@@ -441,6 +478,8 @@ int main() {
         test_inherited_method_identity_resolves_type_aliases();
         test_bare_void_return();
         test_typed_for_emission();
+        test_read_only_dict_iteration_emits_key_binding();
+        test_named_aggregate_emission_orders_fields_and_lowers_fixed_arrays();
         test_class_field_defaults_and_static_fields();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

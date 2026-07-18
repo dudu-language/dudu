@@ -3,6 +3,7 @@
 #include "dudu/codegen/cpp_emit_enum_methods.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/codegen/cpp_stmt_emit_support.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
@@ -250,6 +251,41 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
     if (symbols != nullptr) {
         if (const auto found = symbols->classes.find(callee); found != symbols->classes.end())
             target_class = found->second;
+    }
+    if (target_class != nullptr && class_uses_aggregate_initialization(*target_class)) {
+        std::map<std::string, const Expr*> values;
+        size_t positional = 0;
+        for (const Expr& arg : expr.children) {
+            if (arg.kind == ExprKind::NamedArg && arg.children.size() == 1) {
+                values[arg.name] = &arg.children.front();
+            } else if (positional < target_class->fields.size()) {
+                values[target_class->fields[positional].name] = &arg;
+                ++positional;
+            }
+        }
+        bool emitted = false;
+        const std::map<std::string, TypeRef> function_returns;
+        for (const FieldDecl& field : target_class->fields) {
+            const auto value = values.find(field.name);
+            if (value == values.end()) {
+                continue;
+            }
+            if (emitted) {
+                out << ", ";
+            }
+            out << "." << emitted_member_name(target_class->name, field.name, options) << " = ";
+            if (is_fixed_array_type(field.type_ref) && value->second->kind == ExprKind::ListLiteral) {
+                out << lower_fixed_array_literal_as_type_ref(
+                    field.type_ref, *value->second, aliases, locals, local_type_refs,
+                    function_returns, symbols, options);
+            } else {
+                out << lower_expr_as_type_ref(field.type_ref, *value->second, aliases, locals,
+                                              local_type_refs, function_returns, symbols, options);
+            }
+            emitted = true;
+        }
+        out << "}";
+        return out.str();
     }
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {

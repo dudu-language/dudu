@@ -27,12 +27,8 @@ std::optional<TypeRef> fixed_array_element_type_ref(const TypeRef& type) {
     if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
     }
-    const TypeRef& storage = type.children.front();
-    if (storage.kind == TypeKind::Template && storage.name == "array" &&
-        !storage.children.empty()) {
-        return storage.children.front();
-    }
-    return storage;
+    const TypeRef child = fixed_array_child_type_ref(type);
+    return has_type_ref(child) ? std::optional<TypeRef>{child} : std::nullopt;
 }
 
 std::optional<TypeRef> single_template_child_type_ref(const TypeRef& type, std::string_view name) {
@@ -40,6 +36,16 @@ std::optional<TypeRef> single_template_child_type_ref(const TypeRef& type, std::
         return single_template_child_type_ref(type.children.front(), name);
     }
     if (type.kind == TypeKind::Template && type.name == name && type.children.size() == 1) {
+        return type.children.front();
+    }
+    return std::nullopt;
+}
+
+std::optional<TypeRef> dict_key_type_ref(const TypeRef& type) {
+    if (type.kind == TypeKind::Shaped && !type.children.empty()) {
+        return dict_key_type_ref(type.children.front());
+    }
+    if (type.kind == TypeKind::Template && type.name == "dict" && type.children.size() == 2) {
         return type.children.front();
     }
     return std::nullopt;
@@ -63,6 +69,9 @@ std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type) {
     }
     if (const auto element = single_template_child_type_ref(type, "array_view")) {
         return *element;
+    }
+    if (const auto key = dict_key_type_ref(type)) {
+        return *key;
     }
     if (const auto element = fixed_array_element_type_ref(type)) {
         return *element;

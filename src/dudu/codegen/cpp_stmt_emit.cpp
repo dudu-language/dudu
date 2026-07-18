@@ -22,6 +22,7 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_index.hpp"
 #include "dudu/sema/sema_methods.hpp"
 
 #include <algorithm>
@@ -66,6 +67,17 @@ TypeRef inferred_range_binding_type(const Expr& range_expr,
         return inferred;
     }
     return named_type_ref("i32", range_expr.location);
+}
+
+bool is_builtin_dict_type(const TypeRef& type) {
+    if ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+        type.children.size() == 1) {
+        return is_builtin_dict_type(type.children.front());
+    }
+    if (type.kind == TypeKind::Shaped && !type.children.empty()) {
+        return is_builtin_dict_type(type.children.front());
+    }
+    return type.kind == TypeKind::Template && type.name == "dict" && type.children.size() == 2;
 }
 
 void emit_source_comment(std::ostringstream& out, const Stmt& stmt, int depth) {
@@ -436,6 +448,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::For && has_stmt_iterable_expr(stmt)) {
         const bool discard = is_discard_binding(stmt.name);
         const std::string binding = discard ? locals.bind_discard() : stmt.name;
+        const TypeRef iterable_type = infer_emitted_local_type_ref(
+            stmt_iterable_expr(stmt), local_type_refs, function_returns, symbols);
         const std::string range = lower_emitted_expr(stmt_iterable_expr(stmt), aliases, locals,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
@@ -446,6 +460,10 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             binding_type = lower_cpp_type(stmt_type_ref(stmt), aliases, options);
             if (!discard) {
                 local_type_refs[stmt.name] = stmt_type_ref(stmt);
+            }
+        } else if (!discard && symbols != nullptr) {
+            if (const auto inferred = iterable_type_ref_from_type(*symbols, iterable_type)) {
+                local_type_refs[stmt.name] = *inferred;
             }
         }
         if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
@@ -477,6 +495,18 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             }
             out << binding_type << ' ' << binding << " = " << start << "; " << binding << " < "
                 << end << "; " << binding << " += " << step << ") {\n";
+            emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs,
+                       return_type_ref, function_returns, symbols, options);
+            out << indent(depth) << "}\n";
+            return;
+        }
+        if (is_builtin_dict_type(iterable_type)) {
+            const std::string ignored = locals.bind_discard();
+            out << indent(depth) << "for (";
+            if (discard) {
+                out << "[[maybe_unused]] ";
+            }
+            out << "auto&& [" << binding << ", " << ignored << "] : " << range << ") {\n";
             emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs,
                        return_type_ref, function_returns, symbols, options);
             out << indent(depth) << "}\n";

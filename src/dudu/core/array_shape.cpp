@@ -203,4 +203,31 @@ TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {
     return storage.children.front();
 }
 
+TypeRef fixed_array_child_type_ref(const TypeRef& declared_type) {
+    const std::vector<TypeRef> shape = explicit_array_shape_refs(declared_type);
+    const TypeRef element = explicit_array_element_type_ref(declared_type);
+    if (shape.size() <= 1 || !has_type_ref(element)) {
+        return element;
+    }
+    TypeRef child;
+    child.kind = TypeKind::FixedArray;
+    child.location = declared_type.location;
+    child.range = declared_type.range;
+    TypeRef storage;
+    storage.kind = TypeKind::Template;
+    storage.name = "array";
+    storage.children.push_back(element);
+    storage.location = declared_type.location;
+    storage.range = declared_type.range;
+    child.children.push_back(std::move(storage));
+    for (size_t index = 1; index < shape.size(); ++index) {
+        child.children.push_back(shape[index]);
+        if (index > 1) {
+            child.value += ", ";
+        }
+        child.value += substitute_type_ref_text(shape[index], {});
+    }
+    return child;
+}
+
 } // namespace dudu

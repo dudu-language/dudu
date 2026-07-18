@@ -4,6 +4,13 @@
 
 ### Added
 
+- Dictionary iteration now follows Python semantics and yields keys, including
+  through reference and const wrappers, without materializing a key list.
+- Multidimensional fixed-array iteration now yields the correctly shaped child
+  array. Nested fixed-array literals are accepted in aggregate constructors and
+  emitted with concrete nested `std::array` types.
+- Named aggregate construction now emits fields in declaration order, allowing
+  source arguments to use any valid named-argument order under C++20.
 - Macro expansions can declare hygienic runtime module dependencies with
   `Expansion.require_module`.
 - Macro helper dependency closures now remain in the macro worker instead of

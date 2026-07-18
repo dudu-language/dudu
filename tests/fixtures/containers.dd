@@ -4,6 +4,9 @@ def main() -> i32:
     seen = {"bob", "ada"}
     values.push_back(12)
     values.push_back(30)
+    score_total = 0
+    for name in scores:
+        score_total += scores[name]
     if seen.contains("bob"):
-        return values[0] + values[1] + scores["bob"] + scores["ada"] - 42
+        return values[0] + values[1] + score_total - 42
     return 1

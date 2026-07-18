@@ -448,6 +448,34 @@ void test_cpp_range_inference_uses_begin_and_dereference() {
     assert(dudu::type_ref_text(*element) == "i32");
 }
 
+void test_dict_iteration_infers_key_type() {
+    const dudu::TypeRef dict_type = dudu::parse_type_text("dict[str, i32]");
+    const std::optional<dudu::TypeRef> key = dudu::iterable_type_ref_from_type(dict_type);
+    assert(key);
+    assert(dudu::type_ref_text(*key) == "str");
+
+    const dudu::ModuleAst module = dudu::parse_source(
+        "def keys(values: &const[dict[str, i32]]) -> list[str]:\n"
+        "    result: list[str] = []\n"
+        "    for key in values:\n"
+        "        result.append(key)\n"
+        "    return result\n",
+        "dict_iteration.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_fixed_array_literal_constructor_argument() {
+    const dudu::ModuleAst module = dudu::parse_source(
+        "class MatrixOwner:\n"
+        "    matrix: array[i32][2, 2]\n"
+        "\n"
+        "def main() -> i32:\n"
+        "    owner = MatrixOwner(matrix=[[1, 2], [3, 4]])\n"
+        "    return owner.matrix[1, 0]\n",
+        "fixed_array_constructor.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 } // namespace
 
 int main() {
@@ -463,6 +491,8 @@ int main() {
         test_tuple_expression_inference_uses_type_ast();
         test_result_constructor_inference_uses_type_ast();
         test_cpp_range_inference_uses_begin_and_dereference();
+        test_dict_iteration_infers_key_type();
+        test_fixed_array_literal_constructor_argument();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 1;

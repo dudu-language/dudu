@@ -104,6 +104,17 @@ for number in numbers:
 answer = first(numbers)
 ```
 
+As in Python, iterating a dictionary yields its keys:
+
+```python
+scores = {"ada": 20, "bob": 22}
+for name in scores:                 # name: str
+    print(name, scores[name])
+```
+
+The generated C++ iterates the underlying map entries directly. It does not
+materialize a separate key collection.
+
 Hover and inlay hints report complete types such as `list[i32]` and
 `dict[str, list[f32]]`. Generated C++ declares the corresponding concrete
 standard container rather than relying on C++ initializer-list inference.

@@ -87,42 +87,6 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
     return lower_emitted_expr(expr, aliases, locals, local_type_refs, symbols, options);
 }
 
-namespace {
-
-TypeRef fixed_array_child_type_ref(const TypeRef& type) {
-    const std::vector<std::string> shape = explicit_array_shape_values(type);
-    const TypeRef element = explicit_array_element_type_ref(type);
-    if (shape.size() <= 1 || !has_type_ref(element)) {
-        return element;
-    }
-    TypeRef child;
-    child.kind = TypeKind::FixedArray;
-    for (size_t i = 1; i < shape.size(); ++i) {
-        if (i > 1) {
-            child.value += ", ";
-        }
-        child.value += shape[i];
-    }
-    TypeRef storage;
-    storage.kind = TypeKind::Template;
-    storage.name = "array";
-    storage.children.push_back(element);
-    child.children.push_back(std::move(storage));
-    for (size_t i = 1; i < shape.size(); ++i) {
-        TypeRef dim;
-        dim.kind = TypeKind::Value;
-        dim.value = shape[i];
-        dim.location = type.location;
-        dim.range = type.range;
-        child.children.push_back(std::move(dim));
-    }
-    child.location = type.location;
-    child.range = type.range;
-    return child;
-}
-
-} // namespace
-
 std::string lower_fixed_array_literal_as_type_ref(
     const TypeRef& expected_type, const Expr& expr, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
