@@ -224,6 +224,10 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
+    if (template_head_is(templated_ref, {"variant"}) && method_name == "index") {
+        set_return_type(signature, "usize");
+        return true;
+    }
     if (unary_type_child_ref(templated_ref, TypeKind::Atomic)) {
         const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "load") {

@@ -106,6 +106,7 @@ compile_and_expect generic_function_overloads 42
 compile_and_expect generic_instantiated_static_member 42
 compile_and_expect generic_type_constructor 42
 compile_and_expect generic_default_constructor 42
+compile_and_expect generic_variant_pack 42
 compile_and_expect class_method_overloads 42
 compile_path_and_expect project_function_overloads tests/fixtures/project_function_overloads/main.dd 42
 compile_and_expect shaped_generic_method_return 42
