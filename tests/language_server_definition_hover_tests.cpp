@@ -277,6 +277,42 @@ void test_lsp_hover_uses_ast_doc_comments() {
     assert(hover.find("Keeps hover docs on the AST.") != std::string::npos);
 }
 
+void test_lsp_hover_does_not_guess_between_unqualified_members() {
+    const dudu::Document doc{
+        .uri = "file:///ambiguous_member_hover.dd",
+        .path = "ambiguous_member_hover.dd",
+        .text = "class Left:\n"
+                "    # Left value docs.\n"
+                "    value: i32\n"
+                "\n"
+                "class Right:\n"
+                "    # Right value docs.\n"
+                "    value: i32\n"};
+
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":6}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("Left value docs.") == std::string::npos);
+    assert(hover.find("Right value docs.") != std::string::npos);
+}
+
+void test_lsp_does_not_resolve_bare_names_to_class_members() {
+    const dudu::Document doc{
+        .uri = "file:///bare_member_hover.dd",
+        .path = "bare_member_hover.dd",
+        .text = "class Holder:\n"
+                "    # Member-only docs.\n"
+                "    value: i32\n"
+                "\n"
+                "def main() -> i32:\n"
+                "    return value\n"};
+
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":12}}").parse();
+    assert(dudu::hover_json(doc, "", &params) == "null");
+    assert(dudu::definition_json(doc, &params) == "null");
+}
+
 void test_lsp_hover_uses_constant_and_alias_docs() {
     const dudu::Document doc{.uri = "file:///constant_alias_docs.dd",
                              .path = "constant_alias_docs.dd",
@@ -431,6 +467,8 @@ int main() {
         test_lsp_hover_infers_local_from_native_call();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_hover_uses_ast_doc_comments();
+        test_lsp_hover_does_not_guess_between_unqualified_members();
+        test_lsp_does_not_resolve_bare_names_to_class_members();
         test_lsp_hover_uses_constant_and_alias_docs();
         test_lsp_hover_uses_imported_ast_doc_comments();
         test_lsp_hover_uses_imported_enum_value_identity();

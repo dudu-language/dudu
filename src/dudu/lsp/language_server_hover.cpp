@@ -469,10 +469,6 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
             }
             return symbol_hover_json(*exact);
         }
-        if (const std::optional<Symbol> suffix =
-                unambiguous_suffix_symbol_match(native_symbols, query)) {
-            return symbol_hover_json(*suffix);
-        }
     } catch (const std::exception&) {
     }
     if (selected_path.has_value()) {
@@ -485,9 +481,6 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
             }
         } catch (const std::exception&) {
         }
-    }
-    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
-        return symbol_hover_json(with_macro_generated_origin(current, query, *suffix));
     }
     std::string local_type =
         !query.empty() && params != nullptr

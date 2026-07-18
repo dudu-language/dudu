@@ -195,6 +195,13 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
             selection.symbol_path = name;
         }
     };
+    const auto set_qualified_symbol_path = [&](const std::string& name,
+                                               const std::string& qualified,
+                                               const SourceLocation& location) {
+        if (!selection.symbol_path && contains_name(location, name, position)) {
+            selection.symbol_path = qualified;
+        }
+    };
     const auto visit_type = [&](const TypeRef& type) {
         const std::string head = type_ref_head_name(type);
         if (contains_name(type.location, head, position)) {
@@ -304,25 +311,29 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         }
         for (const FieldDecl& field : klass.fields) {
             set_symbol(field.name, field.location);
-            set_symbol_path(field.name, field.location);
+            set_qualified_symbol_path(field.name, klass.name + "." + field.name,
+                                      field.location);
             visit_type_tree(field.type_ref, visit_type_tree);
             visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
         }
         for (const ConstDecl& constant : klass.constants) {
             set_symbol(constant.name, constant.location);
-            set_symbol_path(constant.name, constant.location);
+            set_qualified_symbol_path(constant.name, klass.name + "." + constant.name,
+                                      constant.location);
             visit_type_tree(constant.type_ref, visit_type_tree);
             visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
         }
         for (const ConstDecl& field : klass.static_fields) {
             set_symbol(field.name, field.location);
-            set_symbol_path(field.name, field.location);
+            set_qualified_symbol_path(field.name, klass.name + "." + field.name,
+                                      field.location);
             visit_type_tree(field.type_ref, visit_type_tree);
             visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
         }
         for (const FunctionDecl& method : klass.methods) {
             set_symbol(method.name, method.location);
-            set_symbol_path(method.name, method.location);
+            set_qualified_symbol_path(method.name, klass.name + "." + method.name,
+                                      method.location);
             for (const GenericParamDecl& param : method.generic_param_decls) {
                 set_symbol(param.name, param.location);
                 set_symbol_path(param.name, param.location);

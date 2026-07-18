@@ -418,9 +418,6 @@ std::string definition_json(const Document& doc, const Json* params,
         } catch (const std::exception&) {
         }
     }
-    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
-        return symbol_definition_json(*suffix, doc);
-    }
     if (const std::optional<std::string> import_definition =
             import_definition_json(doc, *index, current, word)) {
         return *import_definition;
@@ -459,10 +456,6 @@ std::string definition_json(const Document& doc, const Json* params,
     }
     if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*exact, doc);
-    }
-    if (const std::optional<Symbol> suffix =
-            unambiguous_suffix_symbol_match(native_symbols, word)) {
-        return symbol_definition_json(*suffix, doc);
     }
     return "null";
 }

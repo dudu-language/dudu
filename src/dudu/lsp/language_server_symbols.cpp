@@ -179,26 +179,6 @@ std::optional<std::string> native_class_member_identity_key(const ClassDecl& kla
     return key;
 }
 
-bool suffix_symbol_match(const std::string& symbol, const std::string& query) {
-    if (symbol == query) {
-        return false;
-    }
-    const size_t dot = symbol.rfind('.');
-    return dot != std::string::npos && symbol.substr(dot + 1) == query;
-}
-
-std::optional<Symbol> preferred_symbol_match(const std::vector<Symbol>& matches) {
-    if (matches.empty()) {
-        return std::nullopt;
-    }
-    for (const Symbol& symbol : matches) {
-        if (symbol.kind == lsp_symbol_kind::Class) {
-            return symbol;
-        }
-    }
-    return matches.front();
-}
-
 std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native) {
     std::vector<Symbol> out;
     for (const ClassDecl& klass : module.classes) {
@@ -209,7 +189,7 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .native_identity_key = std::nullopt,
                        .doc_comment = klass.doc_comment});
         for (const FieldDecl& field : klass.fields) {
-            out.push_back({.name = field.name,
+            out.push_back({.name = klass.name + "." + field.name,
                            .detail = field.name + ": " + type_ref_text(field.type_ref),
                            .location = field.location,
                            .kind = lsp_symbol_kind::Field,
@@ -217,7 +197,7 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .doc_comment = field.doc_comment});
         }
         for (const ConstDecl& constant : klass.constants) {
-            out.push_back({.name = constant.name,
+            out.push_back({.name = klass.name + "." + constant.name,
                            .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                            .location = constant.location,
                            .kind = lsp_symbol_kind::Constant,
@@ -225,7 +205,7 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .doc_comment = constant.doc_comment});
         }
         for (const ConstDecl& field : klass.static_fields) {
-            out.push_back({.name = field.name,
+            out.push_back({.name = klass.name + "." + field.name,
                            .detail = field.name + ": " + type_ref_text(field.type_ref),
                            .location = field.location,
                            .kind = lsp_symbol_kind::Field,
@@ -233,7 +213,7 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .doc_comment = field.doc_comment});
         }
         for (const FunctionDecl& method : klass.methods) {
-            out.push_back({.name = method.name,
+            out.push_back({.name = klass.name + "." + method.name,
                            .detail = function_detail(method),
                            .location = method.location,
                            .kind = is_constructor_method_name(method.name)
@@ -386,19 +366,23 @@ std::optional<Symbol> exact_symbol_match(const std::vector<Symbol>& symbols,
             matches.push_back(symbol);
         }
     }
-    return preferred_symbol_match(matches);
-}
-
-std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>& symbols,
-                                                      const std::string& query) {
-    std::vector<Symbol> matches;
-    for (const Symbol& symbol : symbols) {
-        if (suffix_symbol_match(symbol.name, query)) {
-            matches.push_back(symbol);
-        }
-    }
-    if (matches.size() != 1) {
+    if (matches.empty()) {
         return std::nullopt;
+    }
+    if (matches.size() == 1) {
+        return matches.front();
+    }
+    const std::optional<std::string>& identity = matches.front().native_identity_key;
+    if (!identity.has_value() ||
+        !std::all_of(matches.begin(), matches.end(), [&](const Symbol& symbol) {
+            return symbol.native_identity_key == identity;
+        })) {
+        return std::nullopt;
+    }
+    for (const Symbol& symbol : matches) {
+        if (symbol.kind == lsp_symbol_kind::Class) {
+            return symbol;
+        }
     }
     return matches.front();
 }
