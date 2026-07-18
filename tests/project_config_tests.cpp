@@ -157,7 +157,13 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
                                       "\n"
                                       "[build]\n"
                                       "MODE = \"fast\"\n");
-    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+    write_text(project / "src" / "main.dd", "from support.value import answer\n"
+                                                   "\n"
+                                                   "def main() -> i32:\n"
+                                                   "    return answer()\n");
+    write_text(project / "src" / "support" / "value.dd",
+               "def answer() -> i32:\n"
+               "    return 42\n");
 
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     const std::string cmake = dudu::emit_cmake_project(config, project / "src" / "main.dd");
@@ -166,6 +172,7 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     assert(cmake.find("CONTENT \"$<TARGET_FILE:manifest_dep_probe>\"") != std::string::npos);
     assert(cmake.find("DUDU_GENERATED_ARTIFACTS") != std::string::npos);
     assert(cmake.find("target_precompile_headers(manifest_dep_probe PRIVATE") != std::string::npos);
+    assert(cmake.find((project / "src" / "support").string()) != std::string::npos);
 
     const std::string test_cmake = dudu::emit_cmake_test_project(
         config, project / "src" / "main.dd", "manifest_dep_probe_tests", "", true);
@@ -173,6 +180,7 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
            std::string::npos);
     assert(test_cmake.find("target_precompile_headers(manifest_dep_probe_tests PRIVATE") !=
            std::string::npos);
+    assert(test_cmake.find((project / "src" / "support").string()) != std::string::npos);
 }
 
 void test_cmake_project_config(const std::filesystem::path& root) {

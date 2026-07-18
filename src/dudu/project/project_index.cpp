@@ -44,17 +44,20 @@ void apply_project_context_to_tree(ModuleAst& module, const ProjectIndexOptions&
 }
 
 void merge_native_headers_for_tree(ModuleAst& module, const ProjectIndexOptions& options) {
-    const NativeHeaderOptions native_options{.config = options.config,
-                                             .source_dir = options.source_dir};
+    const auto native_options_for = [&](const ModuleAst& unit) {
+        const std::filesystem::path source_dir =
+            unit.source_path.empty() ? options.source_dir : unit.source_path.parent_path();
+        return NativeHeaderOptions{.config = options.config, .source_dir = source_dir};
+    };
     if (module.module_units.empty()) {
-        merge_native_headers(module, native_options);
+        merge_native_headers(module, native_options_for(module));
         return;
     }
     if (options.include_native_headers_in_merged_module) {
-        merge_native_headers(module, native_options);
+        merge_native_headers(module, native_options_for(module));
     }
     for (ModuleAst& unit : module.module_units) {
-        merge_native_headers(unit, native_options);
+        merge_native_headers(unit, native_options_for(unit));
     }
 }
 

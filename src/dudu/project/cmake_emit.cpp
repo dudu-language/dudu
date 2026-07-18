@@ -4,6 +4,7 @@
 #include "dudu/core/file_io.hpp"
 #include "dudu/project/project_index_cache.hpp"
 
+#include <set>
 #include <sstream>
 #include <string_view>
 
@@ -132,6 +133,21 @@ std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& c
     return files;
 }
 
+std::vector<std::string> module_source_directories(const ProjectIndex& index) {
+    std::set<std::filesystem::path> unique;
+    for (const std::filesystem::path& source : index.source_files()) {
+        if (!source.empty() && source.has_parent_path()) {
+            unique.insert(std::filesystem::absolute(source.parent_path()).lexically_normal());
+        }
+    }
+    std::vector<std::string> out;
+    out.reserve(unique.size());
+    for (const std::filesystem::path& directory : unique) {
+        out.push_back(directory.string());
+    }
+    return out;
+}
+
 void emit_generated_module_list(std::ostringstream& out, std::string_view name,
                                 const std::filesystem::path& generated_dir,
                                 const std::vector<std::filesystem::path>& paths) {
@@ -233,6 +249,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
+    emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
+                           module_source_directories(index));
     out << "target_precompile_headers(" << target
         << " PRIVATE \"$<$<COMPILE_LANGUAGE:CXX>:${DUDU_GENERATED_DIR}/dudu_runtime.hpp>\")\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
@@ -312,6 +330,8 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     emit_target_artifact_manifest(out, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
+    emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
+                           module_source_directories(index));
     out << "target_precompile_headers(" << target
         << " PRIVATE \"$<$<COMPILE_LANGUAGE:CXX>:${DUDU_GENERATED_DIR}/dudu_runtime.hpp>\")\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",

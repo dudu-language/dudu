@@ -138,6 +138,46 @@ void test_project_index_resolves_path_dependency_modules() {
            std::filesystem::weakly_canonical(dependency / "src" / "local_math.dd"));
 }
 
+void test_project_index_scans_local_native_headers_relative_to_each_module() {
+    const std::filesystem::path project =
+        std::filesystem::temp_directory_path() / "dudu_transitive_local_native_header_test";
+    std::filesystem::remove_all(project);
+    std::filesystem::create_directories(project / "src" / "support");
+    write_file(project / "dudu.toml", "name = \"native_project\"\n"
+                                      "entry = \"src/main.dd\"\n");
+    write_file(project / "src" / "main.dd", "from support.codec import answer\n"
+                                               "\n"
+                                               "def main() -> i32:\n"
+                                               "    return answer()\n");
+    write_file(project / "src" / "support" / "codec.dd",
+               "from cpp.path import codec_native.hpp\n"
+               "\n"
+               "def answer() -> i32:\n"
+               "    return codec_native.answer()\n");
+    write_file(project / "src" / "support" / "codec_native.hpp",
+               "#pragma once\n"
+               "namespace codec_native {\n"
+               "inline int answer() { return 42; }\n"
+               "}\n");
+
+    dudu::ProjectIndexOptions options;
+    options.entry_path = project / "src" / "main.dd";
+    options.config = dudu::parse_project_config(project / "dudu.toml");
+    options.source_dir = project / "src";
+    options.force_module_tree = true;
+    options.include_native_headers = true;
+    options.check_semantics = true;
+    options.semantic_options = {.check_bodies = true};
+
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    const dudu::ModuleAst* codec = index.unit_for_module("support.codec");
+    assert(codec != nullptr);
+    assert(std::any_of(codec->native_functions.begin(), codec->native_functions.end(),
+                       [](const dudu::NativeFunctionDecl& fn) {
+                           return fn.name == "codec_native.answer";
+                       }));
+}
+
 void test_project_target_outside_src_resolves_package_modules() {
     const std::filesystem::path project =
         std::filesystem::temp_directory_path() / "dudu_external_target_module_root_test";
@@ -282,6 +322,7 @@ int main() {
     try {
         test_project_index_records_module_graph();
         test_project_index_resolves_path_dependency_modules();
+        test_project_index_scans_local_native_headers_relative_to_each_module();
         test_project_target_outside_src_resolves_package_modules();
         test_project_index_source_stamps_detect_changed_modules();
         test_selected_module_analysis_falls_back_when_paths_miss();
