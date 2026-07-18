@@ -225,6 +225,39 @@ bool literal_matches_type(const Expr& value, const TypeRef& type) {
     if (type.kind == TypeKind::Template && type.name == "Option" && !type.children.empty()) {
         return value.kind == ExprKind::NoneLiteral || literal_matches_type(value, type.children[0]);
     }
+    if (type.kind == TypeKind::Template && type.name == "variant") {
+        return std::ranges::any_of(type.children, [&](const TypeRef& alternative) {
+            return literal_matches_type(value, alternative);
+        });
+    }
+    if (type.kind == TypeKind::Template && type.name == "list" && type.children.size() == 1) {
+        return value.kind == ExprKind::ListLiteral &&
+               std::ranges::all_of(value.children, [&](const Expr& child) {
+                   return literal_matches_type(child, type.children.front());
+               });
+    }
+    if (type.kind == TypeKind::Template && type.name == "set" && type.children.size() == 1) {
+        return value.kind == ExprKind::SetLiteral &&
+               std::ranges::all_of(value.children, [&](const Expr& child) {
+                   return literal_matches_type(child, type.children.front());
+               });
+    }
+    if (type.kind == TypeKind::Template && type.name == "dict" && type.children.size() == 2) {
+        return value.kind == ExprKind::DictLiteral &&
+               std::ranges::all_of(value.children, [&](const Expr& entry) {
+                   return entry.kind == ExprKind::DictEntry && entry.children.size() == 2 &&
+                          literal_matches_type(entry.children[0], type.children[0]) &&
+                          literal_matches_type(entry.children[1], type.children[1]);
+               });
+    }
+    if (type.kind == TypeKind::FixedArray && type.children.size() >= 2) {
+        const TypeRef& storage = type.children.front();
+        return storage.kind == TypeKind::Template && storage.name == "array" &&
+               storage.children.size() == 1 && value.kind == ExprKind::ListLiteral &&
+               std::ranges::all_of(value.children, [&](const Expr& child) {
+                   return literal_matches_type(child, storage.children.front());
+               });
+    }
     const std::string name = type_ref_head_name(type);
     if (name == "bool")
         return value.kind == ExprKind::BoolLiteral;

@@ -11,6 +11,9 @@
   emitted with concrete nested `std::array` types.
 - Named aggregate construction now emits fields in declaration order, allowing
   source arguments to use any valid named-argument order under C++20.
+- Typed macro helper schemas now validate list, set, dictionary, fixed-array,
+  optional, and variant literals recursively. Declaration-only `variant` and
+  `tuple` types also request their required C++ runtime headers.
 - Macro expansions can declare hygienic runtime module dependencies with
   `Expansion.require_module`.
 - Macro helper dependency closures now remain in the macro worker instead of

@@ -28,6 +28,10 @@ void inspect_type(const TypeRef& type, CppRuntimeFeatures& features) {
         features.optional = true;
     } else if (name == "Result") {
         features.result = true;
+    } else if (name == "variant") {
+        features.variant = true;
+    } else if (name == "tuple") {
+        features.tuples = true;
     } else if (name == "fn") {
         features.function = true;
     } else if (name == "span") {

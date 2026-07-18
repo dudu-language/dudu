@@ -367,6 +367,64 @@ void test_imported_macro_definition_is_reported_without_an_invocation() {
     assert(index.macro_report().definitions.front().identity == "macros.Debug");
 }
 
+void test_macro_helper_schema_accepts_typed_collection_literals() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_macro_collection_options_test";
+    std::filesystem::remove_all(dir);
+    write_file(dir / "dudu.toml", "name = \"macro_collection_options\"\n"
+                                  "entry = \"src/main.dd\"\n"
+                                  "build_dir = \"build\"\n");
+    write_file(dir / "src/macros.dd",
+               "import dudu.ast as ast\n"
+               "\n"
+               "class Options:\n"
+               "    aliases: list[str] = []\n"
+               "    labels: set[str] = {}\n"
+               "    scores: dict[str, i32] = {}\n"
+               "    choice: variant[bool, str] = False\n"
+               "\n"
+               "@macro(attributes=Options)\n"
+               "def Metadata(item: ast.ClassDecl) -> ast.Expansion:\n"
+               "    return ast.expansion()\n");
+    write_file(dir / "src/main.dd",
+               "from macros import Metadata\n"
+               "\n"
+               "@derive(Metadata)\n"
+               "class Player:\n"
+               "    @Metadata(\n"
+               "        aliases=[\"old\", \"older\"],\n"
+               "        labels={\"stable\"},\n"
+               "        scores={\"v1\": 1},\n"
+               "        choice=\"named\",\n"
+               "    )\n"
+               "    hp: i32\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(dir / "dudu.toml");
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "src/main.dd";
+    options.config = config;
+    options.source_dir = dir / "src";
+    options.force_module_tree = true;
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    assert(index.macro_report().invocations == 1);
+
+    write_file(dir / "src/main.dd",
+               "from macros import Metadata\n"
+               "\n"
+               "@derive(Metadata)\n"
+               "class Player:\n"
+               "    @Metadata(aliases=[1])\n"
+               "    hp: i32\n");
+    bool rejected = false;
+    try {
+        (void)dudu::ProjectIndex::load(options);
+    } catch (const dudu::CompileError& error) {
+        rejected = std::string(error.what()).find("wrong value type for Metadata.aliases") !=
+                   std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_enum_derive_generates_a_callable_method() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_macro_enum_derive_test";
@@ -431,6 +489,7 @@ void test_enum_derive_generates_a_callable_method() {
 int main() {
     test_dudu_macro_expands_before_semantics_and_caches();
     test_imported_macro_definition_is_reported_without_an_invocation();
+    test_macro_helper_schema_accepts_typed_collection_literals();
     test_enum_derive_generates_a_callable_method();
     return 0;
 }
