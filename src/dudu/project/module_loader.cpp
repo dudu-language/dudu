@@ -217,6 +217,21 @@ std::string selective_import_name(const ImportDecl& import) {
     return import.alias.empty() ? import.imported_name : import.alias;
 }
 
+void report_missing_import(const ImportDecl& import,
+                           std::vector<ParseDiagnostic>* diagnostics) {
+    const std::string message = "module '" + import.module_path + "' has no symbol '" +
+                                import.imported_name + "'";
+    if (diagnostics != nullptr) {
+        diagnostics->push_back({.location = import.location,
+                                .message = message,
+                                .code = "dudu.sema.missing_import",
+                                .data_name = import.imported_name});
+        return;
+    }
+    throw CompileError(import.location, message, "dudu.sema.missing_import",
+                       import.imported_name);
+}
+
 void reject_selective_import_collision(const ModuleAst& module, const ImportDecl& import) {
     const std::string name = selective_import_name(import);
     if (!has_binding(module, name)) {
@@ -341,11 +356,8 @@ void add_from_import_aliases(ModuleAst& module) {
                 added = true;
             }
         }
-        if (!added) {
-            throw CompileError(import.location, "module '" + import.module_path +
-                                                    "' has no symbol '" + import.imported_name +
-                                                    "'");
-        }
+        // Strict loading already rejects a missing selective import. Recovering loading keeps
+        // the current graph but deliberately omits aliases for unavailable declarations.
     }
 
     module.aliases.insert(module.aliases.end(), type_aliases.begin(), type_aliases.end());
@@ -409,9 +421,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
                                        .location = import.location});
         if (import.kind == ImportKind::From &&
             !has_module_symbol(dependency_module, import.imported_name)) {
-            throw CompileError(import.location, "module '" + import.module_path +
-                                                    "' has no symbol '" + import.imported_name +
-                                                    "'");
+            report_missing_import(import, diagnostics);
         }
     }
 

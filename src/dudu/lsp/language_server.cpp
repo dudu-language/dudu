@@ -21,6 +21,7 @@
 #include "dudu/lsp/language_server_workspace.hpp"
 #include "dudu/parser/parser.hpp"
 
+#include <algorithm>
 #include <condition_variable>
 #include <exception>
 #include <filesystem>
@@ -29,6 +30,7 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -279,8 +281,12 @@ class LanguageServer {
                            .text = string_value(text_document->get("text")),
                            .version = optional_int_value(text_document->get("version"))};
         invalidate_workspace_cache(uri);
+        std::set<std::string> affected = affected_open_documents(documents_[uri].path, uri);
+        affected.erase(uri);
+        invalidate_workspace_cache(affected);
+        affected.insert(uri);
         publish_syntax_diagnostics(uri);
-        queue_full_diagnostics(uri);
+        queue_full_diagnostics(affected);
     }
 
     void did_change(const Json* params) {
@@ -303,8 +309,12 @@ class LanguageServer {
         apply_lsp_content_changes(doc.text, *array);
         doc.version = version;
         invalidate_workspace_cache(uri);
+        std::set<std::string> affected = affected_open_documents(doc.path, uri);
+        affected.erase(uri);
+        invalidate_workspace_cache(affected);
+        affected.insert(uri);
         publish_syntax_diagnostics(uri);
-        queue_full_diagnostics(uri);
+        queue_full_diagnostics(affected);
     }
 
     void did_close(const Json* params) {
@@ -313,18 +323,22 @@ class LanguageServer {
             return;
         }
         const std::string uri = string_value(text_document->get("uri"));
+        const auto document = documents_.find(uri);
+        if (document == documents_.end()) {
+            return;
+        }
+        const std::filesystem::path path = document->second.path;
         {
             const std::lock_guard lock(diagnostics_mutex_);
-            ++documents_revision_;
-            ++document_revisions_[uri];
             pending_diagnostics_.erase(uri);
             native_ready_revisions_.erase(uri);
         }
         documents_.erase(uri);
-        workspace_cache_revision_ = std::numeric_limits<size_t>::max();
-        workspace_cache_.clear();
-        set_language_server_open_documents(documents_);
+        invalidate_workspace_cache(uri);
+        const std::set<std::string> affected = affected_open_documents(path, {});
+        invalidate_workspace_cache(affected);
         publish_diagnostics(uri, {}, std::nullopt);
+        queue_full_diagnostics(affected);
     }
 
     void did_save(const Json* params) {
@@ -382,6 +396,12 @@ class LanguageServer {
             pending_diagnostics_.insert_or_assign(uri, std::move(job));
         }
         diagnostics_cv_.notify_one();
+    }
+
+    void queue_full_diagnostics(const std::set<std::string>& uris) {
+        for (const std::string& uri : uris) {
+            queue_full_diagnostics(uri);
+        }
     }
 
     void diagnostics_worker_loop() {
@@ -575,6 +595,39 @@ class LanguageServer {
         workspace_cache_revision_ = std::numeric_limits<size_t>::max();
         workspace_cache_.clear();
         set_language_server_open_documents(documents_);
+    }
+
+    void invalidate_workspace_cache(const std::set<std::string>& uris) {
+        for (const std::string& uri : uris) {
+            if (documents_.contains(uri)) {
+                invalidate_workspace_cache(uri);
+            }
+        }
+    }
+
+    std::set<std::string> affected_open_documents(const std::filesystem::path& changed_path,
+                                                  const std::string& changed_uri) const {
+        std::set<std::string> affected;
+        if (!changed_uri.empty() && documents_.contains(changed_uri)) {
+            affected.insert(changed_uri);
+        }
+        for (const auto& [uri, document] : documents_) {
+            try {
+                const ProjectIndex& index = project_index_for_document(document, false);
+                const ProjectModuleSummary* changed = index.summary_for_path(changed_path);
+                const ProjectModuleSummary* current = index.summary_for_path(document.path);
+                if (changed == nullptr || current == nullptr) {
+                    continue;
+                }
+                const std::vector<std::string> modules =
+                    index.affected_modules_for_sources({changed_path});
+                if (std::ranges::find(modules, current->module_path) != modules.end()) {
+                    affected.insert(uri);
+                }
+            } catch (const std::exception&) {
+            }
+        }
+        return affected;
     }
 
     const std::map<std::string, Document>& cached_workspace_documents() const {

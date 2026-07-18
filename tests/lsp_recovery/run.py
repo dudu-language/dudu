@@ -2,6 +2,7 @@
 
 from assertions import assert_case, assert_versioned_diagnostics
 from cases import CASES, source_for
+from modules import run_module_recovery
 from protocol import notification, position, request, response, run_server, text_document
 
 
@@ -215,4 +216,5 @@ def run(repo_root):
         run_damaged_case(repo_root, case, index)
     run_repair_case(repo_root)
     run_lifecycle_case(repo_root)
+    run_module_recovery(repo_root)
     print(f"lsp adversarial recovery checks passed ({len(CASES)} damaged states)")

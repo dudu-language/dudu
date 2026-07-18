@@ -297,6 +297,40 @@ void test_module_loader_preserves_declaration_origins() {
     assert(renderer_make_cpp_name == "dudu_renderer_camera_make_camera");
 }
 
+void test_module_loader_recovers_missing_selective_import_without_stale_alias() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_missing_selective_import_recovery_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def replacement(value: i32) -> i32:\n"
+                                  "    return value + 1\n");
+    write_file(dir / "main.dd", "from helper import removed as local_removed\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return local_removed(1)\n");
+
+    bool strict_failed = false;
+    try {
+        (void)dudu::load_source_tree(dir / "main.dd");
+    } catch (const dudu::CompileError& error) {
+        strict_failed = error.code() == "dudu.sema.missing_import" &&
+                        error.data_name() == "removed";
+    }
+    assert(strict_failed);
+
+    const dudu::LoadSourceTreeResult recovered = dudu::load_source_tree_recovering(
+        {.entry = dir / "main.dd", .source_overrides = {}, .module_roots = {}});
+    assert(recovered.module.module_units.size() == 2);
+    assert(recovered.diagnostics.size() == 1);
+    assert(recovered.diagnostics.front().code == "dudu.sema.missing_import");
+    assert(recovered.diagnostics.front().data_name == "removed");
+    assert(std::none_of(recovered.module.native_functions.begin(),
+                        recovered.module.native_functions.end(),
+                        [](const dudu::NativeFunctionDecl& fn) {
+                            return fn.name == "removed" || fn.name == "local_removed";
+                        }));
+}
+
 } // namespace
 
 int main() {
@@ -307,6 +341,7 @@ int main() {
         test_imported_classes_keep_distinct_symbol_identities();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
+        test_module_loader_recovers_missing_selective_import_without_stale_alias();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
