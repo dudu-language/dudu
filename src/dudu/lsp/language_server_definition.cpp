@@ -18,6 +18,7 @@
 #include "dudu/lsp/language_server_operator.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/lsp/language_server_type_identity.hpp"
 #include "dudu/project/module_names.hpp"
 
 #include <algorithm>
@@ -441,6 +442,12 @@ std::string definition_json(const Document& doc, const Json* params,
         return *constructor;
     }
     const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
+    if (selection.type_ref) {
+        if (const std::optional<Symbol> type =
+                native_type_symbol_for_type_ref(native_visible, *selection.type_ref)) {
+            return symbol_definition_json(*type, doc);
+        }
+    }
     if (const std::optional<std::string> native_type_target =
             native_type_target_definition_json(doc, word, native_visible)) {
         return *native_type_target;

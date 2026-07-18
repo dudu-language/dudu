@@ -186,6 +186,86 @@ void test_lsp_native_template_identity_completion_signature_and_definition() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_native_associated_alias_hover_and_definition() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_associated_alias_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path header = dir / "native_associated.hpp";
+    write_file(header, "#pragma once\n"
+                       "template <typename T> struct NativeBox {\n"
+                       "    using value_type = T;\n"
+                       "};\n");
+
+    const std::string source = "from cpp.path import native_associated.hpp\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    value: NativeBox[i32].value_type = 7\n"
+                               "    return value\n";
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":31}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("value_type") != std::string::npos);
+    assert(hover.find("i32") != std::string::npos);
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find(dudu::file_uri(header)) != std::string::npos);
+    const std::map<std::string, dudu::Document> workspace = {{doc.uri, doc}};
+    const std::string references = dudu::references_json(doc, &params, workspace);
+    assert(references.find(dudu::file_uri(path)) != std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
+void test_lsp_native_associated_aliases_keep_namespace_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_associated_namespace_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path left_header = dir / "left.hpp";
+    const std::filesystem::path right_header = dir / "right.hpp";
+    write_file(left_header, "#pragma once\n"
+                            "namespace left {\n"
+                            "template <typename T> struct Box { using value_type = T; };\n"
+                            "}\n");
+    write_file(right_header, "#pragma once\n"
+                             "namespace right {\n"
+                             "template <typename T> struct Box { using value_type = T; };\n"
+                             "}\n");
+
+    const std::string source = "from cpp.path import left.hpp\n"
+                               "from cpp.path import right.hpp\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    lhs: left.Box[i32].value_type = 1\n"
+                               "    rhs: right.Box[i32].value_type = 2\n"
+                               "    return lhs + rhs\n";
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+    const std::map<std::string, dudu::Document> workspace = {{doc.uri, doc}};
+
+    dudu::clear_language_server_module_cache();
+    dudu::Json left_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":29}}").parse();
+    dudu::Json right_params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":30}}").parse();
+    const std::string left_definition = dudu::definition_json(doc, &left_params);
+    const std::string right_definition = dudu::definition_json(doc, &right_params);
+    assert(left_definition.find(dudu::file_uri(left_header)) != std::string::npos);
+    assert(left_definition.find(dudu::file_uri(right_header)) == std::string::npos);
+    assert(right_definition.find(dudu::file_uri(right_header)) != std::string::npos);
+    assert(right_definition.find(dudu::file_uri(left_header)) == std::string::npos);
+
+    const std::string left_references = dudu::references_json(doc, &left_params, workspace);
+    assert(left_references.find("\"line\":4") != std::string::npos);
+    assert(left_references.find("\"line\":5") == std::string::npos);
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_signature_help_resolves_native_callable_values() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_callable_value_test";
@@ -279,6 +359,8 @@ int main() {
         test_lsp_native_member_docs_reach_completion_and_signature_help();
         test_lsp_native_macro_identity_completion_signature_and_definition();
         test_lsp_native_template_identity_completion_signature_and_definition();
+        test_lsp_native_associated_alias_hover_and_definition();
+        test_lsp_native_associated_aliases_keep_namespace_identity();
         test_lsp_signature_help_resolves_native_callable_values();
         test_lsp_inlay_hints_include_native_parameter_names();
         test_lsp_inlay_hints_include_builtin_method_parameter_names();

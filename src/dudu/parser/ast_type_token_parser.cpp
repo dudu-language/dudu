@@ -369,6 +369,7 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
             if (type.kind == TypeKind::Associated) {
                 TypeRef templ = make_node(TypeKind::AssociatedTemplate, begin, cursor_);
                 templ.name = type.name;
+                templ.location = type.location;
                 templ.children.push_back(std::move(type.children.front()));
                 templ.children.insert(templ.children.end(), std::make_move_iterator(args.begin()),
                                       std::make_move_iterator(args.end()));
@@ -395,6 +396,7 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
                                       begin, cursor_);
             templ.name = type.name;
             if (type.kind == TypeKind::Associated) {
+                templ.location = type.location;
                 templ.children.push_back(std::move(type.children.front()));
             }
             templ.children.insert(templ.children.end(), std::make_move_iterator(args.begin()),
@@ -406,8 +408,10 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
             if (!at(TokenKind::Identifier)) {
                 return make_node(TypeKind::Unknown, begin, cursor_);
             }
+            const SourceLocation member_location = current().location;
             TypeRef associated = make_node(TypeKind::Associated, begin, cursor_ + 1);
             associated.name = std::string(current().text);
+            associated.location = member_location;
             ++cursor_;
             associated.children.push_back(std::move(type));
             associated.range = range_between(begin, cursor_);

@@ -8,6 +8,7 @@
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
+#include "dudu/lsp/language_server_type_identity.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
@@ -110,6 +111,11 @@ struct ReferenceCollector {
 
     void visit_type(const TypeRef& type) {
         const std::string text = type_ref_text(type);
+        const std::string binding = type_ref_binding_name(type);
+        if (!binding.empty() && binding == query) {
+            add_matched(type_ref_head_name(type), type.location);
+            return;
+        }
         if (text == query || (match_any_path_segment && dotted_tail(text) == query)) {
             add_matched(text, type.location);
         }

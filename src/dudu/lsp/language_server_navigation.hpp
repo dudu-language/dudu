@@ -24,6 +24,7 @@ struct AstSelection {
     std::optional<std::string> symbol;
     std::optional<std::string> symbol_path;
     std::optional<ExprPath> expr_path;
+    std::optional<TypeRef> type_ref;
     std::optional<Expr> member_expr;
     std::optional<Expr> operator_expr;
     std::optional<Expr> call_expr;

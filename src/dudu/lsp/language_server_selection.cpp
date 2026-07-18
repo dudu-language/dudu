@@ -115,6 +115,9 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
     };
     const auto visit_type = [&](const TypeRef& type) {
         const std::string head = type_ref_head_name(type);
+        if (contains_name(type.location, head, position)) {
+            selection.type_ref = type;
+        }
         set_symbol(head, type.location);
         set_symbol_path(head, type.location);
         const std::string text = type_ref_text(type);
@@ -194,6 +197,9 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
     };
     const auto visit_type = [&](const TypeRef& type) {
         const std::string head = type_ref_head_name(type);
+        if (contains_name(type.location, head, position)) {
+            selection.type_ref = type;
+        }
         set_symbol(head, type.location);
         set_symbol_path(head, type.location);
         const std::string text = type_ref_text(type);

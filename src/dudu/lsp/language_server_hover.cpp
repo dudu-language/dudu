@@ -18,6 +18,7 @@
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/lsp/language_server_type_hover.hpp"
+#include "dudu/lsp/language_server_type_identity.hpp"
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/project/module_names.hpp"
 
@@ -429,6 +430,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     try {
         const ProjectIndex* native = load_native_index();
         const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
+        if (has_selection && selection.type_ref) {
+            if (const std::optional<Symbol> type =
+                    native_type_symbol_for_type_ref(native_visible, *selection.type_ref)) {
+                return symbol_hover_json(*type);
+            }
+        }
         if (has_selection) {
             if (const std::optional<std::string> constructor =
                     constructor_hover_json(native_visible, selection)) {
