@@ -86,7 +86,18 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
     write_file(dir / "dudu.toml", "name = \"macro_expansion_fixture\"\n"
                                   "entry = \"src/main.dd\"\n"
                                   "build_dir = \"build\"\n");
+    write_file(dir / "src/macro_helper.dd",
+               "import dudu.ast as ast\n"
+               "\n"
+               "def score_method(score: str) -> ast.FunctionDecl:\n"
+               "    return_stmt = ast.return_statement(ast.int_expression(score))\n"
+               "    return ast.FunctionDecl(\n"
+               "        name=\"debug_score\",\n"
+               "        return_type=ast.named_type(\"i32\"),\n"
+               "        body=[return_stmt],\n"
+               "    )\n");
     write_file(dir / "src/macros.dd",
+               "from macro_helper import score_method\n"
                "import dudu.ast as ast\n"
                "\n"
                "class DebugOptions:\n"
@@ -99,14 +110,8 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
                "        options = ast.find_attribute(field.attributes, \"Debug\")\n"
                "        if options.has_value():\n"
                "            score = ast.string_argument(options.value(), \"score\", score)\n"
-               "    return_stmt = ast.return_statement(ast.int_expression(score))\n"
-               "    method = ast.FunctionDecl(\n"
-               "        name=\"debug_score\",\n"
-               "        return_type=ast.named_type(\"i32\"),\n"
-               "        body=[return_stmt],\n"
-               "    )\n"
                "    out = ast.expansion()\n"
-               "    out.add_method(method)\n"
+               "    out.add_method(score_method(score))\n"
                "    return out\n");
     write_file(dir / "src/main.dd", "from macros import Debug\n"
                                     "\n"
@@ -250,7 +255,8 @@ void test_dudu_macro_expands_before_semantics_and_caches() {
         dudu::emit_cpp_module_artifacts(first.merged_module());
     assert(artifacts.size() == 3);
     assert(std::none_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
-        return artifact.module_path == "macros" || artifact.module_path == "dudu.ast";
+        return artifact.module_path == "macros" || artifact.module_path == "macro_helper" ||
+               artifact.module_path == "dudu.ast";
     }));
     assert(std::any_of(artifacts.begin(), artifacts.end(), [](const auto& artifact) {
         return artifact.content.find("debug_score") != std::string::npos;

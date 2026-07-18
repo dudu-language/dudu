@@ -6,6 +6,12 @@
 
 - Macro expansions can declare hygienic runtime module dependencies with
   `Expansion.require_module`.
+- Macro helper dependency closures now remain in the macro worker instead of
+  leaking into target artifacts. Modules requested by generated code retain
+  their canonical type identity across host and target module projections.
+- Imported generic bodies now carry the transitive class and enum type metadata
+  referenced by generated method signatures, so ordinary generic APIs can use
+  macro-generated protocol methods without losing type identity.
 
 - Generic function bodies may call instance and static methods on dependent
   receiver types. Imported generic bodies retain their declaration-module

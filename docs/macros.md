@@ -233,6 +233,13 @@ SDK in `lib/dudu/ast.dd`, generated from the versioned protocol schema.
 Macro modules may import normal Dudu helper modules. They compile as host tools,
 separately from the target program.
 
+The compiler computes macro-worker and target dependency reachability
+separately. A helper used only by a macro stays out of target headers and object
+files. A runtime codec or support module requested by generated code may be
+needed by both graphs; it keeps one canonical type identity in both contexts.
+Macro packages do not need wrapper headers or duplicated host/target type
+declarations to share such a module.
+
 Generated methods sometimes need a runtime module owned by the macro package.
 Declare that dependency normally in the macro module, request it under a
 private alias, and use the alias in generated AST:

@@ -176,7 +176,8 @@ bool has_unresolved_generic(const std::vector<TypeRef>& args, const Symbols& sym
         args, [&](const TypeRef& arg) { return contains_unresolved_generic(arg, symbols); });
 }
 
-void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRef& type) {
+void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRef& type,
+                            std::set<std::string>& expanded_bindings) {
     const std::string name = type_ref_head_name(type);
     if (!name.empty()) {
         target.types.insert(name);
@@ -194,9 +195,42 @@ void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRe
         }
         if (const auto found = source.classes.find(name); found != source.classes.end()) {
             target.classes.insert_or_assign(name, found->second);
+            if (expanded_bindings.insert(name).second) {
+                const ClassDecl& klass = *found->second;
+                for (const FieldDecl& field : klass.fields) {
+                    add_instantiation_type(target, source, field.type_ref, expanded_bindings);
+                }
+                for (const FunctionDecl& method : klass.methods) {
+                    add_instantiation_type(target, source, method.receiver_type_ref,
+                                           expanded_bindings);
+                    for (const ParamDecl& param : method.params) {
+                        add_instantiation_type(target, source, param.type_ref, expanded_bindings);
+                    }
+                    add_instantiation_type(target, source, method.return_type_ref,
+                                           expanded_bindings);
+                }
+            }
         }
         if (const auto found = source.enums.find(name); found != source.enums.end()) {
             target.enums.insert_or_assign(name, found->second);
+            if (expanded_bindings.insert(name).second) {
+                const EnumDecl& en = *found->second;
+                add_instantiation_type(target, source, en.underlying_type_ref, expanded_bindings);
+                for (const EnumValueDecl& value : en.values) {
+                    for (const EnumPayloadField& field : value.payload_fields) {
+                        add_instantiation_type(target, source, field.type_ref, expanded_bindings);
+                    }
+                }
+                for (const FunctionDecl& method : en.methods) {
+                    add_instantiation_type(target, source, method.receiver_type_ref,
+                                           expanded_bindings);
+                    for (const ParamDecl& param : method.params) {
+                        add_instantiation_type(target, source, param.type_ref, expanded_bindings);
+                    }
+                    add_instantiation_type(target, source, method.return_type_ref,
+                                           expanded_bindings);
+                }
+            }
         }
         if (const auto found = source.native_class_specializations.find(name);
             found != source.native_class_specializations.end()) {
@@ -223,14 +257,15 @@ void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRe
         }
     }
     for (const TypeRef& child : type.children) {
-        add_instantiation_type(target, source, child);
+        add_instantiation_type(target, source, child, expanded_bindings);
     }
 }
 
 void add_instantiation_types(Symbols& target, const Symbols& source,
                              const std::vector<TypeRef>& types) {
+    std::set<std::string> expanded_bindings;
     for (const TypeRef& type : types) {
-        add_instantiation_type(target, source, type);
+        add_instantiation_type(target, source, type, expanded_bindings);
     }
 }
 

@@ -191,8 +191,9 @@ void bind_native_identity(Symbols& symbols, const std::string& name, const std::
                           const SourceLocation& location) {
     const auto existing = symbols.native_type_identity_by_binding.find(name);
     if (existing != symbols.native_type_identity_by_binding.end() && existing->second != identity) {
-        throw CompileError(location,
-                           "native type binding '" + name + "' resolves to multiple declarations");
+        throw CompileError(location, "native type binding '" + name +
+                                         "' resolves to multiple declarations ('" +
+                                         existing->second + "' and '" + identity + "')");
     }
     symbols.native_type_identity_by_binding[name] = identity;
 }

@@ -109,6 +109,33 @@ void test_module_loader_canonicalizes_physical_modules() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_transitive_qualified_imports_keep_canonical_type_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_transitive_qualified_identity_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "model.dd", "class Item:\n"
+                                 "    value: i32\n");
+    write_file(dir / "helper.dd", "import model as api\n"
+                                  "\n"
+                                  "def make() -> api.Item:\n"
+                                  "    return api.Item(42)\n"
+                                  "\n"
+                                  "def read(item: &const[api.Item]) -> i32:\n"
+                                  "    return item.value\n");
+    write_file(dir / "main.dd", "import model as api\n"
+                                "from model import Item\n"
+                                "from helper import make\n"
+                                "from helper import read\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    item: Item = make()\n"
+                                "    return read(item)\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    dudu::analyze_module_tree(module, {.check_bodies = true});
+}
+
 void test_module_loader_rejects_duplicate_from_aliases() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_alias_collision_test";
@@ -313,8 +340,8 @@ void test_module_loader_recovers_missing_selective_import_without_stale_alias() 
     try {
         (void)dudu::load_source_tree(dir / "main.dd");
     } catch (const dudu::CompileError& error) {
-        strict_failed = error.code() == "dudu.sema.missing_import" &&
-                        error.data_name() == "removed";
+        strict_failed =
+            error.code() == "dudu.sema.missing_import" && error.data_name() == "removed";
     }
     assert(strict_failed);
 
@@ -365,6 +392,7 @@ void test_module_loader_recovers_missing_module_without_stale_declarations() {
 int main() {
     try {
         test_module_loader_canonicalizes_physical_modules();
+        test_transitive_qualified_imports_keep_canonical_type_identity();
         test_module_loader_rejects_duplicate_from_aliases();
         test_module_loader_resolves_source_root_import_from_submodule();
         test_imported_classes_keep_distinct_symbol_identities();

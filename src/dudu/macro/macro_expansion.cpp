@@ -252,6 +252,51 @@ void mark_macro_host_modules(ModuleAst& module, const Plan& plan) {
     }
 }
 
+std::set<std::string> dependency_closure(const ModuleAst& module, std::set<std::string> reachable,
+                                         const std::set<std::string>& blocked = {}) {
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (const ModuleAst& unit : module.module_units) {
+            if (!reachable.contains(unit.module_path))
+                continue;
+            for (const ModuleDependency& dependency : unit.dependencies) {
+                if (dependency.resolved_module_path.empty() ||
+                    blocked.contains(dependency.resolved_module_path)) {
+                    continue;
+                }
+                changed |= reachable.insert(dependency.resolved_module_path).second;
+            }
+        }
+    }
+    return reachable;
+}
+
+void finalize_compilation_domains(ModuleAst& module, const Plan& plan) {
+    if (module.module_units.empty())
+        return;
+
+    std::set<std::string> definitions;
+    for (const auto& [_, definition] : plan.definitions)
+        definitions.insert(definition.module_path);
+
+    std::set<std::string> host_roots = definitions;
+    if (!definitions.empty()) {
+        host_roots.insert("dudu.ast");
+        host_roots.insert("dudu.macro");
+    }
+    const std::set<std::string> host = dependency_closure(module, std::move(host_roots));
+    const std::set<std::string> target =
+        dependency_closure(module, {module.module_path}, definitions);
+
+    for (ModuleAst& unit : module.module_units) {
+        unit.compilation_domain =
+            host.contains(unit.module_path) && !target.contains(unit.module_path)
+                ? CompilationDomain::MacroHost
+                : CompilationDomain::Target;
+    }
+}
+
 } // namespace
 
 ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& options) {
@@ -432,6 +477,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     }
     const Clock::time_point merge_start = Clock::now();
     merge_expansions(module, plan, collected);
+    finalize_compilation_domains(module, plan);
     report.timings.merge_ns += elapsed_ns(merge_start);
     return report;
 }
