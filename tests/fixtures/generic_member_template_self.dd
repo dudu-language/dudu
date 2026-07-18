@@ -1,0 +1,19 @@
+class Box[T]:
+    def write[Writer](self, output: &Writer) -> bool:
+        return True
+
+    def encode[Writer](self, output: &Writer) -> bool:
+        ready: bool = self.write[Writer](output)
+        return ready
+
+
+class Sink:
+    value: i32 = 0
+
+
+def main() -> i32:
+    box = Box[i32]()
+    sink = Sink()
+    if not box.encode(sink):
+        return 1
+    return 42

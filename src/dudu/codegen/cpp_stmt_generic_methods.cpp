@@ -1,11 +1,11 @@
 #include "dudu/codegen/cpp_stmt_generic_methods.hpp"
 
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -13,6 +13,7 @@
 #include "dudu/sema/sema_methods_internal.hpp"
 #include "dudu/sema/type_compat.hpp"
 
+#include <algorithm>
 #include <sstream>
 
 namespace dudu {
@@ -68,6 +69,57 @@ bool concrete_method_matches_expected(const Symbols& symbols, const TypeRef& rec
     return false;
 }
 
+bool depends_on_local_type(const TypeRef& type, const CppLocalContext& locals,
+                           const Symbols* symbols) {
+    if (!has_type_ref(type)) {
+        return false;
+    }
+    if (locals.contains_type(type_ref_head_name(type))) {
+        return true;
+    }
+    if (symbols != nullptr &&
+        (type_ref_head_name(type) == "Self" || type_ref_head_name(type) == locals.current_class)) {
+        const auto current = symbols->classes.find(locals.current_class);
+        if (current != symbols->classes.end() && !current->second->generic_params.empty()) {
+            return true;
+        }
+    }
+    return std::ranges::any_of(type.children, [&](const TypeRef& child) {
+        return depends_on_local_type(child, locals, symbols);
+    });
+}
+
+std::string method_template_callee(const Expr& expr, const TypeRef& receiver_type,
+                                   const std::vector<std::string>& aliases,
+                                   const CppLocalContext& locals,
+                                   const std::map<std::string, TypeRef>& local_type_refs,
+                                   const Symbols* symbols, const CppEmitOptions& options) {
+    std::string callee =
+        lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options);
+    bool dependent = depends_on_local_type(receiver_type, locals, symbols);
+    if (!dependent && symbols != nullptr && has_expr_callee(expr) &&
+        expr_callee(expr).front().kind == ExprKind::Member &&
+        expr_callee(expr).front().children.size() == 1 &&
+        expr_callee(expr).front().children.front().kind == ExprKind::Name &&
+        expr_callee(expr).front().children.front().name == "self") {
+        const ClassDecl* receiver_class = class_for_receiver_type(*symbols, receiver_type);
+        dependent = receiver_class != nullptr && !receiver_class->generic_params.empty();
+    }
+    if (!dependent) {
+        return callee;
+    }
+    const size_t arrow = callee.rfind("->");
+    const size_t dot = callee.rfind('.');
+    const size_t separator = arrow == std::string::npos ? dot
+                             : dot == std::string::npos ? arrow
+                                                        : std::max(arrow, dot);
+    if (separator == std::string::npos) {
+        return callee;
+    }
+    callee.insert(separator + (separator == arrow ? 2 : 1), "template ");
+    return callee;
+}
+
 } // namespace
 
 std::optional<std::string> lower_expected_generic_method_call(
@@ -116,8 +168,9 @@ std::optional<std::string> lower_expected_generic_method_call(
         }
         lowered_args << lower_cpp_type((*type_args)[i], aliases, options);
     }
-    return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) + "<" +
-           lowered_args.str() + ">(" +
+    return method_template_callee(expr, receiver_type_ref, aliases, locals, local_type_refs,
+                                  symbols, options) +
+           "<" + lowered_args.str() + ">(" +
            join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
                               options) +
            ")";

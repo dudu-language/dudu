@@ -8,6 +8,7 @@
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
+#include <algorithm>
 #include <sstream>
 
 namespace dudu {
@@ -52,7 +53,28 @@ bool generic_receiver_type(const TypeRef& type, const Symbols& symbols,
         return false;
     }
     const TypeRef receiver = unwrap_receiver_type_ref(symbols, type);
-    return locals.contains_type(type_ref_head_name(receiver));
+    if (locals.contains_type(type_ref_head_name(receiver))) {
+        return true;
+    }
+    if (type_ref_head_name(receiver) == "Self") {
+        const auto current = symbols.classes.find(locals.current_class);
+        if (current != symbols.classes.end() && !current->second->generic_params.empty()) {
+            return true;
+        }
+    }
+    if (type_ref_head_name(receiver) == locals.current_class) {
+        const auto current = symbols.classes.find(locals.current_class);
+        if (current != symbols.classes.end() && !current->second->generic_params.empty()) {
+            return true;
+        }
+    }
+    return std::ranges::any_of(receiver.children, [&](const TypeRef& child) {
+        return generic_receiver_type(child, symbols, locals);
+    });
+}
+
+std::string cpp_instance_method_name(std::string_view name) {
+    return name == "append" ? "push_back" : std::string(name);
 }
 
 std::optional<std::string>
@@ -102,8 +124,9 @@ lower_instance_dispatch(const Expr& expr, const Expr& member,
     const std::string dispatch_call = "dudu_dispatch_instance_" + member.name + templates + "(" +
                                       call_arguments(dispatch_receiver, arguments) + ")";
     const std::string access = pointer ? "->" : ".";
+    const std::string cpp_method = cpp_instance_method_name(member.name);
     const std::string method =
-        templates.empty() ? member.name : "template " + member.name + templates;
+        templates.empty() ? cpp_method : "template " + cpp_method + templates;
     const std::string member_call = forwarded + access + method + "(" + arguments + ")";
     const std::string lowered_receiver =
         lower_expr(receiver, aliases, locals, local_type_refs, &symbols, options);

@@ -108,6 +108,8 @@ compile_modules_path_and_expect generic_dependent_target_overload \
     tests/fixtures/project_generic_dependent_target_overload/main.dd 42
 compile_and_expect generic_instantiated_static_member 42
 compile_and_expect generic_static_enum_dispatch 42
+compile_and_expect generic_member_template_self 42
+compile_and_expect generic_list_append 42
 compile_and_expect generic_type_constructor 42
 compile_and_expect generic_default_constructor 42
 compile_and_expect generic_variant_pack 42

@@ -45,6 +45,21 @@ void test_expected_generic_method_emission_uses_type_ast_receiver() {
     assert(cpp.find("std::string text = wrapper.make<std::string>();") != std::string::npos);
 }
 
+void test_dependent_self_generic_method_uses_template_disambiguator() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("class Box[T]:\n"
+                           "    def write[Writer](self, output: &Writer) -> bool:\n"
+                           "        return True\n"
+                           "\n"
+                           "    def encode[Writer](self, output: &Writer) -> bool:\n"
+                           "        ready: bool = self.write[Writer](output)\n"
+                           "        return ready\n",
+                           "dependent_self_generic_method.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find(".template write<Writer>(output)") != std::string::npos);
+}
+
 void test_receiver_reference_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("class Vec3:\n"
@@ -173,6 +188,7 @@ int main() {
     try {
         test_inferred_auto_assignment_is_not_redeclared();
         test_expected_generic_method_emission_uses_type_ast_receiver();
+        test_dependent_self_generic_method_uses_template_disambiguator();
         test_receiver_reference_emission();
         test_class_construction_distinguishes_aggregates_and_constructors();
         test_class_emit_order_uses_type_ast_fields();
