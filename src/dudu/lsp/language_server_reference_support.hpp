@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
+#include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/lsp/language_server_types.hpp"
 
@@ -32,11 +33,9 @@ std::optional<std::string> native_identity_for_selection(const AstSelection& sel
                                                          const std::string& query,
                                                          const SourceLocation& cursor_location);
 std::string dotted_tail(const std::string& query);
-const ProjectIndex* document_project_index(const Document& doc, bool include_native);
+ProjectIndexSnapshot document_project_index(const Document& doc, bool include_native);
 const ModuleAst* visible_document_unit(const ProjectIndex* index, const Document& doc);
-const ModuleAst* workspace_candidate_unit(const ProjectIndex* workspace_index,
-                                          const Document& candidate, bool include_native);
-const ProjectIndex* workspace_candidate_index(const ProjectIndex* workspace_index,
-                                              const Document& candidate, bool include_native);
+ProjectIndexSnapshot workspace_candidate_index(const ProjectIndexSnapshot& workspace_index,
+                                               const Document& candidate, bool include_native);
 
 } // namespace dudu

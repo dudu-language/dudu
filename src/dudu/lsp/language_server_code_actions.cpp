@@ -27,11 +27,11 @@ struct CodeActionEdit {
     TextEdit edit;
 };
 
-const ProjectIndex* document_project_index(const Document& doc) {
+ProjectIndexSnapshot document_project_index(const Document& doc) {
     try {
-        return &project_index_for_document(doc, false);
+        return project_index_for_document(doc, false);
     } catch (const std::exception&) {
-        return nullptr;
+        return {};
     }
 }
 
@@ -155,8 +155,8 @@ missing_import_action(const Document& doc, const std::string& name, const Module
             continue;
         }
         std::vector<Symbol> candidate_symbols;
-        const ProjectIndex* candidate_index = document_project_index(candidate);
-        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
+        const ProjectIndexSnapshot candidate_index = document_project_index(candidate);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index.get(), candidate);
         if (candidate_unit == nullptr) {
             continue;
         }
@@ -272,8 +272,8 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
 std::string code_actions_json(const Document& doc, const Json* params,
                               const std::map<std::string, Document>& workspace) {
     std::vector<std::string> actions;
-    const ProjectIndex* index = document_project_index(doc);
-    const ModuleAst* current = visible_document_unit(index, doc);
+    const ProjectIndexSnapshot index = document_project_index(doc);
+    const ModuleAst* current = visible_document_unit(index.get(), doc);
     actions.push_back("{\"title\":\"Format document\",\"kind\":\"source.format\","
                       "\"command\":{\"title\":\"Format document\","
                       "\"command\":\"editor.action.formatDocument\"}}");

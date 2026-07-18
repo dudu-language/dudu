@@ -227,7 +227,9 @@ void test_lsp_native_overload_references_use_selected_identity() {
     const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
                                   .path = dir / "main.dd",
                                   .text = read_file(dir / "main.dd")};
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst& unit = index.visible_unit_for_path(main_doc.path);
     std::set<std::string> overload_identities;
     for (const dudu::NativeFunctionDecl& fn : unit.native_functions) {
@@ -295,7 +297,9 @@ void test_lsp_native_method_overload_references_use_selected_identity() {
     const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
                                   .path = dir / "main.dd",
                                   .text = read_file(dir / "main.dd")};
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst& unit = index.visible_unit_for_path(main_doc.path);
     std::set<std::string> overload_identities;
     for (const dudu::ClassDecl& klass : unit.native_classes) {
@@ -382,7 +386,9 @@ void test_lsp_native_namespace_reference_query_uses_selected_segment() {
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
                              .text = read_file(dir / "main.dd")};
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst& unit = index.visible_unit_for_path(doc.path);
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":13}}").parse();
     const dudu::AstSelection selection = dudu::ast_selection_at(unit, &params);

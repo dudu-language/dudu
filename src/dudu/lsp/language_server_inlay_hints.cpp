@@ -477,9 +477,9 @@ std::string hint_json(const InlayHint& hint) {
 std::string inlay_hints_json(const Document& doc, const Json*, InlayHintOptions options) {
     std::vector<InlayHint> hints;
     try {
-        const ProjectIndex& index = project_index_for_document(doc, true, false);
-        const ModuleAst& module = index.visible_unit_for_path(doc.path);
-        LspPresentationSymbols presentation = presentation_symbols(index, module);
+        const ProjectIndexSnapshot index = project_index_for_document(doc, true, false);
+        const ModuleAst& module = index->visible_unit_for_path(doc.path);
+        LspPresentationSymbols presentation = presentation_symbols(*index, module);
         Symbols& symbols = presentation.symbols;
         for (const FunctionDecl& fn : module.functions) {
             collect_hints_for_function(doc, symbols, fn, {}, options, hints);

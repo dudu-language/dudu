@@ -29,13 +29,13 @@ std::optional<ImportReferenceTarget> selective_import_target(const Document& doc
         return std::nullopt;
     }
     try {
-        const ProjectIndex& index = project_index_for_document(doc, false);
-        const ModuleAst& current = index.visible_unit_for_path(doc.path);
+        const ProjectIndexSnapshot index = project_index_for_document(doc, false);
+        const ModuleAst& current = index->visible_unit_for_path(doc.path);
         for (const ImportDecl& import : current.imports) {
             if (import.kind != ImportKind::From || bound_import_name(import) != query) {
                 continue;
             }
-            if (const ModuleAst* imported = index.imported_unit(current, import)) {
+            if (const ModuleAst* imported = index->imported_unit(current, import)) {
                 return ImportReferenceTarget{
                     .source_key = imported->source_path.empty() ? imported->module_path
                                                                : imported->source_path.string(),
@@ -55,13 +55,13 @@ std::optional<std::string> module_import_target_key(const Document& doc,
     }
     const std::string head = dotted_head(dotted_query);
     try {
-        const ProjectIndex& index = project_index_for_document(doc, false);
-        const ModuleAst& current = index.visible_unit_for_path(doc.path);
+        const ProjectIndexSnapshot index = project_index_for_document(doc, false);
+        const ModuleAst& current = index->visible_unit_for_path(doc.path);
         for (const ImportDecl& import : current.imports) {
             if (import.kind != ImportKind::Module || bound_import_name(import) != head) {
                 continue;
             }
-            if (const ModuleAst* imported = index.imported_unit(current, import)) {
+            if (const ModuleAst* imported = index->imported_unit(current, import)) {
                 return imported->source_path.empty() ? imported->module_path
                                                      : imported->source_path.string();
             }

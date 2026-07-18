@@ -89,30 +89,47 @@ ProjectIndexCache::CacheKey ProjectIndexCache::key_for_options(const ProjectInde
 }
 
 const ProjectIndex& ProjectIndexCache::get(ProjectIndexOptions options) {
+    return *get_shared(std::move(options));
+}
+
+std::shared_ptr<const ProjectIndex> ProjectIndexCache::get_shared(ProjectIndexOptions options) {
     const CacheKey key = key_for_options(options);
-    if (const auto found = entries_.find(key); found != entries_.end()) {
-        if (found->second.index.source_stamps_current()) {
-            ++stats_.hits;
-            return found->second.index;
+    {
+        const std::lock_guard lock(mutex_);
+        if (const auto found = entries_.find(key); found != entries_.end()) {
+            if (found->second.index->source_stamps_current()) {
+                ++stats_.hits;
+                return found->second.index;
+            }
+            ++stats_.stale_evictions;
+            entries_.erase(found);
         }
-        ++stats_.stale_evictions;
-        entries_.erase(found);
+        ++stats_.misses;
     }
-    ++stats_.misses;
-    CacheEntry entry{.index = ProjectIndex::load(options)};
+
+    std::shared_ptr<const ProjectIndex> loaded =
+        std::make_shared<ProjectIndex>(ProjectIndex::load(options));
+    const std::lock_guard lock(mutex_);
     ++stats_.loads;
-    auto result = entries_.emplace(key, std::move(entry));
+    if (const auto found = entries_.find(key); found != entries_.end() &&
+                                              found->second.index->source_stamps_current()) {
+        ++stats_.hits;
+        return found->second.index;
+    }
+    auto result = entries_.insert_or_assign(key, CacheEntry{.index = std::move(loaded)});
     stats_.entries = entries_.size();
     return result.first->second.index;
 }
 
 ProjectIndexCacheStats ProjectIndexCache::stats() const {
+    const std::lock_guard lock(mutex_);
     ProjectIndexCacheStats out = stats_;
     out.entries = entries_.size();
     return out;
 }
 
 void ProjectIndexCache::clear() {
+    const std::lock_guard lock(mutex_);
     entries_.clear();
     stats_ = {};
 }

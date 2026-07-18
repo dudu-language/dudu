@@ -231,7 +231,9 @@ void test_lsp_project_index_reuses_last_good_after_broken_edit() {
                               .text = "def answer() -> i32:\n"
                                       "    return 42\n"};
     dudu::clear_language_server_module_cache();
-    const dudu::ProjectIndex& current = dudu::project_index_for_document(good, false);
+    const dudu::ProjectIndexSnapshot current_snapshot =
+        dudu::project_index_for_document(good, false);
+    const dudu::ProjectIndex& current = *current_snapshot;
     assert(current.merged_module().functions.size() == 1);
     assert(current.merged_module().functions.front().name == "answer");
 
@@ -239,7 +241,9 @@ void test_lsp_project_index_reuses_last_good_after_broken_edit() {
                                 .path = path,
                                 .text = "def answer() -> i32\n"
                                         "    return 42\n"};
-    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(broken, false);
+    const dudu::ProjectIndexSnapshot recovered_snapshot =
+        dudu::project_index_for_document(broken, false);
+    const dudu::ProjectIndex& recovered = *recovered_snapshot;
     assert(recovered.merged_module().functions.empty());
     assert(recovered.parse_diagnostics().size() == 1);
 
@@ -249,7 +253,9 @@ void test_lsp_project_index_reuses_last_good_after_broken_edit() {
                                                 "\n"
                                                 "def answer() -> i32:\n"
                                                 "    return 42\n"};
-    const dudu::ProjectIndex& last_good = dudu::project_index_for_document(missing_import, false);
+    const dudu::ProjectIndexSnapshot last_good_snapshot =
+        dudu::project_index_for_document(missing_import, false);
+    const dudu::ProjectIndex& last_good = *last_good_snapshot;
     assert(last_good.merged_module().functions.size() == 1);
     assert(last_good.merged_module().functions.front().name == "answer");
     dudu::clear_language_server_module_cache();
@@ -272,7 +278,9 @@ void test_lsp_project_index_recovers_bad_indentation_without_last_good_state() {
     const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
 
     dudu::clear_language_server_module_cache();
-    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndexSnapshot recovered_snapshot =
+        dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndex& recovered = *recovered_snapshot;
     assert(recovered.parse_diagnostics().size() == 1);
     assert(recovered.merged_module().functions.size() == 2);
     assert(recovered.merged_module().functions[1].name == "usable");
@@ -293,7 +301,9 @@ void test_lsp_project_index_isolates_missing_native_headers() {
     const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
 
     dudu::clear_language_server_module_cache();
-    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndexSnapshot recovered_snapshot =
+        dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndex& recovered = *recovered_snapshot;
     assert(recovered.merged_module().functions.size() == 1);
     assert(recovered.merged_module().functions.front().name == "usable");
 
@@ -363,7 +373,9 @@ void test_lsp_native_context_header_field_definition() {
     const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
 
     dudu::clear_language_server_module_cache();
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst& unit = index.visible_unit_for_path(path);
     bool saw_class = false;
     bool saw_field = false;

@@ -52,8 +52,8 @@ std::string document_symbol_json(const Symbol& symbol) {
 
 std::vector<Symbol> document_symbols(const Document& doc, bool include_native) {
     try {
-        const ProjectIndex& index = project_index_for_document(doc, include_native);
-        return symbols_for_module(index.visible_unit_for_path(doc.path), include_native);
+        const ProjectIndexSnapshot index = project_index_for_document(doc, include_native);
+        return symbols_for_module(index->visible_unit_for_path(doc.path), include_native);
     } catch (const std::exception&) {
     }
     return {};
@@ -133,9 +133,9 @@ std::string workspace_symbols_json(const std::string& query,
     for (const auto& [uri, doc] : open_documents) {
         (void)uri;
         try {
-            const ProjectIndex& index = project_index_for_document(doc, true);
-            for (const ProjectModuleSummary& module : index.modules()) {
-                const ModuleAst* unit = index.unit_for_module(module.module_path);
+            const ProjectIndexSnapshot index = project_index_for_document(doc, true);
+            for (const ProjectModuleSummary& module : index->modules()) {
+                const ModuleAst* unit = index->unit_for_module(module.module_path);
                 if (unit == nullptr) {
                     continue;
                 }
@@ -145,7 +145,7 @@ std::string workspace_symbols_json(const std::string& query,
                 append_matching_symbols(out, first, seen, lowered_query,
                                         symbols_for_module(*unit, false), doc.uri);
             }
-            const ModuleAst& native_unit = index.visible_unit_for_path(doc.path);
+            const ModuleAst& native_unit = index->visible_unit_for_path(doc.path);
             append_matching_symbols(out, first, seen, lowered_query,
                                     symbols_for_module(native_unit, true), doc.uri);
         } catch (const std::exception&) {

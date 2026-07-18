@@ -259,6 +259,7 @@ if(DUDU_BUILD_TESTS)
     dudu_add_test(dudu_member_type_lookup_tests tests/member_type_lookup_tests.cpp dudu_frontend)
     dudu_add_test(dudu_module_loader_tests tests/module_loader_tests.cpp dudu_frontend)
     dudu_add_test(dudu_project_index_module_tests tests/project_index_module_tests.cpp dudu_frontend)
+    dudu_add_test(dudu_project_index_cache_tests tests/project_index_cache_tests.cpp dudu_frontend)
     dudu_add_test(dudu_cpp_module_artifact_tests tests/cpp_module_artifact_tests.cpp dudu_frontend)
     target_compile_definitions(
         dudu_project_index_module_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")

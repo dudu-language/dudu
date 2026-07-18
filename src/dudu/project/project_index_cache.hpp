@@ -5,6 +5,8 @@
 #include <compare>
 #include <filesystem>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <string>
 
 namespace dudu {
@@ -20,6 +22,7 @@ struct ProjectIndexCacheStats {
 class ProjectIndexCache {
   public:
     const ProjectIndex& get(ProjectIndexOptions options);
+    std::shared_ptr<const ProjectIndex> get_shared(ProjectIndexOptions options);
     ProjectIndexCacheStats stats() const;
     void clear();
 
@@ -42,13 +45,14 @@ class ProjectIndexCache {
         friend auto operator<=>(const CacheKey& lhs, const CacheKey& rhs) = default;
     };
     struct CacheEntry {
-        ProjectIndex index;
+        std::shared_ptr<const ProjectIndex> index;
     };
 
     static CacheKey key_for_options(const ProjectIndexOptions& options);
 
     std::map<CacheKey, CacheEntry> entries_;
     ProjectIndexCacheStats stats_;
+    mutable std::mutex mutex_;
 };
 
 } // namespace dudu

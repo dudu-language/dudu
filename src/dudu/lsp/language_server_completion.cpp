@@ -181,12 +181,12 @@ std::string enum_value_completion_json(const ModuleAst& module, const std::strin
     return completions.json();
 }
 
-const ProjectIndex* completion_index(const Document& doc) {
+ProjectIndexSnapshot completion_index(const Document& doc) {
     try {
-        return &project_index_for_document(doc, true);
+        return project_index_for_document(doc, true);
     } catch (const std::exception&) {
     }
-    return nullptr;
+    return {};
 }
 
 std::string member_completion_json(const ProjectIndex& index, const ModuleAst& current,
@@ -275,7 +275,7 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
 } // namespace
 
 std::string completion_json(const Document* doc, const Json* params) {
-    const ProjectIndex* index = nullptr;
+    ProjectIndexSnapshot index;
     const ModuleAst* current = nullptr;
     if (doc != nullptr) {
         index = completion_index(*doc);

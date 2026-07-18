@@ -447,14 +447,14 @@ class LanguageServer {
             return "{\"data\":[]}";
         }
         try {
-            const ProjectIndex& index =
+            const ProjectIndexSnapshot index =
                 project_index_for_document(found->second, false, false, false);
             if (full_diagnostics_ready(uri)) {
-                const ProjectIndex& native_index =
+                const ProjectIndexSnapshot native_index =
                     project_index_for_document(found->second, true, false, false);
-                return semantic_tokens_json(index, found->second.path, native_index);
+                return semantic_tokens_json(*index, found->second.path, *native_index);
             }
-            return semantic_tokens_json(index, found->second.path, index);
+            return semantic_tokens_json(*index, found->second.path, *index);
         } catch (const std::exception&) {
             const ParseResult recovered =
                 parse_source_recovering(found->second.text, found->second.path);
@@ -613,14 +613,14 @@ class LanguageServer {
         }
         for (const auto& [uri, document] : documents_) {
             try {
-                const ProjectIndex& index = project_index_for_document(document, false);
-                const ProjectModuleSummary* changed = index.summary_for_path(changed_path);
-                const ProjectModuleSummary* current = index.summary_for_path(document.path);
+                const ProjectIndexSnapshot index = project_index_for_document(document, false);
+                const ProjectModuleSummary* changed = index->summary_for_path(changed_path);
+                const ProjectModuleSummary* current = index->summary_for_path(document.path);
                 if (changed == nullptr || current == nullptr) {
                     continue;
                 }
                 const std::vector<std::string> modules =
-                    index.affected_modules_for_sources({changed_path});
+                    index->affected_modules_for_sources({changed_path});
                 if (std::ranges::find(modules, current->module_path) != modules.end()) {
                     affected.insert(uri);
                 }

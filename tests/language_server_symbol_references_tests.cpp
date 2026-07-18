@@ -265,7 +265,9 @@ void test_lsp_references_use_imported_member_identity_from_use_site() {
                                                           {entities_doc.uri, entities_doc}};
     dudu::clear_language_server_module_cache();
     dudu::set_language_server_open_documents(workspace);
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst* entity_unit = index.unit_for_path(entities_path);
     assert(entity_unit != nullptr);
     assert(!dudu::references_in(*entity_unit, entities_doc, "Player.hp").empty());
@@ -325,7 +327,9 @@ void test_lsp_references_use_imported_method_identity_from_use_site() {
                                                           {entities_doc.uri, entities_doc}};
     dudu::clear_language_server_module_cache();
     dudu::set_language_server_open_documents(workspace);
-    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndexSnapshot index_snapshot =
+        dudu::project_index_for_document(main_doc, true);
+    const dudu::ProjectIndex& index = *index_snapshot;
     const dudu::ModuleAst& main_unit = index.visible_unit_for_path(main_path);
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":6,\"character\":20}}").parse();
     const dudu::AstSelection selection = dudu::ast_selection_at(main_unit, &params);

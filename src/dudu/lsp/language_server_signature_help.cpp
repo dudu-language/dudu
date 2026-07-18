@@ -28,11 +28,11 @@ struct SignatureCandidate {
     std::string documentation;
 };
 
-const ProjectIndex* signature_index(const Document& doc) {
+ProjectIndexSnapshot signature_index(const Document& doc) {
     try {
-        return &project_index_for_document(doc, true);
+        return project_index_for_document(doc, true);
     } catch (const std::exception&) {
-        return nullptr;
+        return {};
     }
 }
 
@@ -97,7 +97,7 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
     }
     std::vector<SignatureCandidate> signatures;
-    if (const ProjectIndex* index = signature_index(*doc)) {
+    if (const ProjectIndexSnapshot index = signature_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
         const std::optional<MacroEditorCall> macro =
             macro_call_for_reference(*index, current, call.name);

@@ -115,8 +115,8 @@ std::optional<std::string> prepare_rename_range_json(const Document& doc, const 
 
 std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
-    const ProjectIndex* current_index = document_project_index(doc, true);
-    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
+    const ProjectIndexSnapshot current_index = document_project_index(doc, true);
+    const ModuleAst* current_unit = visible_document_unit(current_index.get(), doc);
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
     if (current_index != nullptr && current_unit != nullptr) {
@@ -129,10 +129,10 @@ std::string rename_json(const Document& doc, const Json* params,
             macro_edit << "{\"changes\":{";
             bool first_document = true;
             for (const auto& [_, candidate] : workspace) {
-                const ProjectIndex* candidate_index =
+                const ProjectIndexSnapshot candidate_index =
                     workspace_candidate_index(current_index, candidate, false);
                 const ModuleAst* candidate_unit =
-                    workspace_candidate_unit(current_index, candidate, false);
+                    visible_document_unit(candidate_index.get(), candidate);
                 if (candidate_index == nullptr || candidate_unit == nullptr) {
                     continue;
                 }
@@ -184,7 +184,9 @@ std::string rename_json(const Document& doc, const Json* params,
         if (scope == RenameScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const ModuleAst* candidate_unit = workspace_candidate_unit(current_index, candidate, false);
+        const ProjectIndexSnapshot candidate_index =
+            workspace_candidate_index(current_index, candidate, false);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index.get(), candidate);
         if (candidate_unit == nullptr) {
             continue;
         }
@@ -244,8 +246,8 @@ std::string rename_json(const Document& doc, const Json* params,
 }
 
 std::string prepare_rename_json(const Document& doc, const Json* params) {
-    const ProjectIndex* current_index = document_project_index(doc, false);
-    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
+    const ProjectIndexSnapshot current_index = document_project_index(doc, false);
+    const ModuleAst* current_unit = visible_document_unit(current_index.get(), doc);
     if (current_unit == nullptr) {
         return "null";
     }

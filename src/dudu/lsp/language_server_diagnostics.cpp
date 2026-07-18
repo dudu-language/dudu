@@ -219,8 +219,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
             !diagnostics.empty()) {
             return diagnostics;
         }
-        const ProjectIndex& index = project_index_for_document(doc, true, false, false);
-        return diagnostics_from_index(index, doc);
+        const ProjectIndexSnapshot index = project_index_for_document(doc, true, false, false);
+        return diagnostics_from_index(*index, doc);
     } catch (const CompileError& error) {
         return exception_diagnostic(doc, error);
     } catch (const std::exception& error) {

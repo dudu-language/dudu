@@ -187,11 +187,11 @@ std::string dotted_tail(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(dot + 1);
 }
 
-const ProjectIndex* document_project_index(const Document& doc, bool include_native) {
+ProjectIndexSnapshot document_project_index(const Document& doc, bool include_native) {
     try {
-        return &project_index_for_document(doc, include_native);
+        return project_index_for_document(doc, include_native);
     } catch (const std::exception&) {
-        return nullptr;
+        return {};
     }
 }
 
@@ -199,19 +199,9 @@ const ModuleAst* visible_document_unit(const ProjectIndex* index, const Document
     return index == nullptr ? nullptr : &index->visible_unit_for_path(doc.path);
 }
 
-const ModuleAst* workspace_candidate_unit(const ProjectIndex* workspace_index,
-                                          const Document& candidate, bool include_native) {
-    if (workspace_index != nullptr) {
-        if (const ModuleAst* unit = workspace_index->unit_for_path(candidate.path)) {
-            return unit;
-        }
-    }
-    return visible_document_unit(document_project_index(candidate, include_native), candidate);
-}
-
-const ProjectIndex* workspace_candidate_index(const ProjectIndex* workspace_index,
-                                              const Document& candidate, bool include_native) {
-    if (workspace_index != nullptr && workspace_index->unit_for_path(candidate.path) != nullptr) {
+ProjectIndexSnapshot workspace_candidate_index(const ProjectIndexSnapshot& workspace_index,
+                                               const Document& candidate, bool include_native) {
+    if (workspace_index && workspace_index->unit_for_path(candidate.path) != nullptr) {
         return workspace_index;
     }
     return document_project_index(candidate, include_native);

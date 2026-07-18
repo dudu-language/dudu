@@ -26,9 +26,9 @@ void collect_indexed_documents(const Document& doc,
                                const std::set<std::filesystem::path>& open_paths,
                                std::set<std::filesystem::path>& indexed_paths,
                                std::map<std::string, Document>& out) {
-    const ProjectIndex* index = nullptr;
+    ProjectIndexSnapshot index;
     try {
-        index = &project_index_for_document(doc, false);
+        index = project_index_for_document(doc, false);
     } catch (const std::exception&) {
         return;
     }

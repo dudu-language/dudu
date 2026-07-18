@@ -99,7 +99,9 @@ void test_lsp_semantic_recovery_reports_independent_body_errors() {
     assert(diagnostics[0].location.line == 2);
     assert(diagnostics[1].location.line == 5);
 
-    const dudu::ProjectIndex& project = dudu::project_index_for_document(doc, false);
+    const dudu::ProjectIndexSnapshot project_snapshot =
+        dudu::project_index_for_document(doc, false);
+    const dudu::ProjectIndex& project = *project_snapshot;
     assert(project.merged_module().functions.size() == 3);
     assert(project.merged_module().functions.back().name == "usable");
 }
@@ -161,7 +163,9 @@ void test_lsp_editor_requests_use_recovered_current_ast() {
     const std::string hints = dudu::inlay_hints_json(doc, nullptr);
     assert(hints.find("\"value\":\"i32\"") != std::string::npos);
 
-    const dudu::ProjectIndex& project = dudu::project_index_for_document(doc, false);
+    const dudu::ProjectIndexSnapshot project_snapshot =
+        dudu::project_index_for_document(doc, false);
+    const dudu::ProjectIndex& project = *project_snapshot;
     const std::string tokens = dudu::semantic_tokens_json(project, path, project);
     assert(tokens != "{\"data\":[]}");
 

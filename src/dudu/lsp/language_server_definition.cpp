@@ -303,8 +303,8 @@ std::optional<std::string> local_definition_json(const Document& doc, const Modu
 
 std::string definition_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const ProjectIndex& index = project_index_for_document(doc, false);
-    const ModuleAst& current = index.visible_unit_for_path(doc.path);
+    const ProjectIndexSnapshot index = project_index_for_document(doc, false);
+    const ModuleAst& current = index->visible_unit_for_path(doc.path);
     if (const std::optional<std::string> header =
             native_header_definition_json(doc, current, params)) {
         return *header;
@@ -312,7 +312,7 @@ std::string definition_json(const Document& doc, const Json* params,
     const AstSelection selection = ast_selection_at(current, params);
     if (const std::optional<MacroEditorSelection> macro = macro_selection_at(current, params)) {
         if (const std::optional<Symbol> symbol =
-                macro_symbol_for_reference(index, current, *macro)) {
+                macro_symbol_for_reference(*index, current, *macro)) {
             return symbol_definition_json(*symbol, doc);
         }
     }
@@ -349,16 +349,16 @@ std::string definition_json(const Document& doc, const Json* params,
     }
     if (word.find('.') != std::string::npos && module_import_target_key(doc, word).has_value()) {
         if (const std::optional<std::string> import_definition =
-                import_definition_json(doc, index, current, word)) {
+                import_definition_json(doc, *index, current, word)) {
             return *import_definition;
         }
     }
-    const ProjectIndex* native_index = nullptr;
+    ProjectIndexSnapshot native_index;
     const auto load_native_index = [&]() -> const ProjectIndex* {
-        if (native_index == nullptr) {
-            native_index = &project_index_for_document(doc, true);
+        if (!native_index) {
+            native_index = project_index_for_document(doc, true);
         }
-        return native_index;
+        return native_index.get();
     };
     const std::optional<ExprPath>& path = selection.expr_path;
     if (path && path->segments.size() >= 2) {
@@ -409,13 +409,13 @@ std::string definition_json(const Document& doc, const Json* params,
         return symbol_definition_json(*suffix, doc);
     }
     if (const std::optional<std::string> import_definition =
-            import_definition_json(doc, index, current, word)) {
+            import_definition_json(doc, *index, current, word)) {
         return *import_definition;
     }
     if (path && path->segments.size() >= 2) {
         const std::string path_text = render_expr_path(*path);
         if (path_text != word) {
-            return import_definition_json(doc, index, current, path_text).value_or("null");
+            return import_definition_json(doc, *index, current, path_text).value_or("null");
         }
     }
     const ProjectIndex* native = nullptr;

@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -16,9 +17,10 @@ namespace dudu {
 std::string file_uri_to_path(std::string uri);
 std::filesystem::path project_config_path(const std::filesystem::path& file);
 ProjectConfig config_for_file(const std::filesystem::path& file);
-const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
-                                               bool check_semantics = false,
-                                               bool allow_last_good = true);
+using ProjectIndexSnapshot = std::shared_ptr<const ProjectIndex>;
+ProjectIndexSnapshot project_index_for_document(const Document& doc, bool include_native_headers,
+                                                bool check_semantics = false,
+                                                bool allow_last_good = true);
 ProjectIndexOptions project_index_options_for_document(
     const Document& doc, bool include_native_headers, bool check_semantics,
     const std::map<std::filesystem::path, std::string>& source_overrides = {});

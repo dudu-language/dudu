@@ -273,9 +273,9 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
 
 std::string hover_json(const Document& doc, const std::string& word, const Json* params,
                        std::optional<ExprPath> selected_path) {
-    const ProjectIndex* index = nullptr;
+    ProjectIndexSnapshot index;
     try {
-        index = &project_index_for_document(doc, false);
+        index = project_index_for_document(doc, false);
     } catch (const std::exception&) {
         return "null";
     }
@@ -370,12 +370,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
             imported_symbol_hover_json(*index, current, query)) {
         return *imported;
     }
-    const ProjectIndex* native_index = nullptr;
+    ProjectIndexSnapshot native_index;
     const auto load_native_index = [&]() -> const ProjectIndex* {
-        if (native_index == nullptr) {
-            native_index = &project_index_for_document(doc, true);
+        if (!native_index) {
+            native_index = project_index_for_document(doc, true);
         }
-        return native_index;
+        return native_index.get();
     };
     if (selected_path.has_value()) {
         if (const std::optional<std::string> builtin_member =

@@ -95,13 +95,13 @@ void append_import_alias_references(const Symbol& symbol,
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
         try {
-            const ProjectIndex& index = project_index_for_document(candidate, false);
-            const ModuleAst& module = index.visible_unit_for_path(candidate.path);
+            const ProjectIndexSnapshot index = project_index_for_document(candidate, false);
+            const ModuleAst& module = index->visible_unit_for_path(candidate.path);
             for (const ImportDecl& import : module.imports) {
                 if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
                     continue;
                 }
-                const ModuleAst* imported = index.imported_unit(module, import);
+                const ModuleAst* imported = index->imported_unit(module, import);
                 if (imported == nullptr || !same_imported_module_file(*imported, symbol)) {
                     continue;
                 }

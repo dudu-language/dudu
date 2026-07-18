@@ -114,17 +114,17 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 std::vector<ReferenceLocation> reference_locations(const Document& doc, const Json* params,
                                                    const std::map<std::string, Document>& workspace,
                                                    bool include_native) {
-    const ProjectIndex* current_index = document_project_index(doc, include_native);
-    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
+    const ProjectIndexSnapshot current_index = document_project_index(doc, include_native);
+    const ModuleAst* current_unit = visible_document_unit(current_index.get(), doc);
     if (current_index != nullptr && current_unit != nullptr) {
         if (const std::optional<MacroReferenceTarget> macro =
                 macro_reference_target_at(*current_index, *current_unit, params)) {
             std::vector<ReferenceLocation> macro_locations;
             for (const auto& [_, candidate] : workspace) {
-                const ProjectIndex* candidate_index =
+                const ProjectIndexSnapshot candidate_index =
                     workspace_candidate_index(current_index, candidate, false);
                 const ModuleAst* candidate_unit =
-                    workspace_candidate_unit(current_index, candidate, false);
+                    visible_document_unit(candidate_index.get(), candidate);
                 if (candidate_index == nullptr || candidate_unit == nullptr)
                     continue;
                 std::vector<ReferenceLocation> found = macro_reference_locations(
@@ -168,7 +168,9 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
         if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const ModuleAst* candidate_unit = workspace_candidate_unit(current_index, candidate, false);
+        ProjectIndexSnapshot candidate_index =
+            workspace_candidate_index(current_index, candidate, false);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index.get(), candidate);
         if (candidate_unit == nullptr) {
             continue;
         }
@@ -211,15 +213,13 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                 !module_may_reference_name_segment(*candidate_unit, symbol_segment)) {
                 continue;
             }
-            const ProjectIndex* native_candidate_index =
-                workspace_candidate_index(current_index, candidate, include_native);
-            if (native_candidate_index == nullptr) {
+            candidate_index = workspace_candidate_index(current_index, candidate, include_native);
+            if (!candidate_index) {
                 continue;
             }
-            candidate_unit = &native_candidate_index->visible_unit_for_path(candidate.path);
+            candidate_unit = &candidate_index->visible_unit_for_path(candidate.path);
             const std::set<std::string> identity_queries =
-                native_candidate_index->native_queries_for_identity(candidate.path,
-                                                                    *native_identity);
+                candidate_index->native_queries_for_identity(candidate.path, *native_identity);
             if (identity_queries.empty()) {
                 continue;
             }

@@ -6,6 +6,7 @@
 #include <compare>
 #include <exception>
 #include <filesystem>
+#include <mutex>
 #include <sstream>
 #include <string>
 
@@ -14,6 +15,7 @@ namespace {
 
 ProjectIndexCache project_index_cache;
 std::map<std::filesystem::path, std::string> open_document_sources;
+std::mutex project_state_mutex;
 
 struct LastGoodProjectKey {
     std::string entry_path;
@@ -23,7 +25,7 @@ struct LastGoodProjectKey {
     friend auto operator<=>(const LastGoodProjectKey&, const LastGoodProjectKey&) = default;
 };
 
-std::map<LastGoodProjectKey, ProjectIndex> last_good_project_indexes;
+std::map<LastGoodProjectKey, ProjectIndexSnapshot> last_good_project_indexes;
 
 std::filesystem::path canonical_overlay_path(const std::filesystem::path& path) {
     std::error_code error;
@@ -81,18 +83,24 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
     return parsed;
 }
 
-const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
-                                               bool check_semantics, bool allow_last_good) {
+ProjectIndexSnapshot project_index_for_document(const Document& doc, bool include_native_headers,
+                                                bool check_semantics, bool allow_last_good) {
     const LastGoodProjectKey last_good_key{
         .entry_path = canonical_overlay_path(doc.path).string(),
         .manifest_path = canonical_overlay_path(project_config_path(doc.path)).string(),
         .include_native_headers = include_native_headers,
     };
+    std::map<std::filesystem::path, std::string> source_overrides;
+    {
+        const std::lock_guard lock(project_state_mutex);
+        source_overrides = open_document_sources;
+    }
     ProjectIndexOptions options = project_index_options_for_document(
-        doc, include_native_headers, check_semantics, open_document_sources);
+        doc, include_native_headers, check_semantics, source_overrides);
     try {
-        const ProjectIndex& index = project_index_cache.get(options);
+        ProjectIndexSnapshot index = project_index_cache.get_shared(options);
         if (!check_semantics) {
+            const std::lock_guard lock(project_state_mutex);
             last_good_project_indexes.insert_or_assign(last_good_key, index);
         }
         return index;
@@ -102,11 +110,12 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
             try {
                 options.recover_syntax = true;
                 options.check_semantics = false;
-                return project_index_cache.get(options);
+                return project_index_cache.get_shared(options);
             } catch (const std::exception&) {
             }
         }
         if (!check_semantics && allow_last_good) {
+            const std::lock_guard lock(project_state_mutex);
             if (const auto found = last_good_project_indexes.find(last_good_key);
                 found != last_good_project_indexes.end()) {
                 return found->second;
@@ -143,6 +152,7 @@ ProjectIndexCacheStats language_server_project_index_cache_stats() {
 }
 
 void set_language_server_open_documents(const std::map<std::string, Document>& documents) {
+    const std::lock_guard lock(project_state_mutex);
     open_document_sources.clear();
     for (const auto& [uri, doc] : documents) {
         (void)uri;
@@ -151,9 +161,12 @@ void set_language_server_open_documents(const std::map<std::string, Document>& d
 }
 
 void clear_language_server_module_cache() {
+    {
+        const std::lock_guard lock(project_state_mutex);
+        open_document_sources.clear();
+        last_good_project_indexes.clear();
+    }
     project_index_cache.clear();
-    open_document_sources.clear();
-    last_good_project_indexes.clear();
 }
 
 int leading_spaces(const std::string& line) {
