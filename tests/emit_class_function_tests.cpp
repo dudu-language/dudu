@@ -171,6 +171,30 @@ void test_class_defaults_use_complete_enums_and_optional_values() {
     assert(cpp.find("std::optional<int32_t> value = std::nullopt;") != std::string::npos);
 }
 
+void test_class_and_payload_enum_emit_order_follows_by_value_fields() {
+    const dudu::ModuleAst enum_first = dudu::parse_source("enum Event:\n"
+                                                          "    Move:\n"
+                                                          "        x: i32\n"
+                                                          "\n"
+                                                          "class Envelope:\n"
+                                                          "    event: Event\n",
+                                                          "payload_enum_before_class.dd");
+    dudu::analyze_module(enum_first, {.check_bodies = true});
+    const std::string enum_first_cpp = dudu::emit_cpp_source(enum_first);
+    assert(enum_first_cpp.find("struct Event {") < enum_first_cpp.find("struct Envelope {"));
+
+    const dudu::ModuleAst class_first = dudu::parse_source("enum Shape:\n"
+                                                           "    Dot:\n"
+                                                           "        point: Point\n"
+                                                           "\n"
+                                                           "class Point:\n"
+                                                           "    x: i32\n",
+                                                           "class_before_payload_enum.dd");
+    dudu::analyze_module(class_first, {.check_bodies = true});
+    const std::string class_first_cpp = dudu::emit_cpp_source(class_first);
+    assert(class_first_cpp.find("struct Point {") < class_first_cpp.find("struct Shape {"));
+}
+
 void test_operator_continuation_is_part_of_return_expression() {
     const dudu::ModuleAst module = dudu::parse_source("def value(x: i32) -> i32:\n"
                                                       "    return x\n"
@@ -193,6 +217,7 @@ int main() {
         test_class_construction_distinguishes_aggregates_and_constructors();
         test_class_emit_order_uses_type_ast_fields();
         test_class_defaults_use_complete_enums_and_optional_values();
+        test_class_and_payload_enum_emit_order_follows_by_value_fields();
         test_operator_continuation_is_part_of_return_expression();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

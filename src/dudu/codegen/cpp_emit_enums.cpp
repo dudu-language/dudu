@@ -8,7 +8,6 @@
 #include <sstream>
 
 namespace dudu {
-namespace {
 
 bool enum_has_payload_fields(const EnumDecl& en) {
     for (const EnumValueDecl& value : en.values) {
@@ -18,6 +17,8 @@ bool enum_has_payload_fields(const EnumDecl& en) {
     }
     return false;
 }
+
+namespace {
 
 bool enum_has_underlying_type(const EnumDecl& en) {
     return has_type_ref(en.underlying_type_ref);
@@ -74,27 +75,32 @@ void emit_payload_enums(std::ostringstream& out, const ModuleAst& module,
         if (!enum_has_payload_fields(en)) {
             continue;
         }
-        const std::string& name = emitted_name(en, options);
-        out << "struct " << name << " {\n";
-        for (const EnumValueDecl& value : en.values) {
-            out << "    struct " << value.name << " {\n";
-            for (const EnumPayloadField& field : value.payload_fields) {
-                out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
-                    << emitted_member_name(en.name + "_" + value.name, field.name, options)
-                    << "{};\n";
-            }
-            out << "    };\n";
-        }
-        out << "    std::variant<";
-        for (size_t i = 0; i < en.values.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << en.values[i].name;
-        }
-        out << "> value;\n";
-        out << "};\n\n";
+        emit_payload_enum_definition(out, en, aliases, options);
     }
+}
+
+void emit_payload_enum_definition(std::ostringstream& out, const EnumDecl& en,
+                                  const std::vector<std::string>& aliases,
+                                  const CppEmitOptions& options) {
+    const std::string& name = emitted_name(en, options);
+    out << "struct " << name << " {\n";
+    for (const EnumValueDecl& value : en.values) {
+        out << "    struct " << value.name << " {\n";
+        for (const EnumPayloadField& field : value.payload_fields) {
+            out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
+                << emitted_member_name(en.name + "_" + value.name, field.name, options) << "{};\n";
+        }
+        out << "    };\n";
+    }
+    out << "    std::variant<";
+    for (size_t i = 0; i < en.values.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << en.values[i].name;
+    }
+    out << "> value;\n";
+    out << "};\n\n";
 }
 
 void emit_enums(std::ostringstream& out, const ModuleAst& module,

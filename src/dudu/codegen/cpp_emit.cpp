@@ -7,6 +7,7 @@
 #include "dudu/codegen/cpp_emit_functions.hpp"
 #include "dudu/codegen/cpp_emit_internal.hpp"
 #include "dudu/codegen/cpp_emit_prelude.hpp"
+#include "dudu/codegen/cpp_emit_type_definitions.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
@@ -139,8 +140,8 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     emit_enum_method_declarations(out, module, aliases, true, emit_options);
     emit_cpp_function_declarations(out, module, aliases, true, false, emit_options);
     emit_value_enums(out, module, aliases, emit_options);
-    emit_classes(out, module, aliases, function_returns, symbols, true, emit_options);
-    emit_payload_enums(out, module, aliases, emit_options);
+    emit_class_and_payload_enum_definitions(out, module, aliases, function_returns, symbols, true,
+                                            emit_options);
     emit_generic_enum_method_declarations(out, module, aliases, emit_options);
     emit_enum_method_dispatch_overloads(out, module, aliases, emit_options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true,
@@ -194,8 +195,8 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     emit_cpp_function_declarations(out, module, aliases, false, emit_options.test_source,
                                    emit_options);
     emit_value_enums(out, module, aliases, emit_options);
-    emit_classes(out, module, aliases, function_returns, symbols, false, emit_options);
-    emit_payload_enums(out, module, aliases, emit_options);
+    emit_class_and_payload_enum_definitions(out, module, aliases, function_returns, symbols, false,
+                                            emit_options);
     emit_generic_enum_method_declarations(out, module, aliases, emit_options);
     emit_enum_method_dispatch_overloads(out, module, aliases, emit_options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true,
@@ -265,8 +266,9 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     emit_class_forward_declarations(out, module, options);
     emit_enum_method_declarations(out, module, aliases, false, options);
     emit_cpp_function_declarations(out, module, aliases, false, true, options);
-    emit_classes(out, module, aliases, function_returns, symbols, false, options);
-    emit_enums(out, module, aliases, options);
+    emit_value_enums(out, module, aliases, options);
+    emit_class_and_payload_enum_definitions(out, module, aliases, function_returns, symbols, false,
+                                            options);
     emit_generic_enum_method_declarations(out, module, aliases, options);
     emit_enum_method_dispatch_overloads(out, module, aliases, options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true, options);

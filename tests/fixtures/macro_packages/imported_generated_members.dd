@@ -1,0 +1,6 @@
+from showcase import Player
+
+
+def imported_generated_member(player: &Player) -> i32:
+    return player.debug_field_count() + player.json_field_count()
+

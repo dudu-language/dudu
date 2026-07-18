@@ -41,6 +41,15 @@ bool has_method(const dudu::ClassDecl& klass, const std::string& name) {
                        [&](const dudu::FunctionDecl& method) { return method.name == name; });
 }
 
+const dudu::ModuleAst& find_unit(const dudu::ModuleAst& module, std::string_view name) {
+    for (const dudu::ModuleAst& unit : module.module_units) {
+        if (unit.module_path == name)
+            return unit;
+    }
+    assert(false && "module unit is missing");
+    return module.module_units.front();
+}
+
 void test_public_macro_packages_expand_through_codegen() {
     const std::filesystem::path root =
         std::filesystem::path(DUDU_REPO_ROOT) / "tests/fixtures/macro_packages";
@@ -94,9 +103,31 @@ void test_public_macro_packages_expand_through_codegen() {
     assert(emitted("demo_export_count"));
 }
 
+void test_imported_class_shapes_include_generated_members() {
+    const std::filesystem::path root =
+        std::filesystem::path(DUDU_REPO_ROOT) / "tests/fixtures/macro_packages";
+    const dudu::ProjectConfig config = dudu::parse_project_config(root / "dudu.toml");
+    dudu::ProjectIndexOptions options;
+    options.entry_path = root / "imported_generated_members.dd";
+    options.config = config;
+    options.source_dir = root;
+    options.force_module_tree = true;
+
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    const dudu::ModuleAst& consumer =
+        find_unit(index.merged_module(), "imported_generated_members");
+    const auto imported =
+        std::find_if(consumer.native_classes.begin(), consumer.native_classes.end(),
+                     [](const dudu::ClassDecl& klass) { return klass.name == "Player"; });
+    assert(imported != consumer.native_classes.end());
+    assert(has_method(*imported, "debug_field_count"));
+    assert(has_method(*imported, "json_field_count"));
+}
+
 } // namespace
 
 int main() {
     test_public_macro_packages_expand_through_codegen();
+    test_imported_class_shapes_include_generated_members();
     return 0;
 }

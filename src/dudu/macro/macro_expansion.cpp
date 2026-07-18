@@ -10,6 +10,7 @@
 #include "dudu/macro/macro_registry.hpp"
 #include "dudu/macro/macro_runtime_layout.hpp"
 #include "dudu/macro/macro_worker_process.hpp"
+#include "dudu/project/module_import_aliases.hpp"
 
 #include <map>
 #include <mutex>
@@ -477,6 +478,7 @@ ExpansionReport expand_module_macros(ModuleAst& module, const ExpansionOptions& 
     }
     const Clock::time_point merge_start = Clock::now();
     merge_expansions(module, plan, collected);
+    refresh_projected_module_symbols(module);
     finalize_compilation_domains(module, plan);
     report.timings.merge_ns += elapsed_ns(merge_start);
     return report;

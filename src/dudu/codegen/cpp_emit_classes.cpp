@@ -193,56 +193,67 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
     const std::vector<size_t> emit_order = class_emit_order(module.classes);
     for (const size_t index : emit_order) {
         const ClassDecl& klass = module.classes[index];
-        const std::string& class_name = emitted_name(klass, options);
         if (header_only && !visible_in_cpp_header(klass.visibility)) {
             continue;
         }
-        emit_cpp_template_parameters(out, generic_cpp_params_for_class(klass),
-                                     generic_cpp_value_params_for_class(klass));
-        out << class_opening(klass, aliases, options) << " {\n";
-        for (const FieldDecl& field : klass.fields) {
-            out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' '
-                << emitted_member_name(klass.name, field.name, options);
-            if (expr_present(field.value_expr)) {
-                out << " = ";
-                if (is_template_type(field.type_ref, "Option") &&
-                    field.value_expr.kind == ExprKind::NoneLiteral) {
-                    out << "std::nullopt";
-                } else {
-                    out << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols,
-                                      options);
-                }
-            } else if (field.type_ref.kind != TypeKind::Reference) {
-                out << "{}";
-            }
-            out << ";\n";
-        }
-        for (const ConstDecl& field : klass.static_fields) {
-            out << "    inline static " << lower_cpp_type(field.type_ref, aliases, options) << ' '
-                << emitted_member_name(klass.name, field.name, options) << " = "
-                << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols, options)
-                << ";\n";
-        }
-        for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_decl(out, klass.name, constant, aliases, options);
-        }
-        emit_class_method_members(out, klass, class_name, aliases, function_returns, symbols,
-                                  options);
-        out << "};\n\n";
-        for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_definition(out, klass.name, class_name, constant, aliases, options);
-        }
-        if (!klass.constants.empty()) {
-            out << '\n';
-        }
+        emit_class_definition(out, klass, aliases, function_returns, symbols, options);
     }
     if (!header_only) {
         for (const size_t index : emit_order) {
-            const ClassDecl& klass = module.classes[index];
-            emit_out_of_line_class_methods(out, klass, emitted_name(klass, options), aliases,
-                                           function_returns, symbols, options);
+            emit_class_out_of_line_definitions(out, module.classes[index], aliases,
+                                               function_returns, symbols, options);
         }
     }
+}
+
+void emit_class_definition(std::ostringstream& out, const ClassDecl& klass,
+                           const std::vector<std::string>& aliases,
+                           const std::map<std::string, TypeRef>& function_returns,
+                           const Symbols& symbols, const CppEmitOptions& options) {
+    const std::string& class_name = emitted_name(klass, options);
+    emit_cpp_template_parameters(out, generic_cpp_params_for_class(klass),
+                                 generic_cpp_value_params_for_class(klass));
+    out << class_opening(klass, aliases, options) << " {\n";
+    for (const FieldDecl& field : klass.fields) {
+        out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' '
+            << emitted_member_name(klass.name, field.name, options);
+        if (expr_present(field.value_expr)) {
+            out << " = ";
+            if (is_template_type(field.type_ref, "Option") &&
+                field.value_expr.kind == ExprKind::NoneLiteral) {
+                out << "std::nullopt";
+            } else {
+                out << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols, options);
+            }
+        } else if (field.type_ref.kind != TypeKind::Reference) {
+            out << "{}";
+        }
+        out << ";\n";
+    }
+    for (const ConstDecl& field : klass.static_fields) {
+        out << "    inline static " << lower_cpp_type(field.type_ref, aliases, options) << ' '
+            << emitted_member_name(klass.name, field.name, options) << " = "
+            << lower_expr(field.value_expr, aliases, CppLocalContext{}, &symbols, options) << ";\n";
+    }
+    for (const ConstDecl& constant : klass.constants) {
+        emit_class_constant_decl(out, klass.name, constant, aliases, options);
+    }
+    emit_class_method_members(out, klass, class_name, aliases, function_returns, symbols, options);
+    out << "};\n\n";
+    for (const ConstDecl& constant : klass.constants) {
+        emit_class_constant_definition(out, klass.name, class_name, constant, aliases, options);
+    }
+    if (!klass.constants.empty()) {
+        out << '\n';
+    }
+}
+
+void emit_class_out_of_line_definitions(std::ostringstream& out, const ClassDecl& klass,
+                                        const std::vector<std::string>& aliases,
+                                        const std::map<std::string, TypeRef>& function_returns,
+                                        const Symbols& symbols, const CppEmitOptions& options) {
+    emit_out_of_line_class_methods(out, klass, emitted_name(klass, options), aliases,
+                                   function_returns, symbols, options);
 }
 
 void emit_public_class_method_definitions(std::ostringstream& out, const ModuleAst& module,
