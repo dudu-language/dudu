@@ -12,6 +12,7 @@
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/parser/lexer.hpp"
 #include "dudu/project/project_index.hpp"
 
 #include <algorithm>
@@ -56,64 +57,26 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
     return RenameScope::None;
 }
 
-std::optional<std::string_view> line_at(const std::string& text, int line) {
-    if (line < 0) {
-        return std::nullopt;
-    }
-    size_t start = 0;
-    int current_line = 0;
-    while (current_line < line) {
-        const size_t next = text.find('\n', start);
-        if (next == std::string::npos) {
-            return std::nullopt;
-        }
-        start = next + 1;
-        ++current_line;
-    }
-    size_t end = text.find('\n', start);
-    if (end == std::string::npos) {
-        end = text.size();
-    }
-    if (end > start && text[end - 1] == '\r') {
-        --end;
-    }
-    return std::string_view(text).substr(start, end - start);
-}
-
 std::optional<std::string> prepare_rename_range_json(const Document& doc, const Json* params,
                                                      const std::string& query) {
     const LspPosition position = lsp_position(params);
-    const std::optional<std::string_view> line = line_at(doc.text, position.line);
-    if (!line || position.character < 0 || position.character > static_cast<int>(line->size())) {
-        return std::nullopt;
+    const LexResult lexed = lex_source_recovering(doc.text, doc.path);
+    for (const Token& token : lexed.tokens) {
+        if (token.kind != TokenKind::Identifier || token.location.line != position.line + 1) {
+            continue;
+        }
+        const SourceLocation end = token_end_location(token);
+        const int start_character = token.location.column - 1;
+        const int end_character = end.column - 1;
+        if (position.character < start_character || position.character > end_character ||
+            token.text != dotted_tail(query)) {
+            continue;
+        }
+        return "{\"range\":" +
+               range_json(position.line, start_character, position.line, end_character) +
+               ",\"placeholder\":\"" + json_escape(token.text) + "\"}";
     }
-    int start = position.character;
-    if (start == static_cast<int>(line->size()) && start > 0 &&
-        identifier_char((*line)[static_cast<size_t>(start - 1)])) {
-        --start;
-    }
-    if (start < 0 || start >= static_cast<int>(line->size()) ||
-        !identifier_char((*line)[static_cast<size_t>(start)])) {
-        return std::nullopt;
-    }
-    int end = start;
-    while (start > 0 && identifier_char((*line)[static_cast<size_t>(start - 1)])) {
-        --start;
-    }
-    while (end < static_cast<int>(line->size()) &&
-           identifier_char((*line)[static_cast<size_t>(end)])) {
-        ++end;
-    }
-    const std::string placeholder =
-        std::string(line->substr(static_cast<size_t>(start), static_cast<size_t>(end - start)));
-    if (placeholder.empty() || !valid_identifier(placeholder) ||
-        placeholder != dotted_tail(query)) {
-        return std::nullopt;
-    }
-    std::ostringstream out;
-    out << "{\"range\":" << range_json(position.line, start, position.line, end)
-        << ",\"placeholder\":\"" << json_escape(placeholder) << "\"}";
-    return out.str();
+    return std::nullopt;
 }
 
 bool dudu_member_target(const std::optional<MemberReferenceTarget>& target) {
@@ -313,25 +276,6 @@ std::string prepare_rename_json(const Document& doc, const Json* params) {
         if (const std::optional<std::string> range =
                 prepare_rename_range_json(doc, params, query)) {
             return *range;
-        }
-        const LspPosition position = lsp_position(params);
-        const std::optional<std::string_view> line = line_at(doc.text, position.line);
-        if (line) {
-            int start = std::min(position.character, static_cast<int>(line->size()));
-            while (start > 0 && identifier_char((*line)[static_cast<size_t>(start - 1)])) {
-                --start;
-            }
-            int end = std::max(0, position.character);
-            while (end < static_cast<int>(line->size()) &&
-                   identifier_char((*line)[static_cast<size_t>(end)])) {
-                ++end;
-            }
-            if (end > start) {
-                const std::string placeholder = std::string(
-                    line->substr(static_cast<size_t>(start), static_cast<size_t>(end - start)));
-                return "{\"range\":" + range_json(position.line, start, position.line, end) +
-                       ",\"placeholder\":\"" + json_escape(placeholder) + "\"}";
-            }
         }
         return "null";
     }

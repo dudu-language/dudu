@@ -401,6 +401,28 @@ void test_lsp_sum_type_variant_hover_and_references_use_identity() {
     assert(refs.find("\"start\":{\"line\":11,\"character\":35}") == std::string::npos);
 }
 
+void test_lsp_local_definitions_follow_lexical_shadowing() {
+    const dudu::Document doc{.uri = "file:///local_shadow_definition.dd",
+                             .path = "local_shadow_definition.dd",
+                             .text = "def choose(flag: bool) -> i32:\n"
+                                     "    value = 1\n"
+                                     "    if flag:\n"
+                                     "        value = 2\n"
+                                     "        return value\n"
+                                     "    return value\n"};
+
+    dudu::Json inner_params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":16}}").parse();
+    const std::string inner = dudu::definition_json(doc, &inner_params);
+    assert(inner.find("\"start\":{\"line\":3,\"character\":8}") != std::string::npos);
+
+    dudu::Json outer_params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":12}}").parse();
+    const std::string outer = dudu::definition_json(doc, &outer_params);
+    assert(outer.find("\"start\":{\"line\":1,\"character\":4}") != std::string::npos);
+    assert(outer.find("\"start\":{\"line\":3,\"character\":8}") == std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -415,6 +437,7 @@ int main() {
         test_lsp_references_use_imported_method_identity_from_use_site();
         test_lsp_references_use_enum_value_identity();
         test_lsp_sum_type_variant_hover_and_references_use_identity();
+        test_lsp_local_definitions_follow_lexical_shadowing();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -2,7 +2,11 @@
 #include "dudu/parser/parser.hpp"
 
 #include <cassert>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -135,6 +139,33 @@ void test_macro_decorators_are_canonical_and_idempotent() {
     assert(dudu::format_source(formatted) == formatted);
 }
 
+std::string read_file(const std::filesystem::path& path) {
+    std::ifstream input(path);
+    std::ostringstream out;
+    out << input.rdbuf();
+    return out.str();
+}
+
+void test_example_corpus_is_idempotent_and_parseable() {
+    const std::filesystem::path examples = std::filesystem::path(DUDU_REPO_ROOT) / "examples";
+    for (const std::filesystem::directory_entry& entry :
+         std::filesystem::recursive_directory_iterator(examples)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".dd") {
+            continue;
+        }
+        const std::string formatted = dudu::format_source(read_file(entry.path()));
+        if (dudu::format_source(formatted) != formatted) {
+            throw std::runtime_error("formatter is not idempotent for " + entry.path().string());
+        }
+        try {
+            (void)dudu::parse_source(formatted, entry.path());
+        } catch (const std::exception& error) {
+            throw std::runtime_error("formatted example does not parse: " + entry.path().string() +
+                                     ": " + error.what());
+        }
+    }
+}
+
 } // namespace
 
 int main() {
@@ -144,6 +175,7 @@ int main() {
     test_unterminated_triple_string_contents_are_preserved();
     test_enum_variants_are_compact();
     test_macro_decorators_are_canonical_and_idempotent();
+    test_example_corpus_is_idempotent_and_parseable();
     std::cout << "format tests passed\n";
     return 0;
 }

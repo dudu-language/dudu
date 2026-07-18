@@ -11,6 +11,7 @@
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
+#include "dudu/lsp/language_server_local_definition.hpp"
 #include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_member_identity.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -222,70 +223,6 @@ std::optional<std::string> binary_operator_definition_json(const Document& doc,
         return std::nullopt;
     }
     return location_json(uri_for_location(symbol->location, doc), range_json(symbol->location));
-}
-
-bool location_before_cursor(SourceLocation location, const LspPosition& position) {
-    const int line = position.line + 1;
-    const int column = position.character + 1;
-    if (location.line < line) {
-        return true;
-    }
-    return location.line == line && location.column <= column;
-}
-
-void collect_binding_locations_before_cursor(const std::vector<Stmt>& statements,
-                                             const LspPosition& position, const std::string& query,
-                                             std::optional<SourceLocation>& result) {
-    for (const Stmt& stmt : statements) {
-        if (stmt.location.line > position.line + 1) {
-            continue;
-        }
-        visit_stmt_binding_names(stmt, [&](const std::string& name, SourceLocation location) {
-            if (!result && name == query && location_before_cursor(location, position)) {
-                result = location;
-            }
-        });
-        collect_binding_locations_before_cursor(stmt.children, position, query, result);
-    }
-}
-
-std::optional<std::string> local_definition_json(const Document& doc, const ModuleAst& current,
-                                                 const Json* params, const std::string& word) {
-    if (word.empty() || word.find('.') != std::string::npos) {
-        return std::nullopt;
-    }
-    const LspPosition position = lsp_position(params);
-    const int line = position.line + 1;
-    const auto search_function = [&](const FunctionDecl& function) -> std::optional<std::string> {
-        if (!function_contains_source_line(function, line)) {
-            return std::nullopt;
-        }
-        for (const ParamDecl& param : function.params) {
-            if (param.name == word && location_before_cursor(param.location, position)) {
-                return location_json(uri_for_location(param.location, doc),
-                                     range_json(param.location));
-            }
-        }
-        std::optional<SourceLocation> local;
-        collect_binding_locations_before_cursor(function.statements, position, word, local);
-        if (local) {
-            return location_json(uri_for_location(*local, doc), range_json(*local));
-        }
-        return std::nullopt;
-    };
-    for (const FunctionDecl& function : current.functions) {
-        if (const std::optional<std::string> found = search_function(function)) {
-            return found;
-        }
-    }
-    for (const ClassDecl& klass : current.classes) {
-        for (const FunctionDecl& method : klass.methods) {
-            if (const std::optional<std::string> found = search_function(method)) {
-                return found;
-            }
-        }
-    }
-    return std::nullopt;
 }
 
 } // namespace

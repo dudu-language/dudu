@@ -34,7 +34,7 @@ def run(repo_root):
         messages = read_lsp_messages(proc.stdout)
         assert_core_behavior(messages, workspace)
         assert_native_behavior(messages, workspace)
-        assert_action_behavior(messages, workspace)
+        assert_action_behavior(messages, workspace, repo_root)
         run_advanced(repo_root, tmp / "advanced")
         print("lsp matrix checks passed")
     finally:

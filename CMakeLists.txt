@@ -312,6 +312,7 @@ if(DUDU_BUILD_TESTS)
     target_compile_definitions(dudu_project_config_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
     dudu_add_test(dudu_format_tests tests/format_tests.cpp dudu_frontend)
+    target_compile_definitions(dudu_format_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
     dudu_add_test(dudu_macro_protocol_tests tests/macro_protocol_tests.cpp dudu_frontend)
     dudu_add_test(dudu_macro_syntax_tests tests/macro_syntax_tests.cpp dudu_frontend)
     target_compile_definitions(dudu_macro_syntax_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")

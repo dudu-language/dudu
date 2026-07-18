@@ -1,7 +1,49 @@
+import subprocess
+
 from protocol import item_with_title, publish_diagnostics, response
 
 
-def assert_action_behavior(messages, workspace):
+def offset_at(text, position):
+    lines = text.splitlines(keepends=True)
+    line = position["line"]
+    if line < 0 or line >= len(lines):
+        raise AssertionError(f"edit line outside document: {position!r}")
+    return sum(len(item) for item in lines[:line]) + position["character"]
+
+
+def apply_edits(path, edits):
+    text = path.read_text()
+    replacements = []
+    for edit in edits:
+        edit_range = edit["range"]
+        replacements.append(
+            (
+                offset_at(text, edit_range["start"]),
+                offset_at(text, edit_range["end"]),
+                edit.get("newText", ""),
+            )
+        )
+    for start, end, replacement in sorted(replacements, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    path.write_text(text)
+
+
+def assert_checks(repo_root, path, label):
+    result = subprocess.run(
+        [str(repo_root / "build" / "duc"), "check", str(path), "--quiet"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"{label} did not produce valid Dudu:\n{result.stdout}{result.stderr}\n{path.read_text()}"
+        )
+
+
+def assert_action_behavior(messages, workspace, repo_root):
     missing = workspace.missing
     missing_symbol = workspace.missing_symbol
     disorganized_imports = workspace.disorganized_imports
@@ -20,6 +62,8 @@ def assert_action_behavior(messages, workspace):
         for edit in missing_symbol_edits
     ):
         raise AssertionError(f"missing import quick fix edit: {missing_import_action!r}")
+    apply_edits(missing_symbol, missing_symbol_edits)
+    assert_checks(repo_root, missing_symbol, "missing-import quick fix")
     organize_actions = response(messages, 108)
     organize_action = item_with_title(organize_actions, "Organize imports")
     organize_edits = organize_action.get("edit", {}).get("changes", {}).get(disorganized_imports.as_uri(), [])
@@ -31,6 +75,8 @@ def assert_action_behavior(messages, workspace):
         for edit in organize_edits
     ):
         raise AssertionError(f"missing organize-imports edit: {organize_action!r}")
+    apply_edits(disorganized_imports, organize_edits)
+    assert_checks(repo_root, disorganized_imports, "organize-imports action")
     lint_actions = response(messages, 109)
     lint_action = item_with_title(lint_actions, "Remove unused local")
     lint_edits = lint_action.get("edit", {}).get("changes", {}).get(lint_quickfix.as_uri(), [])
@@ -41,6 +87,8 @@ def assert_action_behavior(messages, workspace):
         for edit in lint_edits
     ):
         raise AssertionError(f"missing lint quick fix edit: {lint_action!r}")
+    apply_edits(lint_quickfix, lint_edits)
+    assert_checks(repo_root, lint_quickfix, "unused-local quick fix")
     resolved_completion = response(messages, 110)
     if resolved_completion.get("label") != "mix":
         raise AssertionError(f"completion resolve lost label: {resolved_completion!r}")
