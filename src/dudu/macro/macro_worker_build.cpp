@@ -6,6 +6,7 @@
 #include "dudu/macro/macro_protocol_generated.hpp"
 #include "dudu/macro/macro_worker_codegen.hpp"
 #include "dudu/macro/macro_worker_compile.hpp"
+#include "dudu/native/native_header_scan_command.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <algorithm>
@@ -73,6 +74,46 @@ std::vector<std::string> dependency_closure(const ModuleAst& module, const Plan&
     return {selected.begin(), selected.end()};
 }
 
+bool is_native_import(const ImportDecl& import) {
+    return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx ||
+           import.kind == ImportKind::ForeignCpp;
+}
+
+void append_unique_path(std::vector<std::filesystem::path>& paths,
+                        const std::filesystem::path& path) {
+    const std::filesystem::path normalized = path.lexically_normal();
+    if (!normalized.empty() && std::ranges::find(paths, normalized) == paths.end()) {
+        paths.push_back(normalized);
+    }
+}
+
+WorkerBuildOptions worker_options_for_modules(const ModuleAst& module,
+                                              const std::vector<std::string>& selected,
+                                              const WorkerBuildOptions& base) {
+    WorkerBuildOptions options = base;
+    const auto modules = unit_map(module);
+    for (const std::string& module_path : selected) {
+        const ModuleAst& unit = *modules.at(module_path);
+        const std::filesystem::path source_dir = unit.source_path.parent_path();
+        append_unique_path(options.include_dirs, source_dir);
+        for (const ImportDecl& import : unit.imports) {
+            if (!is_native_import(import) ||
+                import.native_include_style != NativeIncludeStyle::Path) {
+                continue;
+            }
+            std::filesystem::path header = native_header_unquoted(import.module_path);
+            if (!header.is_absolute()) {
+                header = source_dir / header;
+            }
+            std::error_code error;
+            if (std::filesystem::is_regular_file(header, error) && !error) {
+                append_unique_path(options.source_dependencies, header);
+            }
+        }
+    }
+    return options;
+}
+
 void hash_plan(StableHash& hash, const Plan& plan) {
     for (const auto& [identity, definition] : plan.definitions) {
         hash.add(identity);
@@ -100,6 +141,10 @@ void hash_worker_inputs(StableHash& hash, const WorkerBuildOptions& options) {
     };
     add_paths(options.runtime_include_dirs);
     add_paths(options.include_dirs);
+    for (const std::filesystem::path& dependency : options.source_dependencies) {
+        hash.add(dependency.generic_string());
+        hash.add(try_read_text_file(dependency).value_or(""));
+    }
     add_paths(options.library_dirs);
     add_paths(options.cpp_sources);
     hash.add(options.runtime_library.generic_string());
@@ -204,7 +249,10 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
         throw std::invalid_argument("macro worker cache directory is required");
     }
     const std::vector<std::string> selected = dependency_closure(module, plan);
-    const std::optional<std::string> source_key = source_identity(module, selected, plan, options);
+    const WorkerBuildOptions effective_options =
+        worker_options_for_modules(module, selected, options);
+    const std::optional<std::string> source_key =
+        source_identity(module, selected, plan, effective_options);
     const std::filesystem::path lookup =
         source_key ? options.cache_dir / "lookup" / *source_key : std::filesystem::path{};
     if (source_key) {
@@ -223,8 +271,8 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
                         {.check_bodies = true, .include_macro_host_modules = true});
     const std::vector<CppModuleArtifact> artifacts =
         emit_cpp_module_artifacts(module, selected, {.include_macro_host_modules = true});
-    const std::string identity = build_identity(artifacts, plan, options);
-    const std::filesystem::path cache_entry = options.cache_dir / identity;
+    const std::string identity = build_identity(artifacts, plan, effective_options);
+    const std::filesystem::path cache_entry = effective_options.cache_dir / identity;
     const std::filesystem::path executable = cache_entry / "worker";
     if (std::filesystem::is_regular_file(executable)) {
         if (source_key)
@@ -261,7 +309,7 @@ WorkerBinary build_worker_binary(const ModuleAst& module, const Plan& plan,
                                       .non_cacheable_macros = options.non_cacheable_macros}));
     WorkerBinary::Timings timings;
     try {
-        timings = compile_worker(staging, artifacts, options);
+        timings = compile_worker(staging, artifacts, effective_options);
         std::error_code error;
         std::filesystem::rename(staging, cache_entry, error);
         if (error && !std::filesystem::is_regular_file(executable)) {

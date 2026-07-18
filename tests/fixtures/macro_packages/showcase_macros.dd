@@ -1,5 +1,6 @@
 import dudu.ast as ast
 import generated_runtime
+from cpp.path import macro_native.hpp
 
 
 class JsonOptions:
@@ -22,6 +23,8 @@ class ExportOptions:
 
 def reserved_option_names() -> str:
     options: ArgsOptions = ArgsOptions(short="o", default="False")
+    if dudu_macro_fixture_value() != 42:
+        return ""
     return options.short + options.default
 
 

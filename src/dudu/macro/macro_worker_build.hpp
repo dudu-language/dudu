@@ -3,8 +3,8 @@
 #include "dudu/core/ast.hpp"
 #include "dudu/macro/macro_registry.hpp"
 
-#include <filesystem>
 #include <cstdint>
+#include <filesystem>
 #include <set>
 #include <string>
 #include <vector>
@@ -24,6 +24,7 @@ struct WorkerBuildOptions {
     std::filesystem::path runtime_library;
     std::filesystem::path sdk_bridge_source;
     std::vector<std::filesystem::path> include_dirs;
+    std::vector<std::filesystem::path> source_dependencies;
     std::vector<std::filesystem::path> library_dirs;
     std::vector<std::filesystem::path> cpp_sources;
     std::vector<std::string> defines;

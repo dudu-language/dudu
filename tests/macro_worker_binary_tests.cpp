@@ -53,6 +53,7 @@ void test_build_launch_and_cache() {
                                                          root / "src/dudu/macro/"
                                                                 "macro_sdk_bridge_generated.cpp",
                                                      .include_dirs = {},
+                                                     .source_dependencies = {},
                                                      .library_dirs = {},
                                                      .cpp_sources = {},
                                                      .defines = {},
