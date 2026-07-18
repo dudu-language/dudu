@@ -1,0 +1,95 @@
+from pathlib import Path
+
+
+def latency_cases(repo_root):
+    dogfood = Path("/home/vega/Coding/LangDev/Dudu/dogfooding")
+    fixtures = repo_root / "tests/fixtures"
+    return [
+        (
+            "raymarch-dd",
+            dogfood / "raymarch-dd",
+            dogfood / "raymarch-dd/src/main.dd",
+            {
+                "definition": "setup_monitor_rect()",
+                "definition_uri_suffix": "/src/windowing.dd",
+                "native_hover": "SDL_CreateWindow",
+                "references": "render_w =",
+                "completion": "SDL_",
+                "rename": "setup_monitor_rect()",
+                "signature": "make_16_9_half(",
+                "require_inlay_hints": True,
+            },
+        ),
+        (
+            "dudu-webserver",
+            dogfood / "dudu-webserver",
+            dogfood / "dudu-webserver/src/server.dd",
+            {
+                "definition": "parse_request(raw)",
+                "definition_uri_suffix": "/src/request.dd",
+                "native_hover": "std.string",
+                "references": "server",
+                "completion": "sock.",
+                "rename": "parse_request(raw)",
+                "signature": "parse_request(",
+                "require_inlay_hints": True,
+            },
+        ),
+        (
+            "small-generics",
+            fixtures / "lsp_latency_small",
+            fixtures / "lsp_latency_small/main.dd",
+            {
+                "definition": "a.add(b)",
+                "definition_uri_suffix": "/tests/fixtures/lsp_latency_small/main.dd",
+                "native_hover": "Vec2[i32](2, 3)",
+                "first_hover_phase": "cold_dudu_hover",
+                "references": "class Vec2",
+                "references_offset": len("class ") + 1,
+                "completion": "a.",
+                "rename": "a.add(b)",
+                "signature": "a.add(",
+            },
+        ),
+        (
+            "macro-project",
+            fixtures / "macro_packages",
+            fixtures / "macro_packages/showcase.dd",
+            {
+                "definition": "class Player",
+                "definition_offset": len("class ") + 1,
+                "definition_uri_suffix": "/tests/fixtures/macro_packages/showcase.dd",
+                "native_hover": "player.debug_field_count",
+                "first_hover_phase": "cold_macro_hover",
+                "references": "class Player",
+                "references_offset": len("class ") + 1,
+                "completion": "player.",
+                "rename": "class Player",
+                "rename_offset": len("class ") + 1,
+                "signature": "player.debug_field_count(",
+            },
+        ),
+        (
+            "template-native",
+            fixtures / "lsp_latency_native",
+            fixtures / "lsp_latency_native/main.dd",
+            {
+                "definition": "dudu_modern.constrained_add",
+                "definition_offset": len("dudu_modern.") + 1,
+                "definition_uri_suffix": "/tests/fixtures/native_headers/native_modern_templates.hpp",
+                "first_definition_phase": "cold_native_definition",
+                "repeat_definition": True,
+                "native_hover": "dudu_modern.constrained_add",
+                "native_hover_offset": len("dudu_modern.") + 1,
+                "first_hover_phase": "post_scan_native_hover",
+                "references": "dudu_modern.constrained_add",
+                "references_offset": len("dudu_modern.") + 1,
+                "first_references_phase": "cold_native_references",
+                "repeat_references": True,
+                "completion": "dudu_modern.",
+                "rename": "mutable_value = 4",
+                "signature": "dudu_modern.constrained_add(",
+                "require_inlay_hints": True,
+            },
+        ),
+    ]

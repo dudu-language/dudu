@@ -9,6 +9,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+from lsp_latency_cases import latency_cases
+
 
 def frame_message(obj):
     body = json.dumps(obj, separators=(",", ":"))
@@ -112,6 +114,31 @@ class LspSession:
             if params.get("uri") == path.resolve().as_uri():
                 return (time.perf_counter() - self.started_at) * 1000.0
 
+    def change_document(self, path, text, version, diagnostics_match):
+        uri = path.resolve().as_uri()
+        start = time.perf_counter()
+        send_message(
+            self.proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": version},
+                    "contentChanges": [{"text": text}],
+                },
+            },
+        )
+        while True:
+            message = read_message(self.proc.stdout)
+            if message.get("method") != "textDocument/publishDiagnostics":
+                continue
+            params = message.get("params", {})
+            if params.get("uri") != uri or params.get("version") != version:
+                continue
+            diagnostics = params.get("diagnostics", [])
+            if diagnostics_match(diagnostics):
+                return (time.perf_counter() - start) * 1000.0
+
     def peak_rss_kb(self):
         status = Path(f"/proc/{self.proc.pid}/status")
         if not status.exists():
@@ -162,6 +189,14 @@ def require_nonempty_result(response, label):
         raise RuntimeError(f"{label} returned an empty object")
 
 
+def require_document_symbol(response, label, expected_name):
+    require_nonempty_result(response, label)
+    if not any(item.get("name") == expected_name for item in response["result"]):
+        raise RuntimeError(
+            f"{label} did not contain {expected_name!r}: {response['result']!r}"
+        )
+
+
 def result_locations(response):
     result = response.get("result")
     if result is None:
@@ -196,7 +231,11 @@ def probe_workspace(lsp_bin, name, root, entry, needles, sample):
         require_nonempty_result(response, f"{name} post-diagnostics documentSymbol")
         rows.append((name, sample, "post_diagnostics_document_symbol", elapsed))
 
-        definition_pos = position_of(entry_text, needles["definition"], offset=1)
+        definition_pos = position_of(
+            entry_text,
+            needles["definition"],
+            offset=needles.get("definition_offset", 1),
+        )
         response, elapsed = session.request(
             "textDocument/definition",
             {**doc, "position": definition_pos},
@@ -207,24 +246,72 @@ def probe_workspace(lsp_bin, name, root, entry, needles, sample):
             f"{name} definition",
             needles.get("definition_uri_suffix", ""),
         )
-        rows.append((name, sample, "warm_definition", elapsed))
+        rows.append(
+            (
+                name,
+                sample,
+                needles.get("first_definition_phase", "warm_definition"),
+                elapsed,
+            )
+        )
 
-        hover_pos = position_of(entry_text, needles["native_hover"], offset=1)
+        hover_pos = position_of(
+            entry_text,
+            needles["native_hover"],
+            offset=needles.get("native_hover_offset", 1),
+        )
         response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
         require_nonempty_result(response, f"{name} cold native hover")
-        rows.append((name, sample, "cold_native_hover", elapsed))
+        rows.append(
+            (name, sample, needles.get("first_hover_phase", "cold_native_hover"), elapsed)
+        )
 
         response, elapsed = session.request("textDocument/hover", {**doc, "position": hover_pos})
         require_nonempty_result(response, f"{name} hover")
         rows.append((name, sample, "warm_hover", elapsed))
 
-        references_pos = position_of(entry_text, needles["references"], offset=1)
+        if needles.get("repeat_definition", False):
+            response, elapsed = session.request(
+                "textDocument/definition",
+                {**doc, "position": definition_pos},
+            )
+            require_nonempty_result(response, f"{name} repeated definition")
+            require_definition_target(
+                response,
+                f"{name} repeated definition",
+                needles.get("definition_uri_suffix", ""),
+            )
+            rows.append((name, sample, "warm_definition", elapsed))
+
+        references_pos = position_of(
+            entry_text,
+            needles["references"],
+            offset=needles.get("references_offset", 1),
+        )
         response, elapsed = session.request(
             "textDocument/references",
             {**doc, "position": references_pos, "context": {"includeDeclaration": True}},
         )
         require_nonempty_result(response, f"{name} references")
-        rows.append((name, sample, "warm_references", elapsed))
+        rows.append(
+            (
+                name,
+                sample,
+                needles.get("first_references_phase", "warm_references"),
+                elapsed,
+            )
+        )
+        if needles.get("repeat_references", False):
+            response, elapsed = session.request(
+                "textDocument/references",
+                {
+                    **doc,
+                    "position": references_pos,
+                    "context": {"includeDeclaration": True},
+                },
+            )
+            require_nonempty_result(response, f"{name} repeated references")
+            rows.append((name, sample, "warm_references", elapsed))
 
         completion_pos = position_of(
             entry_text,
@@ -244,7 +331,47 @@ def probe_workspace(lsp_bin, name, root, entry, needles, sample):
             raise RuntimeError(f"{name} semantic tokens returned no data")
         rows.append((name, sample, "warm_semantic_tokens", elapsed))
 
-        rename_pos = position_of(entry_text, needles["rename"], offset=1)
+        signature_pos = position_of(
+            entry_text,
+            needles["signature"],
+            offset=len(needles["signature"]),
+        )
+        response, elapsed = session.request(
+            "textDocument/signatureHelp",
+            {**doc, "position": signature_pos},
+        )
+        require_nonempty_result(response, f"{name} signature help")
+        if not response["result"].get("signatures"):
+            raise RuntimeError(f"{name} signature help returned no signatures")
+        rows.append((name, sample, "warm_signature_help", elapsed))
+
+        document_range = {
+            "start": {"line": 0, "character": 0},
+            "end": {"line": entry_text.count("\n") + 1, "character": 0},
+        }
+        response, elapsed = session.request(
+            "textDocument/inlayHint",
+            {**doc, "range": document_range},
+        )
+        if needles.get("require_inlay_hints", False):
+            require_nonempty_result(response, f"{name} inlay hints")
+        elif response.get("result") is None:
+            raise RuntimeError(f"{name} inlay hints returned null")
+        rows.append((name, sample, "warm_inlay_hints", elapsed))
+
+        response, elapsed = session.request(
+            "textDocument/formatting",
+            {**doc, "options": {"tabSize": 4, "insertSpaces": True}},
+        )
+        if response.get("result") is None:
+            raise RuntimeError(f"{name} formatting returned null")
+        rows.append((name, sample, "warm_formatting", elapsed))
+
+        rename_pos = position_of(
+            entry_text,
+            needles["rename"],
+            offset=needles.get("rename_offset", 1),
+        )
         response, elapsed = session.request(
             "textDocument/rename",
             {
@@ -255,6 +382,54 @@ def probe_workspace(lsp_bin, name, root, entry, needles, sample):
         )
         require_nonempty_result(response, f"{name} rename")
         rows.append((name, sample, "warm_rename", elapsed))
+
+        semantic_damaged_text = (
+            entry_text
+            + "\ndef dudu_latency_semantic_probe() -> i32:\n"
+            + "    return dudu_latency_missing_name\n"
+        )
+        elapsed = session.change_document(
+            entry,
+            semantic_damaged_text,
+            2,
+            lambda diagnostics: any(
+                "dudu_latency_missing_name" in item.get("message", "")
+                for item in diagnostics
+            ),
+        )
+        rows.append((name, sample, "semantic_diagnostics_after_edit", elapsed))
+
+        damaged_text = entry_text + "\ndef dudu_latency_recovery_probe(value: i32) -> i32\n    return value\n"
+        elapsed = session.change_document(
+            entry,
+            damaged_text,
+            3,
+            lambda diagnostics: bool(diagnostics),
+        )
+        rows.append((name, sample, "parser_diagnostics_after_edit", elapsed))
+
+        repaired_name = "dudu_latency_recovered_probe"
+        repaired_text = (
+            entry_text
+            + f"\ndef {repaired_name}(value: i32) -> i32:\n    return value\n"
+        )
+        repair_start = time.perf_counter()
+        session.change_document(
+            entry,
+            repaired_text,
+            4,
+            lambda diagnostics: not diagnostics,
+        )
+        response, _ = session.request("textDocument/documentSymbol", doc)
+        require_document_symbol(response, f"{name} repaired documentSymbol", repaired_name)
+        rows.append(
+            (
+                name,
+                sample,
+                "repaired_source_recovery",
+                (time.perf_counter() - repair_start) * 1000.0,
+            )
+        )
 
         peak_rss_kb = session.peak_rss_kb()
     finally:
@@ -273,6 +448,7 @@ def main():
     parser.add_argument("lsp_bin", nargs="?", type=Path)
     parser.add_argument("--samples", type=int, default=1)
     parser.add_argument("--csv", type=Path)
+    parser.add_argument("--case", action="append", dest="cases")
     args = parser.parse_args()
     if args.samples < 1:
         raise SystemExit("--samples must be at least 1")
@@ -282,34 +458,14 @@ def main():
     if not lsp_bin.exists():
         raise SystemExit(f"missing dudu-lsp binary: {lsp_bin}")
 
-    workspaces = [
-        (
-            "raymarch-dd",
-            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd"),
-            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/raymarch-dd/src/main.dd"),
-            {
-                "definition": "setup_monitor_rect()",
-                "definition_uri_suffix": "/src/windowing.dd",
-                "native_hover": "SDL_CreateWindow",
-                "references": "render_w =",
-                "completion": "SDL_",
-                "rename": "setup_monitor_rect()",
-            },
-        ),
-        (
-            "dudu-webserver",
-            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver"),
-            Path("/home/vega/Coding/LangDev/Dudu/dogfooding/dudu-webserver/src/server.dd"),
-            {
-                "definition": "parse_request(raw)",
-                "definition_uri_suffix": "/src/request.dd",
-                "native_hover": "std.string",
-                "references": "server",
-                "completion": "sock.",
-                "rename": "parse_request(raw)",
-            },
-        ),
-    ]
+    workspaces = latency_cases(repo_root)
+    if args.cases:
+        requested = set(args.cases)
+        known = {name for name, _root, _entry, _needles in workspaces}
+        unknown = requested - known
+        if unknown:
+            raise SystemExit(f"unknown latency case(s): {', '.join(sorted(unknown))}")
+        workspaces = [case for case in workspaces if case[0] in requested]
 
     all_rows = []
     rss_rows = []

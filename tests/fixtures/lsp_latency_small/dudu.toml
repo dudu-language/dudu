@@ -1,0 +1,3 @@
+name = "lsp_latency_small"
+entry = "main.dd"
+build_dir = "build"

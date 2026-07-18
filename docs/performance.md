@@ -171,27 +171,54 @@ Reproduce the bounded frontend and clean-emission matrix from a checkout with:
 
 ## Editor Latency
 
-The LSP benchmark starts a fresh server for each sample. Workspace usability is
-measured through immediate recovering parser diagnostics. Full semantic and
-native diagnostics continue on one coalescing background worker. Warm requests
-run afterward against populated project and native indexes.
+The LSP benchmark starts a fresh Release server for every sample. It measures
+initial parser diagnostics, complete semantic diagnostics after a valid edit,
+malformed-edit parser diagnostics, repair without restart, definition, hover,
+references, rename, completion, signature help, semantic tokens, inlay hints,
+formatting, first native queries, and process peak RSS. Five samples use the
+same Ryzen 9 9950X, Ubuntu 24.04, GCC 13.3, and Clang 18.1.3 described above.
 
-| Workspace and operation | Median | p95 | Peak RSS |
-| --- | ---: | ---: | ---: |
-| `raymarch-dd` workspace usable | 7.5 ms | 8.0 ms | 280.6 MiB |
-| `raymarch-dd` cached first native hover | 219.5 ms | 222.1 ms | 280.6 MiB |
-| `raymarch-dd` slowest warm request | 21.0 ms | 22.8 ms | 280.6 MiB |
-| `dudu-webserver` workspace usable | 7.5 ms | 7.8 ms | 173.7 MiB |
-| `dudu-webserver` cached first native hover | 91.6 ms | 92.3 ms | 173.7 MiB |
-| `dudu-webserver` slowest warm request | 11.8 ms | 12.3 ms | 173.7 MiB |
+The main table reports p95 latency. Native metadata was already present on disk
+for these five-sample warm-cache measurements.
 
-The probe covers definition, hover, references, completion, semantic tokens,
-rename, native-aware hover, and process RSS. A separate one-sample run with the
-native metadata directories removed measured workspace usability at 8.2 ms for
-`raymarch-dd` and 7.6 ms for `dudu-webserver`; the deliberately native hover
-then paid the actual background scan at 3.65 seconds and 1.08 seconds. That
-native cost is visible, but no longer blocks parser diagnostics or unrelated
-Dudu editor requests.
+| Workload | Usable | Parser edit | Repair | Hover | Definition | References | Semantic tokens | Peak RSS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| small generics | 7.6 ms | 0.3 ms | 0.2 ms | 0.1 ms | 0.2 ms | 0.2 ms | 0.2 ms | 57.9 MiB |
+| declaration macros | 10.8 ms | 3.0 ms | 3.1 ms | 0.4 ms | 3.0 ms | 0.5 ms | 0.2 ms | 73.6 MiB |
+| template-heavy native | 8.4 ms | 0.5 ms | 0.4 ms | 8.0 ms | 5.8 ms | 81.9 ms | 2.7 ms | 147.7 MiB |
+| `raymarch-dd` | 9.7 ms | 3.0 ms | 2.0 ms | 2.8 ms | 0.6 ms | 8.9 ms | 0.3 ms | 276.0 MiB |
+| `dudu-webserver` | 8.8 ms | 1.5 ms | 1.1 ms | 0.8 ms | 0.4 ms | 7.5 ms | 0.3 ms | 190.1 MiB |
+
+The slowest p95 values outside that table are 34.8 ms for inlay hints, 25.7 ms
+for signature help, 20.9 ms for rename, 11.9 ms for completion, and 0.4 ms for
+formatting. Complete semantic diagnostics after adding an unresolved name take
+1.1 ms for the small fixture, 25.2 ms for the macro fixture, 53.4 ms for the
+template-heavy fixture, 238.8 ms for `dudu-webserver`, and 410.2 ms for
+`raymarch-dd`. Parser diagnostics remain immediate while that complete project
+analysis runs in the background.
+
+Removing the dedicated template fixture's native metadata cache makes the
+first native definition query take 1.43 seconds and 197.2 MiB. Workspace
+usability remains 7.0 ms, and the same process then answers warm definition,
+hover, and references in 5.4, 6.2, and 75.7 ms. The cold cost is an explicit
+Clang header scan; it does not block Dudu parsing or unrelated editor queries.
+
+Reproduce the tracked matrix with:
+
+```sh
+./scripts/probe_lsp_dogfood_latency.py build-release/dudu-lsp \
+    --samples 5 \
+    --csv build/bench_compiler/editor-reliability-release.csv
+```
+
+Measure the empty-cache native case separately with:
+
+```sh
+rm -rf tests/fixtures/lsp_latency_native/build
+./scripts/probe_lsp_dogfood_latency.py build-release/dudu-lsp \
+    --samples 1 --case template-native \
+    --csv build/bench_compiler/editor-reliability-cold-native.csv
+```
 
 ## Declaration Macro Compilation
 

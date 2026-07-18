@@ -21,8 +21,11 @@ The July 15, 2026 reference measurements show:
 - generated-CMake public interface edit: 159.0 ms
 - generated-CMake native-header edit: 130.4 ms
 - generated-CMake build-config edit: 422.1 ms
-- dogfood workspaces usable: 7.5-8.2 ms, including with an empty native cache
-- cached warm dogfood LSP requests: 0.3-21 ms
+- tracked editor workspaces usable: 7.6-10.8 ms p95
+- malformed-edit parser diagnostics: 0.3-3.0 ms p95
+- repaired-source recovery without restart: 0.2-3.1 ms p95
+- warm definitions: 0.2-5.8 ms p95
+- warm references: 0.2-81.9 ms p95
 - 1,000-unit mixed Dudu frontend: 127.7 ms
 - 1,000-unit Dudu C++ emission: 219.4 ms
 - generated C++ compile/link: 256.4 ms, versus 264.8 ms for the equivalent

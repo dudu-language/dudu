@@ -1,0 +1,20 @@
+from cpp.path import ../native_headers/native_modern_templates.hpp
+
+
+def main() -> i32:
+    total = dudu_modern.constrained_add(20, 22)
+    folded = dudu_modern.fold_sum(1, 2, 3, 4)
+    defaults = dudu_modern.default_sum(37)
+
+    derived = dudu_modern.Derived[i32](7)
+    inherited = derived.get()
+    scaled = derived.scaled(2)
+
+    movable = dudu_modern.MoveOnly(9)
+    moved = move(movable)
+
+    mutable_value = 4
+    dudu_modern.increment(mutable_value)
+    readonly = dudu_modern.address_of(mutable_value)
+
+    return total + folded + defaults + inherited + scaled + moved.get() + *readonly - 82

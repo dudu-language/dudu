@@ -186,6 +186,16 @@ Tracked cases meet their budgets or identify a bounded external tool cost with
 phase evidence. Optimization does not weaken diagnostics, recovery, generated
 code, or semantic correctness.
 
+Status: complete on the July 18, 2026 reference matrix. Five-sample Release
+measurements cover a small generic project, a declaration-macro project, a
+template-heavy native project, `raymarch-dd`, and `dudu-webserver`. All p95
+budgets pass: workspace usability is at most 10.8 ms, parser diagnostics after
+malformed edits 3.0 ms, repaired-source recovery 3.1 ms, warm definition 5.8
+ms, warm references 81.9 ms, and warm semantic tokens 2.7 ms. An empty native
+cache makes the first template-heavy Clang query take 1.43 seconds without
+delaying the 7.0 ms parser publication. Full methods, cache state, hardware,
+RSS, and reproduction commands are recorded in [Performance](performance.md#editor-latency).
+
 ## 6. Add Rich Information And Native Documentation
 
 After reliability, correctness, and latency are green, make the editor explain
