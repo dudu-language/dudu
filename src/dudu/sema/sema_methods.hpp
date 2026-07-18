@@ -22,6 +22,10 @@ struct DuduMethodInstantiation {
 
 std::optional<TypeRef> static_class_receiver_type_ref(const FunctionScope& scope,
                                                       const Expr& receiver);
+std::optional<TypeRef>
+static_class_receiver_type_ref(const Symbols& symbols,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               std::string_view current_class, const Expr& receiver);
 
 TypeRef member_expr_type_ref(const Symbols& symbols,
                              const std::map<std::string, TypeRef>& local_type_refs,

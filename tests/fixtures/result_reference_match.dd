@@ -1,0 +1,13 @@
+def inspect(value: &const[Result[i32, str]]) -> i32:
+    if not value.ok:
+        return 1
+    match value:
+        case Ok(number):
+            return number
+        case Err(_):
+            return 2
+
+
+def main() -> i32:
+    value: Result[i32, str] = Ok(42)
+    return inspect(value)

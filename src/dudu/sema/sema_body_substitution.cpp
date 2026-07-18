@@ -88,7 +88,9 @@ scalar_body_type_substitutions(const std::map<std::string, TypeRef>& substitutio
 void substitute_expr_types(Expr& expr, const BodyTypeSubstitutions& substitutions) {
     if (const auto replacement = substitutions.scalar.find(expr.name);
         expr.kind == ExprKind::Name && replacement != substitutions.scalar.end()) {
-        expr.name = substitute_type_ref_text(replacement->second, {});
+        expr.kind = ExprKind::TypeExpr;
+        set_expr_type_ref(expr, replacement->second);
+        expr.name = {};
     }
     if (has_expr_type_ref(expr)) {
         set_expr_type_ref(expr, substitute_type_ref_pack_aware(expr_type_ref(expr), substitutions));

@@ -1,0 +1,57 @@
+def nested_ok() -> Result[Result[i32, str], str]:
+    return Ok(Ok(42))
+
+
+def nested_err() -> Result[Result[i32, str], str]:
+    return Ok(Err("inner"))
+
+
+def optional_values() -> list[Option[i32]]:
+    values: list[Option[i32]] = []
+    values.append(None)
+    values.append(42)
+    return values
+
+
+def nested_none() -> Result[Option[i32], str]:
+    return Ok(None)
+
+
+def main() -> i32:
+    first = nested_ok()
+    match first:
+        case Err(_):
+            return 1
+        case Ok(inner):
+            match inner:
+                case Err(_):
+                    return 2
+                case Ok(value):
+                    if value != 42:
+                        return 3
+
+    second = nested_err()
+    match second:
+        case Err(_):
+            return 4
+        case Ok(inner):
+            match inner:
+                case Ok(_):
+                    return 5
+                case Err(message):
+                    if message != "inner":
+                        return 6
+
+    values = optional_values()
+    if len(values) != 2 or values[0].has_value():
+        return 7
+    if not values[1].has_value() or values[1].value() != 42:
+        return 8
+    maybe = nested_none()
+    match maybe:
+        case Err(_):
+            return 9
+        case Ok(value):
+            if value.has_value():
+                return 10
+    return 42

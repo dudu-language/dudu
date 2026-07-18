@@ -328,6 +328,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "unknown";
     case ExprKind::Name:
         return "name";
+    case ExprKind::TypeExpr:
+        return "type_expression";
     case ExprKind::BoolLiteral:
         return "bool_literal";
     case ExprKind::IntLiteral:

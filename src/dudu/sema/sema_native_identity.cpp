@@ -33,14 +33,23 @@ TypeRef canonical_native_type_ref(const Symbols& symbols, TypeRef type) {
         const auto identity = symbols.native_type_identity_by_binding.find(binding);
         if (identity != symbols.native_type_identity_by_binding.end()) {
             type.name = native_identity_atom(identity->second);
+            if (type.kind == TypeKind::Qualified) {
+                type.kind = TypeKind::Named;
+            }
         } else if (const auto klass = symbols.classes.find(binding);
                    klass != symbols.classes.end() && !klass->second->origin_module.empty()) {
             type.name = native_identity_atom("path:" + klass->second->origin_module + "." +
                                              klass->second->name);
+            if (type.kind == TypeKind::Qualified) {
+                type.kind = TypeKind::Named;
+            }
         } else if (const auto en = symbols.enums.find(binding);
                    en != symbols.enums.end() && !en->second->origin_module.empty()) {
             type.name =
                 native_identity_atom("path:" + en->second->origin_module + "." + en->second->name);
+            if (type.kind == TypeKind::Qualified) {
+                type.kind = TypeKind::Named;
+            }
         }
     }
     return type;

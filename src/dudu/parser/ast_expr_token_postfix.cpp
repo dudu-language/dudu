@@ -58,6 +58,9 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             index.children.reserve(2);
             index.children.push_back(std::move(expr));
             index.children.push_back(std::move(index_arg));
+            if (at(TokenKind::Dot)) {
+                set_expr_template_type_args(index, parse_type_list_span(body_begin, close));
+            }
             expr = std::move(index);
             continue;
         }

@@ -1,0 +1,12 @@
+class Payload:
+    value: i32
+
+
+class Problem:
+    code: i32
+
+
+def load(value: i32) -> Result[Payload, Problem]:
+    if value >= 0:
+        return Ok(Payload(value))
+    return Err(Problem(value))

@@ -109,23 +109,13 @@ std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr, const Sym
     return type_ref;
 }
 
-bool accepts_dudu_string(const TypeRef& type) {
-    if (type_ref_is_name(type, "str")) {
-        return true;
-    }
-    if ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
-        type.children.size() == 1) {
-        return accepts_dudu_string(type.children.front());
-    }
-    return false;
-}
-
 std::string lower_call_args_for_signature(const std::vector<Expr>& args,
                                           const FunctionSignature& signature,
                                           const std::vector<std::string>& aliases,
                                           const CppLocalContext& locals,
                                           const std::map<std::string, TypeRef>& local_type_refs,
                                           const Symbols* symbols, const CppEmitOptions& options) {
+    const std::map<std::string, TypeRef> function_returns;
     std::ostringstream out;
     for (size_t i = 0; i < args.size(); ++i) {
         if (i > 0) {
@@ -133,13 +123,8 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args,
         }
         const TypeRef expected = signature_param_type_ref(
             signature, signature_param_index_for_arg(signature, i, args.size()));
-        const std::string lowered =
-            lower_expr(args[i], aliases, locals, local_type_refs, symbols, options);
-        if (args[i].kind == ExprKind::StringLiteral && accepts_dudu_string(expected)) {
-            out << "std::string(" << lowered << ')';
-        } else {
-            out << lowered;
-        }
+        out << lower_expr_as_type_ref(expected, args[i], aliases, locals, local_type_refs,
+                                      function_returns, symbols, options);
     }
     return out.str();
 }
@@ -347,6 +332,13 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
             callee.children.front().name == "super") {
             if (!locals.super_class.empty()) {
                 return locals.super_class + "::" + callee.name;
+            }
+        }
+        if (callee.kind == ExprKind::Member && callee.children.size() == 1 && symbols != nullptr) {
+            if (const auto static_type = static_class_receiver_type_ref(
+                    *symbols, local_type_refs, locals.current_class, callee.children.front())) {
+                return lower_cpp_type(*static_type, aliases, options) + "::" +
+                       emitted_member_name_for_expr(callee, local_type_refs, symbols, options);
             }
         }
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
@@ -558,6 +550,20 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                    lower_call_args_for_signature(expr.children, signature->second, aliases, locals,
                                                  local_type_refs, symbols, options) +
                    ")";
+        }
+        if (has_expr_callee(expr) && expr_callee(expr).front().kind == ExprKind::Member &&
+            expr_callee(expr).front().children.size() == 1) {
+            const Expr& member = expr_callee(expr).front();
+            const TypeRef receiver_type =
+                infer_emitted_local_type_ref(member.children.front(), local_type_refs, {}, symbols);
+            FunctionSignature signature;
+            if (method_signature_for_type(*symbols, receiver_type, member.name, signature,
+                                          nullptr)) {
+                return callee + "(" +
+                       lower_call_args_for_signature(expr.children, signature, aliases, locals,
+                                                     local_type_refs, symbols, options) +
+                       ")";
+            }
         }
     }
     return callee + "(" +

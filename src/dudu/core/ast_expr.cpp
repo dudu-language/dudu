@@ -79,6 +79,11 @@ std::optional<std::string> path_index_from_expr(const Expr& expr) {
 }
 
 std::optional<ExprPath> expr_path_from_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::TypeExpr && has_expr_type_ref(expr)) {
+        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
+                                     .text = type_ref_text(expr_type_ref(expr)),
+                                     .location = expr.location}}};
+    }
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         return ExprPath{
             .segments = {
@@ -122,6 +127,9 @@ std::string render_expr_path(const ExprPath& path) {
 }
 
 std::string expr_label(const Expr& expr) {
+    if (expr.kind == ExprKind::TypeExpr && has_expr_type_ref(expr)) {
+        return type_ref_text(expr_type_ref(expr));
+    }
     if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
         return render_expr_path(*path);
     }
@@ -456,6 +464,9 @@ std::string display_expr(const Expr& expr) {
     switch (expr.kind) {
     case ExprKind::Name:
         return expr.name;
+    case ExprKind::TypeExpr:
+        return has_expr_type_ref(expr) ? type_ref_text(expr_type_ref(expr))
+                                       : malformed_expr_display("type");
     case ExprKind::BoolLiteral:
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:

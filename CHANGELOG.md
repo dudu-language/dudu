@@ -4,6 +4,25 @@
 
 ### Added
 
+- Generic function overload resolution now considers concrete and generic
+  candidates together, infers type arguments per candidate, and prefers the
+  most specific viable declaration. Generic codecs and other protocol-style
+  APIs can therefore overload primitives, containers, and user-defined types
+  without library-specific compiler behavior.
+- Generic body substitution now represents substituted type parameters as
+  structured `TypeExpr` AST nodes. Generic type construction and static member
+  calls no longer rely on rewriting type spellings into expression names.
+- Generic code can construct concrete type parameters, default-construct
+  supported built-in and user types, and call static methods through
+  instantiated generic class receivers.
+- Expected parameter and return types now materialize nested `Option`,
+  `Result`, and owning `str` values consistently, including wrapper values
+  passed to ordinary and member function calls.
+- Matching and member access through const references to `Result[T, E]` now
+  preserve the active alternative and payload type.
+- Module-qualified Dudu types now canonicalize to their declaration identity
+  during semantic comparison, preventing aliases reached through separate
+  import routes from becoming incompatible types.
 - Generic method body checking now reconstructs declaration scope by explicit
   module identity rather than AST pointer identity. Methods generated on
   generic classes therefore retain hygienic runtime imports when invoked

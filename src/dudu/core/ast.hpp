@@ -165,6 +165,7 @@ enum class ExprKind {
     Missing,
     Unknown,
     Name,
+    TypeExpr,
     BoolLiteral,
     IntLiteral,
     FloatLiteral,

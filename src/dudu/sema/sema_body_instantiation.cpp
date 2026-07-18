@@ -5,6 +5,7 @@
 #include "dudu/sema/sema_body_substitution.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_dudu_overloads.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -131,8 +132,7 @@ std::vector<const FunctionDecl*> imported_function_declarations(const FunctionSc
         }
         for (const ModuleAst& unit : scope.symbols.module_tree->module_units) {
             for (const FunctionDecl& fn : unit.functions) {
-                if (!fn.generic_params.empty() &&
-                    function_identity(fn) == alias->identity.canonical_path) {
+                if (function_identity(fn) == alias->identity.canonical_path) {
                     out.push_back(&fn);
                 }
             }
@@ -302,20 +302,13 @@ void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
 void check_instantiated_imported_generic_function_body(
     const FunctionScope& caller_scope, const std::string& callee, const std::vector<Expr>& args,
     const std::optional<std::vector<TypeRef>>& explicit_type_args, const SourceLocation& site) {
-    for (const FunctionDecl* fn : imported_function_declarations(caller_scope, callee)) {
-        std::optional<std::vector<TypeRef>> type_args = explicit_type_args;
-        if (!type_args) {
-            type_args = infer_generic_call_type_args(caller_scope, *fn, callee, args, nullptr);
-        }
-        if (!type_args || !generic_arity_matches(fn->generic_params, type_args->size())) {
-            continue;
-        }
-        const FunctionSignature signature = instantiate_generic_signature(*fn, *type_args);
-        if (!matching_signature_ast(caller_scope, {signature}, args)) {
-            continue;
-        }
-        check_instantiated_generic_function_body(caller_scope, *fn, *type_args, "", site);
-        return;
+    const std::vector<const FunctionDecl*> declarations =
+        imported_function_declarations(caller_scope, callee);
+    const auto selected =
+        select_dudu_function_overload(caller_scope, callee, args, declarations, explicit_type_args);
+    if (selected && !selected->generic_args.empty()) {
+        check_instantiated_generic_function_body(caller_scope, *selected->declaration,
+                                                 selected->generic_args, "", site);
     }
 }
 

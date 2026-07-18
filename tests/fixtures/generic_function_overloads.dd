@@ -1,0 +1,29 @@
+class Wrapped:
+    value: i32
+
+    def dispatch(self: &const[Self]) -> i32:
+        return self.value + 30
+
+
+def dispatch(value: &const[i32]) -> i32:
+    return value + 1
+
+
+def dispatch[T](value: &const[list[T]]) -> i32:
+    return i32(len(value)) + 10
+
+
+def dispatch[T](value: &const[T]) -> i32:
+    return value.dispatch()
+
+
+def invoke[T](value: &const[T]) -> i32:
+    return dispatch(value)
+
+
+def main() -> i32:
+    values: list[i32] = [1, 2]
+    concrete = invoke(1)
+    structured = invoke(values)
+    fallback = invoke(Wrapped(7))
+    return concrete + structured + fallback - 9

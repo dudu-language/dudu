@@ -37,7 +37,9 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         const Expr& receiver = member.children.front();
         const bool receiver_is_bare_path =
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
-        if (!receiver_is_bare_path) {
+        const bool receiver_is_static_type =
+            static_class_receiver_type_ref(scope, receiver).has_value();
+        if (!receiver_is_bare_path && !receiver_is_static_type) {
             const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, &location);
             if (!foreign_cpp_class_type(scope.symbols, receiver_ref)) {
                 const std::vector<DuduMethodInstantiation> methods =
@@ -204,9 +206,8 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         return named_type_ref("i32", location);
     }
     if (stmt_iterable_expr(stmt).kind == ExprKind::Name) {
-        const std::optional<TypeRef> element =
-            iterable_value_type_ref(scope.symbols, scope.local_type_refs,
-                                    stmt_iterable_expr(stmt).name);
+        const std::optional<TypeRef> element = iterable_value_type_ref(
+            scope.symbols, scope.local_type_refs, stmt_iterable_expr(stmt).name);
         if (element) {
             return *element;
         }

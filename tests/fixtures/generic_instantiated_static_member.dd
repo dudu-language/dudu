@@ -1,0 +1,13 @@
+class Decoder[T]:
+    value: T
+
+    def decoded(value: T) -> Decoder[T]:
+        return Decoder[T](value)
+
+
+def decode[T](value: T) -> Decoder[T]:
+    return Decoder[T].decoded(value)
+
+
+def main() -> i32:
+    return decode[i32](42).value

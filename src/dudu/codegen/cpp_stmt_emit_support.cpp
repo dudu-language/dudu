@@ -1,9 +1,10 @@
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_generic_methods.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
 
 #include <sstream>
 #include <utility>
@@ -74,6 +75,29 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options) {
+    if (is_template_type(expected_type, "Option")) {
+        if (expr.kind == ExprKind::NoneLiteral) {
+            return lower_cpp_type(expected_type, aliases, options) + "{}";
+        }
+        return lower_cpp_type(expected_type, aliases, options) + "(" +
+               lower_emitted_expr(expr, aliases, locals, local_type_refs, symbols, options) + ")";
+    }
+    if (is_template_type(expected_type, "Result") && expr.kind == ExprKind::Call &&
+        expr.children.size() == 1) {
+        const std::string callee = direct_callee_name(expr);
+        const std::vector<TypeRef> args = template_type_arg_refs(expected_type, "Result");
+        if ((callee == "Ok" || callee == "Err") && args.size() == 2) {
+            const TypeRef& payload_type = callee == "Ok" ? args[0] : args[1];
+            return lower_cpp_type(expected_type, aliases, options) + "(dudu::" + callee + "(" +
+                   lower_expr_as_type_ref(payload_type, expr.children.front(), aliases, locals,
+                                          local_type_refs, function_returns, symbols, options) +
+                   "))";
+        }
+    }
+    if (type_ref_is_name(expected_type, "str") && expr.kind == ExprKind::StringLiteral) {
+        return "std::string(" +
+               lower_emitted_expr(expr, aliases, locals, local_type_refs, symbols, options) + ")";
+    }
     if (is_fixed_array_type(expected_type) && expr.kind == ExprKind::ListLiteral) {
         return lower_fixed_array_literal_as_type_ref(expected_type, expr, aliases, locals,
                                                      local_type_refs, function_returns, symbols,

@@ -384,6 +384,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             return named_type_ref("usize", expr.location);
         }
         return emitted_local_type_ref(local_type_refs, expr.name, expr.location);
+    case ExprKind::TypeExpr:
+        return has_expr_type_ref(expr) ? expr_type_ref(expr) : TypeRef{};
     case ExprKind::Unary:
         if (expr.children.size() != 1) {
             return {};

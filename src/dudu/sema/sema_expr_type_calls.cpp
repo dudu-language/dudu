@@ -5,6 +5,7 @@
 #include "dudu/sema/sema_body.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_constructors.hpp"
+#include "dudu/sema/sema_dudu_overloads.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
@@ -284,6 +285,40 @@ std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, 
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                             const SourceLocation* location) {
+    if (has_expr_callee(expr) && expr_callee(expr).front().kind == ExprKind::TypeExpr &&
+        has_expr_type_ref(expr_callee(expr).front())) {
+        const TypeRef constructor_type = expr_type_ref(expr_callee(expr).front());
+        const TypeRef resolved_type = receiver_template_type_ref(scope.symbols, constructor_type);
+        if (const ClassDecl* klass = class_for_receiver_type(scope.symbols, resolved_type)) {
+            const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(resolved_type);
+            const ClassDecl instantiated =
+                klass->generic_params.empty()
+                    ? *klass
+                    : instantiate_generic_class(*klass, receiver_args,
+                                                type_ref_text(constructor_type));
+            reject_abstract_construction(scope.symbols, constructor_type, location);
+            check_constructor_args_ast(scope, instantiated, expr.children, location);
+            if (location != nullptr) {
+                if (const FunctionDecl* init = matching_constructor_method_ast(
+                        scope, instantiated, expr.children, location)) {
+                    const size_t method_index =
+                        static_cast<size_t>(init - instantiated.methods.data());
+                    if (method_index < klass->methods.size()) {
+                        check_instantiated_generic_method_body(
+                            scope, *klass, klass->methods[method_index], constructor_type,
+                            receiver_args, {}, *location);
+                    }
+                }
+            }
+            return constructor_type;
+        }
+        if (known_template_constructor_type(scope, constructor_type)) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_type_ast(scope, arg, location);
+            }
+            return constructor_type;
+        }
+    }
     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
     const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
@@ -320,29 +355,19 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         }
         return out;
     }
-    if (const auto decl = scope.symbols.function_decls.find(callee);
-        decl != scope.symbols.function_decls.end() && !decl->second->generic_params.empty()) {
-        if (const auto type_args = infer_generic_call_type_args(scope, *decl->second, callee,
-                                                                expr.children, location)) {
-            const FunctionSignature signature =
-                instantiate_generic_signature(*decl->second, *type_args);
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            if (location != nullptr) {
-                check_instantiated_generic_function_body(scope, *decl->second, *type_args, "",
-                                                         *location);
+    if (scope.symbols.function_overload_decls.contains(callee)) {
+        if (const auto selected = select_dudu_function_overload(scope, callee, expr.children)) {
+            check_call_args_ast(scope, callee, selected->signature, expr.children, location);
+            if (location != nullptr && !selected->generic_args.empty()) {
+                check_instantiated_generic_function_body(scope, *selected->declaration,
+                                                         selected->generic_args, "", *location);
             }
-            return signature_return_type_ref(signature);
+            return signature_return_type_ref(selected->signature);
         }
-        return std::nullopt;
-    }
-    if (const auto overloads = scope.symbols.function_overload_signatures.find(callee);
-        overloads != scope.symbols.function_overload_signatures.end()) {
-        if (const auto match = matching_signature_ast(scope, overloads->second, expr.children)) {
-            check_call_args_ast(scope, callee, *match, expr.children, location);
-            return signature_return_type_ref(*match);
-        }
-        if (location != nullptr && !overloads->second.empty()) {
-            check_call_args_ast(scope, callee, overloads->second.front(), expr.children, location);
+        const auto signatures = scope.symbols.function_overload_signatures.find(callee);
+        if (location != nullptr && signatures != scope.symbols.function_overload_signatures.end() &&
+            !signatures->second.empty()) {
+            check_call_args_ast(scope, callee, signatures->second.front(), expr.children, location);
         }
         return std::nullopt;
     }
@@ -351,6 +376,21 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     }
     if (callee == "move") {
         return direct_builtin_call_type_ref(scope, expr, callee, location);
+    }
+    if (has_expr_callee(expr) && expr_callee(expr).front().kind == ExprKind::Member &&
+        expr_callee(expr).front().children.size() == 1) {
+        const Expr& receiver = expr_callee(expr).front().children.front();
+        const std::optional<TypeRef> static_type = static_class_receiver_type_ref(scope, receiver);
+        const ClassDecl* static_class =
+            static_type ? class_for_receiver_type(scope.symbols, *static_type) : nullptr;
+        if (static_type && (static_class == nullptr || !static_class->native_declaration) &&
+            !foreign_cpp_class_type(scope.symbols, *static_type) &&
+            !foreign_cpp_type_name(scope.symbols, *static_type)) {
+            if (const auto method_type =
+                    direct_member_call_type_ref(scope, expr, callee, location)) {
+                return *method_type;
+            }
+        }
     }
     if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
         if (location != nullptr) {

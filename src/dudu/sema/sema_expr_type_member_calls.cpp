@@ -161,6 +161,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
     }
     const Expr& member = expr_callee(expr).front();
     const Expr& receiver_expr = member.children.front();
+    const std::string call_name = callee.empty() ? expr_label(member) : callee;
     const bool bare_nonlocal_receiver =
         receiver_expr.kind == ExprKind::Name && !typed_value_receiver(scope, receiver_expr);
     const bool static_class_receiver =
@@ -171,11 +172,11 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
         if (!foreign_receiver) {
             if (const auto inferred = inferred_dudu_method_instantiation_for_type(
                     scope, receiver_type_ref, member.name, expr.children, location)) {
-                return check_dudu_method_instantiation(scope, expr, callee, *inferred, location);
+                return check_dudu_method_instantiation(scope, expr, call_name, *inferred, location);
             }
         }
     }
-    return receiver_call_type_ref(scope, expr, callee, member.name, {}, location);
+    return receiver_call_type_ref(scope, expr, call_name, member.name, {}, location);
 }
 
 std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,

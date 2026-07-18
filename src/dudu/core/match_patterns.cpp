@@ -85,11 +85,17 @@ std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValu
 }
 
 WrapperMatchType wrapper_match_type(const TypeRef& type) {
-    if (const std::vector<TypeRef> args = template_type_arg_refs(type, "Option");
+    TypeRef subject = type;
+    while ((subject.kind == TypeKind::Reference || subject.kind == TypeKind::Const) &&
+           subject.children.size() == 1) {
+        subject = subject.children.front();
+    }
+    if (const std::vector<TypeRef> args = template_type_arg_refs(subject, "Option");
         args.size() == 1) {
         return {.kind = WrapperMatchKind::Option, .arg_refs = args};
     }
-    if (const std::vector<TypeRef> args = template_type_arg_refs(type, "Result"); !args.empty()) {
+    if (const std::vector<TypeRef> args = template_type_arg_refs(subject, "Result");
+        !args.empty()) {
         return {.kind = WrapperMatchKind::Result, .arg_refs = args};
     }
     return {};

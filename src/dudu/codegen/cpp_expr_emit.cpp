@@ -253,6 +253,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             }
         }
         return lower_name_expr(expr.name, locals, options);
+    case ExprKind::TypeExpr:
+        if (has_expr_type_ref(expr)) {
+            return lower_cpp_type(expr_type_ref(expr), aliases, options);
+        }
+        break;
     case ExprKind::CppEscape:
         return lower_cpp_escape_expr(expr.value, aliases, local_type_refs);
     case ExprKind::StringLiteral:
@@ -308,6 +313,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (const auto swizzle =
                     lower_swizzle_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
                 return *swizzle;
+            }
+            if (symbols != nullptr) {
+                if (const auto static_type = static_class_receiver_type_ref(
+                        *symbols, local_type_refs, locals.current_class, expr.children.front())) {
+                    return lower_cpp_type(*static_type, aliases, options) + "::" +
+                           emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
+                }
             }
             if (is_pointer_receiver_expr(expr.children.front(), local_type_refs)) {
                 return lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,

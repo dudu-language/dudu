@@ -51,6 +51,8 @@ compile_and_expect recursive_enum_expr 42
 compile_and_expect result_option 42
 compile_and_expect result_default_error 42
 compile_and_expect result_non_default_payload 42
+compile_and_expect result_reference_match 42
+compile_and_expect expected_wrapper_materialization 42
 compile_modules_path_and_expect imported_result_match \
     tests/fixtures/project_imported_result_match/main.dd 42
 compile_and_expect sum_type_events 42
@@ -100,6 +102,10 @@ fi
 compile_and_expect named_callback 42
 compile_and_expect function_values 42
 compile_and_expect function_overloads 44
+compile_and_expect generic_function_overloads 42
+compile_and_expect generic_instantiated_static_member 42
+compile_and_expect generic_type_constructor 42
+compile_and_expect generic_default_constructor 42
 compile_and_expect class_method_overloads 42
 compile_path_and_expect project_function_overloads tests/fixtures/project_function_overloads/main.dd 42
 compile_and_expect shaped_generic_method_return 42
@@ -247,6 +253,7 @@ compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_dependent_member 42
 compile_and_expect generic_dependent_static_member 42
 compile_path_and_expect project_imported_generic_codec tests/fixtures/project_imported_generic_codec/main.dd 42
+compile_path_and_expect project_module_alias_identity tests/fixtures/project_module_alias_identity/main.dd 42
 expect_fail bad_generic_dependent_member --check "unknown function: value.encoded while instantiating"
 expect_fail bad_generic_dependent_static_member --check "unknown function: i32.decoded while instantiating"
 compile_and_expect string_index 42

@@ -1,0 +1,15 @@
+import shared as first
+import shared as second
+
+
+def relay(value: Result[first.Payload, first.Problem]) -> Result[second.Payload, second.Problem]:
+    return value
+
+
+def main() -> i32:
+    result: Result[second.Payload, second.Problem] = relay(first.load(42))
+    match result:
+        case Ok(payload):
+            return payload.value
+        case Err(problem):
+            return problem.code

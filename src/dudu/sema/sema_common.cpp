@@ -142,6 +142,11 @@ void check_index_arg_exprs(const std::vector<Expr>& args, const SourceLocation* 
 
 std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location) {
+    if (expr.kind == ExprKind::TypeExpr && has_expr_type_ref(expr)) {
+        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
+                                     .text = type_ref_text(expr_type_ref(expr)),
+                                     .location = expr.location}}};
+    }
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         if (expr.name == "class") {
             if (!scope.current_class.empty()) {
