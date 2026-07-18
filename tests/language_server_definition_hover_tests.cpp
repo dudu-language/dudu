@@ -313,6 +313,26 @@ void test_lsp_does_not_resolve_bare_names_to_class_members() {
     assert(dudu::definition_json(doc, &params) == "null");
 }
 
+void test_lsp_hover_selects_the_overload_declaration_at_the_cursor() {
+    const dudu::Document doc{
+        .uri = "file:///overload_declaration_hover.dd",
+        .path = "overload_declaration_hover.dd",
+        .text = "# Integer overload docs.\n"
+                "def choose(value: i32) -> i32:\n"
+                "    return value\n"
+                "\n"
+                "# String overload docs.\n"
+                "def choose(value: str) -> i32:\n"
+                "    return i32(len(value))\n"};
+
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":5}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("def choose(value: str) -> i32") != std::string::npos);
+    assert(hover.find("String overload docs.") != std::string::npos);
+    assert(hover.find("Integer overload docs.") == std::string::npos);
+}
+
 void test_lsp_hover_uses_constant_and_alias_docs() {
     const dudu::Document doc{.uri = "file:///constant_alias_docs.dd",
                              .path = "constant_alias_docs.dd",
@@ -469,6 +489,7 @@ int main() {
         test_lsp_hover_uses_ast_doc_comments();
         test_lsp_hover_does_not_guess_between_unqualified_members();
         test_lsp_does_not_resolve_bare_names_to_class_members();
+        test_lsp_hover_selects_the_overload_declaration_at_the_cursor();
         test_lsp_hover_uses_constant_and_alias_docs();
         test_lsp_hover_uses_imported_ast_doc_comments();
         test_lsp_hover_uses_imported_enum_value_identity();

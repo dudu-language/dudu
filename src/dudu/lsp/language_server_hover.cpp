@@ -15,6 +15,7 @@
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
+#include "dudu/lsp/language_server_reference_support.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/lsp/language_server_type_hover.hpp"
@@ -384,6 +385,12 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         }
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
+    if (params != nullptr) {
+        if (const std::optional<Symbol> declaration =
+                declaration_at_position(doc, params, query, symbols)) {
+            return symbol_hover_json(*declaration);
+        }
+    }
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
         if (exact->kind == lsp_symbol_kind::Class) {
             for (const ClassDecl& klass : current.classes) {

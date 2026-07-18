@@ -60,9 +60,10 @@ std::optional<Symbol> declaration_at_position(const Document& doc, const Json* p
                                               const std::string& name,
                                               const std::vector<Symbol>& symbols) {
     for (const Symbol& symbol : symbols) {
-        if (symbol.name == name && renameable_symbol_kind(symbol.kind) &&
+        if ((symbol.name == name || symbol.qualified_name.value_or(symbol.name) == name) &&
+            renameable_symbol_kind(symbol.kind) &&
             std::filesystem::path(symbol.location.file) == doc.path &&
-            position_contains_name(params, name, symbol.location)) {
+            position_contains_name(params, symbol.name, symbol.location)) {
             return symbol;
         }
     }
