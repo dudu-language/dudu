@@ -233,6 +233,9 @@ compile_and_expect generic_arena_handle 42
 compile_and_expect generic_box 42
 compile_and_expect generic_identity 42
 compile_and_expect generic_inferred_calls 42
+compile_and_expect generic_dependent_member 42
+expect_fail bad_generic_dependent_member --check "unknown function: value.encoded while instantiating"
+compile_and_expect string_index 42
 compile_and_expect generic_inferred_structured 42
 compile_and_expect generic_method 42
 compile_and_expect generic_method_inferred 42

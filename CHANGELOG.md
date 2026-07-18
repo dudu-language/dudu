@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Generic function bodies may call methods on dependent receiver types. Each
+  concrete instantiation is still checked and reports the instantiation site
+  when the substituted type does not provide the method.
+- Added checked string indexing and iteration, `str + char`, and owning-string
+  lowering for inferred string locals and Dudu `str` call arguments.
+- Added typed `dict.at(key)` access so read-only dictionary code can retrieve a
+  value without mutating through `operator[]`.
 - Graduated wrapper-free nlohmann/json, Boost.Asio, range-v3, protobuf, EnTT,
   and Abseil programs through check, C++ emission, native build, link, and run
   under GCC/libstdc++ and Clang/libstdc++. The four header-only programs also

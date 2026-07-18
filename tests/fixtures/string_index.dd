@@ -1,0 +1,21 @@
+def identity(value: str) -> str:
+    return value
+
+def main() -> i32:
+    text = "dudu"
+    echoed = identity("dudu")
+    if text[0] != char(100):
+        return 1
+    if text[3] != char(117):
+        return 2
+    output = "du"
+    output += char(100)
+    output += char(117)
+    if output != "dudu" or echoed != "dudu":
+        return 3
+    count: i32 = 0
+    for ch in output:
+        count += i32(ch)
+    if count != 434:
+        return 4
+    return 42

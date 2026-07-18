@@ -10,6 +10,7 @@
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_constructors.hpp"
 #include "dudu/sema/sema_enum.hpp"
+#include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
@@ -106,7 +107,19 @@ std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr, const Sym
     return type_ref;
 }
 
-std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
+bool accepts_dudu_string(const TypeRef& type) {
+    if (type_ref_is_name(type, "str")) {
+        return true;
+    }
+    if ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+        type.children.size() == 1) {
+        return accepts_dudu_string(type.children.front());
+    }
+    return false;
+}
+
+std::string lower_call_args_for_signature(const std::vector<Expr>& args,
+                                          const FunctionSignature& signature,
                                           const std::vector<std::string>& aliases,
                                           const CppLocalContext& locals,
                                           const std::map<std::string, TypeRef>& local_type_refs,
@@ -116,7 +129,15 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
         if (i > 0) {
             out << ", ";
         }
-        out << lower_expr(args[i], aliases, locals, local_type_refs, symbols, options);
+        const TypeRef expected = signature_param_type_ref(
+            signature, signature_param_index_for_arg(signature, i, args.size()));
+        const std::string lowered =
+            lower_expr(args[i], aliases, locals, local_type_refs, symbols, options);
+        if (args[i].kind == ExprKind::StringLiteral && accepts_dudu_string(expected)) {
+            out << "std::string(" << lowered << ')';
+        } else {
+            out << lowered;
+        }
     }
     return out.str();
 }

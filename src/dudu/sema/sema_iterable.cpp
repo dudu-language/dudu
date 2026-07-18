@@ -49,6 +49,9 @@ std::optional<TypeRef> single_template_child_type_ref(const TypeRef& type, std::
 
 std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type) {
     type = unwrap_reference_and_const(std::move(type));
+    if (type_ref_is_name(type, "str")) {
+        return named_type_ref("char", type.location);
+    }
     if (const auto element = single_template_child_type_ref(type, "list")) {
         return *element;
     }

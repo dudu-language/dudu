@@ -13,6 +13,18 @@ bool typed_value_receiver(const FunctionScope& scope, const Expr& expr) {
             scope.symbols.native_value_type_refs.contains(expr.name));
 }
 
+bool dependent_receiver_type(const FunctionScope& scope, const TypeRef& type) {
+    if (scope.symbols.generic_params.contains(type_ref_head_name(type))) {
+        return true;
+    }
+    for (const TypeRef& child : type.children) {
+        if (dependent_receiver_type(scope, child)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 TypeRef check_dudu_method_instantiation(const FunctionScope& scope, const Expr& expr,
                                         const std::string& callee,
                                         const DuduMethodInstantiation& method,
@@ -71,6 +83,12 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     }
     const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
     if (!has_type_ref(receiver_type_ref) || type_ref_is_auto(receiver_type_ref)) {
+        for (const Expr& arg : expr.children) {
+            check_expr_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
+    }
+    if (dependent_receiver_type(scope, receiver_type_ref)) {
         for (const Expr& arg : expr.children) {
             check_expr_ast(scope, arg, location);
         }

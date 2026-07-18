@@ -284,6 +284,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     stmt.value_expr, local_type_refs, function_returns, symbols);
                 const bool inferred_collection =
                     is_collection_literal(stmt.value_expr) && has_type_ref(inferred_ref);
+                const bool inferred_string = type_ref_is_name(inferred_ref, "str");
                 const std::string value =
                     inferred_collection ? lower_expr_as_type_ref(inferred_ref, stmt.value_expr,
                                                                  aliases, locals, local_type_refs,
@@ -298,7 +299,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         lhs, named_type_ref("auto", stmt_target_expr(stmt).location));
                 }
                 out << indent(depth)
-                    << (inferred_collection
+                    << (inferred_collection || inferred_string
                             ? lower_declared_stmt_type(inferred_ref, aliases, options)
                             : "auto")
                     << ' ' << lhs << " = " << value << ";\n";

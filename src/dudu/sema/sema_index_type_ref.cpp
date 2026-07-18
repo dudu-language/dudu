@@ -177,6 +177,12 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     if (pointer_index) {
         return *type;
     }
+    if (type_ref_is_name(*type, "str")) {
+        if (is_slice || index_count != 1) {
+            throw CompileError(location, "string indexing requires exactly one index: " + label);
+        }
+        return named_type_ref("char", location);
+    }
     for (std::string_view name : {"list", "span", "strided_span", "array_view", "set"}) {
         const std::vector<TypeRef> args = template_type_arg_refs(*type, name);
         if (args.size() == 1) {

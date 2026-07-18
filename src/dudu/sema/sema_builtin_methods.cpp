@@ -187,6 +187,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
     }
     if (template_head_is(templated_ref, {"dict"})) {
         const TypeRef key_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
+        const std::vector<TypeRef> args = template_type_arg_refs(templated_ref, "dict");
+        const TypeRef value_type = args.size() == 2 ? args[1] : auto_type_ref();
         if (method_name == "contains") {
             set_param_types(signature, {key_type});
             set_return_type(signature, "bool");
@@ -203,6 +205,11 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
         }
         if (method_name == "empty") {
             set_return_type(signature, "bool");
+            return true;
+        }
+        if (method_name == "at") {
+            set_param_types(signature, {key_type});
+            set_return_type(signature, value_type);
             return true;
         }
     }

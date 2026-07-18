@@ -492,7 +492,8 @@ bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeR
         return true;
     }
     if (op == "+" && type_ref_is_name(value_left_ref, "str")) {
-        return assignment_type_allowed(symbols, value_left_ref, right_expr, value_right_ref);
+        return type_ref_is_name(value_right_ref, "char") ||
+               assignment_type_allowed(symbols, value_left_ref, right_expr, value_right_ref);
     }
     if (op == "+" || op == "-") {
         return (resolved_left.kind == TypeKind::Pointer && type_ref_is_integer(value_right_ref)) ||
