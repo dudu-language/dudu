@@ -141,6 +141,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     emit_value_enums(out, module, aliases, emit_options);
     emit_classes(out, module, aliases, function_returns, symbols, true, emit_options);
     emit_payload_enums(out, module, aliases, emit_options);
+    emit_generic_enum_method_declarations(out, module, aliases, emit_options);
     emit_enum_method_dispatch_overloads(out, module, aliases, emit_options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true,
                                  emit_options);
@@ -195,6 +196,10 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     emit_value_enums(out, module, aliases, emit_options);
     emit_classes(out, module, aliases, function_returns, symbols, false, emit_options);
     emit_payload_enums(out, module, aliases, emit_options);
+    emit_generic_enum_method_declarations(out, module, aliases, emit_options);
+    emit_enum_method_dispatch_overloads(out, module, aliases, emit_options);
+    emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true,
+                                 emit_options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, false,
                                  emit_options);
     emit_cpp_early_functions(out, module, aliases, function_returns, symbols, false,
@@ -262,6 +267,9 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     emit_cpp_function_declarations(out, module, aliases, false, true, options);
     emit_classes(out, module, aliases, function_returns, symbols, false, options);
     emit_enums(out, module, aliases, options);
+    emit_generic_enum_method_declarations(out, module, aliases, options);
+    emit_enum_method_dispatch_overloads(out, module, aliases, options);
+    emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true, options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, false, options);
     emit_cpp_early_functions(out, module, aliases, function_returns, symbols, false, true, options);
     emit_constants(out, module, aliases, options);

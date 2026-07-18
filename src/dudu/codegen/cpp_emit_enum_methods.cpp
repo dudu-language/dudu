@@ -97,6 +97,27 @@ void emit_enum_method_declarations(std::ostringstream& out, const ModuleAst& mod
         out << '\n';
 }
 
+void emit_generic_enum_method_declarations(std::ostringstream& out, const ModuleAst& module,
+                                           const std::vector<std::string>& aliases,
+                                           const CppEmitOptions& options) {
+    bool emitted = false;
+    for (const EnumDecl& en : module.enums) {
+        for (const FunctionDecl& method : en.methods) {
+            if (!visible_in_cpp_header(method.visibility) || !generic_method(method)) {
+                continue;
+            }
+            emit_cpp_template_parameters(out, generic_cpp_params_for_function(method),
+                                         generic_cpp_value_params_for_function(method));
+            emit_signature(out, en, method, aliases, options);
+            out << ";\n";
+            emitted = true;
+        }
+    }
+    if (emitted) {
+        out << '\n';
+    }
+}
+
 void emit_private_enum_method_declarations(std::ostringstream& out, const ModuleAst& module,
                                            const std::vector<std::string>& aliases,
                                            const CppEmitOptions& options) {

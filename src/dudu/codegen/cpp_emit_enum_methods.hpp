@@ -19,6 +19,10 @@ void emit_enum_method_declarations(std::ostringstream& out, const ModuleAst& mod
                                    const std::vector<std::string>& aliases, bool header_only,
                                    const CppEmitOptions& options = {});
 
+void emit_generic_enum_method_declarations(std::ostringstream& out, const ModuleAst& module,
+                                           const std::vector<std::string>& aliases,
+                                           const CppEmitOptions& options = {});
+
 void emit_private_enum_method_declarations(std::ostringstream& out, const ModuleAst& module,
                                            const std::vector<std::string>& aliases,
                                            const CppEmitOptions& options = {});

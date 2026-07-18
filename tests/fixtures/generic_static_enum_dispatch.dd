@@ -1,0 +1,19 @@
+class Reader:
+    value: i32
+
+enum Message:
+    Number:
+        value: i32
+
+    def decode[Input](input: &const[Input]) -> Message:
+        return Message.Number(value=42)
+
+def decode_as[T, Input](input: &const[Input]) -> T:
+    return T.decode[Input](input)
+
+def main() -> i32:
+    reader = Reader(value=42)
+    message = decode_as[Message, Reader](reader)
+    match message:
+        case Message.Number(value):
+            return value

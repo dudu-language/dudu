@@ -69,6 +69,15 @@ void test_enum_methods_parse_analyze_and_emit() {
     assert(source.find("generic_make<") != std::string::npos);
     assert(source.find("State__keep<int32_t>(state, State__score(state, 42))") !=
            std::string::npos);
+
+    const size_t generic_declaration = header.find("State__keep(");
+    const size_t generic_dispatch = header.find("dudu_dispatch_instance_keep");
+    const size_t generic_definition = header.find("State__keep(", generic_declaration + 1);
+    assert(generic_declaration != std::string::npos);
+    assert(generic_dispatch != std::string::npos);
+    assert(generic_definition != std::string::npos);
+    assert(generic_declaration < generic_dispatch);
+    assert(generic_dispatch < generic_definition);
 }
 
 void test_enum_method_protocol_roundtrip() {
