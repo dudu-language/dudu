@@ -201,6 +201,24 @@ bool is_reference_binding(const TypeRef& expected, const TypeRef& got) {
     return false;
 }
 
+bool is_reference_to_reference_assignment(const TypeRef& expected, const TypeRef& got) {
+    const auto expected_target = reference_target_ref(expected);
+    const auto got_target = reference_target_ref(got);
+    if (!expected_target || !got_target) {
+        return false;
+    }
+
+    const auto expected_const = unary_child_ref(*expected_target, TypeKind::Const);
+    const auto got_const = unary_child_ref(*got_target, TypeKind::Const);
+    if (!expected_const && got_const) {
+        return false;
+    }
+
+    const TypeRef& expected_value = expected_const ? *expected_const : *expected_target;
+    const TypeRef& got_value = got_const ? *got_const : *got_target;
+    return type_assignment_allowed(expected_value, got_value);
+}
+
 bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(got)) {
         const TypeRef target_value = wrapped_type_arg_ref(*target);
@@ -331,6 +349,7 @@ bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeR
            is_const_pointer_binding(expected_ref, got_ref) ||
            is_pointer_to_reference_value(expected_ref, got_ref) ||
            is_reference_binding(expected_ref, got_ref) ||
+           is_reference_to_reference_assignment(expected_ref, got_ref) ||
            is_index_category_assignment(expected_ref, got_ref) ||
            is_value_from_reference(expected_ref, got_ref) ||
            is_value_from_const(expected_ref, got_ref) ||
@@ -355,6 +374,7 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     return structural_type_assignment_allowed(expected, got) ||
            is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
+           is_reference_to_reference_assignment(expected, got) ||
            is_index_category_assignment(expected, got) || is_value_from_reference(expected, got) ||
            is_value_from_const(expected, got) || is_native_function_pointer(expected, got) ||
            native_associated_type_assignment_allowed(expected, got) ||
@@ -396,6 +416,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
             is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
             is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
+            is_reference_to_reference_assignment(normalized_expected_ref, normalized_got_ref) ||
             is_index_category_assignment(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
@@ -417,6 +438,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
            is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
            is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
+           is_reference_to_reference_assignment(normalized_expected_ref, normalized_got_ref) ||
            is_index_category_assignment(normalized_expected_ref, normalized_got_ref) ||
            is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
            is_value_from_const(normalized_expected_ref, normalized_got_ref) ||

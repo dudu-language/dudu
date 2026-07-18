@@ -64,6 +64,7 @@ grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.c
 ! grep -Fq "runtime_error" "$repo_root/build/freestanding_debug_assert.cpp"
 compile_and_expect cpp_exceptions 42
 compile_and_expect native_function_pointer_value 42
+compile_and_expect native_string_reference_alias 0
 expect_fail bad_native_function_pointer_value --check "argument 1 for native.dudu_transform expects i32, got str"
 compile_and_expect cpp_escape_expr 42
 compile_path_and_expect native_alias_with_module tests/fixtures/native_alias_with_module/main.dd 42

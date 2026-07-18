@@ -111,6 +111,15 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("std.string")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("std.string"),
                                          dudu::parse_type_text("std::string")));
+    assert(dudu::type_assignment_allowed(
+        dudu::parse_type_text("&const[std.basic_string[char]]"),
+        dudu::parse_type_text("&const[str]")));
+    assert(dudu::type_assignment_allowed(
+        dudu::parse_type_text("&const[str]"),
+        dudu::parse_type_text("&const[std.basic_string[char]]")));
+    assert(!dudu::type_assignment_allowed(
+        dudu::parse_type_text("&std.basic_string[char]"),
+        dudu::parse_type_text("&const[str]")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("std.vector.size_type"),
                                          dudu::parse_type_text("usize")));
     assert(dudu::type_assignment_allowed(

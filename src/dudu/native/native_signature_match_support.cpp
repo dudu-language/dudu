@@ -153,6 +153,17 @@ const TypeRef& native_referent(const TypeRef& type) {
     return type;
 }
 
+TypeRef native_unqualified_referent(TypeRef type) {
+    if (type.kind == TypeKind::Reference && type.children.size() == 1) {
+        type = type.children.front();
+    }
+    while ((type.kind == TypeKind::Const || type.kind == TypeKind::Volatile) &&
+           type.children.size() == 1) {
+        type = type.children.front();
+    }
+    return type;
+}
+
 TypeRef concrete_native_argument_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_associated_type_ref(symbols, std::move(type));
     if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
@@ -293,6 +304,14 @@ bool native_arg_assignable(const FunctionScope& scope, const Expr& arg, const Ty
     const TypeRef got_value =
         concrete_native_argument_type_ref(scope.symbols, native_referent(got_ref));
     if (type_assignment_allowed(expected_value, got_value)) {
+        return true;
+    }
+    const TypeRef expected_unqualified =
+        concrete_native_argument_type_ref(scope.symbols,
+                                          native_unqualified_referent(expected_ref));
+    const TypeRef got_unqualified =
+        concrete_native_argument_type_ref(scope.symbols, native_unqualified_referent(got_ref));
+    if (type_assignment_allowed(expected_unqualified, got_unqualified)) {
         return true;
     }
     if (native_base_assignable(scope.symbols, expected_ref, got_ref)) {
