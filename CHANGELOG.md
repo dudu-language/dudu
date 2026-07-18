@@ -4,9 +4,15 @@
 
 ### Added
 
-- `Result[T, E]` now stores only its active alternative and no longer requires
-  `T` or `E` to be default-constructible. Direct `value`/`err` access and
-  `Ok`/`Err` pattern bindings lower through checked active-alternative accessors.
+- `Result[T, E]` now stores only its active alternative, so constructing `Ok`
+  never default-constructs `E` and constructing `Err` never default-constructs
+  `T`. Value initialization preserves the existing `Err(E{})` default, and
+  direct `value`/`err` access plus `Ok`/`Err` pattern bindings lower through
+  checked active-alternative accessors.
+- Modular C++ emission now retains the return type of a unique, non-generic
+  imported function even when an intermediate argument type cannot be
+  reconstructed locally. `Result` matching inside class methods therefore
+  uses the analyzed imported signature instead of degrading to equality code.
 - Generic instance and static method calls now use a neutral dependent-receiver
   dispatch path. Classes and imported C++ types retain normal member calls,
   while Dudu enums expose equivalent overloads despite their compact

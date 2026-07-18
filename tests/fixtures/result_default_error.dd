@@ -1,0 +1,12 @@
+enum Payload:
+    Data:
+        value: i32
+
+
+def main() -> i32:
+    result: Result[Payload, str]
+    if result.ok:
+        return 1
+    if result.err != "":
+        return 2
+    return 42

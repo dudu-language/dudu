@@ -267,7 +267,7 @@ def else_statement(body: list[Statement]) -> Statement:
 
 
 def match_statement(value: Expression, cases: list[Statement]) -> Statement:
-    return Statement(kind=StatementKind.Match, expression=value, children=cases)
+    return Statement(kind=StatementKind.Match, condition=value, children=cases)
 
 
 def case_statement(pattern: Expression, guard: Expression, body: list[Statement]) -> Statement:

@@ -1,0 +1,25 @@
+from decoder import Box
+from decoder import decode
+
+
+class Reader:
+    def read(value: &const[Box]) -> Result[Reader, str]:
+        field = value.field()
+        decoded = decode(field)
+        match decoded:
+            case Err(error):
+                return Err(error)
+            case Ok(number):
+                if number == 42:
+                    return Ok(Reader())
+                return Err(str("wrong value"))
+
+
+def main() -> i32:
+    box = Box(value=42)
+    result = Reader.read(box)
+    match result:
+        case Err(_):
+            return 1
+        case Ok(_):
+            return 42

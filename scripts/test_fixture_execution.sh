@@ -68,7 +68,10 @@ compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42
 compile_and_expect constructor_comparison_arg 42; compile_and_expect native_escape 42
 compile_and_expect result_option 42
+compile_and_expect result_default_error 42
 compile_and_expect result_non_default_payload 42
+compile_modules_path_and_expect imported_result_match \
+    tests/fixtures/project_imported_result_match/main.dd 42
 compile_and_expect function_pointers 42
 compile_and_expect function_attrs 42
 compile_and_expect section_attrs 42

@@ -114,6 +114,18 @@ TypeRef infer_call_type_ref(const std::string& callee,
     if (const auto fn = function_returns.find(callee); fn != function_returns.end()) {
         return fn->second;
     }
+    if (symbols != nullptr) {
+        const auto overloads = symbols->function_overload_signatures.find(callee);
+        if (overloads != symbols->function_overload_signatures.end() &&
+            overloads->second.size() == 1) {
+            return signature_return_type_ref(overloads->second.front());
+        }
+        const auto native = symbols->native_function_signatures.find(callee);
+        if (native != symbols->native_function_signatures.end() && native->second.size() == 1 &&
+            native->second.front().template_params.empty()) {
+            return signature_return_type_ref(native->second.front());
+        }
+    }
     if (symbols != nullptr &&
         (symbols->classes.contains(callee) || is_native_class_binding(*symbols, callee) ||
          symbols->types.contains(callee))) {

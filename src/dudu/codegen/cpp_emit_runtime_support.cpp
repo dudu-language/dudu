@@ -10,6 +10,7 @@ template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }
 template <typename T, typename E> struct Result {
     bool ok{};
     std::variant<T, E> storage;
+    Result() : ok(false), storage(std::in_place_index<1>) {}
     Result(OkValue<T> ok_value)
         : ok(true), storage(std::in_place_index<0>, std::move(ok_value.value)) {}
     Result(ErrValue<E> err_value)

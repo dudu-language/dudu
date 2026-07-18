@@ -1,0 +1,11 @@
+class Box:
+    value: i32
+
+    def field(self: &const[Self]) -> &const[i32]:
+        return self.value
+
+
+def decode(value: &const[i32]) -> Result[i32, str]:
+    if value >= 0:
+        return Ok(value)
+    return Err(str("negative"))
