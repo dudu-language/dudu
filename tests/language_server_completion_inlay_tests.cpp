@@ -447,6 +447,24 @@ void test_lsp_signature_help_uses_visible_imported_functions() {
     assert(help.find("\"activeParameter\":1") != std::string::npos);
 }
 
+void test_lsp_signature_help_does_not_guess_a_bare_member_call() {
+    const dudu::Document doc{
+        .uri = "file:///bare_member_signature.dd",
+        .path = "bare_member_signature.dd",
+        .text = "class Worker:\n"
+                "    # Receiver-only run docs.\n"
+                "    def run(self, value: i32) -> i32:\n"
+                "        return value\n"
+                "\n"
+                "def main() -> i32:\n"
+                "    return run(1)\n"};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":6,\"character\":16}}").parse();
+    const std::string help = dudu::signature_help_json(&doc, &params);
+    assert(help.find("Receiver-only run docs.") == std::string::npos);
+    assert(help.find("\"signatures\":[]") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -466,6 +484,7 @@ int main() {
         test_lsp_hover_describes_tensor_indexing_builtin_types();
         test_lsp_move_builtin_hover_inlay_and_shadowing();
         test_lsp_signature_help_uses_visible_imported_functions();
+        test_lsp_signature_help_does_not_guess_a_bare_member_call();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -194,11 +194,6 @@ std::optional<std::string> native_alias_hover_json(const std::string& word,
             return build_hover(type);
         }
     }
-    for (const NativeTypeDecl& type : module.native_types) {
-        if (symbol_matches(type.name, word)) {
-            return build_hover(type);
-        }
-    }
     return std::nullopt;
 }
 

@@ -77,14 +77,6 @@ SourceLocation expr_name_location(const Expr& expr) {
     return expr.location;
 }
 
-bool symbol_matches(const std::string& symbol, const std::string& query) {
-    if (symbol == query) {
-        return true;
-    }
-    const size_t dot = symbol.rfind('.');
-    return dot != std::string::npos && symbol.substr(dot + 1) == query;
-}
-
 bool identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }

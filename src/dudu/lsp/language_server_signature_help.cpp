@@ -194,14 +194,13 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         add_member_candidates(signatures, current, call, params);
         add_constructor_candidates(signatures, current, call.name);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
-            if (!macro && symbol_matches(symbol.name, call.name) &&
-                (symbol.kind == lsp_symbol_kind::Function ||
-                 symbol.kind == lsp_symbol_kind::Method)) {
+            if (!macro && symbol.name == call.name &&
+                symbol.kind == lsp_symbol_kind::Function) {
                 signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
             }
         }
         for (const NativeValueDecl& value : current.native_values) {
-            if (!symbol_matches(value.name, call.name)) {
+            if (value.name != call.name) {
                 continue;
             }
             FunctionSignature signature;

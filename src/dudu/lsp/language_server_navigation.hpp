@@ -44,7 +44,6 @@ SourceLocation expr_name_location(const Expr& expr);
 
 AstSelection ast_selection_at(const ModuleAst& module, const Json* params);
 AstSelection ast_selection_at(const ModuleAst& module, LspPosition position);
-bool symbol_matches(const std::string& symbol, const std::string& query);
 bool identifier_char(char c);
 bool valid_identifier(const std::string& value);
 
