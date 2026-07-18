@@ -595,13 +595,21 @@ inside the compiler.
 
 ## 6. Editor And Diagnostics Polish
 
-After cold-start architecture is fixed, continue
+Execute [Editor Reliability](editor-reliability-plan.md), informed by
 [Editor Intelligence](editor-intelligence-plan.md) and
-[Language Server Plan](language-server-plan.md):
+[Language Server Plan](language-server-plan.md). The priority order is:
+
+1. never break or require manual editor recovery
+2. never publish confidently wrong semantic information
+3. meet measured cold and warm latency budgets
+4. add rich Dudu and native C/C++ documentation
+
+The detailed plan includes:
 
 - richer recovery for malformed declarations and nested expressions
 - symbol-identity-based references and rename in every supported scope
-- native docs and definitions when Clang metadata provides them
+- native documentation, original declarations, layouts, definitions, and
+  import provenance when Clang metadata provides them
 - field, alias, constant, and generated-macro documentation
 - accurate signature help and inlay hints for generic/native/index operations
 - quick fixes tied to AST/token ranges
@@ -632,12 +640,15 @@ Do not make GitHub Actions part of the normal patch/test loop.
 1. P0 user-visible latency and current benchmark budgets from
    [Dudu Performance Tasks](performance-tasks.md) (complete for the current
    bounded gate)
-2. Native template/header correctness exposed by real programs (next)
-3. Architecture/readability cleanup encountered during that work
-4. Editor/diagnostic polish after cold indexing is fixed
+2. Native template/header correctness exposed by real programs (complete for
+   the current six-library graduation gate; continue only from concrete
+   failures)
+3. Editor reliability, semantic correctness, latency, and native documentation
+   from [Editor Reliability](editor-reliability-plan.md) (next)
+4. Architecture/readability cleanup encountered during that work
 5. `serdd`-driven external-conformance decision
 6. Numeric libraries and optional native/GPU ecosystem proof
 7. Distribution maintenance and platform validation in parallel
 
-The first three items are the next compiler push. The others should not delay
-measured latency and native-interop improvements.
+Editor reliability is the next bounded compiler push. The remaining items
+should not delay fixes for broken, incorrect, or slow editor behavior.
