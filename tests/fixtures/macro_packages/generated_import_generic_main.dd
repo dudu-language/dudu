@@ -1,0 +1,11 @@
+from generic_runtime_helper import call_runtime
+from showcase_macros import RuntimeDependency
+
+
+@derive(RuntimeDependency)
+class Probe[T]:
+    value: T
+
+
+def main() -> i32:
+    return call_runtime(Probe[i32](0))

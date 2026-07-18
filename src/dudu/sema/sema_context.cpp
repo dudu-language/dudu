@@ -343,6 +343,7 @@ void add_native_path_prefix(Symbols& symbols, const std::string& name) {
 
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
+    symbols.module_path = module.module_path;
     for (const std::string& prefix : module.module_import_prefixes) {
         symbols.module_import_prefixes.insert(prefix);
     }

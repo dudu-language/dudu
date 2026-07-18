@@ -27,6 +27,7 @@ struct FunctionSignature {
 
 struct Symbols {
     const ModuleAst* module_tree = nullptr;
+    std::string module_path;
     std::set<std::string> types;
     std::set<std::string> generic_params;
     std::map<std::string, TypeRef> alias_type_refs;

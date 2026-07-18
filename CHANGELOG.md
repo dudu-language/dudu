@@ -4,6 +4,10 @@
 
 ### Added
 
+- Generic method body checking now reconstructs declaration scope by explicit
+  module identity rather than AST pointer identity. Methods generated on
+  generic classes therefore retain hygienic runtime imports when invoked
+  through an imported dependent generic helper.
 - `Result[T, E]` now stores only its active alternative, so constructing `Ok`
   never default-constructs `E` and constructing `Err` never default-constructs
   `T`. Value initialization preserves the existing `Err(E{})` default, and

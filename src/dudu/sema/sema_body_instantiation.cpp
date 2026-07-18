@@ -334,7 +334,7 @@ void check_instantiated_generic_method_body(const FunctionScope& caller_scope,
     }
     if (const ModuleAst* unit = declaration_unit(caller_scope.symbols, owner.origin_module)) {
         if (const ClassDecl* declared_owner = declaration_class(*unit, owner);
-            declared_owner != nullptr && declared_owner != &owner) {
+            declared_owner != nullptr && caller_scope.symbols.module_path != owner.origin_module) {
             const size_t method_index = static_cast<size_t>(&method - owner.methods.data());
             if (method_index < declared_owner->methods.size()) {
                 Symbols declaration_symbols = collect_symbols(*unit);

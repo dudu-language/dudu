@@ -34,6 +34,8 @@ ctest --test-dir "$repo_root/build" --output-on-failure
 compile_and_expect simple_program 42
 compile_modules_path_and_expect macro_generated_runtime_import \
     tests/fixtures/macro_packages/generated_import_main.dd 42
+compile_modules_path_and_expect macro_generated_runtime_import_generic \
+    tests/fixtures/macro_packages/generated_import_generic_main.dd 42
 expect_path_fail macro_undeclared_runtime_import \
     tests/fixtures/macro_packages/bad_generated_import.dd --check \
     "macro generated import is not a declared dependency"
