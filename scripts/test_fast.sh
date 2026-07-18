@@ -279,6 +279,9 @@ compile_and_expect generic_method_receiver_ast 42
 compile_and_expect generic_pair 42
 compile_path_and_expect project_imported_variadic_pack tests/fixtures/project_imported_variadic_pack/main.dd 42
 compile_and_expect generic_result_helpers 42
+compile_and_expect result_temporary_and_nested_literal 42
+compile_and_expect generic_string_literal 42
+compile_and_expect local_shadows_native_scope 42
 compile_and_expect generic_sort_by 42
 compile_and_expect generic_span_sum 42
 compile_and_expect generic_stack 42

@@ -33,7 +33,8 @@ void test_inferred_collection_literal_emission() {
                            "inferred_collection_emission.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("std::vector<int32_t> numbers = {1, 2, 3};") != std::string::npos);
+    assert(cpp.find("std::vector<int32_t> numbers = std::vector<int32_t>{1, 2, 3};") !=
+           std::string::npos);
     assert(cpp.find("std::unordered_map<std::string, int32_t> scores") != std::string::npos);
     assert(cpp.find("std::unordered_set<std::string> names") != std::string::npos);
     assert(cpp.find("std::vector<std::vector<int32_t>> nested") != std::string::npos);

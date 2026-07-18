@@ -39,6 +39,42 @@ bool has_named_argument_shape(const std::vector<Expr>& args) {
     return false;
 }
 
+bool concrete_template_argument(const TypeRef& type) {
+    if (type.kind == TypeKind::Unknown || type_ref_head_name(type) == "auto") {
+        return false;
+    }
+    return std::ranges::all_of(type.children, concrete_template_argument);
+}
+
+std::vector<TypeRef> emitted_generic_arguments(const FunctionDecl& declaration,
+                                               const std::vector<TypeRef>& inferred) {
+    const std::vector<std::string> emitted_params = generic_cpp_params_for_function(declaration);
+    if (emitted_params.empty()) {
+        return {};
+    }
+    std::set<std::string> emitted_names;
+    for (const std::string& param : emitted_params) {
+        emitted_names.insert(generic_param_base_name(param));
+    }
+
+    std::vector<TypeRef> out;
+    for (size_t param_index = 0; param_index < declaration.generic_params.size(); ++param_index) {
+        const std::string& param = declaration.generic_params[param_index];
+        if (!emitted_names.contains(generic_param_base_name(param))) {
+            continue;
+        }
+        if (generic_param_is_pack(param)) {
+            out.insert(out.end(), inferred.begin() + static_cast<std::ptrdiff_t>(param_index),
+                       inferred.end());
+            break;
+        }
+        if (param_index < inferred.size()) {
+            out.push_back(inferred[param_index]);
+        }
+    }
+    return out;
+}
+
 bool is_builtin_cast_call(std::string_view name) {
     static const std::vector<std::string_view> types = {"bool",  "char", "i8",  "i16", "i32",
                                                         "i64",   "u8",   "u16", "u32", "u64",
@@ -146,10 +182,10 @@ bool expression_has_pointer_type(const Expr& expr,
 }
 
 std::optional<std::string>
-lower_inferred_value_pack_call(const Expr& expr, const std::vector<std::string>& aliases,
-                               const CppLocalContext& locals,
-                               const std::map<std::string, TypeRef>& local_type_refs,
-                               const Symbols* symbols, const CppEmitOptions& options) {
+lower_inferred_generic_call(const Expr& expr, const std::vector<std::string>& aliases,
+                            const CppLocalContext& locals,
+                            const std::map<std::string, TypeRef>& local_type_refs,
+                            const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || has_expr_template_type_args(expr)) {
         return std::nullopt;
     }
@@ -174,11 +210,17 @@ lower_inferred_value_pack_call(const Expr& expr, const std::vector<std::string>&
                 return generic_param_is_pack(param) &&
                        value_params.contains(generic_param_base_name(param));
             });
-        if (!has_value_pack) {
+        if (!has_value_pack && symbols->function_overload_decls.at(callee_name).size() > 1) {
             return std::nullopt;
         }
-        generic_args = selected->generic_args;
+        generic_args = emitted_generic_arguments(*selected->declaration, selected->generic_args);
+        if (generic_args.empty()) {
+            return std::nullopt;
+        }
         signature = selected->signature;
+        if (!std::ranges::all_of(generic_args, concrete_template_argument)) {
+            return std::nullopt;
+        }
     } else if (symbols->native_function_signatures.contains(callee_name)) {
         const auto selected =
             match_native_signature_declaration(scope, callee_name, {}, expr.children, nullptr);
@@ -549,8 +591,8 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
             lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {
         return *lowered;
     }
-    if (const auto lowered = lower_inferred_value_pack_call(expr, aliases, locals, local_type_refs,
-                                                            symbols, options)) {
+    if (const auto lowered =
+            lower_inferred_generic_call(expr, aliases, locals, local_type_refs, symbols, options)) {
         return *lowered;
     }
     const std::string callee_name = direct_callee_name(expr);

@@ -1,0 +1,12 @@
+from cpp.path import local_shadows_native_scope.hpp
+
+
+def failure() -> Result[i32, str]:
+    return Err("bad")
+
+
+def main() -> i32:
+    nested = failure()
+    if nested.ok:
+        return 1
+    return i32(len(nested.err)) + 39

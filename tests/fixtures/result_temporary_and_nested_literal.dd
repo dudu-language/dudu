@@ -1,0 +1,11 @@
+class Envelope:
+    result: Result[list[i32], str]
+
+
+def make_number() -> Result[i32, str]:
+    return Ok(40)
+
+
+def main() -> i32:
+    envelope = Envelope(result=Ok([1, 2]))
+    return make_number().value + envelope.result.value[1]

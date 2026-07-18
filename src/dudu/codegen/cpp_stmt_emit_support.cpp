@@ -103,6 +103,50 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
                                                      local_type_refs, function_returns, symbols,
                                                      options);
     }
+    if ((is_template_type(expected_type, "list") && expr.kind == ExprKind::ListLiteral) ||
+        (is_template_type(expected_type, "set") && expr.kind == ExprKind::SetLiteral)) {
+        const std::string collection = expr.kind == ExprKind::ListLiteral ? "list" : "set";
+        const std::vector<TypeRef> args = template_type_arg_refs(expected_type, collection);
+        if (args.size() == 1) {
+            std::ostringstream out;
+            out << lower_cpp_type(expected_type, aliases, options) << "{";
+            for (size_t i = 0; i < expr.children.size(); ++i) {
+                if (i > 0) {
+                    out << ", ";
+                }
+                out << lower_expr_as_type_ref(args[0], expr.children[i], aliases, locals,
+                                              local_type_refs, function_returns, symbols, options);
+            }
+            out << "}";
+            return out.str();
+        }
+    }
+    if (is_template_type(expected_type, "dict") && expr.kind == ExprKind::DictLiteral) {
+        const std::vector<TypeRef> args = template_type_arg_refs(expected_type, "dict");
+        if (args.size() == 2) {
+            std::ostringstream out;
+            out << lower_cpp_type(expected_type, aliases, options) << "{";
+            for (size_t i = 0; i < expr.children.size(); ++i) {
+                if (i > 0) {
+                    out << ", ";
+                }
+                const Expr& entry = expr.children[i];
+                if (entry.kind != ExprKind::DictEntry || entry.children.size() != 2) {
+                    return lower_emitted_expr(expr, aliases, locals, local_type_refs, symbols,
+                                              options);
+                }
+                out << "{"
+                    << lower_expr_as_type_ref(args[0], entry.children[0], aliases, locals,
+                                              local_type_refs, function_returns, symbols, options)
+                    << ", "
+                    << lower_expr_as_type_ref(args[1], entry.children[1], aliases, locals,
+                                              local_type_refs, function_returns, symbols, options)
+                    << "}";
+            }
+            out << "}";
+            return out.str();
+        }
+    }
     if (const auto call = lower_expected_generic_method_call(expected_type, expr, aliases, locals,
                                                              local_type_refs, function_returns,
                                                              symbols, options)) {

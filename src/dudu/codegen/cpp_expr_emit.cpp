@@ -6,6 +6,7 @@
 #include "dudu/codegen/cpp_expr_swizzles.hpp"
 #include "dudu/codegen/cpp_expr_template_calls.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/codegen/cpp_stmt_types.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/naming.hpp"
@@ -158,6 +159,9 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
     }
     if (receiver.name == "class") {
         return !locals.current_class.empty();
+    }
+    if (locals.contains(receiver.name)) {
+        return false;
     }
     if (locals.contains_type(receiver.name)) {
         return true;
@@ -327,8 +331,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                        "->" + emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
             }
             if (symbols != nullptr) {
-                const TypeRef receiver_type =
-                    member_expr_type_ref(*symbols, local_type_refs, nullptr, expr.children.front());
+                const TypeRef receiver_type = infer_emitted_local_type_ref(
+                    expr.children.front(), local_type_refs, {}, symbols);
                 const TypeRef unwrapped_receiver =
                     unwrap_receiver_type_ref(*symbols, receiver_type);
                 if (!template_type_arg_refs(unwrapped_receiver, "Result").empty()) {
@@ -347,6 +351,18 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     return lower_expr(expr.children.front(), aliases, locals, local_type_refs,
                                       symbols, options) +
                            access +
+                           emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
+                }
+            }
+            if (const std::optional<ExprPath> receiver_path =
+                    expr_path_from_expr(expr.children.front());
+                receiver_path && !receiver_path->segments.empty() &&
+                receiver_path->segments.front().kind == ExprPathSegmentKind::Name) {
+                const std::string& root = receiver_path->segments.front().text;
+                if (locals.contains(root) || local_type_refs.contains(root)) {
+                    return lower_expr(expr.children.front(), aliases, locals, local_type_refs,
+                                      symbols, options) +
+                           "." +
                            emitted_member_name_for_expr(expr, local_type_refs, symbols, options);
                 }
             }
