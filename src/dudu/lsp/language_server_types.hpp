@@ -46,6 +46,7 @@ struct Diagnostic {
     std::string data_name;
     std::optional<SourceRange> fix_range;
     std::vector<DiagnosticRelatedInformation> related_information;
+    std::optional<SourceRange> range{};
 };
 
 struct Symbol {

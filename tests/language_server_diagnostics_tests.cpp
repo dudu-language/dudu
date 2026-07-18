@@ -63,6 +63,19 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.front().code.starts_with("dudu.sema."));
 }
 
+void test_lsp_diagnostic_ranges_cover_the_offending_token() {
+    const dudu::Document doc{.uri = "",
+                             .path = "diagnostic_token_range.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    return missing_name\n"};
+    const std::vector<dudu::Diagnostic> diagnostics = dudu::diagnostics_for_document(doc);
+    assert(diagnostics.size() == 1);
+    assert(diagnostics.front().range.has_value());
+    const std::string json = dudu::diagnostic_json(diagnostics.front());
+    assert(json.find("\"start\":{\"line\":1,\"character\":11}") != std::string::npos);
+    assert(json.find("\"end\":{\"line\":1,\"character\":23}") != std::string::npos);
+}
+
 void test_lsp_parser_recovery_reports_multiple_diagnostics() {
     const dudu::Document doc{.uri = "",
                              .path = "recover_multiple.dd",
@@ -384,6 +397,7 @@ void test_lsp_suspicious_cast_lint_uses_type_refs() {
 int main() {
     try {
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_diagnostic_ranges_cover_the_offending_token();
         test_lsp_parser_recovery_reports_multiple_diagnostics();
         test_lsp_semantic_recovery_reports_independent_body_errors();
         test_lsp_parser_error_only_suppresses_its_damaged_body();

@@ -7,6 +7,7 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/native/native_build.hpp"
+#include "dudu/parser/lexer.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/sema/sema.hpp"
 
@@ -197,9 +198,33 @@ std::vector<Diagnostic> exception_diagnostic(const Document& doc, const CompileE
              .related_information = {}}};
 }
 
+void attach_token_ranges(const Document& doc, std::vector<Diagnostic>& diagnostics) {
+    const LexResult lexed = lex_source_recovering(doc.text, doc.path);
+    for (Diagnostic& diagnostic : diagnostics) {
+        if (diagnostic.range.has_value() || diagnostic.location.line <= 0 ||
+            diagnostic.location.column <= 0) {
+            continue;
+        }
+        for (const Token& token : lexed.tokens) {
+            if (token.kind == TokenKind::End || token.kind == TokenKind::Indent ||
+                token.kind == TokenKind::Dedent || token.kind == TokenKind::Newline ||
+                token.location.line != diagnostic.location.line) {
+                continue;
+            }
+            const SourceLocation end = token_end_location(token);
+            if (diagnostic.location.column < token.location.column ||
+                diagnostic.location.column >= end.column) {
+                continue;
+            }
+            diagnostic.range = SourceRange{.start = token.location, .end = end};
+            break;
+        }
+    }
+}
+
 } // namespace
 
-std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
+static std::vector<Diagnostic> diagnostics_for_document_unranged(const Document& doc) {
     try {
         ProjectConfig config;
         try {
@@ -235,6 +260,12 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
     }
 }
 
+std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
+    std::vector<Diagnostic> diagnostics = diagnostics_for_document_unranged(doc);
+    attach_token_ranges(doc, diagnostics);
+    return diagnostics;
+}
+
 std::vector<Diagnostic> syntax_diagnostics_for_document(const Document& doc) {
     const ParseResult recovered = parse_source_recovering(doc.text, doc.path);
     std::vector<Diagnostic> diagnostics;
@@ -242,10 +273,11 @@ std::vector<Diagnostic> syntax_diagnostics_for_document(const Document& doc) {
     for (const ParseDiagnostic& diagnostic : recovered.diagnostics) {
         diagnostics.push_back(parser_diagnostic(diagnostic));
     }
+    attach_token_ranges(doc, diagnostics);
     return diagnostics;
 }
 
-std::vector<Diagnostic> diagnostics_for_document_snapshot(
+static std::vector<Diagnostic> diagnostics_for_document_snapshot_unranged(
     const Document& doc, const std::map<std::filesystem::path, std::string>& source_overrides) {
     try {
         ProjectIndexOptions options;
@@ -291,13 +323,23 @@ std::vector<Diagnostic> diagnostics_for_document_snapshot(
     }
 }
 
+std::vector<Diagnostic> diagnostics_for_document_snapshot(
+    const Document& doc, const std::map<std::filesystem::path, std::string>& source_overrides) {
+    std::vector<Diagnostic> diagnostics =
+        diagnostics_for_document_snapshot_unranged(doc, source_overrides);
+    attach_token_ranges(doc, diagnostics);
+    return diagnostics;
+}
+
 std::string diagnostic_json(const Diagnostic& diagnostic) {
     const int line = std::max(0, diagnostic.location.line - 1);
     const int column = std::max(0, diagnostic.location.column - 1);
     std::ostringstream out;
-    out << "{\"range\":{\"start\":{\"line\":" << line << ",\"character\":" << column
-        << "},\"end\":{\"line\":" << line << ",\"character\":" << (column + 1)
-        << "}},\"severity\":" << diagnostic.severity << ",\"source\":\""
+    const std::string diagnostic_range =
+        diagnostic.range.has_value() ? range_json(*diagnostic.range)
+                                     : range_json(line, column, column + 1);
+    out << "{\"range\":" << diagnostic_range << ",\"severity\":" << diagnostic.severity
+        << ",\"source\":\""
         << json_escape(diagnostic.source) << "\"";
     if (!diagnostic.code.empty()) {
         out << ",\"code\":\"" << json_escape(diagnostic.code) << "\"";
