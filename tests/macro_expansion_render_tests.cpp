@@ -15,6 +15,31 @@ dudu::macro::ExpansionReport report_fixture() {
     namespace p = dudu::macro::protocol;
     p::FunctionDecl function;
     function.name = "to_json";
+
+    p::Expression ready;
+    ready.kind = p::ExpressionKind::Name;
+    ready.name = "ready";
+    p::Expression negated;
+    negated.kind = p::ExpressionKind::Unary;
+    negated.operator_name = "not";
+    negated.children.push_back(ready);
+    p::Statement check;
+    check.kind = p::StatementKind::Expression;
+    check.expression = negated;
+    function.body.push_back(check);
+
+    p::Expression count;
+    count.kind = p::ExpressionKind::Name;
+    count.name = "count";
+    p::Expression one;
+    one.kind = p::ExpressionKind::IntLiteral;
+    one.value = "1";
+    p::Statement increment;
+    increment.kind = p::StatementKind::CompoundAssign;
+    increment.target = count;
+    increment.value = one;
+    increment.operator_name = "+=";
+    function.body.push_back(increment);
     p::Declaration declaration;
     declaration.kind = p::DeclarationKind::Function;
     declaration.function_decl = function;
@@ -57,6 +82,10 @@ void test_render_filter_diagnostics_and_origins() {
     const dudu::macro::ExpansionReport report = report_fixture();
     const std::string plain = dudu::macro::render_expansion_report(report);
     assert(plain.find("@Json (macros.Json)") != std::string::npos);
+    assert(plain.find("not ready") != std::string::npos);
+    assert(plain.find("count += 1") != std::string::npos);
+    assert(plain.find("notready") == std::string::npos);
+    assert(plain.find("+==") == std::string::npos);
     assert(plain.find("warning[json.rename]") != std::string::npos);
     assert(plain.find("  note: field declared here") != std::string::npos);
     assert(plain.find("macro defined at") == std::string::npos);

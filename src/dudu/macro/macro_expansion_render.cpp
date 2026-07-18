@@ -1,6 +1,7 @@
 #include "dudu/macro/macro_expansion_render.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <string_view>
 
@@ -61,8 +62,7 @@ std::string render_type(const p::TypeRef& type) {
         std::vector<std::string> args;
         for (std::size_t index = 1; index < type.children.size(); ++index)
             args.push_back(render_type(type.children[index]));
-        return render_type(type.children.front()) + "." + type.name + "[" +
-               join(args, ", ") + "]";
+        return render_type(type.children.front()) + "." + type.name + "[" + join(args, ", ") + "]";
     }
     case p::TypeKind::NativeTransform:
         return type.name + "(" + child() + ")";
@@ -137,8 +137,12 @@ std::string render_expression(const p::Expression& expression) {
         return quote_string(expression.value);
     case p::ExpressionKind::NoneLiteral:
         return "None";
-    case p::ExpressionKind::Unary:
-        return expression.operator_name + child(0);
+    case p::ExpressionKind::Unary: {
+        const bool textual =
+            !expression.operator_name.empty() &&
+            std::isalpha(static_cast<unsigned char>(expression.operator_name.back()));
+        return expression.operator_name + (textual ? " " : "") + child(0);
+    }
     case p::ExpressionKind::Binary:
         return child(0) + " " + expression.operator_name + " " + child(1);
     case p::ExpressionKind::Call:
@@ -214,7 +218,7 @@ void render_statements(std::ostringstream& out, const std::vector<p::Statement>&
             out << pad << expr(statement.target) << " = " << expr(statement.value) << '\n';
             break;
         case p::StatementKind::CompoundAssign:
-            out << pad << expr(statement.target) << ' ' << statement.operator_name << "= "
+            out << pad << expr(statement.target) << ' ' << statement.operator_name << ' '
                 << expr(statement.value) << '\n';
             break;
         case p::StatementKind::Return:
