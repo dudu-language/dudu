@@ -191,6 +191,7 @@ The same macro name becomes typed metadata on the source declaration:
 
 ```python
 @derive(Json)
+@Json(rename_all="camelCase")
 class Player:
     id: u64
 
@@ -200,6 +201,10 @@ class Player:
     @Json(skip=True)
     cached_score: i32
 ```
+
+The same-named decorator on the derived declaration configures that derive; it
+does not invoke the macro a second time. This is independent of whether the
+helper decorator appears before or after `@derive(...)`.
 
 Unknown option names, wrong value types, duplicate options, and invalid
 placements are compiler diagnostics before the worker runs. The fixture's

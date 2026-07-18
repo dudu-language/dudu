@@ -75,6 +75,17 @@ struct ProjectModuleLoad {
     std::vector<ParseDiagnostic> diagnostics;
 };
 
+std::filesystem::path project_module_root(const ProjectIndexOptions& options) {
+    if (!options.config.project_dir.empty()) {
+        const std::filesystem::path source = options.config.project_dir / "src";
+        if (std::filesystem::is_directory(source)) {
+            return source;
+        }
+        return options.config.project_dir;
+    }
+    return options.source_dir;
+}
+
 ProjectModuleLoad load_project_module(const ProjectIndexOptions& options) {
     const auto stamp_single_module = [&](ModuleAst module) {
         if (!options.entry_path.empty() && module.source_path.empty()) {
@@ -103,6 +114,7 @@ ProjectModuleLoad load_project_module(const ProjectIndexOptions& options) {
     }
     if (options.allow_module_tree && options.force_module_tree) {
         const LoadSourceTreeOptions load_options{.entry = options.entry_path,
+                                                 .module_root = project_module_root(options),
                                                  .source_overrides = source_overrides,
                                                  .module_roots =
                                                      dependency_module_roots(options.config)};
@@ -124,6 +136,7 @@ ProjectModuleLoad load_project_module(const ProjectIndexOptions& options) {
     }
     if (options.allow_module_tree && has_dudu_module_imports(parsed)) {
         const LoadSourceTreeOptions load_options{.entry = options.entry_path,
+                                                 .module_root = project_module_root(options),
                                                  .source_overrides = source_overrides,
                                                  .module_roots =
                                                      dependency_module_roots(options.config)};

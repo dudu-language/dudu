@@ -4,6 +4,14 @@
 
 ### Added
 
+- Imported functions now preserve the class and enum metadata referenced by
+  their public signatures across module boundaries. Inferred return and payload
+  values therefore retain method lookup without redundant type imports.
+- Project targets outside `src/`, including integration tests, now resolve
+  package modules from the manifest's source root.
+- Same-named helper attributes can now configure their enclosing derived
+  declaration, independent of decorator order, without being mistaken for a
+  second attached macro invocation.
 - Dudu parameters, locals, destructuring targets, loop bindings, and exception
   bindings whose source names are C++ keywords now receive stable, injective
   backend-only names. Source names remain unchanged in diagnostics and editor

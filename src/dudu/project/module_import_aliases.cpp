@@ -2,7 +2,9 @@
 
 #include "dudu/core/ast_type.hpp"
 
+#include <algorithm>
 #include <map>
+#include <set>
 
 namespace dudu {
 namespace {
@@ -82,7 +84,94 @@ std::map<std::string, TypeRef> selective_type_substitutions(const ModuleAst& dep
     return out;
 }
 
+void collect_type_names(const TypeRef& type, std::set<std::string>& names) {
+    const std::string name = type_ref_head_name(type);
+    if (!name.empty()) {
+        names.insert(name);
+    }
+    for (const TypeRef& child : type.children) {
+        collect_type_names(child, names);
+    }
+}
+
+bool has_native_class(const ModuleAst& module, const ClassDecl& candidate) {
+    return std::any_of(
+        module.native_classes.begin(), module.native_classes.end(), [&](const ClassDecl& klass) {
+            return klass.name == candidate.name && klass.identity.usr == candidate.identity.usr &&
+                   klass.identity.canonical_path == candidate.identity.canonical_path;
+        });
+}
+
+bool has_imported_enum_shape(const ModuleAst& module, const EnumDecl& candidate) {
+    return std::any_of(module.imported_enum_shapes.begin(), module.imported_enum_shapes.end(),
+                       [&](const EnumDecl& en) { return en.name == candidate.name; });
+}
+
+void collect_function_types(const FunctionDecl& fn, std::set<std::string>& names) {
+    collect_type_names(fn.receiver_type_ref, names);
+    for (const ParamDecl& param : fn.params) {
+        collect_type_names(param.type_ref, names);
+    }
+    collect_type_names(fn.return_type_ref, names);
+}
+
+void collect_class_types(const ClassDecl& klass, std::set<std::string>& names) {
+    for (const BaseClassDecl& base : klass.base_class_refs) {
+        collect_type_names(base.type_ref, names);
+    }
+    for (const FieldDecl& field : klass.fields) {
+        collect_type_names(field.type_ref, names);
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        collect_function_types(method, names);
+    }
+}
+
+void add_signature_type_support(ModuleAst& module, const ModuleAst& dependency,
+                                const NativeFunctionDecl& signature) {
+    std::set<std::string> pending;
+    for (const TypeRef& param : signature.param_type_refs) {
+        collect_type_names(param, pending);
+    }
+    collect_type_names(signature.return_type_ref, pending);
+
+    std::set<std::string> visited;
+    while (!pending.empty()) {
+        const std::string name = *pending.begin();
+        pending.erase(pending.begin());
+        if (!visited.insert(name).second) {
+            continue;
+        }
+        for (const ClassDecl& klass : dependency.native_classes) {
+            if (klass.name != name) {
+                continue;
+            }
+            if (!has_native_class(module, klass)) {
+                module.native_classes.push_back(klass);
+            }
+            collect_class_types(klass, pending);
+        }
+        for (const EnumDecl& en : dependency.imported_enum_shapes) {
+            if (en.name != name) {
+                continue;
+            }
+            if (!has_imported_enum_shape(module, en)) {
+                module.imported_enum_shapes.push_back(en);
+            }
+            for (const EnumValueDecl& value : en.values) {
+                for (const EnumPayloadField& field : value.payload_fields) {
+                    collect_type_names(field.type_ref, pending);
+                }
+            }
+            for (const FunctionDecl& method : en.methods) {
+                collect_function_types(method, pending);
+            }
+        }
+    }
+}
+
 void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::string& name,
+                        const ModuleAst& dependency,
                         const std::map<std::string, TypeRef>& type_substitutions,
                         const SourceLocation& location) {
     NativeFunctionDecl alias;
@@ -107,6 +196,7 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
         }
     }
     module.native_functions.push_back(std::move(alias));
+    add_signature_type_support(module, dependency, module.native_functions.back());
 }
 
 FunctionDecl substituted_method(FunctionDecl method,
@@ -158,6 +248,62 @@ EnumDecl imported_enum_shape(EnumDecl en, const std::string& name,
 }
 
 } // namespace
+
+bool selective_module_symbol_already_projected(const ModuleAst& module, const ModuleAst& dependency,
+                                               const ImportDecl& import) {
+    const std::string name = import.alias.empty() ? import.imported_name : import.alias;
+    std::string identity;
+    for (const TypeAliasDecl& alias : dependency.aliases) {
+        if (alias.name == import.imported_name) {
+            identity = declaration_path(alias.origin_module, dependency.module_path, alias.name);
+        }
+    }
+    for (const EnumDecl& en : dependency.enums) {
+        if (en.name == import.imported_name) {
+            identity = declaration_path(en.origin_module, dependency.module_path, en.name);
+        }
+    }
+    for (const ClassDecl& klass : dependency.classes) {
+        if (klass.name == import.imported_name) {
+            identity = declaration_path(klass.origin_module, dependency.module_path, klass.name);
+        }
+    }
+    for (const FunctionDecl& fn : dependency.functions) {
+        if (fn.name == import.imported_name) {
+            identity = declaration_path(fn.origin_module, dependency.module_path, fn.name);
+        }
+    }
+    for (const ConstDecl& constant : dependency.constants) {
+        if (constant.name == import.imported_name) {
+            identity =
+                declaration_path(constant.origin_module, dependency.module_path, constant.name);
+        }
+    }
+    if (identity.empty()) {
+        return false;
+    }
+    for (const NativeTypeDecl& type : module.native_types) {
+        if (type.name == name && type.identity.canonical_path == identity) {
+            return true;
+        }
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        if (klass.name == name && klass.identity.canonical_path == identity) {
+            return true;
+        }
+    }
+    for (const NativeValueDecl& value : module.native_values) {
+        if (value.name == name && value.identity.canonical_path == identity) {
+            return true;
+        }
+    }
+    for (const NativeFunctionDecl& fn : module.native_functions) {
+        if (fn.name == name && fn.identity.canonical_path == identity) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency,
                                   const ImportDecl& import) {
@@ -220,7 +366,8 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
              .doc_comment = constant.doc_comment});
     }
     for (const FunctionDecl& fn : dependency.functions) {
-        add_function_alias(module, fn, prefix + "." + fn.name, type_substitutions, import.location);
+        add_function_alias(module, fn, prefix + "." + fn.name, dependency, type_substitutions,
+                           import.location);
     }
 }
 
@@ -333,7 +480,8 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     bool added_function = false;
     for (const FunctionDecl& fn : dependency.functions) {
         if (fn.name == import.imported_name) {
-            add_function_alias(module, fn, exposed_name, type_substitutions, import.location);
+            add_function_alias(module, fn, exposed_name, dependency, type_substitutions,
+                               import.location);
             added_function = true;
         }
     }

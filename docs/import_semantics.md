@@ -274,6 +274,10 @@ file before configured include paths.
 
 - Dudu modules are source modules, not textual includes; imported declarations
   are not implicitly re-exported.
+- Types referenced by an imported function's public signature carry the class
+  and enum metadata needed for inference, payload matching, and member lookup.
+  This is signature support, not an implicit re-export of unrelated declarations.
+  Explicitly importing the same canonical type coalesces with that support.
 - Native imports depend on configured compiler include paths and Clang scanner
   metadata.
 - Header aliases create collision boundaries but do not rename declarations

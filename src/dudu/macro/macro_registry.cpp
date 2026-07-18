@@ -350,6 +350,17 @@ Plan build_plan(const ModuleAst& module) {
         [&](const ModuleAst& unit, const std::vector<Decorator>& decorators, TargetKind kind,
             const std::string& name, std::vector<Invocation>& invocations) {
             std::vector<const Definition*> active;
+            std::vector<const Definition*> derived;
+            for (const Decorator& decorator : decorators) {
+                if (!decorator_matches(decorator, "derive")) {
+                    continue;
+                }
+                for (const Definition* definition : derive_definitions(plan, unit, decorator)) {
+                    if (std::find(derived.begin(), derived.end(), definition) == derived.end()) {
+                        derived.push_back(definition);
+                    }
+                }
+            }
             for (const Decorator& decorator : decorators) {
                 if (decorator_matches(decorator, "derive")) {
                     for (const Definition* definition : derive_definitions(plan, unit, decorator)) {
@@ -366,7 +377,9 @@ Plan build_plan(const ModuleAst& module) {
                                                .target_kind = kind,
                                                .derive = true,
                                                .helper_attributes = {}});
-                        active.push_back(definition);
+                        if (std::find(active.begin(), active.end(), definition) == active.end()) {
+                            active.push_back(definition);
+                        }
                     }
                     continue;
                 }
@@ -376,6 +389,10 @@ Plan build_plan(const ModuleAst& module) {
                 }
                 const Definition* definition = resolve_definition(plan, unit, reference);
                 if (definition == nullptr) {
+                    continue;
+                }
+                if (std::find(derived.begin(), derived.end(), definition) != derived.end()) {
+                    validate_helper_arguments(*definition, decorator);
                     continue;
                 }
                 if (!target_accepts(definition->accepted_kind, kind)) {
@@ -389,7 +406,9 @@ Plan build_plan(const ModuleAst& module) {
                                        .target_kind = kind,
                                        .derive = false,
                                        .helper_attributes = {}});
-                active.push_back(definition);
+                if (std::find(active.begin(), active.end(), definition) == active.end()) {
+                    active.push_back(definition);
+                }
             }
             return active;
         };

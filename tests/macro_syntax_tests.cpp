@@ -141,6 +141,24 @@ void test_macro_registry_rejects_bad_helper_attribute() {
     assert(failed);
 }
 
+void test_container_helper_attribute_does_not_invoke_derive_twice() {
+    for (const std::string& decorators : {
+             std::string("@derive(Json)\n@Json(name=\"player\")\n"),
+             std::string("@Json(name=\"player\")\n@derive(Json)\n"),
+         }) {
+        const std::filesystem::path dir = make_macro_project("from macros import Json\n"
+                                                             "\n" +
+                                                             decorators +
+                                                             "class Player:\n"
+                                                             "    id: u64\n");
+        const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+        const dudu::macro::Plan plan = dudu::macro::build_plan(module);
+        assert(plan.invocations.size() == 1);
+        assert(plan.invocations.front().macro->identity == "macros.Json");
+        assert(plan.invocations.front().derive);
+    }
+}
+
 void test_macro_registry_validates_attached_macro_options() {
     const std::filesystem::path dir = make_macro_project("from macros import Json\n"
                                                          "\n"
@@ -181,6 +199,7 @@ int main() {
     test_public_sdk_resolves_from_standard_module_root();
     test_macro_registry_uses_ordinary_import_resolution();
     test_macro_registry_rejects_bad_helper_attribute();
+    test_container_helper_attribute_does_not_invoke_derive_twice();
     test_macro_registry_validates_attached_macro_options();
     test_macro_registry_rejects_wrong_target_kind();
     std::cout << "macro syntax tests passed\n";

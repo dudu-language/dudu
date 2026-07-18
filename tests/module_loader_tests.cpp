@@ -136,6 +136,58 @@ void test_transitive_qualified_imports_keep_canonical_type_identity() {
     dudu::analyze_module_tree(module, {.check_bodies = true});
 }
 
+void test_selective_generic_import_preserves_signature_type_metadata() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_transitive_signature_type_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "errors.dd", "class Failure:\n"
+                                  "    value: i32\n"
+                                  "\n"
+                                  "    def code(self) -> i32:\n"
+                                  "        return self.value\n");
+    write_file(dir / "api.dd", "from errors import Failure\n"
+                               "\n"
+                               "def reject[T](value: T) -> Result[T, Failure]:\n"
+                               "    return Err(Failure(42))\n");
+    write_file(dir / "main.dd", "from api import reject\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    result = reject[i32](1)\n"
+                                "    match result:\n"
+                                "        case Ok(value):\n"
+                                "            return value\n"
+                                "        case Err(error):\n"
+                                "            return error.code()\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    dudu::analyze_module_tree(module, {.check_bodies = true});
+}
+
+void test_explicit_import_coalesces_transitive_signature_type() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_transitive_signature_import_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "support.dd", "class Helper:\n"
+                                   "    value: i32\n"
+                                   "\n"
+                                   "    def read(self) -> i32:\n"
+                                   "        return self.value\n");
+    write_file(dir / "bridge.dd", "from support import Helper\n"
+                                  "\n"
+                                  "def inspect(value: &const[Helper]) -> i32:\n"
+                                  "    return value.read()\n");
+    write_file(dir / "main.dd", "from bridge import inspect\n"
+                                "from support import Helper\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return inspect(Helper(42))\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    dudu::analyze_module_tree(module, {.check_bodies = true});
+}
+
 void test_module_loader_rejects_duplicate_from_aliases() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_alias_collision_test";
@@ -346,7 +398,7 @@ void test_module_loader_recovers_missing_selective_import_without_stale_alias() 
     assert(strict_failed);
 
     const dudu::LoadSourceTreeResult recovered = dudu::load_source_tree_recovering(
-        {.entry = dir / "main.dd", .source_overrides = {}, .module_roots = {}});
+        {.entry = dir / "main.dd", .module_root = {}, .source_overrides = {}, .module_roots = {}});
     assert(recovered.module.module_units.size() == 2);
     assert(recovered.diagnostics.size() == 1);
     assert(recovered.diagnostics.front().code == "dudu.sema.missing_import");
@@ -378,7 +430,7 @@ void test_module_loader_recovers_missing_module_without_stale_declarations() {
     assert(strict_failed);
 
     const dudu::LoadSourceTreeResult recovered = dudu::load_source_tree_recovering(
-        {.entry = dir / "main.dd", .source_overrides = {}, .module_roots = {}});
+        {.entry = dir / "main.dd", .module_root = {}, .source_overrides = {}, .module_roots = {}});
     assert(recovered.module.module_units.size() == 1);
     assert(recovered.diagnostics.size() == 1);
     assert(recovered.diagnostics.front().code == "dudu.sema.missing_module");
@@ -393,6 +445,8 @@ int main() {
     try {
         test_module_loader_canonicalizes_physical_modules();
         test_transitive_qualified_imports_keep_canonical_type_identity();
+        test_selective_generic_import_preserves_signature_type_metadata();
+        test_explicit_import_coalesces_transitive_signature_type();
         test_module_loader_rejects_duplicate_from_aliases();
         test_module_loader_resolves_source_root_import_from_submodule();
         test_imported_classes_keep_distinct_symbol_identities();

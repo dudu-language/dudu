@@ -280,6 +280,9 @@ void add_import_aliases_for_unit(ModuleAst& module,
         if (import.kind == ImportKind::Module) {
             add_qualified_module_symbols(module, dependency->second, import);
         } else {
+            if (selective_module_symbol_already_projected(module, dependency->second, import)) {
+                continue;
+            }
             reject_selective_import_collision(module, import);
             add_selective_module_symbol(module, dependency->second, import);
         }
@@ -486,7 +489,9 @@ void collect_files(const std::filesystem::path& path,
 
 LoadSourceTreeResult load_source_tree_impl(const LoadSourceTreeOptions& options, bool recovering) {
     const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(options.entry);
-    const std::filesystem::path root = canonical_entry.parent_path();
+    const std::filesystem::path root = options.module_root.empty()
+                                           ? canonical_entry.parent_path()
+                                           : canonical_source_path(options.module_root);
     std::map<std::filesystem::path, std::string> canonical_overrides;
     for (const auto& [path, source] : options.source_overrides) {
         canonical_overrides[canonical_source_path(path)] = source;
@@ -504,7 +509,8 @@ LoadSourceTreeResult load_source_tree_impl(const LoadSourceTreeOptions& options,
 
     ModuleAst& merged = result.module;
     merged.source_path = canonical_entry;
-    merged.module_path = module_name_from_file(root, canonical_entry);
+    merged.module_path = module_name_from_file(
+        module_root_for_source(root, canonical_entry, canonical_module_roots), canonical_entry);
     for (const std::filesystem::path& path : ordered) {
         ModuleAst unit = loaded.at(path);
         add_import_aliases_for_unit(unit, loaded);
@@ -526,8 +532,10 @@ LoadSourceTreeResult load_source_tree_recovering(const LoadSourceTreeOptions& op
 
 ModuleAst load_source_tree(const std::filesystem::path& entry,
                            const std::map<std::filesystem::path, std::string>& source_overrides) {
-    return load_source_tree(
-        {.entry = entry, .source_overrides = source_overrides, .module_roots = {}});
+    return load_source_tree({.entry = entry,
+                             .module_root = {},
+                             .source_overrides = source_overrides,
+                             .module_roots = {}});
 }
 
 ModuleAst load_source_tree(const std::filesystem::path& entry, std::string_view entry_source) {

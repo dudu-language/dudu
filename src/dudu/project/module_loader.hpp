@@ -13,6 +13,7 @@ namespace dudu {
 
 struct LoadSourceTreeOptions {
     std::filesystem::path entry;
+    std::filesystem::path module_root;
     std::map<std::filesystem::path, std::string> source_overrides;
     std::map<std::string, std::filesystem::path> module_roots;
 };
