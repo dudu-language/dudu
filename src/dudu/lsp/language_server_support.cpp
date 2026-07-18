@@ -134,6 +134,11 @@ ProjectIndexSnapshot project_index_for_document(const Document& doc, bool includ
                 return project_index_cache.get_shared(options);
             } catch (const std::exception&) {
             }
+            try {
+                options.expand_macros = false;
+                return project_index_cache.get_shared(options);
+            } catch (const std::exception&) {
+            }
         }
         if (!check_semantics && allow_last_good) {
             const std::lock_guard lock(project_state_mutex);

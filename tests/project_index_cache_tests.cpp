@@ -102,12 +102,34 @@ void test_concurrent_cache_churn_preserves_request_snapshots() {
     }
 }
 
+void test_macro_expansion_mode_has_distinct_cache_identity() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_project_index_cache_macro_mode_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, "def answer() -> i32:\n"
+                     "    return 42\n");
+
+    dudu::ProjectIndexCache cache;
+    dudu::ProjectIndexOptions expanded = options_for(path);
+    dudu::ProjectIndexOptions unexpanded = expanded;
+    unexpanded.expand_macros = false;
+    assert_answer_snapshot(cache.get_shared(expanded));
+    assert_answer_snapshot(cache.get_shared(unexpanded));
+
+    const dudu::ProjectIndexCacheStats stats = cache.stats();
+    assert(stats.entries == 2);
+    assert(stats.loads == 2);
+}
+
 } // namespace
 
 int main() {
     try {
         test_snapshot_survives_cache_clear();
         test_concurrent_cache_churn_preserves_request_snapshots();
+        test_macro_expansion_mode_has_distinct_cache_identity();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

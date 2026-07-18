@@ -84,6 +84,7 @@ ProjectIndexCache::CacheKey ProjectIndexCache::key_for_options(const ProjectInde
             .include_native_headers_in_merged_module =
                 options.include_native_headers_in_merged_module,
             .recover_syntax = options.recover_syntax,
+            .expand_macros = options.expand_macros,
             .check_semantics = options.check_semantics,
             .check_bodies = options.semantic_options.check_bodies};
 }
