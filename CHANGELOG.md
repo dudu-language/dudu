@@ -4,6 +4,9 @@
 
 ### Added
 
+- `Result[T, E]` now stores only its active alternative and no longer requires
+  `T` or `E` to be default-constructible. Direct `value`/`err` access and
+  `Ok`/`Err` pattern bindings lower through checked active-alternative accessors.
 - Generic instance and static method calls now use a neutral dependent-receiver
   dispatch path. Classes and imported C++ types retain normal member calls,
   while Dudu enums expose equivalent overloads despite their compact

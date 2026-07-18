@@ -68,6 +68,7 @@ compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42
 compile_and_expect constructor_comparison_arg 42; compile_and_expect native_escape 42
 compile_and_expect result_option 42
+compile_and_expect result_non_default_payload 42
 compile_and_expect function_pointers 42
 compile_and_expect function_attrs 42
 compile_and_expect section_attrs 42

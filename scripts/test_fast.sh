@@ -47,6 +47,7 @@ compile_and_expect enum_match 49
 compile_and_expect payload_enum_match 82
 compile_and_expect recursive_enum_expr 42
 compile_and_expect result_option 42
+compile_and_expect result_non_default_payload 42
 compile_and_expect sum_type_events 42
 compile_and_expect sum_type_tokens 42
 compile_and_expect anonymous_variant 42

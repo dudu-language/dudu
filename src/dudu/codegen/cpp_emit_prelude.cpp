@@ -169,7 +169,7 @@ void emit_standard_includes(std::ostringstream& out, const ModuleAst& module,
     include(features.string_view, "string_view");
     include(features.unordered_map, "unordered_map");
     include(features.unordered_set, "unordered_set");
-    include(features.variant, "variant");
+    include(features.variant || features.result, "variant");
     include(features.vector || features.array_view, "vector");
 }
 

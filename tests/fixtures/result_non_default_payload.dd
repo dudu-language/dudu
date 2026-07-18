@@ -1,0 +1,25 @@
+enum Payload:
+    Data:
+        value: i32
+
+
+def choose(ok: bool) -> Result[Payload, str]:
+    if ok:
+        return Ok(Payload.Data(value=41))
+    return Err(str("failed"))
+
+
+def main() -> i32:
+    failed = choose(False)
+    if failed.ok:
+        return 1
+    if failed.err != "failed":
+        return 2
+    succeeded = choose(True)
+    match succeeded:
+        case Err(_):
+            return 3
+        case Ok(payload):
+            match payload:
+                case Payload.Data(value):
+                    return value + 1

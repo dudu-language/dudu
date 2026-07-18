@@ -9,11 +9,15 @@ template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }
 template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }
 template <typename T, typename E> struct Result {
     bool ok{};
-    T value{};
-    E err{};
-    Result() = default;
-    Result(OkValue<T> ok_value) : ok(true), value(std::move(ok_value.value)), err{} {}
-    Result(ErrValue<E> err_value) : ok(false), value{}, err(std::move(err_value.err)) {}
+    std::variant<T, E> storage;
+    Result(OkValue<T> ok_value)
+        : ok(true), storage(std::in_place_index<0>, std::move(ok_value.value)) {}
+    Result(ErrValue<E> err_value)
+        : ok(false), storage(std::in_place_index<1>, std::move(err_value.err)) {}
+    T& value_ref() { return std::get<0>(storage); }
+    const T& value_ref() const { return std::get<0>(storage); }
+    E& error_ref() { return std::get<1>(storage); }
+    const E& error_ref() const { return std::get<1>(storage); }
 };
 )cpp";
 }

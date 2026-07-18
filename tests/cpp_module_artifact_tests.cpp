@@ -201,6 +201,8 @@ void test_cpp_runtime_support_is_feature_gated() {
         emitted_runtime_for_source("result", "def choose() -> Result[i32, i32]:\n"
                                              "    return Ok(1)\n");
     assert(result.find("template <typename T, typename E> struct Result") != std::string::npos);
+    assert(result.find("std::variant<T, E> storage") != std::string::npos);
+    assert(result.find("#include <variant>") != std::string::npos);
     assert(result.find("struct Slice") == std::string::npos);
     assert(result.find("#include <vector>") == std::string::npos);
 

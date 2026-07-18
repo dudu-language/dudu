@@ -1,13 +1,13 @@
 #include "dudu/codegen/cpp_match_emit.hpp"
 
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
-#include "dudu/core/control_flow.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit.hpp"
 #include "dudu/codegen/cpp_stmt_helpers.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/control_flow.hpp"
 #include "dudu/sema/sema_enum.hpp"
 
 #include <sstream>
@@ -228,12 +228,12 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
-                                << ".value;\n";
+                                << ".value_ref();\n";
                         } else if (*case_name == "Err" && wrapper.arg_refs.size() == 2) {
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[1];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
-                                << ".err;\n";
+                                << ".error_ref();\n";
                         }
                     }
                 }

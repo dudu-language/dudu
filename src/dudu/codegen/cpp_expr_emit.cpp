@@ -317,6 +317,18 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (symbols != nullptr) {
                 const TypeRef receiver_type =
                     member_expr_type_ref(*symbols, local_type_refs, nullptr, expr.children.front());
+                const TypeRef unwrapped_receiver =
+                    unwrap_receiver_type_ref(*symbols, receiver_type);
+                if (!template_type_arg_refs(unwrapped_receiver, "Result").empty()) {
+                    const std::string receiver = lower_expr(expr.children.front(), aliases, locals,
+                                                            local_type_refs, symbols, options);
+                    if (expr.name == "value") {
+                        return receiver + ".value_ref()";
+                    }
+                    if (expr.name == "err") {
+                        return receiver + ".error_ref()";
+                    }
+                }
                 if (has_type_ref(receiver_type) &&
                     field_type_ref_for_type(*symbols, receiver_type, expr.name)) {
                     const std::string access = receiver_type.kind == TypeKind::Pointer ? "->" : ".";
