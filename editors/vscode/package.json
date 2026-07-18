@@ -35,7 +35,8 @@
     "onCommand:dudu.runFile",
     "onCommand:dudu.testProject",
     "onCommand:dudu.restartLsp",
-    "onCommand:dudu.toggleInlayHints"
+    "onCommand:dudu.toggleInlayHints",
+    "onCommand:dudu.showGeneratedCpp"
   ],
   "categories": [
     "Programming Languages"
@@ -94,6 +95,10 @@
       {
         "command": "dudu.toggleInlayHints",
         "title": "Dudu: Toggle Inlay Hints"
+      },
+      {
+        "command": "dudu.showGeneratedCpp",
+        "title": "Dudu: Show Generated C++ For Selection"
       }
     ],
     "keybindings": [

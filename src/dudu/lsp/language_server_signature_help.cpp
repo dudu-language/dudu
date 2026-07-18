@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_call_site.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
+#include "dudu/lsp/language_server_documentation.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_macros.hpp"
@@ -14,10 +15,10 @@
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/sema/sema_context.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_methods.hpp"
 
 #include <exception>
 #include <optional>
-#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -29,7 +30,41 @@ namespace {
 struct SignatureCandidate {
     std::string label;
     std::string documentation;
+    std::vector<Symbol::Parameter> parameters;
 };
+
+SignatureCandidate signature_candidate(const Symbol& symbol) {
+    return {.label = symbol.detail,
+            .documentation = symbol_documentation_markdown(symbol),
+            .parameters = symbol.parameters};
+}
+
+Symbol instantiated_method_symbol(const DuduMethodInstantiation& instantiation) {
+    const FunctionDecl& method = *instantiation.method;
+    Symbol symbol = method_symbol(method, instantiation.owner != nullptr &&
+                                              instantiation.owner->native_declaration);
+    for (size_t i = 0;
+         i < symbol.parameters.size() && i < instantiation.signature.param_type_refs.size(); ++i) {
+        const size_t default_value = symbol.parameters[i].label.find(" = ");
+        const std::string suffix = default_value == std::string::npos
+                                       ? std::string{}
+                                       : symbol.parameters[i].label.substr(default_value);
+        symbol.parameters[i].label = method.params[i].name + ": " +
+                                     type_ref_text(instantiation.signature.param_type_refs[i]) +
+                                     suffix;
+    }
+    std::ostringstream detail;
+    detail << "def " << method.name << '(';
+    for (size_t i = 0; i < symbol.parameters.size(); ++i) {
+        if (i > 0) {
+            detail << ", ";
+        }
+        detail << symbol.parameters[i].label;
+    }
+    detail << ") -> " << type_ref_text(instantiation.signature.return_type_ref);
+    symbol.detail = detail.str();
+    return symbol;
+}
 
 bool position_in_range(const LspPosition& position, const SourceRange& range) {
     const int line = position.line + 1;
@@ -51,7 +86,8 @@ const Expr* index_expr_at(const ModuleAst& module, const LspPosition& position) 
                 visit_lsp_expr_tree(
                     root,
                     [&](const Expr& expr) {
-                        if (expr.kind == ExprKind::Index && position_in_range(position, expr.range)) {
+                        if (expr.kind == ExprKind::Index &&
+                            position_in_range(position, expr.range)) {
                             selected = &expr;
                         }
                     },
@@ -118,8 +154,10 @@ void add_constructor_candidates(std::vector<SignatureCandidate>& signatures,
     const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
         for (const ClassDecl& klass : classes) {
             if (klass.name == call_name) {
-                signatures.push_back({.label = constructor_detail(klass),
-                                      .documentation = constructor_doc_comment(klass)});
+                signatures.push_back(
+                    {.label = constructor_detail(klass),
+                     .documentation = documentation_markdown(constructor_doc_comment(klass)),
+                     .parameters = constructor_symbol_parameters(klass)});
             }
         }
     };
@@ -138,29 +176,21 @@ void add_member_candidates(std::vector<SignatureCandidate>& signatures, const Mo
     for (const Symbol& symbol : class_member_symbols_for_owner(current, receiver)) {
         if (symbol.name == member && (symbol.kind == lsp_symbol_kind::Method ||
                                       symbol.kind == lsp_symbol_kind::Constructor)) {
-            signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
+            signatures.push_back(signature_candidate(symbol));
         }
     }
     const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
     if (!has_type_ref(type_ref)) {
         return;
     }
-    const std::set<std::string> candidate_types = member_candidate_types(current, type_ref);
-    const auto add_from_classes = [&](const std::vector<ClassDecl>& classes) {
-        for (const ClassDecl& klass : classes) {
-            if (!candidate_types.contains(klass.name)) {
-                continue;
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                if (method.name == member) {
-                    signatures.push_back(
-                        {.label = function_detail(method), .documentation = method.doc_comment});
-                }
-            }
+    const Symbols symbols = collect_symbols(current);
+    for (const DuduMethodInstantiation& instantiation :
+         dudu_method_instantiations_for_type(symbols, type_ref, member, {})) {
+        if (instantiation.method == nullptr) {
+            continue;
         }
-    };
-    add_from_classes(current.classes);
-    add_from_classes(current.native_classes);
+        signatures.push_back(signature_candidate(instantiated_method_symbol(instantiation)));
+    }
 }
 
 } // namespace
@@ -187,16 +217,16 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         const std::optional<MacroEditorCall> macro =
             macro_call_for_reference(*index, current, call.name);
         if (macro) {
-            signatures.push_back(
-                {.label = macro->signature, .documentation = macro->documentation});
+            signatures.push_back({.label = macro->signature,
+                                  .documentation = macro->documentation,
+                                  .parameters = {}});
         }
         const Symbols semantic_symbols = collect_symbols(current);
         add_member_candidates(signatures, current, call, params);
         add_constructor_candidates(signatures, current, call.name);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
-            if (!macro && symbol.name == call.name &&
-                symbol.kind == lsp_symbol_kind::Function) {
-                signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
+            if (!macro && symbol.name == call.name && symbol.kind == lsp_symbol_kind::Function) {
+                signatures.push_back(signature_candidate(symbol));
             }
         }
         for (const NativeValueDecl& value : current.native_values) {
@@ -212,7 +242,8 @@ std::string signature_help_json(const Document* doc, const Json* params) {
             if (label.starts_with("fn")) {
                 label.replace(0, 2, call.name);
             }
-            signatures.push_back({.label = std::move(label), .documentation = value.doc_comment});
+            signatures.push_back(
+                {.label = std::move(label), .documentation = value.doc_comment, .parameters = {}});
         }
     }
     std::ostringstream out;
@@ -223,6 +254,20 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         }
         out << "{\"label\":\"" << json_escape(signatures[index].label) << "\"";
         write_markdown_documentation(out, signatures[index].documentation);
+        if (!signatures[index].parameters.empty()) {
+            out << ",\"parameters\":[";
+            for (size_t parameter = 0; parameter < signatures[index].parameters.size();
+                 ++parameter) {
+                if (parameter > 0) {
+                    out << ',';
+                }
+                const Symbol::Parameter& item = signatures[index].parameters[parameter];
+                out << "{\"label\":\"" << json_escape(item.label) << "\"";
+                write_markdown_documentation(out, item.documentation);
+                out << '}';
+            }
+            out << ']';
+        }
         out << "}";
     }
     out << "],\"activeSignature\":0,\"activeParameter\":" << call.parameter << "}";

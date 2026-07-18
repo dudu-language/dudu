@@ -148,6 +148,12 @@ void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& lo
     klass.base_class_refs.push_back(std::move(decl));
 }
 
+NativeDeclarationMetadata scanned_metadata(const NativeCursorIdentityIndex& identities,
+                                           NativeCursorKind kind, std::string_view spelling,
+                                           const SourceLocation& location) {
+    return identities.find_metadata(kind, spelling, location).value_or(NativeDeclarationMetadata{});
+}
+
 std::optional<std::string> parm_var_decl_name(const std::string& line) {
     const size_t type_quote = line.find(" '");
     if (type_quote == std::string::npos) {
@@ -274,6 +280,17 @@ size_t append_native_function(NativeHeaderScan& scan,
     fn.variadic = signature.find("...") != std::string::npos;
     fn.deleted = deleted;
     fn.location = location;
+    fn.native_metadata =
+        scanned_metadata(identities, NativeCursorKind::Function, raw_name, location);
+    for (size_t index = 0;
+         index < fn.param_names.size() && index < fn.native_metadata.parameters.size(); ++index) {
+        if (!fn.native_metadata.parameters[index].name.empty()) {
+            fn.param_names[index] = fn.native_metadata.parameters[index].name;
+        }
+        if (!fn.native_metadata.parameters[index].default_value.empty()) {
+            fn.min_params = std::min(fn.min_params, static_cast<int>(index));
+        }
+    }
     scan.functions.push_back(std::move(fn));
     return scan.functions.size() - 1;
 }

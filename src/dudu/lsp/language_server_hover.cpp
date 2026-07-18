@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_builtin_hover.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_decorators.hpp"
+#include "dudu/lsp/language_server_documentation.hpp"
 #include "dudu/lsp/language_server_generic_params.hpp"
 #include "dudu/lsp/language_server_hover_keywords.hpp"
 #include "dudu/lsp/language_server_json.hpp"
@@ -36,18 +37,53 @@ namespace {
 
 std::string hover_markdown(const Symbol& symbol) {
     const bool native = symbol.native_identity_key.has_value();
-    std::string markdown = fenced_code(native ? "cpp" : "dudu", symbol.detail);
+    std::string markdown = fenced_code("dudu", symbol.detail);
+    if (native && !symbol.native_declaration.empty() &&
+        symbol.native_declaration != symbol.detail) {
+        markdown += "\n\n" + fenced_code("cpp", symbol.native_declaration);
+    }
     if (symbol.native_identity_key.has_value()) {
+        bool has_declared_path = false;
         if (const std::optional<std::filesystem::path> path =
                 native_identity_source_path(*symbol.native_identity_key)) {
             markdown += "\n\nDeclared in: `" + path->string() + "`";
+            has_declared_path = true;
+        }
+        if (!has_declared_path && !symbol.location.file.empty()) {
+            markdown += "\n\nDeclared in: `" + symbol.location.file.str() + "`";
         }
         markdown += "\n\nNative identity: `" + *symbol.native_identity_key + "`";
     }
-    if (!symbol.doc_comment.empty()) {
-        markdown += "\n\n" + symbol.doc_comment;
+    if (const std::string docs = symbol_documentation_markdown(symbol); !docs.empty()) {
+        markdown += "\n\n" + docs;
+    }
+    if (symbol.layout_size && symbol.layout_alignment) {
+        markdown += "\n\nsize = " + std::to_string(*symbol.layout_size) +
+                    " bytes, align = " + std::to_string(*symbol.layout_alignment) + " bytes";
+    }
+    if (!symbol.provenance.empty()) {
+        markdown += "\n\n" + symbol.provenance;
     }
     return markdown;
+}
+
+std::optional<std::string> declaration_preview_hover_json(const ModuleAst& module,
+                                                          const Symbol& symbol) {
+    if (symbol.kind == lsp_symbol_kind::Class) {
+        for (const ClassDecl& klass : module.classes) {
+            if (klass.name == symbol.name) {
+                return class_hover_json(module, klass, false);
+            }
+        }
+    }
+    if (symbol.kind == lsp_symbol_kind::Enum) {
+        for (const EnumDecl& en : module.enums) {
+            if (en.name == symbol.name) {
+                return enum_hover_json(en);
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> imported_module_hover_json(const ProjectIndex& index,
@@ -120,6 +156,10 @@ std::optional<std::string> imported_symbol_hover_json(const ProjectIndex& index,
         for (const Symbol& symbol : symbols_for_module(*imported, false)) {
             if (symbol.name != target) {
                 continue;
+            }
+            if (const std::optional<std::string> preview =
+                    declaration_preview_hover_json(*imported, symbol)) {
+                return preview;
             }
             return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" +
                    json_escape(hover_markdown(symbol)) + "\"}}";
@@ -388,16 +428,17 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     if (params != nullptr) {
         if (const std::optional<Symbol> declaration =
                 declaration_at_position(doc, params, query, symbols)) {
+            if (const std::optional<std::string> preview =
+                    declaration_preview_hover_json(current, *declaration)) {
+                return *preview;
+            }
             return symbol_hover_json(*declaration);
         }
     }
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
-        if (exact->kind == lsp_symbol_kind::Class) {
-            for (const ClassDecl& klass : current.classes) {
-                if (klass.name == exact->name) {
-                    return class_hover_json(current, klass, false);
-                }
-            }
+        if (const std::optional<std::string> preview =
+                declaration_preview_hover_json(current, *exact)) {
+            return *preview;
         }
         return symbol_hover_json(with_macro_generated_origin(current, query, *exact));
     }
@@ -437,9 +478,36 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     try {
         const ProjectIndex* native = load_native_index();
         const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
+        const std::vector<Symbol> native_symbols = symbols_for_module(native_visible, true);
+        if (has_selection) {
+            const SourceLocation cursor_location{
+                .file = SourceFileName(doc.path.string()),
+                .line = lsp_position(params).line + 1,
+                .column = lsp_position(params).character + 1,
+            };
+            if (const std::optional<std::string> identity = native_identity_for_selection(
+                    selection, &native_visible, native_symbols, query, cursor_location)) {
+                if (const std::optional<Symbol> selected =
+                        native_symbol_for_identity(native_symbols, *identity)) {
+                    if (selected->kind == lsp_symbol_kind::Class) {
+                        if (const ClassDecl* klass =
+                                native_class_for_identity(native_visible, *identity)) {
+                            return class_hover_json(native_visible, *klass, true);
+                        }
+                    }
+                    return symbol_hover_json(*selected);
+                }
+            }
+        }
         if (has_selection && selection.type_ref) {
             if (const std::optional<Symbol> type =
                     native_type_symbol_for_type_ref(native_visible, *selection.type_ref)) {
+                if (type->native_identity_key.has_value()) {
+                    if (const ClassDecl* klass =
+                            native_class_for_identity(native_visible, *type->native_identity_key)) {
+                        return class_hover_json(native_visible, *klass, true);
+                    }
+                }
                 return symbol_hover_json(*type);
             }
         }
@@ -459,7 +527,6 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
                 native_alias_hover_json(query, native_visible)) {
             return *native_alias;
         }
-        const std::vector<Symbol> native_symbols = symbols_for_module(native_visible, true);
         if (has_selection) {
             if (const std::optional<Symbol> native_namespace =
                     native_namespace_segment_symbol(native_symbols, selection.symbol, query)) {
@@ -467,11 +534,10 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
             }
         }
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
-            if (exact->kind == lsp_symbol_kind::Class) {
-                for (const ClassDecl& klass : native_visible.native_classes) {
-                    if (klass.name == exact->name) {
-                        return class_hover_json(native_visible, klass, true);
-                    }
+            if (exact->kind == lsp_symbol_kind::Class && exact->native_identity_key.has_value()) {
+                if (const ClassDecl* klass =
+                        native_class_for_identity(native_visible, *exact->native_identity_key)) {
+                    return class_hover_json(native_visible, *klass, true);
                 }
             }
             return symbol_hover_json(*exact);

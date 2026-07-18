@@ -102,6 +102,38 @@ void test_concurrent_cache_churn_preserves_request_snapshots() {
     }
 }
 
+void test_concurrent_identical_loads_are_coalesced() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_project_index_cache_coalesce_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    write_file(path, "def answer() -> i32:\n"
+                     "    return 42\n");
+
+    dudu::ProjectIndexCache cache;
+    const dudu::ProjectIndexOptions options = options_for(path);
+    std::atomic<bool> start = false;
+    std::vector<std::thread> readers;
+    for (size_t reader = 0; reader < 8; ++reader) {
+        readers.emplace_back([&] {
+            while (!start.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            assert_answer_snapshot(cache.get_shared(options));
+        });
+    }
+    start.store(true, std::memory_order_release);
+    for (std::thread& reader : readers) {
+        reader.join();
+    }
+
+    const dudu::ProjectIndexCacheStats stats = cache.stats();
+    assert(stats.loads == 1);
+    assert(stats.entries == 1);
+    assert(stats.hits == 7);
+}
+
 void test_macro_expansion_mode_has_distinct_cache_identity() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_project_index_cache_macro_mode_test";
@@ -129,6 +161,7 @@ int main() {
     try {
         test_snapshot_survives_cache_clear();
         test_concurrent_cache_churn_preserves_request_snapshots();
+        test_concurrent_identical_loads_are_coalesced();
         test_macro_expansion_mode_has_distinct_cache_identity();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

@@ -12,6 +12,7 @@ namespace {
 struct MacroParams {
     int arity = 0;
     bool variadic = false;
+    std::vector<std::string> names;
 };
 
 MacroParams macro_params(std::string args) {
@@ -26,6 +27,7 @@ MacroParams macro_params(std::string args) {
             out.variadic = true;
         } else {
             ++out.arity;
+            out.names.push_back(std::move(part));
         }
     }
     return out;
@@ -58,6 +60,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.macros.push_back({.name = name,
                                    .arity = params.arity,
                                    .function_like = true,
+                                   .param_names = params.names,
                                    .identity = native_identity(name),
                                    .location = location});
             scan.functions.push_back(
@@ -65,7 +68,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                  .template_params = {},
                  .template_param_is_value = {},
                  .template_default_args = {},
-                 .param_names = std::vector<std::string>(static_cast<size_t>(params.arity)),
+                 .param_names = params.names,
                  .param_native_spellings =
                      std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .param_type_refs = std::vector<TypeRef>(static_cast<size_t>(params.arity),

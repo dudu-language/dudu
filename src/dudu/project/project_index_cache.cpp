@@ -95,31 +95,46 @@ const ProjectIndex& ProjectIndexCache::get(ProjectIndexOptions options) {
 
 std::shared_ptr<const ProjectIndex> ProjectIndexCache::get_shared(ProjectIndexOptions options) {
     const CacheKey key = key_for_options(options);
+    size_t load_generation = 0;
     {
-        const std::lock_guard lock(mutex_);
-        if (const auto found = entries_.find(key); found != entries_.end()) {
-            if (found->second.index->source_stamps_current()) {
-                ++stats_.hits;
-                return found->second.index;
+        std::unique_lock lock(mutex_);
+        while (true) {
+            if (const auto found = entries_.find(key); found != entries_.end()) {
+                if (found->second.index->source_stamps_current()) {
+                    ++stats_.hits;
+                    return found->second.index;
+                }
+                ++stats_.stale_evictions;
+                entries_.erase(found);
             }
-            ++stats_.stale_evictions;
-            entries_.erase(found);
+            if (!loading_.contains(key)) {
+                loading_.insert(key);
+                ++stats_.misses;
+                load_generation = generation_;
+                break;
+            }
+            ready_.wait(lock, [&] { return !loading_.contains(key); });
         }
-        ++stats_.misses;
     }
 
-    std::shared_ptr<const ProjectIndex> loaded =
-        std::make_shared<ProjectIndex>(ProjectIndex::load(options));
-    const std::lock_guard lock(mutex_);
-    ++stats_.loads;
-    if (const auto found = entries_.find(key); found != entries_.end() &&
-                                              found->second.index->source_stamps_current()) {
-        ++stats_.hits;
-        return found->second.index;
+    try {
+        std::shared_ptr<const ProjectIndex> loaded =
+            std::make_shared<ProjectIndex>(ProjectIndex::load(options));
+        const std::lock_guard lock(mutex_);
+        loading_.erase(key);
+        if (load_generation == generation_) {
+            ++stats_.loads;
+            entries_.insert_or_assign(key, CacheEntry{.index = loaded});
+            stats_.entries = entries_.size();
+        }
+        ready_.notify_all();
+        return loaded;
+    } catch (...) {
+        const std::lock_guard lock(mutex_);
+        loading_.erase(key);
+        ready_.notify_all();
+        throw;
     }
-    auto result = entries_.insert_or_assign(key, CacheEntry{.index = std::move(loaded)});
-    stats_.entries = entries_.size();
-    return result.first->second.index;
 }
 
 ProjectIndexCacheStats ProjectIndexCache::stats() const {
@@ -131,6 +146,7 @@ ProjectIndexCacheStats ProjectIndexCache::stats() const {
 
 void ProjectIndexCache::clear() {
     const std::lock_guard lock(mutex_);
+    ++generation_;
     entries_.clear();
     stats_ = {};
 }

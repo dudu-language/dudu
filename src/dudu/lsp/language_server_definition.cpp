@@ -17,6 +17,7 @@
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
+#include "dudu/lsp/language_server_reference_support.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/lsp/language_server_type_identity.hpp"
@@ -376,17 +377,29 @@ std::string definition_json(const Document& doc, const Json* params,
         return *constructor;
     }
     const ModuleAst& native_visible = native->visible_unit_for_path(doc.path);
+    const std::vector<Symbol> native_symbols = symbols_for_module(native_visible, true);
     if (selection.type_ref) {
+        if (const std::optional<std::string> native_type_target =
+                native_type_target_definition_json(doc, word, native_visible)) {
+            return *native_type_target;
+        }
         if (const std::optional<Symbol> type =
                 native_type_symbol_for_type_ref(native_visible, *selection.type_ref)) {
             return symbol_definition_json(*type, doc);
         }
     }
-    if (const std::optional<std::string> native_type_target =
-            native_type_target_definition_json(doc, word, native_visible)) {
-        return *native_type_target;
+    const SourceLocation cursor_location{
+        .file = SourceFileName(doc.path.string()),
+        .line = lsp_position(params).line + 1,
+        .column = lsp_position(params).character + 1,
+    };
+    if (const std::optional<std::string> identity = native_identity_for_selection(
+            selection, &native_visible, native_symbols, word, cursor_location)) {
+        if (const std::optional<Symbol> selected =
+                native_symbol_for_identity(native_symbols, *identity)) {
+            return symbol_definition_json(*selected, doc);
+        }
     }
-    const std::vector<Symbol> native_symbols = symbols_for_module(native_visible, true);
     if (const std::optional<Symbol> native_namespace =
             native_namespace_segment_symbol(native_symbols, selection.symbol, word)) {
         return symbol_definition_json(*native_namespace, doc);

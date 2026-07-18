@@ -183,24 +183,27 @@ for these five-sample warm-cache measurements.
 
 | Workload | Usable | Parser edit | Repair | Hover | Definition | References | Semantic tokens | Peak RSS |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| small generics | 7.6 ms | 0.3 ms | 0.2 ms | 0.1 ms | 0.2 ms | 0.2 ms | 0.2 ms | 57.9 MiB |
-| declaration macros | 10.8 ms | 3.0 ms | 3.1 ms | 0.4 ms | 3.0 ms | 0.5 ms | 0.2 ms | 73.6 MiB |
-| template-heavy native | 8.4 ms | 0.5 ms | 0.4 ms | 8.0 ms | 5.8 ms | 81.9 ms | 2.7 ms | 147.7 MiB |
-| `raymarch-dd` | 9.7 ms | 3.0 ms | 2.0 ms | 2.8 ms | 0.6 ms | 8.9 ms | 0.3 ms | 276.0 MiB |
-| `dudu-webserver` | 8.8 ms | 1.5 ms | 1.1 ms | 0.8 ms | 0.4 ms | 7.5 ms | 0.3 ms | 190.1 MiB |
+| small generics | 8.3 ms | 0.1 ms | 0.4 ms | 0.1 ms | 0.3 ms | 0.2 ms | 0.1 ms | 57.8 MiB |
+| declaration macros | 8.3 ms | 0.2 ms | 7.1 ms | 0.5 ms | 3.3 ms | 0.7 ms | 0.2 ms | 76.9 MiB |
+| template-heavy native | 8.6 ms | 0.3 ms | 0.6 ms | 41.9 ms | 14.7 ms | 82.6 ms | 3.2 ms | 165.9 MiB |
+| `raymarch-dd` | 8.6 ms | 0.6 ms | 5.2 ms | 24.0 ms | 0.4 ms | 14.5 ms | 0.5 ms | 341.6 MiB |
+| `dudu-webserver` | 8.5 ms | 0.6 ms | 2.5 ms | 12.7 ms | 0.4 ms | 11.1 ms | 0.4 ms | 226.7 MiB |
 
-The slowest p95 values outside that table are 34.8 ms for inlay hints, 25.7 ms
-for signature help, 20.9 ms for rename, 11.9 ms for completion, and 0.4 ms for
+The slowest p95 values outside that table are 53.3 ms for inlay hints, 34.2 ms
+for signature help, 29.9 ms for rename, 15.3 ms for completion, and 0.5 ms for
 formatting. Complete semantic diagnostics after adding an unresolved name take
-1.1 ms for the small fixture, 25.2 ms for the macro fixture, 53.4 ms for the
-template-heavy fixture, 238.8 ms for `dudu-webserver`, and 410.2 ms for
+1.2 ms for the small fixture, 25.8 ms for the macro fixture, 69.5 ms for the
+template-heavy fixture, 260.8 ms for `dudu-webserver`, and 466.3 ms for
 `raymarch-dd`. Parser diagnostics remain immediate while that complete project
-analysis runs in the background.
+analysis runs in the background. A deliberately empty declaration-macro cache
+still publishes parser diagnostics in 7.3 ms; the first request that requires
+generated declarations then pays the separately visible 4.25-second worker
+build.
 
 Removing the dedicated template fixture's native metadata cache makes the
-first native definition query take 1.43 seconds and 197.2 MiB. Workspace
-usability remains 7.0 ms, and the same process then answers warm definition,
-hover, and references in 5.4, 6.2, and 75.7 ms. The cold cost is an explicit
+first native definition query take 1.63 seconds and 214.6 MiB. Workspace
+usability remains 7.6 ms, and the same process then answers warm definition,
+hover, and references in 11.3, 40.6, and 74.3 ms. The cold cost is an explicit
 Clang header scan; it does not block Dudu parsing or unrelated editor queries.
 
 Reproduce the tracked matrix with:
@@ -208,7 +211,7 @@ Reproduce the tracked matrix with:
 ```sh
 ./scripts/probe_lsp_dogfood_latency.py build-release/dudu-lsp \
     --samples 5 \
-    --csv build/bench_compiler/editor-reliability-release.csv
+    --csv build/bench_compiler/editor-reliability-rich-docs.csv
 ```
 
 Measure the empty-cache native case separately with:
@@ -217,7 +220,7 @@ Measure the empty-cache native case separately with:
 rm -rf tests/fixtures/lsp_latency_native/build
 ./scripts/probe_lsp_dogfood_latency.py build-release/dudu-lsp \
     --samples 1 --case template-native \
-    --csv build/bench_compiler/editor-reliability-cold-native.csv
+    --csv build/bench_compiler/editor-reliability-cold-native-rich-docs.csv
 ```
 
 ## Declaration Macro Compilation

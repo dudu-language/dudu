@@ -63,6 +63,8 @@ struct EnumContext {
     int depth = 0;
     std::string type_name;
     std::string value_scope;
+    std::optional<size_t> class_index;
+    std::optional<size_t> declaration_index;
 };
 
 struct StaticInitializerTarget {
@@ -99,9 +101,9 @@ NativeSymbolId scanned_identity(const NativeCursorIdentityIndex& identities, Nat
 std::optional<TypeLayout> scanned_layout(const NativeCursorIdentityIndex& identities,
                                          NativeCursorKind kind, std::string_view spelling,
                                          const SourceLocation& location);
-TypeRef parse_native_type_text(std::string text, const SourceLocation& location);
-TypeRef parse_native_type_text(std::string text, const SourceLocation& location,
-                               const std::vector<std::string>& dependent_type_names);
+NativeDeclarationMetadata scanned_metadata(const NativeCursorIdentityIndex& identities,
+                                           NativeCursorKind kind, std::string_view spelling,
+                                           const SourceLocation& location);
 void replace_native_type_placeholder(TypeRef& type, std::string_view placeholder,
                                      std::string_view replacement);
 std::string native_type_placeholder(std::string_view index);

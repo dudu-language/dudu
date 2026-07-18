@@ -242,7 +242,7 @@ std::string native_header_scan_key(const ImportDecl& import, const NativeHeaderO
 
 std::string native_header_scan_key(std::span<const ImportDecl> imports,
                                    const NativeHeaderOptions& options, const std::string& flags) {
-    std::string key = "v11-batch|" +
+    std::string key = "v12-rich-metadata|" +
                       native_header_compiler_identity(native_header_clangxx_command()) + "|" +
                       options.config.cpp_std + "|" + flags + scanner_environment_identity();
     for (const ImportDecl& import : imports) {

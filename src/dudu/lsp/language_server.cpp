@@ -104,6 +104,8 @@ void LanguageServer::handle_message(const std::string& body) {
                 transport_.respond(*id, signature_help_result(params));
             else if (method == "workspace/symbol")
                 transport_.respond(*id, workspace_symbol_result(params));
+            else if (method == "workspace/executeCommand")
+                transport_.respond(*id, execute_command_result(params));
             else
                 transport_.respond(*id, "null");
         }
@@ -136,14 +138,14 @@ std::string LanguageServer::initialize_result() {
            "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
            "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\"[\",\",\"]},"
            "\"workspaceSymbolProvider\":true,"
+           "\"executeCommandProvider\":{\"commands\":[\"dudu.showGeneratedCpp\"]},"
            "\"workspace\":{\"workspaceFolders\":{\"supported\":true,"
            "\"changeNotifications\":true}}"
            "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"" +
            std::string(kToolchainVersion) + "\"}}";
 }
 
-bool LanguageServer::bool_setting(const Json* object, std::string_view name,
-                                  bool default_value) {
+bool LanguageServer::bool_setting(const Json* object, std::string_view name, bool default_value) {
     const Json* value = object == nullptr ? nullptr : object->get(name);
     if (value == nullptr)
         return default_value;
@@ -167,8 +169,7 @@ void LanguageServer::configure_initialize(const Json* params) {
                 add_workspace_uri(folder.get("uri"));
         }
         add_workspace_uri(params->get("rootUri"));
-        if (const std::string root_path = string_value(params->get("rootPath"));
-            !root_path.empty())
+        if (const std::string root_path = string_value(params->get("rootPath")); !root_path.empty())
             workspace_roots_.emplace_back(root_path);
     }
 

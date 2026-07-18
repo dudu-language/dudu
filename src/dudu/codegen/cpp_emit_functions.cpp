@@ -86,25 +86,6 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     out << ')';
 }
 
-void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
-                        const std::vector<std::string>& aliases,
-                        const std::map<std::string, TypeRef>& function_returns,
-                        const Symbols& symbols, const CppEmitOptions& options) {
-    emit_cpp_template_parameters(out, cpp_emit_template_params_for_function(fn),
-                                 generic_cpp_value_params_for_function(fn));
-    emit_function_signature(out, fn, aliases, options);
-    out << " {\n";
-    CppLocalContext locals;
-    std::map<std::string, TypeRef> local_type_refs;
-    for (const ParamDecl& param : fn.params) {
-        locals.bind(param.name);
-        local_type_refs[param.name] = param.type_ref;
-    }
-    emit_block(out, fn.statements, 1, aliases, locals, local_type_refs,
-               function_return_type_ref(fn), function_returns, &symbols, options);
-    out << "}\n\n";
-}
-
 } // namespace
 
 std::string cpp_emit_string_literal(std::string text) {
@@ -170,6 +151,25 @@ bool cpp_function_visible_in_header(const FunctionDecl& fn, const CppEmitOptions
            (options.expose_test_functions || !is_test_function(fn));
 }
 
+void emit_cpp_function_body(std::ostringstream& out, const FunctionDecl& fn,
+                            const std::vector<std::string>& aliases,
+                            const std::map<std::string, TypeRef>& function_returns,
+                            const Symbols& symbols, const CppEmitOptions& options) {
+    emit_cpp_template_parameters(out, cpp_emit_template_params_for_function(fn),
+                                 generic_cpp_value_params_for_function(fn));
+    emit_function_signature(out, fn, aliases, options);
+    out << " {\n";
+    CppLocalContext locals;
+    std::map<std::string, TypeRef> local_type_refs;
+    for (const ParamDecl& param : fn.params) {
+        locals.bind(param.name);
+        local_type_refs[param.name] = param.type_ref;
+    }
+    emit_block(out, fn.statements, 1, aliases, locals, local_type_refs,
+               function_return_type_ref(fn), function_returns, &symbols, options);
+    out << "}\n\n";
+}
+
 void emit_cpp_function_declarations(std::ostringstream& out, const ModuleAst& module,
                                     const std::vector<std::string>& aliases, bool header_only,
                                     bool test_source, const CppEmitOptions& options) {
@@ -200,7 +200,7 @@ void emit_cpp_early_functions(std::ostringstream& out, const ModuleAst& module,
             (header_only && !cpp_function_visible_in_header(fn, options))) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns, symbols, options);
+        emit_cpp_function_body(out, fn, aliases, function_returns, symbols, options);
     }
 }
 
@@ -211,7 +211,7 @@ void emit_cpp_header_generic_function_bodies(std::ostringstream& out, const Modu
                                              const CppEmitOptions& options) {
     for (const FunctionDecl& fn : module.functions) {
         if (generic_function(fn) && cpp_function_visible_in_header(fn, options)) {
-            emit_function_body(out, fn, aliases, function_returns, symbols, options);
+            emit_cpp_function_body(out, fn, aliases, function_returns, symbols, options);
         }
     }
 }
@@ -223,7 +223,7 @@ void emit_cpp_remaining_function_bodies(std::ostringstream& out, const ModuleAst
                                         const CppEmitOptions& options) {
     for (const FunctionDecl& fn : module.functions) {
         if (!emit_before_constants(fn) && should_emit_function(fn, test_source)) {
-            emit_function_body(out, fn, aliases, function_returns, symbols, options);
+            emit_cpp_function_body(out, fn, aliases, function_returns, symbols, options);
         }
     }
 }
@@ -239,7 +239,7 @@ void emit_cpp_module_function_bodies(std::ostringstream& out, const ModuleAst& m
         const bool body_owned_by_header = cpp_function_visible_in_header(fn, options) &&
                                           (emit_before_constants(fn) || generic_function(fn));
         if (!body_owned_by_header) {
-            emit_function_body(out, fn, aliases, function_returns, symbols, options);
+            emit_cpp_function_body(out, fn, aliases, function_returns, symbols, options);
         }
     }
 }

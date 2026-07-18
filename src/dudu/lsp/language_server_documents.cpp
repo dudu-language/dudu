@@ -21,11 +21,11 @@ void LanguageServer::did_open(const Json* params) {
                        .text = string_value(text_document->get("text")),
                        .version = optional_int_value(text_document->get("version"))};
     invalidate_workspace_cache(uri);
+    publish_syntax_diagnostics(uri);
     std::set<std::string> affected = affected_open_documents(documents_[uri].path, uri);
     affected.erase(uri);
     invalidate_workspace_cache(affected);
     affected.insert(uri);
-    publish_syntax_diagnostics(uri);
     queue_full_diagnostics(affected);
 }
 
@@ -46,11 +46,11 @@ void LanguageServer::did_change(const Json* params) {
     apply_lsp_content_changes(doc.text, *array);
     doc.version = version;
     invalidate_workspace_cache(uri);
+    publish_syntax_diagnostics(uri);
     std::set<std::string> affected = affected_open_documents(doc.path, uri);
     affected.erase(uri);
     invalidate_workspace_cache(affected);
     affected.insert(uri);
-    publish_syntax_diagnostics(uri);
     queue_full_diagnostics(affected);
 }
 

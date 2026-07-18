@@ -62,6 +62,7 @@ class PageParser(HTMLParser):
         self.refs: list[tuple[str, str]] = []
         self.languages: list[str] = []
         self.nav_hrefs: set[str] = set()
+        self.anchor_hrefs: list[str] = []
         self._nav_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -74,6 +75,7 @@ class PageParser(HTMLParser):
             self._nav_depth += 1
         if tag == "a" and "href" in values:
             self.refs.append(("href", values["href"]))
+            self.anchor_hrefs.append(values["href"])
             if self._nav_depth:
                 self.nav_hrefs.add(values["href"])
         for attribute in ("src", "href"):
@@ -178,6 +180,13 @@ def validate(repo: Path) -> list[str]:
         if name in PUBLIC_PAGES and not EXPECTED_NAV.issubset(parser.nav_hrefs):
             missing = ", ".join(sorted(EXPECTED_NAV - parser.nav_hrefs))
             errors.append(f"{source.relative_to(repo)}: missing navigation links: {missing}")
+
+        for value in parser.anchor_hrefs:
+            split = urlsplit(value)
+            if split.netloc in {"dudulang.org", "www.dudulang.org"}:
+                errors.append(
+                    f"{source.relative_to(repo)}: self-link must be origin-relative: '{value}'"
+                )
 
         for attribute, value in parser.refs:
             if not value or value.startswith(("mailto:", "tel:", "javascript:")):

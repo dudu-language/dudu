@@ -189,12 +189,13 @@ code, or semantic correctness.
 Status: complete on the July 18, 2026 reference matrix. Five-sample Release
 measurements cover a small generic project, a declaration-macro project, a
 template-heavy native project, `raymarch-dd`, and `dudu-webserver`. All p95
-budgets pass: workspace usability is at most 10.8 ms, parser diagnostics after
-malformed edits 3.0 ms, repaired-source recovery 3.1 ms, warm definition 5.8
-ms, warm references 81.9 ms, and warm semantic tokens 2.7 ms. An empty native
-cache makes the first template-heavy Clang query take 1.43 seconds without
-delaying the 7.0 ms parser publication. Full methods, cache state, hardware,
-RSS, and reproduction commands are recorded in [Performance](performance.md#editor-latency).
+budgets pass: workspace usability is at most 8.6 ms, parser diagnostics after
+malformed edits 0.6 ms, repaired-source recovery 7.1 ms, warm definition 14.7
+ms, warm references 82.6 ms, and warm semantic tokens 3.2 ms. An empty native
+cache makes the first template-heavy Clang query take 1.63 seconds without
+delaying the 7.6 ms parser publication. Full methods, cache state, hardware,
+RSS, and reproduction commands are recorded in
+[Performance](performance.md#editor-latency).
 
 ## 6. Add Rich Information And Native Documentation
 
@@ -257,6 +258,16 @@ generated-library fixtures show useful hover/signature documentation and
 correct navigation. Missing native documentation degrades honestly to
 structured declaration information.
 
+Status: complete on July 18, 2026. The deterministic rich-documentation fixture
+checks Dudu docstrings, parameter and return documentation, class and enum
+previews, layouts, aliases, ordinary C and C++, template defaults and overload
+selection, standard-library declarations, macros, and generated schema APIs.
+Native comments, declarations, deprecation metadata, layout, identity, source
+location, and import provenance survive the on-disk scan cache and a server
+restart. VS Code exposes the same server data and provides a dedicated command
+for opening generated C++ without feeding generated text back into semantic
+analysis. `scripts/test_lsp_rich_docs.sh` is the executable gate.
+
 ## Final Completion Gate
 
 - all adversarial recovery fixtures pass without reloads or restarts
@@ -268,3 +279,9 @@ structured declaration information.
 - VS Code validation passes in `raymarch-dd` and `dudu-webserver`
 - the implementation contains no editor-only semantic parser, library-name
   special case, or source-string fallback
+
+Status: complete on July 18, 2026. The adversarial 21-state recovery suite,
+incremental synchronization suite, semantic matrix, rich-documentation gate,
+55 native test targets, formatter/site guards, and the `raymarch-dd`,
+`dudu-webserver`, and `dudu-datascience` dogfood checks pass from the current
+tree. The measured Release editor matrix meets the stated latency budgets.

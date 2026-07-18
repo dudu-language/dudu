@@ -355,7 +355,8 @@ native_symbol_names = [item["name"] for item in native_symbols["result"]]
 assert native_symbol_names == ["main"]
 
 native_hover = next(item for item in responses if item.get("id") == 9)
-assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]
+assert "dudu_native.dudu_native_add(a: i32, b: i32) -> i32" in native_hover["result"]["contents"]["value"]
+assert "int dudu_native_add(int a, int b)" in native_hover["result"]["contents"]["value"]
 assert "native i32(i32, i32)" in native_hover["result"]["contents"]["value"]
 assert "Adds two native integers." in native_hover["result"]["contents"]["value"]
 
@@ -375,7 +376,7 @@ assert "DUDU_NATIVE_MAGIC" in direct_native_labels
 assert "dudu_native_kind_ok" in direct_native_labels
 
 native_signature = next(item for item in responses if item.get("id") == 12)
-assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
+assert "dudu_native.dudu_native_add(a: i32, b: i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
 assert native_signature["result"]["activeParameter"] == 1
 
 native_function_references = next(item for item in responses if item.get("id") == 69)
@@ -391,7 +392,7 @@ native_function_reference_ranges = {
 assert native_function_reference_ranges == {(9, 32, 47)}
 
 direct_native_signature = next(item for item in responses if item.get("id") == 36)
-assert "dudu_native_add(i32, i32) -> i32" in direct_native_signature["result"]["signatures"][0]["label"]
+assert "dudu_native_add(a: i32, b: i32) -> i32" in direct_native_signature["result"]["signatures"][0]["label"]
 assert direct_native_signature["result"]["activeParameter"] == 1
 
 direct_native_definition = next(item for item in responses if item.get("id") == 37)
@@ -422,8 +423,8 @@ assert lsp_include_header_definition["result"]["range"]["start"]["line"] == 0
 
 overload_signature = next(item for item in responses if item.get("id") == 32)
 overload_labels = [item["label"] for item in overload_signature["result"]["signatures"]]
-assert "native_cpp.dudu_native.overloaded(i32) -> i32" in overload_labels
-assert "native_cpp.dudu_native.overloaded(f32) -> f32" in overload_labels
+assert "native_cpp.dudu_native.overloaded(value: i32) -> i32" in overload_labels
+assert "native_cpp.dudu_native.overloaded(value: f32) -> f32" in overload_labels
 
 scope_completion = next(item for item in responses if item.get("id") == 33)
 scope_labels = [item["label"] for item in scope_completion["result"]]
@@ -431,7 +432,7 @@ assert "outer_value" in scope_labels
 assert "inner_only" not in scope_labels
 
 native_macro_hover = next(item for item in responses if item.get("id") == 15)
-assert "macro dudu_native.DUDU_NATIVE_SCALE(arg0)" in native_macro_hover["result"]["contents"]["value"]
+assert "function-like macro dudu_native.DUDU_NATIVE_SCALE(value)" in native_macro_hover["result"]["contents"]["value"]
 
 native_member_completion = next(item for item in responses if item.get("id") == 22)
 native_member_labels = [item["label"] for item in native_member_completion["result"]]

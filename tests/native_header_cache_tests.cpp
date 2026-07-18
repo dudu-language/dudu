@@ -2,6 +2,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_header_cache_deps.hpp"
+#include "dudu/native/native_header_cache_format.hpp"
 #include "dudu/native/native_header_merge.hpp"
 #include "dudu/native/native_header_parse.hpp"
 #include "dudu/native/native_header_scan_command.hpp"
@@ -25,10 +26,62 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
 namespace {
+void test_native_cache_record_round_trip() {
+    std::ostringstream encoded;
+    dudu::write_record(encoded, "DOC",
+                       {"line one\nline two", "template<class T>\nT convert(T value)"});
+    std::istringstream input(encoded.str());
+    const auto decoded = dudu::read_record(input);
+    assert(decoded.has_value());
+    assert(decoded->first == "DOC");
+    assert(decoded->second == std::vector<std::string>({"line one\nline two",
+                                                        "template<class T>\nT convert(T value)"}));
+    assert(input.peek() == std::char_traits<char>::eof());
+}
+
+void test_native_cursor_metadata_round_trip() {
+    const dudu::SourceLocation location = {
+        .file = dudu::SourceFileName("rich_docs.hpp"), .line = 17, .column = 9};
+    dudu::NativeCursorIdentityIndex source;
+    source.insert(dudu::NativeCursorKind::Function, "convert", location,
+                  "c:@FT@>1#Tconvert#t0.0#I#", dudu::TypeLayout{.size = 8, .alignment = 8},
+                  "native.convert");
+    source.insert_metadata(
+        dudu::NativeCursorKind::Function, "convert", location,
+        {.declaration = "template<class T> int convert(T value = T{})",
+         .summary_doc_comment = "Convert a value using a compile-time policy.",
+         .return_doc_comment = "The converted score.",
+         .deprecated_message = "Use convert_v2.",
+         .parameters = {{.name = "value",
+                         .default_value = "T{}",
+                         .doc_comment = "Value to convert."}},
+         .template_parameters = {
+             {.name = "T", .default_value = "int", .doc_comment = "Converted value type."}}});
+
+    const dudu::NativeCursorIdentityIndex restored =
+        dudu::NativeCursorIdentityIndex::deserialize(source.serialize());
+    const std::optional<dudu::NativeDeclarationMetadata> metadata =
+        restored.find_metadata(dudu::NativeCursorKind::Function, "convert", location);
+    assert(metadata.has_value());
+    assert(metadata->declaration == "template<class T> int convert(T value = T{})");
+    assert(metadata->summary_doc_comment == "Convert a value using a compile-time policy.");
+    assert(metadata->return_doc_comment == "The converted score.");
+    assert(metadata->deprecated_message == "Use convert_v2.");
+    assert(metadata->parameters.size() == 1);
+    assert(metadata->parameters[0].name == "value");
+    assert(metadata->parameters[0].default_value == "T{}");
+    assert(metadata->parameters[0].doc_comment == "Value to convert.");
+    assert(metadata->template_parameters.size() == 1);
+    assert(metadata->template_parameters[0].name == "T");
+    assert(metadata->template_parameters[0].default_value == "int");
+    assert(metadata->template_parameters[0].doc_comment == "Converted value type.");
+}
+
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
     const std::filesystem::path header_dir = root / "build" / "native-macro-include";
@@ -229,6 +282,8 @@ void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
 int main() {
     try {
         const std::filesystem::path root = DUDU_REPO_ROOT;
+        test_native_cache_record_round_trip();
+        test_native_cursor_metadata_round_trip();
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);

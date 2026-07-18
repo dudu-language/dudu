@@ -32,13 +32,38 @@ void apply_generic_metadata(ClassDecl& klass, const TemplateContext& context) {
     klass.generic_min_args = generic_min_args(context);
 }
 
+template <typename Decl>
+void fill_metadata_generic_defaults(Decl& declaration, const NativeHeaderScan& scan,
+                                    const std::vector<std::pair<int, std::string>>& namespaces,
+                                    const std::vector<NativeClassScope>& classes) {
+    if (declaration.generic_default_args.size() != declaration.generic_params.size()) {
+        declaration.generic_default_args.resize(declaration.generic_params.size());
+    }
+    for (size_t index = 0; index < declaration.generic_params.size(); ++index) {
+        if (has_type_ref(declaration.generic_default_args[index])) {
+            continue;
+        }
+        const auto metadata = std::ranges::find(
+            declaration.native_metadata.template_parameters, declaration.generic_params[index],
+            &NativeParameterMetadata::name);
+        if (metadata == declaration.native_metadata.template_parameters.end() ||
+            metadata->default_value.empty()) {
+            continue;
+        }
+        const std::string default_type = qualify_scoped_type(
+            scan, namespaces, classes, dudu_type(metadata->default_value));
+        declaration.generic_default_args[index] = parse_native_type_text(
+            default_type, declaration.location, declaration.generic_params);
+    }
+}
+
 std::optional<size_t> current_class_index(const std::vector<NativeClassScope>& classes) {
     return classes.empty() ? std::nullopt : classes.back().declaration_index;
 }
 
-std::vector<std::string> dependent_type_names(
-    const NativeHeaderScan& scan, const std::vector<NativeClassScope>& classes,
-    const std::vector<TemplateContext>& templates) {
+std::vector<std::string> dependent_type_names(const NativeHeaderScan& scan,
+                                              const std::vector<NativeClassScope>& classes,
+                                              const std::vector<TemplateContext>& templates) {
     std::vector<std::string> out;
     for (const NativeClassScope& scope : classes) {
         if (!scope.declaration_index) {
@@ -126,9 +151,9 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         const std::string underlying_type = trim_string(match[3].str());
         const std::vector<std::string> dependent_names =
             dependent_type_names(scan, classes, templates);
-        const std::string semantic_type =
-            match[4].matched && dependent_names.empty() ? trim_string(match[4].str())
-                                                        : underlying_type;
+        const std::string semantic_type = match[4].matched && dependent_names.empty()
+                                              ? trim_string(match[4].str())
+                                              : underlying_type;
         const std::string lowered_type =
             qualify_scoped_type(scan, namespaces, classes, dudu_type(underlying_type));
         std::string semantic_lowered_type =
@@ -156,13 +181,14 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name, location,
                                          visible_name, current_file),
             .layout = scanned_layout(identities, NativeCursorKind::Type, raw_name, location),
-            .location = location};
+            .location = location,
+            .native_metadata =
+                scanned_metadata(identities, NativeCursorKind::Type, raw_name, location)};
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Alias) {
             apply_generic_metadata(native_type, templates.back());
         }
         scan.types.push_back(std::move(native_type));
-        if (const auto class_index = current_class_index(classes);
-            class_index && useful_alias) {
+        if (const auto class_index = current_class_index(classes); class_index && useful_alias) {
             TypeAliasDecl alias{.name = raw_name,
                                 .cpp_name = visible_name,
                                 .type_ref = type_ref,
@@ -205,6 +231,8 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         klass.native_declaration = true;
         klass.native_partial_specialization = match[2].matched;
         klass.location = location;
+        klass.native_metadata =
+            scanned_metadata(identities, NativeCursorKind::Class, raw_name, location);
         scan.classes.push_back(std::move(klass));
         classes.push_back({
             .depth = depth,
@@ -231,11 +259,10 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             !public_record && line.find(" definition") != std::string::npos;
         if (!public_record && !internal_definition) {
             if (line.find(" definition") != std::string::npos) {
-                classes.push_back(
-                    {.depth = depth,
-                     .name = name,
-                     .declaration_index = std::nullopt,
-                     .specialization_source_args = {}});
+                classes.push_back({.depth = depth,
+                                   .name = name,
+                                   .declaration_index = std::nullopt,
+                                   .specialization_source_args = {}});
             }
             return;
         }
@@ -249,10 +276,13 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
                 .identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
                                              location, name, current_file),
                 .layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, location),
-                .location = location};
+                .location = location,
+                .native_metadata =
+                    scanned_metadata(identities, NativeCursorKind::Class, raw_name, location)};
             if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Class) {
                 apply_generic_metadata(native_type, templates.back());
             }
+            fill_metadata_generic_defaults(native_type, scan, namespaces, classes);
             scan.types.push_back(std::move(native_type));
             comment_targets.push_back({.depth = depth,
                                        .kind = CommentTargetKind::Type,
@@ -264,10 +294,13 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
                 ClassDecl klass;
                 klass.name = name;
                 klass.identity = scanned_identity(identities, NativeCursorKind::Class, raw_name,
-                                                   location, name, current_file);
+                                                  location, name, current_file);
                 klass.native_declaration = true;
                 klass.location = location;
+                klass.native_metadata =
+                    scanned_metadata(identities, NativeCursorKind::Class, raw_name, location);
                 apply_generic_metadata(klass, templates.back());
+                fill_metadata_generic_defaults(klass, scan, namespaces, classes);
                 scan.classes.push_back(std::move(klass));
             }
             return;
@@ -283,12 +316,14 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
                                           name, current_file);
         klass.layout = scanned_layout(identities, NativeCursorKind::Class, raw_name, location);
         klass.location = location;
+        klass.native_metadata =
+            scanned_metadata(identities, NativeCursorKind::Class, raw_name, location);
+        fill_metadata_generic_defaults(klass, scan, namespaces, classes);
         scan.classes.push_back(std::move(klass));
-        classes.push_back(
-            {.depth = depth,
-             .name = name,
-             .declaration_index = scan.classes.size() - 1,
-             .specialization_source_args = {}});
+        classes.push_back({.depth = depth,
+                           .name = name,
+                           .declaration_index = scan.classes.size() - 1,
+                           .specialization_source_args = {}});
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Class, .primary = scan.classes.size() - 1});
         return;
@@ -301,15 +336,18 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         if (starts_with(raw_name, "__")) {
             return;
         }
-        scan.types.push_back(
-            {.name = name,
-             .native_spelling = "",
-             .type_ref = {},
-             .enum_type = true,
-             .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name, location,
-                                          name, current_file),
-             .layout = scanned_layout(identities, NativeCursorKind::Type, raw_name, location),
-             .location = location});
+        scan.types.push_back({
+            .name = name,
+            .native_spelling = "",
+            .type_ref = {},
+            .enum_type = true,
+            .identity = scanned_identity(identities, NativeCursorKind::Type, raw_name, location,
+                                         name, current_file),
+            .layout = scanned_layout(identities, NativeCursorKind::Type, raw_name, location),
+            .location = location,
+            .native_metadata =
+                scanned_metadata(identities, NativeCursorKind::Type, raw_name, location),
+        });
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Type, .primary = scan.types.size() - 1});
         std::string value_scope;
@@ -323,7 +361,30 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
                 value_scope.pop_back();
             }
         }
-        enums.push_back({.depth = depth, .type_name = name, .value_scope = std::move(value_scope)});
+        EnumContext enum_context{
+            .depth = depth,
+            .type_name = name,
+            .value_scope = std::move(value_scope),
+            .class_index = std::nullopt,
+            .declaration_index = std::nullopt,
+        };
+        if (const std::optional<size_t> class_index = current_class_index(classes)) {
+            enum_context.class_index = class_index;
+            enum_context.declaration_index = scan.classes[*class_index].enums.size();
+            scan.classes[*class_index].enums.push_back({
+                .name = raw_name,
+                .cpp_name = {},
+                .underlying_type_ref = {},
+                .origin_module = current_file,
+                .values = {},
+                .methods = {},
+                .decorators = {},
+                .location = location,
+                .range = {},
+                .doc_comment = {},
+            });
+        }
+        enums.push_back(std::move(enum_context));
         return;
     }
 
@@ -351,11 +412,10 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             template_param_is_value = templates.back().param_is_value;
             template_default_args = templates.back().param_defaults;
         }
-        const size_t function_index =
-            append_native_function(scan, namespaces, identities, raw_name, match[2].str(), location,
-                                   current_file, template_params, template_param_is_value,
-                                   template_default_args,
-                                   line.find(" delete", line.rfind('\'')) != std::string::npos);
+        const size_t function_index = append_native_function(
+            scan, namespaces, identities, raw_name, match[2].str(), location, current_file,
+            template_params, template_param_is_value, template_default_args,
+            line.find(" delete", line.rfind('\'')) != std::string::npos);
         functions.push_back({depth, function_index});
         param_targets.push_back(
             {.depth = depth, .kind = ParamTargetKind::Function, .primary = function_index});
@@ -374,8 +434,7 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         method.name = match[1].str();
         method.native_identity = scanned_identity(
             identities, NativeCursorKind::Method, method.name, location,
-            scan.classes[*class_index].identity.canonical_path + "." + method.name,
-            current_file);
+            scan.classes[*class_index].identity.canonical_path + "." + method.name, current_file);
         if (!templates.empty() && templates.back().kind == TemplateContext::Kind::Function) {
             method.generic_params = templates.back().params;
             method.generic_param_is_value = templates.back().param_is_value;
@@ -404,6 +463,19 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
         }
         method.deleted = line.find(" delete", line.rfind('\'')) != std::string::npos;
         method.location = location;
+        method.native_metadata =
+            scanned_metadata(identities, NativeCursorKind::Method, method.name, location);
+        for (size_t index = 0;
+             index < method.params.size() && index < method.native_metadata.parameters.size();
+             ++index) {
+            const NativeParameterMetadata& metadata = method.native_metadata.parameters[index];
+            if (!metadata.name.empty()) {
+                method.params[index].name = metadata.name;
+            }
+            if (!metadata.default_value.empty()) {
+                method.min_params = std::min(method.min_params, static_cast<int>(index));
+            }
+        }
         scan.classes[*class_index].methods.push_back(std::move(method));
         param_targets.push_back({.depth = depth,
                                  .kind = ParamTargetKind::Method,
@@ -443,6 +515,8 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
             --constructor.min_params;
         }
         constructor.location = location;
+        constructor.native_metadata =
+            scanned_metadata(identities, NativeCursorKind::Constructor, match[1].str(), location);
         scan.classes[*class_index].methods.push_back(std::move(constructor));
         param_targets.push_back({.depth = depth,
                                  .kind = ParamTargetKind::Method,
@@ -506,7 +580,19 @@ void parse_ast_declaration(AstParseState& state, const std::string& line, int de
                                .enum_constant = true,
                                .identity = scanned_identity(identities, NativeCursorKind::Value,
                                                             raw_name, location, name, current_file),
-                               .location = location});
+                               .location = location,
+                               .native_metadata = scanned_metadata(
+                                   identities, NativeCursorKind::Value, raw_name, location)});
+        if (!enums.empty() && enums.back().class_index && enums.back().declaration_index) {
+            scan.classes[*enums.back().class_index]
+                .enums[*enums.back().declaration_index]
+                .values.push_back({.name = raw_name,
+                                   .value_expr = {},
+                                   .payload_fields = {},
+                                   .decorators = {},
+                                   .location = location,
+                                   .doc_comment = {}});
+        }
         comment_targets.push_back(
             {.depth = depth, .kind = CommentTargetKind::Value, .primary = scan.values.size() - 1});
         return;

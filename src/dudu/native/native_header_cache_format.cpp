@@ -2,6 +2,9 @@
 
 #include "dudu/core/ast_type.hpp"
 
+#include <charconv>
+#include <istream>
+#include <limits>
 #include <ostream>
 
 namespace dudu {
@@ -163,29 +166,47 @@ void write_record(std::ostream& out, std::string_view tag,
 }
 
 std::optional<std::pair<std::string, std::vector<std::string>>>
-parse_record(const std::string& line) {
-    const size_t first_tab = line.find('\t');
-    const std::string tag = line.substr(0, first_tab);
+read_record(std::istream& in) {
+    std::string tag;
+    char separator = '\0';
+    while (in.get(separator)) {
+        if (separator == '\t' || separator == '\n') {
+            break;
+        }
+        tag.push_back(separator);
+    }
+    if (tag.empty() || !in) {
+        return std::nullopt;
+    }
+
     std::vector<std::string> fields;
-    size_t offset = first_tab == std::string::npos ? line.size() : first_tab + 1;
-    while (offset < line.size()) {
-        const size_t colon = line.find(':', offset);
-        if (colon == std::string::npos) {
+    while (separator == '\t') {
+        std::string size_text;
+        char current = '\0';
+        while (in.get(current) && current != ':') {
+            size_text.push_back(current);
+        }
+        if (!in || size_text.empty()) {
             return std::nullopt;
         }
-        const size_t size = static_cast<size_t>(std::stoull(line.substr(offset, colon - offset)));
-        const size_t data = colon + 1;
-        if (data + size > line.size()) {
+        size_t size = 0;
+        const auto [end, error] =
+            std::from_chars(size_text.data(), size_text.data() + size_text.size(), size);
+        if (error != std::errc{} || end != size_text.data() + size_text.size() ||
+            size > static_cast<size_t>(std::numeric_limits<std::streamsize>::max())) {
             return std::nullopt;
         }
-        fields.push_back(line.substr(data, size));
-        offset = data + size;
-        if (offset < line.size()) {
-            if (line[offset] != '\t') {
-                return std::nullopt;
-            }
-            ++offset;
+        std::string field(size, '\0');
+        if (size > 0 && !in.read(field.data(), static_cast<std::streamsize>(size))) {
+            return std::nullopt;
         }
+        fields.push_back(std::move(field));
+        if (!in.get(separator) || (separator != '\t' && separator != '\n')) {
+            return std::nullopt;
+        }
+    }
+    if (separator != '\n') {
+        return std::nullopt;
     }
     return std::make_pair(tag, fields);
 }

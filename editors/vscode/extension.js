@@ -10,6 +10,7 @@ let client;
 let statusItem;
 let stateSubscription;
 let diagnosticsSubscription;
+const generatedCppDocuments = new Map();
 
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -240,12 +241,54 @@ async function toggleDuduInlayHints() {
   vscode.window.setStatusBarMessage(`Dudu inlay hints: ${next}`, 2000);
 }
 
+async function showGeneratedCpp() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.languageId !== "dudu") {
+    vscode.window.showErrorMessage("Open a Dudu file first.");
+    return;
+  }
+  if (!client || client.state !== State.Running) {
+    vscode.window.showErrorMessage("The Dudu language server is not running.");
+    return;
+  }
+  let result;
+  try {
+    result = await client.sendRequest("workspace/executeCommand", {
+      command: "dudu.showGeneratedCpp",
+      arguments: [{
+        textDocument: { uri: editor.document.uri.toString() },
+        range: {
+          start: editor.selection.start,
+          end: editor.selection.end,
+        },
+      }],
+    });
+  } catch (error) {
+    vscode.window.showErrorMessage(`Could not generate C++: ${error.message}`);
+    return;
+  }
+  if (!result?.content) {
+    vscode.window.showInformationMessage("No generated C++ is available for this selection.");
+    return;
+  }
+  const key = encodeURIComponent(editor.document.uri.toString());
+  const uri = vscode.Uri.parse(`dudu-generated-cpp:${key}/${encodeURIComponent(result.source)}.cpp`);
+  generatedCppDocuments.set(uri.toString(), result.content);
+  let document = await vscode.workspace.openTextDocument(uri);
+  document = await vscode.languages.setTextDocumentLanguage(document, "cpp");
+  await vscode.window.showTextDocument(document, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+}
+
 function activate(context) {
   checkToolchainVersion(context);
   statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
   context.subscriptions.push(statusItem);
   diagnosticsSubscription = vscode.languages.onDidChangeDiagnostics(() => updateStatus());
   context.subscriptions.push(diagnosticsSubscription);
+  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(
+    "dudu-generated-cpp",
+    { provideTextDocumentContent: (uri) => generatedCppDocuments.get(uri.toString()) ?? "" },
+  ));
 
   context.subscriptions.push(
     vscode.commands.registerCommand("dudu.fmtFile", async () => {
@@ -274,6 +317,7 @@ function activate(context) {
     }),
     vscode.commands.registerCommand("dudu.restartLsp", () => restartClient(context)),
     vscode.commands.registerCommand("dudu.toggleInlayHints", toggleDuduInlayHints),
+    vscode.commands.registerCommand("dudu.showGeneratedCpp", showGeneratedCpp),
   );
 
   startClient(context);

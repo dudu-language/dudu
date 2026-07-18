@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -19,6 +20,12 @@ bool is_constructor_method_name(const std::string& name);
 std::string function_detail(const FunctionDecl& fn);
 std::string constructor_detail(const ClassDecl& klass);
 std::string constructor_doc_comment(const ClassDecl& klass);
+std::string native_import_provenance(const ModuleAst& module, std::string_view name);
+std::vector<Symbol::Parameter> function_symbol_parameters(const FunctionDecl& function);
+std::vector<Symbol::Parameter> constructor_symbol_parameters(const ClassDecl& klass);
+Symbol method_symbol(const FunctionDecl& method, bool native);
+std::vector<Symbol::Parameter>
+native_function_symbol_parameters(const NativeFunctionDecl& function);
 std::string native_macro_detail(const NativeMacroDecl& macro);
 std::string native_function_detail(const NativeFunctionDecl& fn);
 std::optional<std::string> native_identity_key(const NativeSymbolId& identity);

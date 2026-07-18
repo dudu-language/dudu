@@ -1,6 +1,7 @@
 #include "dudu/lsp/language_server_symbols.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_documentation.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/native/native_header_identity.hpp"
@@ -12,6 +13,108 @@
 #include <sstream>
 
 namespace dudu {
+
+namespace {
+
+const NativeParameterMetadata*
+native_parameter_metadata(const std::vector<NativeParameterMetadata>& metadata,
+                          std::string_view name, size_t index) {
+    const auto named = std::ranges::find(metadata, name, &NativeParameterMetadata::name);
+    if (named != metadata.end()) {
+        return &*named;
+    }
+    return index < metadata.size() && metadata[index].name.empty() ? &metadata[index] : nullptr;
+}
+
+std::vector<Symbol::Parameter>
+native_template_symbol_parameters(const NativeDeclarationMetadata& metadata) {
+    std::vector<Symbol::Parameter> out;
+    out.reserve(metadata.template_parameters.size());
+    for (const NativeParameterMetadata& parameter : metadata.template_parameters) {
+        std::string label = parameter.name;
+        if (!parameter.default_value.empty()) {
+            label += " = " + parameter.default_value;
+        }
+        out.push_back({.label = std::move(label), .documentation = parameter.doc_comment});
+    }
+    return out;
+}
+
+} // namespace
+
+std::vector<Symbol::Parameter> function_symbol_parameters(const FunctionDecl& function) {
+    std::vector<Symbol::Parameter> out;
+    out.reserve(function.params.size());
+    for (size_t index = 0; index < function.params.size(); ++index) {
+        const ParamDecl& parameter = function.params[index];
+        const NativeParameterMetadata* native =
+            native_parameter_metadata(function.native_metadata.parameters, parameter.name, index);
+        std::string label = parameter.name + ": " + type_ref_text(parameter.type_ref);
+        if (native != nullptr && !native->default_value.empty()) {
+            label += " = " + native->default_value;
+        }
+        out.push_back({
+            .label = std::move(label),
+            .documentation = native != nullptr && !native->doc_comment.empty()
+                                 ? native->doc_comment
+                                 : parameter_documentation(function.doc_comment, parameter.name),
+        });
+    }
+    return out;
+}
+
+std::vector<Symbol::Parameter> constructor_symbol_parameters(const ClassDecl& klass) {
+    const std::string docs = constructor_doc_comment(klass);
+    std::vector<Symbol::Parameter> out;
+    for (const ConstructorParam& parameter : constructor_params(klass)) {
+        out.push_back({.label = parameter.name + ": " + type_ref_text(parameter.type_ref),
+                       .documentation = parameter_documentation(docs, parameter.name)});
+    }
+    return out;
+}
+
+Symbol method_symbol(const FunctionDecl& method, bool native) {
+    return {
+        .name = method.name,
+        .detail = function_detail(method),
+        .location = method.location,
+        .kind = is_constructor_method_name(method.name) ? lsp_symbol_kind::Constructor
+                                                        : lsp_symbol_kind::Method,
+        .native_identity_key = native ? native_identity_key(method.native_identity) : std::nullopt,
+        .doc_comment = method.doc_comment,
+        .native_declaration = native ? method.native_metadata.declaration : std::string{},
+        .deprecated_message = native ? method.native_metadata.deprecated_message : std::string{},
+        .return_documentation = native ? method.native_metadata.return_doc_comment : std::string{},
+        .parameters = function_symbol_parameters(method),
+        .template_parameters = native ? native_template_symbol_parameters(method.native_metadata)
+                                      : std::vector<Symbol::Parameter>{}};
+}
+
+std::vector<Symbol::Parameter>
+native_function_symbol_parameters(const NativeFunctionDecl& function) {
+    const std::vector<TypeRef> types = native_function_param_type_refs(function);
+    std::vector<Symbol::Parameter> out;
+    out.reserve(types.size());
+    for (size_t index = 0; index < types.size(); ++index) {
+        const std::string name =
+            index < function.param_names.size() && !function.param_names[index].empty()
+                ? function.param_names[index]
+                : "arg" + std::to_string(index);
+        const NativeParameterMetadata* native =
+            native_parameter_metadata(function.native_metadata.parameters, name, index);
+        std::string label = name + ": " + type_ref_text(types[index]);
+        if (native != nullptr && !native->default_value.empty()) {
+            label += " = " + native->default_value;
+        }
+        out.push_back({
+            .label = std::move(label),
+            .documentation = native != nullptr && !native->doc_comment.empty()
+                                 ? native->doc_comment
+                                 : parameter_documentation(function.doc_comment, name),
+        });
+    }
+    return out;
+}
 
 bool is_constructor_method_name(const std::string& name) {
     return name == "init";
@@ -74,18 +177,34 @@ std::string constructor_doc_comment(const ClassDecl& klass) {
 
 std::string native_macro_detail(const NativeMacroDecl& macro) {
     if (!macro.function_like) {
-        return "macro " + macro.name;
+        return "object-like macro " + macro.name;
     }
     std::ostringstream out;
-    out << "macro " << macro.name << "(";
+    out << "function-like macro " << macro.name << "(";
     for (int i = 0; i < macro.arity; ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << "arg" << i;
+        out << (static_cast<size_t>(i) < macro.param_names.size() &&
+                        !macro.param_names[static_cast<size_t>(i)].empty()
+                    ? macro.param_names[static_cast<size_t>(i)]
+                    : "arg" + std::to_string(i));
     }
     out << ")";
     return out.str();
+}
+
+std::string native_import_provenance(const ModuleAst& module, std::string_view name) {
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCpp) {
+            continue;
+        }
+        const std::string bound = bound_import_name(import);
+        if (!import.alias.empty() && (name == bound || name.starts_with(bound + "."))) {
+            return "Imported by: `" + render_import_decl(import) + "`";
+        }
+    }
+    return {};
 }
 
 std::string native_function_detail(const NativeFunctionDecl& fn) {
@@ -96,7 +215,14 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
         if (i > 0) {
             out << ", ";
         }
+        if (i < fn.param_names.size() && !fn.param_names[i].empty()) {
+            out << fn.param_names[i] << ": ";
+        }
         out << type_ref_text(params[i]);
+        if (i < fn.native_metadata.parameters.size() &&
+            !fn.native_metadata.parameters[i].default_value.empty()) {
+            out << " = " << fn.native_metadata.parameters[i].default_value;
+        }
     }
     if (fn.variadic) {
         if (!params.empty()) {
@@ -112,10 +238,9 @@ std::optional<std::string> native_function_signature_doc(const NativeFunctionDec
     const TypeRef return_type = native_function_return_type_ref(fn);
     const std::vector<TypeRef> param_types = native_function_param_type_refs(fn);
     const bool has_concrete_return = has_type_ref(return_type) && !type_ref_is_auto(return_type);
-    const bool has_concrete_param =
-        std::ranges::any_of(param_types, [](const TypeRef& param) {
-            return has_type_ref(param) && !type_ref_is_auto(param);
-        });
+    const bool has_concrete_param = std::ranges::any_of(param_types, [](const TypeRef& param) {
+        return has_type_ref(param) && !type_ref_is_auto(param);
+    });
     const bool has_native_signature = has_concrete_return || has_concrete_param;
     if (!has_native_signature) {
         return std::nullopt;
@@ -155,9 +280,8 @@ std::string native_type_detail(const NativeClassDefinitionIndex& class_index,
         return "native type";
     }
     std::string detail = "native type = " + native_type_alias_type_text(type);
-    if (const std::optional<NativeClassDefinition> target =
-            native_alias_target_class_definition(class_index, type)) {
-        detail += " resolves to native class " + target->name;
+    if (native_alias_target_class_definition(class_index, type).has_value()) {
+        detail += " resolves to native class " + native_type_alias_type_text(type);
     }
     return detail;
 }
@@ -216,15 +340,9 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .qualified_name = klass.name + "." + field.name});
         }
         for (const FunctionDecl& method : klass.methods) {
-            out.push_back({.name = method.name,
-                           .detail = function_detail(method),
-                           .location = method.location,
-                           .kind = is_constructor_method_name(method.name)
-                                       ? lsp_symbol_kind::Constructor
-                                       : lsp_symbol_kind::Method,
-                           .native_identity_key = std::nullopt,
-                           .doc_comment = method.doc_comment,
-                           .qualified_name = klass.name + "." + method.name});
+            Symbol symbol = method_symbol(method, false);
+            symbol.qualified_name = klass.name + "." + method.name;
+            out.push_back(std::move(symbol));
         }
     }
     for (const EnumDecl& en : module.enums) {
@@ -266,7 +384,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .location = fn.location,
                        .kind = lsp_symbol_kind::Function,
                        .native_identity_key = std::nullopt,
-                       .doc_comment = fn.doc_comment});
+                       .doc_comment = fn.doc_comment,
+                       .parameters = function_symbol_parameters(fn)});
     }
     if (!include_native) {
         return out;
@@ -281,12 +400,23 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .doc_comment = ns.doc_comment});
     }
     for (const NativeTypeDecl& type : module.native_types) {
+        std::optional<TypeLayout> layout = type.layout;
+        if (!layout) {
+            const std::optional<NativeClassDefinition> target =
+                native_alias_target_class_definition(native_class_index, type);
+            if (target && target->declaration != nullptr) {
+                layout = target->declaration->layout;
+            }
+        }
         out.push_back({.name = type.name,
                        .detail = native_type_detail(native_class_index, type),
                        .location = type.location,
                        .kind = lsp_symbol_kind::Struct,
                        .native_identity_key = native_identity_key(type.identity),
-                       .doc_comment = type.doc_comment});
+                       .doc_comment = type.doc_comment,
+                       .layout_size = layout ? std::optional<size_t>(layout->size) : std::nullopt,
+                       .layout_alignment =
+                           layout ? std::optional<size_t>(layout->alignment) : std::nullopt});
     }
     for (const NativeValueDecl& value : module.native_values) {
         out.push_back({.name = value.name,
@@ -303,24 +433,36 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
              .location = macro.location,
              .kind = macro.function_like ? lsp_symbol_kind::Namespace : lsp_symbol_kind::Constant,
              .native_identity_key = native_identity_key(macro.identity),
-             .doc_comment = macro.doc_comment});
+             .doc_comment = macro.doc_comment,
+             .provenance = native_import_provenance(module, macro.name)});
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
-        out.push_back({.name = fn.name,
-                       .detail = native_function_detail(fn),
-                       .location = fn.location,
-                       .kind = lsp_symbol_kind::Function,
-                       .native_identity_key = native_identity_key(fn.identity),
-                       .doc_comment =
-                           combine_doc_comment(fn.doc_comment, native_function_signature_doc(fn))});
+        out.push_back(
+            {.name = fn.name,
+             .detail = native_function_detail(fn),
+             .location = fn.location,
+             .kind = lsp_symbol_kind::Function,
+             .native_identity_key = native_identity_key(fn.identity),
+             .doc_comment = combine_doc_comment(fn.doc_comment, native_function_signature_doc(fn)),
+             .native_declaration = fn.native_metadata.declaration,
+             .deprecated_message = fn.native_metadata.deprecated_message,
+             .return_documentation = fn.native_metadata.return_doc_comment,
+             .provenance = native_import_provenance(module, fn.name),
+             .parameters = native_function_symbol_parameters(fn),
+             .template_parameters = native_template_symbol_parameters(fn.native_metadata)});
     }
     for (const ClassDecl& klass : module.native_classes) {
-        out.push_back({.name = klass.name,
-                       .detail = "native class " + klass.name,
-                       .location = klass.location,
-                       .kind = lsp_symbol_kind::Class,
-                       .native_identity_key = native_identity_key(klass.identity),
-                       .doc_comment = klass.doc_comment});
+        out.push_back(
+            {.name = klass.name,
+             .detail = "native class " + klass.name,
+             .location = klass.location,
+             .kind = lsp_symbol_kind::Class,
+             .native_identity_key = native_identity_key(klass.identity),
+             .doc_comment = klass.doc_comment,
+             .native_declaration = klass.native_metadata.declaration,
+             .deprecated_message = klass.native_metadata.deprecated_message,
+             .provenance = native_import_provenance(module, klass.name),
+             .template_parameters = native_template_symbol_parameters(klass.native_metadata)});
         for (const FieldDecl& field : klass.fields) {
             out.push_back(
                 {.name = klass.name + "." + field.name,
@@ -349,14 +491,10 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                  .doc_comment = field.doc_comment});
         }
         for (const FunctionDecl& method : klass.methods) {
-            out.push_back({.name = klass.name + "." + method.name,
-                           .detail = function_detail(method),
-                           .location = method.location,
-                           .kind = is_constructor_method_name(method.name)
-                                       ? lsp_symbol_kind::Constructor
-                                       : lsp_symbol_kind::Method,
-                           .native_identity_key = native_identity_key(method.native_identity),
-                           .doc_comment = method.doc_comment});
+            Symbol symbol = method_symbol(method, true);
+            symbol.name = klass.name + "." + method.name;
+            symbol.provenance = native_import_provenance(module, klass.name + "." + method.name);
+            out.push_back(std::move(symbol));
         }
     }
     return out;

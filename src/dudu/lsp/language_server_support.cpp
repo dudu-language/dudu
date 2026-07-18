@@ -34,8 +34,7 @@ std::filesystem::path canonical_overlay_path(const std::filesystem::path& path) 
     return error ? path.lexically_normal() : canonical;
 }
 
-size_t source_revision_for(
-    const std::map<std::filesystem::path, std::string>& source_overrides) {
+size_t source_revision_for(const std::map<std::filesystem::path, std::string>& source_overrides) {
     size_t revision = 14695981039346656037ULL;
     const auto append = [&](std::string_view text) {
         for (const unsigned char byte : text) {
@@ -53,6 +52,10 @@ size_t source_revision_for(
 }
 
 } // namespace
+
+ProjectIndexSnapshot cached_project_index(ProjectIndexOptions options) {
+    return project_index_cache.get_shared(std::move(options));
+}
 
 std::string file_uri_to_path(std::string uri) {
     constexpr std::string_view prefix = "file://";
@@ -119,7 +122,7 @@ ProjectIndexSnapshot project_index_for_document(const Document& doc, bool includ
     ProjectIndexOptions options = project_index_options_for_document(
         doc, include_native_headers, check_semantics, source_overrides);
     try {
-        ProjectIndexSnapshot index = project_index_cache.get_shared(options);
+        ProjectIndexSnapshot index = cached_project_index(options);
         if (!check_semantics) {
             const std::lock_guard lock(project_state_mutex);
             last_good_project_indexes.insert_or_assign(last_good_key, index);
@@ -131,12 +134,12 @@ ProjectIndexSnapshot project_index_for_document(const Document& doc, bool includ
             try {
                 options.recover_syntax = true;
                 options.check_semantics = false;
-                return project_index_cache.get_shared(options);
+                return cached_project_index(options);
             } catch (const std::exception&) {
             }
             try {
                 options.expand_macros = false;
-                return project_index_cache.get_shared(options);
+                return cached_project_index(options);
             } catch (const std::exception&) {
             }
         }

@@ -194,10 +194,12 @@ ClassDecl from_protocol(const p::ClassDecl& value, const std::string& module_pat
                   .constants = {},
                   .static_fields = {},
                   .methods = {},
+                  .enums = {},
                   .origin_module = module_path,
                   .location = range.start,
                   .range = range,
-                  .doc_comment = value.documentation};
+                  .doc_comment = value.documentation,
+                  .native_metadata = {}};
     for (const p::TypeRef& base : value.bases) {
         out.base_class_refs.push_back(
             {.type_ref = from_protocol(base, range.start), .location = range.start});

@@ -299,12 +299,12 @@ static std::vector<Diagnostic> diagnostics_for_document_snapshot_unranged(
             return diagnostics;
         }
         try {
-            return diagnostics_from_index(ProjectIndex::load(options), doc);
+            return diagnostics_from_index(*cached_project_index(options), doc);
         } catch (const std::exception&) {
             const std::exception_ptr original = std::current_exception();
             try {
                 options.recover_syntax = true;
-                return diagnostics_from_index(ProjectIndex::load(options), doc);
+                return diagnostics_from_index(*cached_project_index(options), doc);
             } catch (const std::exception&) {
                 std::rethrow_exception(original);
             }
@@ -335,12 +335,11 @@ std::string diagnostic_json(const Diagnostic& diagnostic) {
     const int line = std::max(0, diagnostic.location.line - 1);
     const int column = std::max(0, diagnostic.location.column - 1);
     std::ostringstream out;
-    const std::string diagnostic_range =
-        diagnostic.range.has_value() ? range_json(*diagnostic.range)
-                                     : range_json(line, column, column + 1);
+    const std::string diagnostic_range = diagnostic.range.has_value()
+                                             ? range_json(*diagnostic.range)
+                                             : range_json(line, column, column + 1);
     out << "{\"range\":" << diagnostic_range << ",\"severity\":" << diagnostic.severity
-        << ",\"source\":\""
-        << json_escape(diagnostic.source) << "\"";
+        << ",\"source\":\"" << json_escape(diagnostic.source) << "\"";
     if (!diagnostic.code.empty()) {
         out << ",\"code\":\"" << json_escape(diagnostic.code) << "\"";
     }

@@ -57,6 +57,18 @@ struct Symbol {
     std::optional<std::string> native_identity_key;
     std::string doc_comment{};
     std::optional<std::string> qualified_name{};
+    std::string native_declaration{};
+    std::string deprecated_message{};
+    std::string return_documentation{};
+    std::string provenance{};
+    std::optional<size_t> layout_size{};
+    std::optional<size_t> layout_alignment{};
+    struct Parameter {
+        std::string label;
+        std::string documentation;
+    };
+    std::vector<Parameter> parameters{};
+    std::vector<Parameter> template_parameters{};
 };
 
 struct ReferenceLocation {

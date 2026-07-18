@@ -99,7 +99,7 @@ void test_lsp_completion_uses_visible_imported_functions() {
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
     const std::string completions = dudu::completion_json(&doc, &params);
     assert(completions.find("\"label\":\"helper\"") != std::string::npos);
-    assert(completions.find("helper(i32) -> i32") != std::string::npos);
+    assert(completions.find("helper(value: i32) -> i32") != std::string::npos);
 }
 
 void test_lsp_completion_includes_imported_ast_docs() {
@@ -442,7 +442,7 @@ void test_lsp_signature_help_uses_visible_imported_functions() {
                                      "    return helper(1, 2)\n"};
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":22}}").parse();
     const std::string help = dudu::signature_help_json(&doc, &params);
-    assert(help.find("helper(i32, i32) -> i32") != std::string::npos);
+    assert(help.find("helper(value: i32, amount: i32) -> i32") != std::string::npos);
     assert(help.find("Combines two values for signature docs.") != std::string::npos);
     assert(help.find("\"activeParameter\":1") != std::string::npos);
 }

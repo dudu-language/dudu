@@ -65,8 +65,7 @@ class LanguageServer {
     void did_change_watched_files(const Json* params);
     void did_change_workspace_folders(const Json* params);
     void publish_syntax_diagnostics(const std::string& uri);
-    void publish_diagnostics(const std::string& uri,
-                             const std::vector<Diagnostic>& diagnostics,
+    void publish_diagnostics(const std::string& uri, const std::vector<Diagnostic>& diagnostics,
                              std::optional<int> version);
     void queue_full_diagnostics(const std::string& uri);
     void queue_full_diagnostics(const std::set<std::string>& uris);
@@ -88,6 +87,7 @@ class LanguageServer {
     std::string inlay_hint_result(const Json* params) const;
     std::string completion_resolve_result(const Json* params) const;
     std::string signature_help_result(const Json* params) const;
+    std::string execute_command_result(const Json* params) const;
     const Document* document_from_params(const Json* params) const;
 
     void invalidate_workspace_cache(const std::string& uri);

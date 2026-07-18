@@ -12,7 +12,7 @@ assert native_type_definition["result"]["range"]["start"]["line"] == 3
 
 native_type_hover = next(item for item in responses if item.get("id") == 65)
 assert "native type = dudu_native.Widget" in native_type_hover["result"]["contents"]["value"]
-assert "resolves to `native class dudu_native.Widget`" in native_type_hover["result"]["contents"]["value"]
+assert "resolves to native class dudu_native.Widget" in native_type_hover["result"]["contents"]["value"]
 
 native_type_references = next(item for item in responses if item.get("id") == 67)
 native_type_reference_ranges = {

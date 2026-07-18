@@ -14,6 +14,7 @@ struct NativeClassDefinition {
     std::string name;
     SourceLocation location;
     std::string doc_comment;
+    const ClassDecl* declaration = nullptr;
 };
 
 struct NativeClassDefinitionIndex {

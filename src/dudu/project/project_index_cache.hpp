@@ -3,10 +3,12 @@
 #include "dudu/project/project_index.hpp"
 
 #include <compare>
+#include <condition_variable>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 
 namespace dudu {
@@ -52,8 +54,11 @@ class ProjectIndexCache {
     static CacheKey key_for_options(const ProjectIndexOptions& options);
 
     std::map<CacheKey, CacheEntry> entries_;
+    std::set<CacheKey> loading_;
     ProjectIndexCacheStats stats_;
     mutable std::mutex mutex_;
+    std::condition_variable ready_;
+    size_t generation_ = 0;
 };
 
 } // namespace dudu

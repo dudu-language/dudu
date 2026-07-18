@@ -16,6 +16,11 @@ std::map<std::string, TypeRef> cpp_function_return_types(const ModuleAst& module
 
 bool cpp_function_visible_in_header(const FunctionDecl& fn, const CppEmitOptions& options = {});
 
+void emit_cpp_function_body(std::ostringstream& out, const FunctionDecl& fn,
+                            const std::vector<std::string>& aliases,
+                            const std::map<std::string, TypeRef>& function_returns,
+                            const Symbols& symbols, const CppEmitOptions& options = {});
+
 void emit_cpp_function_declarations(std::ostringstream& out, const ModuleAst& module,
                                     const std::vector<std::string>& aliases, bool header_only,
                                     bool test_source, const CppEmitOptions& options);

@@ -313,6 +313,21 @@ struct TypeLayout {
     size_t alignment = 1;
 };
 
+struct NativeParameterMetadata {
+    std::string name;
+    std::string default_value;
+    std::string doc_comment;
+};
+
+struct NativeDeclarationMetadata {
+    std::string declaration;
+    std::string summary_doc_comment;
+    std::string return_doc_comment;
+    std::string deprecated_message;
+    std::vector<NativeParameterMetadata> parameters;
+    std::vector<NativeParameterMetadata> template_parameters;
+};
+
 struct NativeTypeDecl {
     std::string name;
     std::string native_spelling;
@@ -325,6 +340,7 @@ struct NativeTypeDecl {
     std::vector<std::string> generic_params{};
     std::optional<size_t> generic_min_args{};
     std::vector<TypeRef> generic_default_args{};
+    NativeDeclarationMetadata native_metadata{};
 };
 
 struct NativeValueDecl {
@@ -335,6 +351,7 @@ struct NativeValueDecl {
     NativeSymbolId identity{};
     SourceLocation location;
     std::string doc_comment{};
+    NativeDeclarationMetadata native_metadata{};
 };
 
 struct NativeFunctionDecl {
@@ -353,12 +370,14 @@ struct NativeFunctionDecl {
     NativeSymbolId identity{};
     SourceLocation location;
     std::string doc_comment{};
+    NativeDeclarationMetadata native_metadata{};
 };
 
 struct NativeMacroDecl {
     std::string name;
     int arity = -1;
     bool function_like = false;
+    std::vector<std::string> param_names{};
     NativeSymbolId identity{};
     SourceLocation location;
     std::string doc_comment{};
@@ -429,6 +448,7 @@ struct FunctionDecl {
     SourceLocation location;
     SourceRange range;
     std::string doc_comment{};
+    NativeDeclarationMetadata native_metadata{};
 };
 
 struct ConstDecl {
@@ -468,10 +488,12 @@ struct ClassDecl {
     std::vector<ConstDecl> constants;
     std::vector<ConstDecl> static_fields;
     std::vector<FunctionDecl> methods;
+    std::vector<EnumDecl> enums;
     std::string origin_module;
     SourceLocation location;
     SourceRange range;
     std::string doc_comment{};
+    NativeDeclarationMetadata native_metadata{};
 };
 
 struct StaticAssertDecl {

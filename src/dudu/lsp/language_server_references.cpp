@@ -61,6 +61,7 @@ bool document_has_structured_references(const Document& doc, const std::string& 
 }
 
 bool reference_has_native_identity(const ModuleAst& module, const ReferenceLocation& location,
+                                   const std::vector<Symbol>& symbols,
                                    std::string_view expected_identity) {
     if (location.source_range.start.line <= 0 || location.source_range.start.column <= 0 ||
         location.source_range.end.column <= location.source_range.start.column) {
@@ -71,12 +72,22 @@ bool reference_has_native_identity(const ModuleAst& module, const ReferenceLocat
         .character = location.source_range.end.column - 2,
     };
     const AstSelection selection = ast_selection_at(module, position);
-    const std::vector<Symbol> symbols = symbols_for_module(module, true);
     const std::string query =
         selection.symbol_path.value_or(selection.symbol.value_or(std::string{}));
     const std::optional<std::string> identity = native_identity_for_selection(
         selection, &module, symbols, query, location.source_range.start);
     return identity.has_value() && *identity == expected_identity;
+}
+
+bool reference_contains_position(const ReferenceLocation& location, const Document& doc,
+                                 const LspPosition position) {
+    if (location.uri != doc.uri || location.source_range.start.line != position.line + 1 ||
+        location.source_range.start.column <= 0 || location.source_range.end.column <= 0) {
+        return false;
+    }
+    const int column = position.character + 1;
+    return column >= location.source_range.start.column &&
+           column < location.source_range.end.column;
 }
 
 ReferenceScope reference_scope_at(const Document& doc, const Json* params, const std::string& name,
@@ -194,6 +205,7 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                        : std::nullopt;
     const bool filter_native_call_occurrences =
         native_identity.has_value() && selection.call_callee && selection.call_expr.has_value();
+    const LspPosition selected_position = lsp_position(params);
     std::vector<ReferenceLocation> out;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
@@ -258,6 +270,7 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
             candidate_queries.assign(identity_queries.begin(), identity_queries.end());
         }
         std::vector<ReferenceLocation> locations;
+        std::optional<std::vector<Symbol>> candidate_symbols_with_native;
         if (scope == ReferenceScope::CurrentDocument && candidate.uri == doc.uri &&
             current_unit != nullptr &&
             has_type_ref(local_type_ref_before_cursor(*current_unit, query, params))) {
@@ -271,7 +284,15 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
                     references_in(*candidate_unit, candidate, identity_query);
                 if (filter_native_call_occurrences) {
                     std::erase_if(found, [&](const ReferenceLocation& location) {
+                        if (reference_contains_position(location, doc, selected_position)) {
+                            return false;
+                        }
+                        if (!candidate_symbols_with_native) {
+                            candidate_symbols_with_native =
+                                symbols_for_module(*candidate_unit, true);
+                        }
                         return !reference_has_native_identity(*candidate_unit, location,
+                                                              *candidate_symbols_with_native,
                                                               *native_identity);
                     });
                 }

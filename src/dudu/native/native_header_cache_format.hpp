@@ -11,6 +11,9 @@
 
 namespace dudu {
 
+inline constexpr std::string_view kNativeHeaderScanCacheVersion =
+    "dudu-native-scan-v75";
+
 std::string native_cache_join_strings(const std::vector<std::string>& values);
 std::vector<std::string> native_cache_split_strings(const std::string& text);
 std::string cached_type_text(const TypeRef& type);
@@ -20,6 +23,6 @@ std::vector<TypeRef> cached_type_refs(const std::string& text, const SourceLocat
 void write_record(std::ostream& out, std::string_view tag,
                   const std::vector<std::string>& fields);
 std::optional<std::pair<std::string, std::vector<std::string>>>
-parse_record(const std::string& line);
+read_record(std::istream& in);
 
 } // namespace dudu

@@ -63,14 +63,15 @@ void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std:
                              const std::string& lowered_query, const std::vector<Symbol>& symbols,
                              const std::string& default_uri) {
     for (const Symbol& symbol : symbols) {
+        const std::string& display_name = symbol.qualified_name.value_or(symbol.name);
         if (!lowered_query.empty() &&
-            lower_copy(symbol.name).find(lowered_query) == std::string::npos) {
+            lower_copy(display_name).find(lowered_query) == std::string::npos) {
             continue;
         }
         const std::string uri = symbol.location.file.empty()
                                     ? default_uri
                                     : file_uri(std::filesystem::path(symbol.location.file));
-        const std::string key = symbol.name + "\n" + uri + "\n" + range_json(symbol.location);
+        const std::string key = display_name + "\n" + uri + "\n" + range_json(symbol.location);
         if (!seen.insert(key).second) {
             continue;
         }
@@ -78,7 +79,9 @@ void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std:
             out << ",";
         }
         first = false;
-        out << symbol_json(symbol, default_uri);
+        Symbol displayed = symbol;
+        displayed.name = display_name;
+        out << symbol_json(displayed, default_uri);
     }
 }
 
@@ -116,9 +119,9 @@ std::string workspace_symbols_json(const std::string& query, const ProjectIndex&
         append_matching_symbols(out, first, seen, lowered_query, symbols_for_module(*unit, false),
                                 seed_doc.uri);
     }
-    const ModuleAst& native_unit = index.visible_unit_for_path(seed_doc.path);
-    append_matching_symbols(out, first, seen, lowered_query, symbols_for_module(native_unit, true),
-                            seed_doc.uri);
+    const ModuleAst& current_unit = index.visible_unit_for_path(seed_doc.path);
+    append_matching_symbols(out, first, seen, lowered_query,
+                            symbols_for_module(current_unit, false), seed_doc.uri);
     out << "]";
     return out.str();
 }
@@ -133,7 +136,7 @@ std::string workspace_symbols_json(const std::string& query,
     for (const auto& [uri, doc] : open_documents) {
         (void)uri;
         try {
-            const ProjectIndexSnapshot index = project_index_for_document(doc, true);
+            const ProjectIndexSnapshot index = project_index_for_document(doc, false);
             for (const ProjectModuleSummary& module : index->modules()) {
                 const ModuleAst* unit = index->unit_for_module(module.module_path);
                 if (unit == nullptr) {
@@ -145,9 +148,9 @@ std::string workspace_symbols_json(const std::string& query,
                 append_matching_symbols(out, first, seen, lowered_query,
                                         symbols_for_module(*unit, false), doc.uri);
             }
-            const ModuleAst& native_unit = index->visible_unit_for_path(doc.path);
+            const ModuleAst& current_unit = index->visible_unit_for_path(doc.path);
             append_matching_symbols(out, first, seen, lowered_query,
-                                    symbols_for_module(native_unit, true), doc.uri);
+                                    symbols_for_module(current_unit, false), doc.uri);
         } catch (const std::exception&) {
         }
     }

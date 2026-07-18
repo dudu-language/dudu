@@ -52,15 +52,7 @@ std::optional<Symbol> member_symbol_for_class(const ClassDecl& klass, const std:
     }
     for (const FunctionDecl& method : klass.methods) {
         if (method.name == member) {
-            return Symbol{.name = method.name,
-                          .detail = function_detail(method),
-                          .location = method.location,
-                          .kind = is_constructor_method_name(method.name)
-                                      ? lsp_symbol_kind::Constructor
-                                      : lsp_symbol_kind::Method,
-                          .native_identity_key =
-                              native ? native_identity_key(method.native_identity) : std::nullopt,
-                          .doc_comment = method.doc_comment};
+            return method_symbol(method, native);
         }
     }
     return std::nullopt;
@@ -101,15 +93,7 @@ std::vector<Symbol> member_symbols_for_class(const ClassDecl& klass, bool native
                    .doc_comment = field.doc_comment});
     }
     for (const FunctionDecl& method : klass.methods) {
-        out.push_back(
-            Symbol{.name = method.name,
-                   .detail = function_detail(method),
-                   .location = method.location,
-                   .kind = is_constructor_method_name(method.name) ? lsp_symbol_kind::Constructor
-                                                                   : lsp_symbol_kind::Method,
-                   .native_identity_key =
-                       native ? native_identity_key(method.native_identity) : std::nullopt,
-                   .doc_comment = method.doc_comment});
+        out.push_back(method_symbol(method, native));
     }
     return out;
 }

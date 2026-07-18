@@ -1,5 +1,6 @@
 #include "dudu/native/native_header_usr.hpp"
 
+#include "dudu/native/native_header_cursor_metadata.hpp"
 #include "dudu/native/native_header_scan_command.hpp"
 
 #include <charconv>
@@ -38,8 +39,7 @@ std::string semantic_identity_key(NativeCursorKind kind, std::string_view path) 
     return "semantic\n" + std::to_string(static_cast<int>(kind)) + "\n" + std::string(path);
 }
 
-std::string specialization_arguments_key(std::string_view name,
-                                         const SourceLocation& location) {
+std::string specialization_arguments_key(std::string_view name, const SourceLocation& location) {
     return "specialization\n" + normalized_source_path(location.file) + "\n" +
            std::to_string(location.line) + "\n" + std::to_string(location.column) + "\n" +
            std::string(name);
@@ -62,10 +62,8 @@ std::vector<std::string> decode_strings(std::string_view text) {
             return {};
         }
         size_t size = 0;
-        const auto [end, error] =
-            std::from_chars(text.data() + cursor, text.data() + colon, size);
-        if (error != std::errc{} || end != text.data() + colon ||
-            size > text.size() - colon - 1) {
+        const auto [end, error] = std::from_chars(text.data() + cursor, text.data() + colon, size);
+        if (error != std::errc{} || end != text.data() + colon || size > text.size() - colon - 1) {
             return {};
         }
         cursor = colon + 1;
@@ -73,6 +71,57 @@ std::vector<std::string> decode_strings(std::string_view text) {
         cursor += size;
     }
     return out;
+}
+
+std::string encode_parameters(const std::vector<NativeParameterMetadata>& parameters) {
+    std::vector<std::string> fields;
+    fields.reserve(parameters.size() * 3);
+    for (const NativeParameterMetadata& parameter : parameters) {
+        fields.push_back(parameter.name);
+        fields.push_back(parameter.default_value);
+        fields.push_back(parameter.doc_comment);
+    }
+    return encode_strings(fields);
+}
+
+std::vector<NativeParameterMetadata> decode_parameters(std::string_view text) {
+    const std::vector<std::string> fields = decode_strings(text);
+    if (fields.size() % 3 != 0) {
+        return {};
+    }
+    std::vector<NativeParameterMetadata> out;
+    out.reserve(fields.size() / 3);
+    for (size_t index = 0; index < fields.size(); index += 3) {
+        out.push_back({.name = fields[index],
+                       .default_value = fields[index + 1],
+                       .doc_comment = fields[index + 2]});
+    }
+    return out;
+}
+
+std::string encode_metadata(const NativeDeclarationMetadata& metadata) {
+    return encode_strings({metadata.declaration, metadata.summary_doc_comment,
+                           metadata.return_doc_comment, metadata.deprecated_message,
+                           encode_parameters(metadata.parameters),
+                           encode_parameters(metadata.template_parameters)});
+}
+
+std::optional<NativeDeclarationMetadata> decode_metadata(std::string_view text) {
+    if (text.empty()) {
+        return std::nullopt;
+    }
+    const std::vector<std::string> fields = decode_strings(text);
+    if (fields.size() != 6) {
+        return std::nullopt;
+    }
+    return NativeDeclarationMetadata{
+        .declaration = fields[0],
+        .summary_doc_comment = fields[1],
+        .return_doc_comment = fields[2],
+        .deprecated_message = fields[3],
+        .parameters = decode_parameters(fields[4]),
+        .template_parameters = decode_parameters(fields[5]),
+    };
 }
 
 std::string cursor_semantic_path(CXCursor cursor) {
@@ -168,8 +217,7 @@ SourceLocation cursor_location(CXCursor cursor) {
 }
 
 bool word_token(CXTokenKind kind) {
-    return kind == CXToken_Identifier || kind == CXToken_Keyword ||
-           kind == CXToken_Literal;
+    return kind == CXToken_Identifier || kind == CXToken_Keyword || kind == CXToken_Literal;
 }
 
 std::string join_tokens(const std::vector<std::pair<std::string, CXTokenKind>>& tokens) {
@@ -261,8 +309,8 @@ CXChildVisitResult collect_cursor(CXCursor cursor, CXCursor, CXClientData data) 
         if (!name.empty() && !usr.empty() && !location.file.empty()) {
             index.insert(*kind, name, location, usr, cursor_type_layout(cursor, *kind),
                          cursor_semantic_path(cursor));
-            if (clang_getCursorKind(cursor) ==
-                CXCursor_ClassTemplatePartialSpecialization) {
+            index.insert_metadata(*kind, name, location, native_cursor_metadata(cursor));
+            if (clang_getCursorKind(cursor) == CXCursor_ClassTemplatePartialSpecialization) {
                 const std::vector<std::string> arguments =
                     specialization_arguments(context.unit, cursor, name);
                 index.insert_specialization_arguments(name, location, arguments);
@@ -320,6 +368,20 @@ NativeCursorIdentityIndex::find_semantic_layout(NativeCursorKind kind,
     return found == layouts_.end() ? std::nullopt : std::optional<TypeLayout>{found->second};
 }
 
+void NativeCursorIdentityIndex::insert_metadata(NativeCursorKind kind, std::string name,
+                                                SourceLocation location,
+                                                NativeDeclarationMetadata metadata) {
+    metadata_.insert_or_assign(identity_key(kind, name, location), std::move(metadata));
+}
+
+std::optional<NativeDeclarationMetadata>
+NativeCursorIdentityIndex::find_metadata(NativeCursorKind kind, std::string_view name,
+                                         const SourceLocation& location) const {
+    const auto found = metadata_.find(identity_key(kind, name, location));
+    return found == metadata_.end() ? std::nullopt
+                                    : std::optional<NativeDeclarationMetadata>{found->second};
+}
+
 void NativeCursorIdentityIndex::insert_specialization_arguments(
     std::string name, SourceLocation location, std::vector<std::string> arguments) {
     if (arguments.empty()) {
@@ -329,11 +391,11 @@ void NativeCursorIdentityIndex::insert_specialization_arguments(
                                  encode_strings(arguments));
 }
 
-std::vector<std::string> NativeCursorIdentityIndex::find_specialization_arguments(
-    std::string_view name, const SourceLocation& location) const {
+std::vector<std::string>
+NativeCursorIdentityIndex::find_specialization_arguments(std::string_view name,
+                                                         const SourceLocation& location) const {
     const auto found = identities_.find(specialization_arguments_key(name, location));
-    return found == identities_.end() ? std::vector<std::string>{}
-                                      : decode_strings(found->second);
+    return found == identities_.end() ? std::vector<std::string>{} : decode_strings(found->second);
 }
 
 bool NativeCursorIdentityIndex::empty() const {
@@ -348,9 +410,12 @@ std::string NativeCursorIdentityIndex::serialize() const {
             layout == layouts_.end() ? "" : std::to_string(layout->second.size);
         const std::string alignment =
             layout == layouts_.end() ? "" : std::to_string(layout->second.alignment);
+        const auto metadata = metadata_.find(key);
+        const std::string encoded_metadata =
+            metadata == metadata_.end() ? "" : encode_metadata(metadata->second);
         out += std::to_string(key.size()) + ":" + key + std::to_string(usr.size()) + ":" + usr +
                std::to_string(size.size()) + ":" + size + std::to_string(alignment.size()) + ":" +
-               alignment + "\n";
+               alignment + std::to_string(encoded_metadata.size()) + ":" + encoded_metadata + "\n";
     }
     return out;
 }
@@ -378,7 +443,9 @@ NativeCursorIdentityIndex NativeCursorIdentityIndex::deserialize(std::string_vie
         std::string usr;
         std::string size;
         std::string alignment;
-        if (!read_field(key) || !read_field(usr) || !read_field(size) || !read_field(alignment)) {
+        std::string metadata;
+        if (!read_field(key) || !read_field(usr) || !read_field(size) || !read_field(alignment) ||
+            !read_field(metadata)) {
             return {};
         }
         out.identities_.insert_or_assign(key, std::move(usr));
@@ -386,6 +453,9 @@ NativeCursorIdentityIndex NativeCursorIdentityIndex::deserialize(std::string_vie
             out.layouts_.insert_or_assign(
                 key, TypeLayout{.size = static_cast<size_t>(std::stoull(size)),
                                 .alignment = static_cast<size_t>(std::stoull(alignment))});
+        }
+        if (const std::optional<NativeDeclarationMetadata> decoded = decode_metadata(metadata)) {
+            out.metadata_.insert_or_assign(key, *decoded);
         }
         if (cursor < text.size() && text[cursor] == '\n') {
             ++cursor;

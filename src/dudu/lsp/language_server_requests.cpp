@@ -1,12 +1,12 @@
-#include "dudu/lsp/language_server_runtime.hpp"
-
 #include "dudu/format/format.hpp"
 #include "dudu/lsp/language_server_code_actions.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_definition.hpp"
+#include "dudu/lsp/language_server_generated_cpp.hpp"
 #include "dudu/lsp/language_server_hover.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_references.hpp"
+#include "dudu/lsp/language_server_runtime.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
 #include "dudu/lsp/language_server_signature_help.hpp"
 #include "dudu/lsp/language_server_support.hpp"
@@ -83,14 +83,12 @@ std::string LanguageServer::workspace_symbol_result(const Json* params) const {
 
 std::string LanguageServer::definition_result(const Json* params) const {
     const Document* doc = document_from_params(params);
-    return doc == nullptr ? "null"
-                          : definition_json(*doc, params, cached_workspace_documents());
+    return doc == nullptr ? "null" : definition_json(*doc, params, cached_workspace_documents());
 }
 
 std::string LanguageServer::references_result(const Json* params) const {
     const Document* doc = document_from_params(params);
-    return doc == nullptr ? "[]"
-                          : references_json(*doc, params, cached_workspace_documents());
+    return doc == nullptr ? "[]" : references_json(*doc, params, cached_workspace_documents());
 }
 
 std::string LanguageServer::rename_result(const Json* params) const {
@@ -105,8 +103,7 @@ std::string LanguageServer::prepare_rename_result(const Json* params) const {
 
 std::string LanguageServer::code_action_result(const Json* params) const {
     const Document* doc = document_from_params(params);
-    return doc == nullptr ? "[]"
-                          : code_actions_json(*doc, params, cached_workspace_documents());
+    return doc == nullptr ? "[]" : code_actions_json(*doc, params, cached_workspace_documents());
 }
 
 std::string LanguageServer::hover_result(const Json* params) const {
@@ -129,6 +126,29 @@ std::string LanguageServer::completion_resolve_result(const Json* params) const 
 
 std::string LanguageServer::signature_help_result(const Json* params) const {
     return signature_help_json(document_from_params(params), params);
+}
+
+std::string LanguageServer::execute_command_result(const Json* params) const {
+    if (string_value(params == nullptr ? nullptr : params->get("command")) !=
+        "dudu.showGeneratedCpp") {
+        throw std::runtime_error("unknown Dudu command");
+    }
+    const JsonArray* arguments = params == nullptr || params->get("arguments") == nullptr
+                                     ? nullptr
+                                     : params->get("arguments")->array();
+    if (arguments == nullptr || arguments->empty()) {
+        throw std::runtime_error("dudu.showGeneratedCpp requires a document selection");
+    }
+    const Json& argument = arguments->front();
+    const Json* text_document = argument.get("textDocument");
+    const std::string uri =
+        string_value(text_document == nullptr ? nullptr : text_document->get("uri"));
+    const auto found = documents_.find(uri);
+    if (found == documents_.end()) {
+        throw std::runtime_error("selected Dudu document is not open");
+    }
+    const ProjectIndexSnapshot index = project_index_for_document(found->second, true, true, false);
+    return generated_cpp_json(found->second, &argument, *index);
 }
 
 const Document* LanguageServer::document_from_params(const Json* params) const {
