@@ -8,7 +8,7 @@ namespace dudu {
 namespace {
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 } // namespace

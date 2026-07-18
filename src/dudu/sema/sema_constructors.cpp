@@ -14,7 +14,7 @@ namespace dudu {
 namespace {
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorParam& expected,
@@ -30,9 +30,8 @@ bool constructor_arg_assignable(const FunctionScope& scope, const ConstructorPar
 
 bool class_uses_aggregate_initialization(const ClassDecl& klass) {
     return !klass.native_declaration &&
-           std::ranges::none_of(klass.methods, [](const FunctionDecl& method) {
-               return method.name == "init";
-           });
+           std::ranges::none_of(klass.methods,
+                                [](const FunctionDecl& method) { return method.name == "init"; });
 }
 
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
@@ -164,8 +163,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
         const TypeRef got_ref = infer_expr_type_ast(scope, value, location);
         if (!constructor_arg_assignable(scope, *param, value, got_ref)) {
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
-                                type_ref_text(param->type_ref) + ", got " +
-                                type_ref_text(got_ref));
+                                type_ref_text(param->type_ref) + ", got " + type_ref_text(got_ref));
         }
     }
 }

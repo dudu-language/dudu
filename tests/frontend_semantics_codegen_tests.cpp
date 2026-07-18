@@ -64,19 +64,18 @@ void test_reference_list_indexing() {
 }
 
 void test_std_map_index_assignment() {
-    const dudu::ModuleAst ok =
-        dudu::parse_source("from cpp import map\n"
-                           "from cpp import string\n"
-                           "from cpp import unordered_map\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    scores: std.map[std.string, i32]\n"
-                           "    lookup: std.unordered_map[std.string, i32]\n"
-                           "    key: std.string\n"
-                           "    scores[key] = 20\n"
-                           "    lookup[key] = scores[key] + 2\n"
-                           "    return lookup[key]\n",
-                           "std_map_index_assignment.dd");
+    const dudu::ModuleAst ok = dudu::parse_source("from cpp import map\n"
+                                                  "from cpp import string\n"
+                                                  "from cpp import unordered_map\n"
+                                                  "\n"
+                                                  "def main() -> i32:\n"
+                                                  "    scores: std.map[std.string, i32]\n"
+                                                  "    lookup: std.unordered_map[std.string, i32]\n"
+                                                  "    key: std.string\n"
+                                                  "    scores[key] = 20\n"
+                                                  "    lookup[key] = scores[key] + 2\n"
+                                                  "    return lookup[key]\n",
+                                                  "std_map_index_assignment.dd");
     dudu::analyze_module(ok, {.check_bodies = true});
 
     bool rejected = false;
@@ -93,8 +92,7 @@ void test_std_map_index_assignment() {
                                "bad_std_map_index_assignment.dd");
         dudu::analyze_module(bad, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
-        rejected = std::string(error.what()).find("cannot assign bool to i32") !=
-                   std::string::npos;
+        rejected = std::string(error.what()).find("cannot assign bool to i32") != std::string::npos;
     }
     assert(rejected);
 }
@@ -121,30 +119,31 @@ void test_negative_numeric_literals_contextualize_as_f32_args() {
 }
 
 void test_receiver_reference_semantics() {
-    const dudu::ModuleAst ok = dudu::parse_source("class Vec3:\n"
-                                                  "    x: f32\n"
-                                                  "\n"
-                                                  "    def mutable_value(self) -> Self:\n"
-                                                  "        return self\n"
-                                                  "\n"
-                                                  "    def mutable_ref(self) -> &Self:\n"
-                                                  "        return self\n"
-                                                  "\n"
-                                                  "    def mutable_const_ref(self) -> &const[Self]:\n"
-                                                  "        return self\n"
-                                                  "\n"
-                                                  "    def const_value(self: &const[Self]) -> Self:\n"
-                                                  "        return self\n"
-                                                  "\n"
-                                                  "    def const_ref(self: &const[Self]) -> &const[Self]:\n"
-                                                  "        return self\n"
-                                                  "\n"
-                                                  "    def length(self: &const[Self]) -> f32:\n"
-                                                  "        return self.x\n"
-                                                  "\n"
-                                                  "    def normalize(self) -> &Self:\n"
-                                                  "        return self\n",
-                                                  "receiver_reference_semantics.dd");
+    const dudu::ModuleAst ok =
+        dudu::parse_source("class Vec3:\n"
+                           "    x: f32\n"
+                           "\n"
+                           "    def mutable_value(self) -> Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def mutable_ref(self) -> &Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def mutable_const_ref(self) -> &const[Self]:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def const_value(self: &const[Self]) -> Self:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def const_ref(self: &const[Self]) -> &const[Self]:\n"
+                           "        return self\n"
+                           "\n"
+                           "    def length(self: &const[Self]) -> f32:\n"
+                           "        return self.x\n"
+                           "\n"
+                           "    def normalize(self) -> &Self:\n"
+                           "        return self\n",
+                           "receiver_reference_semantics.dd");
     dudu::analyze_module(ok, {.check_bodies = true});
 
     bool rejected_value_receiver = false;
@@ -165,13 +164,12 @@ void test_receiver_reference_semantics() {
 
     bool rejected_const_to_mut_ref = false;
     try {
-        const dudu::ModuleAst bad =
-            dudu::parse_source("class Vec3:\n"
-                               "    x: f32\n"
-                               "\n"
-                               "    def bad(self: &const[Self]) -> &Self:\n"
-                               "        return self\n",
-                               "bad_const_receiver_mut_ref_return.dd");
+        const dudu::ModuleAst bad = dudu::parse_source("class Vec3:\n"
+                                                       "    x: f32\n"
+                                                       "\n"
+                                                       "    def bad(self: &const[Self]) -> &Self:\n"
+                                                       "        return self\n",
+                                                       "bad_const_receiver_mut_ref_return.dd");
         dudu::analyze_module(bad, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
         rejected_const_to_mut_ref =
@@ -183,13 +181,12 @@ void test_receiver_reference_semantics() {
 
     bool rejected_const_mutation = false;
     try {
-        const dudu::ModuleAst bad =
-            dudu::parse_source("class Vec3:\n"
-                               "    x: f32\n"
-                               "\n"
-                               "    def bad(self: &const[Self]):\n"
-                               "        self.x = 1.0\n",
-                               "bad_const_receiver_mutation.dd");
+        const dudu::ModuleAst bad = dudu::parse_source("class Vec3:\n"
+                                                       "    x: f32\n"
+                                                       "\n"
+                                                       "    def bad(self: &const[Self]):\n"
+                                                       "        self.x = 1.0\n",
+                                                       "bad_const_receiver_mutation.dd");
         dudu::analyze_module(bad, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
         rejected_const_mutation =
@@ -289,6 +286,32 @@ void test_duplicate_base_check_resolves_type_aliases() {
     } catch (const dudu::CompileError& error) {
         rejected =
             std::string(error.what()).find("duplicate base class: BaseAlias") != std::string::npos;
+    }
+    assert(rejected);
+}
+
+void test_free_function_overload_signatures_are_unique() {
+    const dudu::ModuleAst overloads = dudu::parse_source("def select(value: i32) -> i32:\n"
+                                                         "    return value\n"
+                                                         "\n"
+                                                         "def select(value: f32) -> f32:\n"
+                                                         "    return value\n",
+                                                         "free_function_overloads.dd");
+    dudu::analyze_module(overloads, {.check_bodies = true});
+
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst duplicate = dudu::parse_source("def select(value: i32) -> i32:\n"
+                                                             "    return value\n"
+                                                             "\n"
+                                                             "def select(value: i32) -> i32:\n"
+                                                             "    return value + 1\n",
+                                                             "duplicate_free_function_overload.dd");
+        dudu::analyze_module(duplicate, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected = error.code() == "dudu.sema.error" &&
+                   std::string(error.what()).find("duplicate function overload: select") !=
+                       std::string::npos;
     }
     assert(rejected);
 }
@@ -414,6 +437,7 @@ int main() {
         test_pointer_arithmetic_uses_type_ast();
         test_base_pointer_assignment_uses_type_ast();
         test_duplicate_base_check_resolves_type_aliases();
+        test_free_function_overload_signatures_are_unique();
         test_inherited_method_identity_resolves_type_aliases();
         test_bare_void_return();
         test_typed_for_emission();

@@ -31,6 +31,25 @@ bool parse_function_type_or_alias_impl(const Symbols& symbols, const TypeRef& ty
 
 } // namespace
 
+FunctionSignature function_signature_from_decl(const FunctionDecl& fn) {
+    FunctionSignature signature;
+    std::vector<TypeRef> params;
+    params.reserve(fn.params.size());
+    for (const ParamDecl& param : fn.params) {
+        params.push_back(param.type_ref);
+    }
+    set_signature_param_types(signature, std::move(params));
+    set_signature_return_type(signature, function_return_type_ref(fn));
+    for (size_t i = 0; i < fn.params.size(); ++i) {
+        if (fn.params[i].variadic) {
+            signature.variadic = true;
+            signature.variadic_param_index = static_cast<int>(i);
+            break;
+        }
+    }
+    return signature;
+}
+
 TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location) {
     TypeRef out;
     out.kind = TypeKind::Function;

@@ -123,6 +123,8 @@ class LanguageServer {
                 did_change(params);
             } else if (method == "textDocument/didSave") {
                 did_save(params);
+            } else if (method == "textDocument/didClose") {
+                did_close(params);
             } else if (method == "textDocument/formatting") {
                 if (id != nullptr) {
                     transport_.respond(*id, formatting_result(params));
@@ -236,10 +238,9 @@ class LanguageServer {
             }
         };
         if (params != nullptr) {
-            if (const JsonArray* folders =
-                    params->get("workspaceFolders") == nullptr
-                        ? nullptr
-                        : params->get("workspaceFolders")->array()) {
+            if (const JsonArray* folders = params->get("workspaceFolders") == nullptr
+                                               ? nullptr
+                                               : params->get("workspaceFolders")->array()) {
                 for (const Json& folder : *folders) {
                     add_workspace_uri(folder.get("uri"));
                 }
@@ -275,7 +276,8 @@ class LanguageServer {
         const std::string uri = string_value(text_document->get("uri"));
         documents_[uri] = {.uri = uri,
                            .path = file_uri_to_path(uri),
-                           .text = string_value(text_document->get("text"))};
+                           .text = string_value(text_document->get("text")),
+                           .version = optional_int_value(text_document->get("version"))};
         invalidate_workspace_cache(uri);
         publish_syntax_diagnostics(uri);
         queue_full_diagnostics(uri);
@@ -289,13 +291,40 @@ class LanguageServer {
             return;
         }
         const std::string uri = string_value(text_document->get("uri"));
-        Document& doc = documents_[uri];
-        doc.uri = uri;
-        doc.path = file_uri_to_path(uri);
+        const auto found = documents_.find(uri);
+        if (found == documents_.end()) {
+            return;
+        }
+        Document& doc = found->second;
+        const int version = optional_int_value(text_document->get("version"), doc.version + 1);
+        if (version <= doc.version) {
+            return;
+        }
         apply_lsp_content_changes(doc.text, *array);
+        doc.version = version;
         invalidate_workspace_cache(uri);
         publish_syntax_diagnostics(uri);
         queue_full_diagnostics(uri);
+    }
+
+    void did_close(const Json* params) {
+        const Json* text_document = params == nullptr ? nullptr : params->get("textDocument");
+        if (text_document == nullptr) {
+            return;
+        }
+        const std::string uri = string_value(text_document->get("uri"));
+        {
+            const std::lock_guard lock(diagnostics_mutex_);
+            ++documents_revision_;
+            ++document_revisions_[uri];
+            pending_diagnostics_.erase(uri);
+            native_ready_revisions_.erase(uri);
+        }
+        documents_.erase(uri);
+        workspace_cache_revision_ = std::numeric_limits<size_t>::max();
+        workspace_cache_.clear();
+        set_language_server_open_documents(documents_);
+        publish_diagnostics(uri, {}, std::nullopt);
     }
 
     void did_save(const Json* params) {
@@ -314,12 +343,18 @@ class LanguageServer {
         if (found == documents_.end()) {
             return;
         }
-        publish_diagnostics(uri, syntax_diagnostics_for_document(found->second));
+        publish_diagnostics(uri, syntax_diagnostics_for_document(found->second),
+                            found->second.version);
     }
 
-    void publish_diagnostics(const std::string& uri, const std::vector<Diagnostic>& diagnostics) {
+    void publish_diagnostics(const std::string& uri, const std::vector<Diagnostic>& diagnostics,
+                             std::optional<int> version) {
         std::ostringstream params;
-        params << "{\"uri\":\"" << json_escape(uri) << "\",\"diagnostics\":[";
+        params << "{\"uri\":\"" << json_escape(uri) << "\"";
+        if (version.has_value()) {
+            params << ",\"version\":" << *version;
+        }
+        params << ",\"diagnostics\":[";
         for (size_t i = 0; i < diagnostics.size(); ++i) {
             if (i > 0) {
                 params << ',';
@@ -369,7 +404,7 @@ class LanguageServer {
             const auto revision = document_revisions_.find(job.document.uri);
             if (revision != document_revisions_.end() && job.revision == revision->second) {
                 native_ready_revisions_[job.document.uri] = job.revision;
-                publish_diagnostics(job.document.uri, diagnostics);
+                publish_diagnostics(job.document.uri, diagnostics, job.document.version);
                 transport_.request_client_refresh("workspace/semanticTokens/refresh");
             }
         }

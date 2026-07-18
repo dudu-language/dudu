@@ -28,7 +28,7 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
     while (!stop_at(stops)) {
         if (match(TokenKind::Dot)) {
             if (!at(TokenKind::Identifier)) {
-                break;
+                return make_node_from_start(ExprKind::Unknown, expr.range.start, cursor_);
             }
             const SourceLocation start = expr.range.start;
             const Token& name = current();

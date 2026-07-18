@@ -203,6 +203,64 @@ void test_parser_recovery_skips_bad_declaration_body() {
     assert(result.module.functions.front().name == "usable");
 }
 
+void test_parser_recovery_preserves_declaration_after_unfinished_decorator() {
+    const std::string source = "@operator(\n"
+                               "def damaged() -> i32:\n"
+                               "    return 1\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_decorator.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[0].name == "damaged");
+    assert(result.module.functions[1].name == "usable");
+}
+
+void test_parser_recovery_rejects_incomplete_member_expression() {
+    const std::string source = "class Player:\n"
+                               "    hp: i32\n"
+                               "\n"
+                               "def damaged(player: Player) -> i32:\n"
+                               "    player.\n"
+                               "    return 0\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_member.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[0].name == "damaged");
+    assert(result.module.functions[1].name == "usable");
+}
+
+void test_parser_recovery_rejects_missing_binary_operand() {
+    const std::string source = "def damaged() -> i32:\n"
+                               "    value = 1 +\n"
+                               "    return 0\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result = dudu::parse_source_recovering(source, "recover_operand.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.diagnostics.front().code == "dudu.parser.incomplete_expression");
+    assert(result.module.functions.size() == 2);
+    assert(result.module.functions[1].name == "usable");
+}
+
+void test_parser_recovery_rejects_missing_return_type() {
+    const std::string source = "def damaged() ->:\n"
+                               "    return 0\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    const dudu::ParseResult result =
+        dudu::parse_source_recovering(source, "recover_return_type.dd");
+    assert(result.diagnostics.size() == 1);
+    assert(result.module.functions.size() == 1);
+    assert(result.module.functions[0].name == "usable");
+}
+
 void test_lexer_recovery_preserves_later_declarations() {
     const std::string source = "def before() -> i32:\n"
                                "    return 1\n"
@@ -249,6 +307,10 @@ int main() {
         test_parser_recovery_preserves_declaration_after_incomplete_import();
         test_recovering_parser_accepts_valid_multiline_groups();
         test_parser_recovery_skips_bad_declaration_body();
+        test_parser_recovery_preserves_declaration_after_unfinished_decorator();
+        test_parser_recovery_rejects_incomplete_member_expression();
+        test_parser_recovery_rejects_missing_binary_operand();
+        test_parser_recovery_rejects_missing_return_type();
         test_lexer_recovery_preserves_later_declarations();
         test_lexer_recovery_preserves_function_body_after_bad_indent();
     } catch (const std::exception& error) {

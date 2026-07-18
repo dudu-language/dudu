@@ -54,7 +54,7 @@ TypeRef build_value_type_ref(const std::string& value) {
 }
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 std::string require_native_identity(const NativeSymbolId& identity, std::string_view kind,
@@ -211,7 +211,8 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
                           const TypeRef& type, const std::string& message) {
     if (const auto unknown = unknown_type_ref(symbols, type)) {
         const SourceLocation error_location = unknown->second.line > 0 ? unknown->second : location;
-        fail(error_location, message + unknown->first);
+        throw CompileError(error_location, message + unknown->first, "dudu.sema.unknown_type",
+                           unknown->first);
     }
 }
 
@@ -432,21 +433,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         if (!symbols.function_overload_decls.contains(fn.name)) {
             add_name(names, fn.name, fn.location);
         }
-        FunctionSignature signature;
-        std::vector<TypeRef> param_types;
-        param_types.reserve(fn.params.size());
-        for (const ParamDecl& param : fn.params) {
-            param_types.push_back(param.type_ref);
-        }
-        set_signature_param_types(signature, std::move(param_types));
-        set_signature_return_type(signature, function_return_type_ref(fn));
-        for (size_t i = 0; i < fn.params.size(); ++i) {
-            if (fn.params[i].variadic) {
-                signature.variadic = true;
-                signature.variadic_param_index = static_cast<int>(i);
-                break;
-            }
-        }
+        FunctionSignature signature = function_signature_from_decl(fn);
         if (!symbols.function_signatures.contains(fn.name)) {
             symbols.function_signatures[fn.name] = signature;
             symbols.function_decls[fn.name] = &fn;

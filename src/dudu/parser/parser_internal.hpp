@@ -90,6 +90,7 @@ class Parser {
     JoinedTokens join_tokens(size_t begin, size_t end) const;
     std::string token_source_spelling(size_t begin, size_t end) const;
     Expr parse_expr_piece(const JoinedTokens& piece) const;
+    Expr parse_required_expr_piece(const JoinedTokens& piece, std::string_view message) const;
     TypeRef parse_type_piece(const JoinedTokens& piece) const;
     std::vector<JoinedTokens> split_top_level_comma_pieces(const JoinedTokens& piece) const;
     JoinedTokens join_until_top_level_identifier(std::string_view identifier,

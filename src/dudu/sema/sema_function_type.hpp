@@ -8,6 +8,7 @@
 namespace dudu {
 
 std::string function_type(const FunctionSignature& signature);
+FunctionSignature function_signature_from_decl(const FunctionDecl& fn);
 TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location = {});
 void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef> types);
 void set_signature_return_type(FunctionSignature& signature, TypeRef type);

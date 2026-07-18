@@ -16,7 +16,7 @@ namespace dudu {
 namespace {
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 TypeRef super_base_type(const FunctionScope& scope, const SourceLocation* location) {

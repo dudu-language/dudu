@@ -255,6 +255,58 @@ void test_lsp_project_index_reuses_last_good_after_broken_edit() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_project_index_recovers_bad_indentation_without_last_good_state() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_bad_indent_recovery_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    const std::string source = "def damaged() -> i32:\n"
+                               "    before = 1\n"
+                               "  broken = 2\n"
+                               "    return before\n"
+                               "\n"
+                               "def usable() -> i32:\n"
+                               "    return 2\n";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(doc, true);
+    assert(recovered.parse_diagnostics().size() == 1);
+    assert(recovered.merged_module().functions.size() == 2);
+    assert(recovered.merged_module().functions[1].name == "usable");
+    dudu::clear_language_server_module_cache();
+}
+
+void test_lsp_project_index_isolates_missing_native_headers() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_missing_native_recovery_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / "main.dd";
+    const std::string source = "from cpp.path import ./header_that_does_not_exist.hpp\n"
+                               "\n"
+                               "def usable(value: i32) -> i32:\n"
+                               "    return value + 1\n";
+    write_file(path, source);
+    const dudu::Document doc{.uri = dudu::file_uri(path), .path = path, .text = source};
+
+    dudu::clear_language_server_module_cache();
+    const dudu::ProjectIndex& recovered = dudu::project_index_for_document(doc, true);
+    assert(recovered.merged_module().functions.size() == 1);
+    assert(recovered.merged_module().functions.front().name == "usable");
+
+    bool scan_failed = false;
+    try {
+        (void)dudu::project_index_for_document(doc, true, true, false);
+    } catch (const dudu::CompileError& error) {
+        scan_failed = error.code() == "dudu.native_header.scan_failed";
+    }
+    assert(scan_failed);
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_project_index_cache_records_native_warm_hits() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_project_index_stats_test";
@@ -344,6 +396,8 @@ int main() {
         test_lsp_hover_uses_open_imported_document_sources();
         test_lsp_project_index_cache_records_warm_hits();
         test_lsp_project_index_reuses_last_good_after_broken_edit();
+        test_lsp_project_index_recovers_bad_indentation_without_last_good_state();
+        test_lsp_project_index_isolates_missing_native_headers();
         test_lsp_project_index_cache_records_native_warm_hits();
         test_lsp_native_context_header_field_definition();
     } catch (const std::exception& error) {

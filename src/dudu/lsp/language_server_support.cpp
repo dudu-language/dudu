@@ -112,6 +112,9 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
                 return found->second;
             }
         }
+        if (!check_semantics && include_native_headers) {
+            return project_index_for_document(doc, false, false, allow_last_good);
+        }
         std::rethrow_exception(current_error);
     }
 }

@@ -19,7 +19,8 @@ std::optional<Token> token_at_cursor(const Document& doc, const Json* params) {
     }
     const LspPosition position = lsp_position(params);
     try {
-        for (const Token& token : lex_source(doc.text, doc.path)) {
+        const LexResult lexed = lex_source_recovering(doc.text, doc.path);
+        for (const Token& token : lexed.tokens) {
             if (token.kind != TokenKind::Identifier || token.location.line != position.line + 1) {
                 continue;
             }

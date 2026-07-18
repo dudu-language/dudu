@@ -29,6 +29,7 @@ struct Document {
     std::string uri;
     std::filesystem::path path;
     std::string text;
+    int version = 0;
 };
 
 struct DiagnosticRelatedInformation {

@@ -5,10 +5,12 @@
 #include "dudu/core/text.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
 
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <set>
 #include <string_view>
@@ -18,7 +20,7 @@ namespace dudu {
 namespace {
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 void check_supported_type_shape(const SourceLocation& location, const TypeRef& type) {
@@ -517,8 +519,17 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_function_types(method, scoped_symbols);
         }
     }
+    std::map<std::string, std::vector<FunctionSignature>> free_function_overloads;
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
+        const FunctionSignature signature = function_signature_from_decl(fn);
+        std::vector<FunctionSignature>& overloads = free_function_overloads[fn.name];
+        if (std::ranges::any_of(overloads, [&](const FunctionSignature& previous) {
+                return same_signature(signature, previous);
+            })) {
+            fail(fn.location, "duplicate function overload: " + fn.name);
+        }
+        overloads.push_back(signature);
         ScopedSymbolOverlay function_symbols(scoped_symbols);
         function_symbols.add_generic_params(fn.generic_params,
                                             generic_value_params_for_function(fn));

@@ -12,6 +12,35 @@
 namespace dudu {
 namespace {
 
+const Expr* incomplete_expression_node(const Expr& expr) {
+    if (expr.kind == ExprKind::Missing || expr.kind == ExprKind::Unknown) {
+        return &expr;
+    }
+    if (expr.callee != nullptr) {
+        for (const Expr& child : *expr.callee) {
+            if (const Expr* incomplete = incomplete_expression_node(child)) {
+                return incomplete;
+            }
+        }
+    }
+    if (expr.template_args != nullptr) {
+        for (const Expr& child : *expr.template_args) {
+            if (const Expr* incomplete = incomplete_expression_node(child)) {
+                return incomplete;
+            }
+        }
+    }
+    for (const Expr& child : expr.children) {
+        if (expr.kind == ExprKind::Slice && child.kind == ExprKind::Missing) {
+            continue;
+        }
+        if (const Expr* incomplete = incomplete_expression_node(child)) {
+            return incomplete;
+        }
+    }
+    return nullptr;
+}
+
 void append_source_token(std::ostringstream& out, SourceLocation& cursor, const Token& token) {
     while (cursor.line < token.location.line) {
         out << '\n';
@@ -181,14 +210,24 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     ExprTokenParser parser(filtered_tokens.empty() ? source_tokens
                                                    : std::span<const Token>{filtered_tokens});
     Expr expr = parser.parse();
-    if (expr.kind == ExprKind::Unknown) {
+    if (const Expr* incomplete = incomplete_expression_node(expr)) {
         const std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));
-        throw CompileError(expr.location,
-                           "unsupported expression: " +
+        const SourceLocation location =
+            incomplete->location.line > 0 ? incomplete->location : piece.range.start;
+        throw CompileError(location,
+                           "incomplete or unsupported expression: " +
                                (spelling.empty() ? display_expr(expr) : spelling),
-                           "dudu.parser.unsupported_expression");
+                           "dudu.parser.incomplete_expression");
     }
     return expr;
+}
+
+Expr Parser::parse_required_expr_piece(const JoinedTokens& piece, std::string_view message) const {
+    if (!piece.has_tokens) {
+        throw CompileError(piece.range.start, std::string(message),
+                           "dudu.parser.incomplete_expression");
+    }
+    return parse_expr_piece(piece);
 }
 
 TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {

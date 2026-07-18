@@ -100,7 +100,8 @@ bool token_before_or_at_cursor(const Token& token, int line, int character) {
 
 std::vector<Token> syntax_tokens_before_cursor(const Document& doc, int line, int character) {
     std::vector<Token> out;
-    for (const Token& token : lex_source(doc.text, doc.path)) {
+    const LexResult lexed = lex_source_recovering(doc.text, doc.path);
+    for (const Token& token : lexed.tokens) {
         if (!token_is_syntax(token)) {
             continue;
         }

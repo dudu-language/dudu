@@ -58,13 +58,12 @@ ModuleAst Parser::parse() {
                                "statement in the file",
                                "dudu.parser.misplaced_docstring");
         }
-        if (match(TokenKind::At)) {
-            decorators.push_back(parse_decorator(previous()));
-            continue;
-        }
-
         const size_t item_begin = cursor_;
         try {
+            if (match(TokenKind::At)) {
+                decorators.push_back(parse_decorator(previous()));
+                continue;
+            }
             Visibility visibility = parse_visibility();
             if (match_identifier("import")) {
                 require_no_decorators(decorators, "import");
@@ -263,7 +262,7 @@ Decorator Parser::parse_decorator(const Token& at_token) {
     consume(TokenKind::Newline, "expected newline after decorator");
     Decorator decorator;
     decorator.location = at_token.location;
-    decorator.expr = parse_expr_piece(expression);
+    decorator.expr = parse_required_expr_piece(expression, "decorator requires an expression");
     return decorator;
 }
 
