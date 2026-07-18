@@ -217,7 +217,7 @@ void test_lsp_project_index_cache_records_warm_hits() {
     dudu::clear_language_server_module_cache();
 }
 
-void test_lsp_project_index_reuses_last_good_after_broken_edit() {
+void test_lsp_project_index_recovers_current_revision_without_stale_declarations() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_last_good_index_test";
     std::filesystem::remove_all(dir);
@@ -251,13 +251,15 @@ void test_lsp_project_index_reuses_last_good_after_broken_edit() {
                                         .path = path,
                                         .text = "import module_that_does_not_exist\n"
                                                 "\n"
-                                                "def answer() -> i32:\n"
+                                                "def replacement() -> i32:\n"
                                                 "    return 42\n"};
-    const dudu::ProjectIndexSnapshot last_good_snapshot =
+    const dudu::ProjectIndexSnapshot current_missing_snapshot =
         dudu::project_index_for_document(missing_import, false);
-    const dudu::ProjectIndex& last_good = *last_good_snapshot;
-    assert(last_good.merged_module().functions.size() == 1);
-    assert(last_good.merged_module().functions.front().name == "answer");
+    const dudu::ProjectIndex& current_missing = *current_missing_snapshot;
+    assert(current_missing.merged_module().functions.size() == 1);
+    assert(current_missing.merged_module().functions.front().name == "replacement");
+    assert(current_missing.parse_diagnostics().size() == 1);
+    assert(current_missing.parse_diagnostics().front().code == "dudu.sema.missing_module");
     dudu::clear_language_server_module_cache();
 }
 
@@ -407,7 +409,7 @@ int main() {
         test_lsp_project_index_uses_open_imported_document_sources();
         test_lsp_hover_uses_open_imported_document_sources();
         test_lsp_project_index_cache_records_warm_hits();
-        test_lsp_project_index_reuses_last_good_after_broken_edit();
+        test_lsp_project_index_recovers_current_revision_without_stale_declarations();
         test_lsp_project_index_recovers_bad_indentation_without_last_good_state();
         test_lsp_project_index_isolates_missing_native_headers();
         test_lsp_project_index_cache_records_native_warm_hits();

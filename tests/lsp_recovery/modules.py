@@ -131,8 +131,75 @@ def run_restored_export(repo_root, root):
         raise AssertionError(f"restored dependent diagnostics did not clear: {diagnostics}")
 
 
+def run_missing_module_uses_current_revision(repo_root, root):
+    main = root / "main.dd"
+    valid = "def old_answer() -> i32:\n    return 41\n"
+    damaged = (
+        "import module_that_does_not_exist\n\n"
+        "def current_answer() -> i32:\n"
+        "    return 42\n\n"
+        "def main() -> i32:\n"
+        "    return current_answer()\n"
+    )
+    main.write_text(valid)
+    uri = main.as_uri()
+
+    messages = [request(1, "initialize", {"rootUri": root.as_uri()})]
+    messages.append(open_document(uri, 1, valid))
+    messages.append(
+        notification(
+            "textDocument/didChange",
+            {
+                "textDocument": {"uri": uri, "version": 2},
+                "contentChanges": [{"text": damaged}],
+            },
+        )
+    )
+    use = position(damaged, "current_answer()", 2, occurrence=1)
+    messages.append(
+        request(2, "textDocument/hover", {"textDocument": text_document(uri), "position": use})
+    )
+    messages.append(
+        request(
+            3,
+            "textDocument/definition",
+            {"textDocument": text_document(uri), "position": use},
+        )
+    )
+    messages.append(
+        request(4, "textDocument/documentSymbol", {"textDocument": text_document(uri)})
+    )
+    messages.append(
+        request(5, "textDocument/semanticTokens/full", {"textDocument": text_document(uri)})
+    )
+    messages.extend([request(6, "shutdown", None), notification("exit", None)])
+    responses = run_server(repo_root, messages)
+
+    hover = response(responses, 2)
+    if hover is None or "def current_answer() -> i32" not in hover["contents"]["value"]:
+        raise AssertionError(f"missing-module edit returned stale hover: {hover}")
+    definition = response(responses, 3)
+    definitions = definition if isinstance(definition, list) else [definition]
+    expected_line = damaged[: damaged.index("def current_answer")].count("\n")
+    if not any(item["range"]["start"]["line"] == expected_line for item in definitions):
+        raise AssertionError(f"missing-module edit returned stale definition: {definition}")
+    symbols = {item["name"] for item in response(responses, 4)}
+    if "current_answer" not in symbols or "old_answer" in symbols:
+        raise AssertionError(f"missing-module edit returned stale symbols: {symbols}")
+    if not response(responses, 5)["data"]:
+        raise AssertionError("missing-module edit lost semantic tokens")
+    diagnostics = published_diagnostics(responses, uri)
+    if not any(
+        any(item.get("code") == "dudu.sema.missing_module" for item in batch["diagnostics"])
+        for batch in diagnostics
+        if batch.get("version") == 2
+    ):
+        raise AssertionError(f"missing-module diagnostic was not published: {diagnostics}")
+
+
 def run_module_recovery(repo_root):
     with tempfile.TemporaryDirectory(prefix="dudu_lsp_module_recovery_") as directory:
         root = Path(directory)
         run_removed_export(repo_root, root)
         run_restored_export(repo_root, root)
+        run_missing_module_uses_current_revision(repo_root, root)

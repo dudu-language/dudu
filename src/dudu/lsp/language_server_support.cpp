@@ -20,6 +20,7 @@ std::mutex project_state_mutex;
 struct LastGoodProjectKey {
     std::string entry_path;
     std::string manifest_path;
+    size_t source_revision = 0;
     bool include_native_headers = false;
 
     friend auto operator<=>(const LastGoodProjectKey&, const LastGoodProjectKey&) = default;
@@ -31,6 +32,24 @@ std::filesystem::path canonical_overlay_path(const std::filesystem::path& path) 
     std::error_code error;
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
     return error ? path.lexically_normal() : canonical;
+}
+
+size_t source_revision_for(
+    const std::map<std::filesystem::path, std::string>& source_overrides) {
+    size_t revision = 14695981039346656037ULL;
+    const auto append = [&](std::string_view text) {
+        for (const unsigned char byte : text) {
+            revision ^= byte;
+            revision *= 1099511628211ULL;
+        }
+        revision ^= 0xff;
+        revision *= 1099511628211ULL;
+    };
+    for (const auto& [path, source] : source_overrides) {
+        append(canonical_overlay_path(path).string());
+        append(source);
+    }
+    return revision;
 }
 
 } // namespace
@@ -85,16 +104,18 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
 
 ProjectIndexSnapshot project_index_for_document(const Document& doc, bool include_native_headers,
                                                 bool check_semantics, bool allow_last_good) {
-    const LastGoodProjectKey last_good_key{
-        .entry_path = canonical_overlay_path(doc.path).string(),
-        .manifest_path = canonical_overlay_path(project_config_path(doc.path)).string(),
-        .include_native_headers = include_native_headers,
-    };
     std::map<std::filesystem::path, std::string> source_overrides;
     {
         const std::lock_guard lock(project_state_mutex);
         source_overrides = open_document_sources;
     }
+    source_overrides[canonical_overlay_path(doc.path)] = doc.text;
+    const LastGoodProjectKey last_good_key{
+        .entry_path = canonical_overlay_path(doc.path).string(),
+        .manifest_path = canonical_overlay_path(project_config_path(doc.path)).string(),
+        .source_revision = source_revision_for(source_overrides),
+        .include_native_headers = include_native_headers,
+    };
     ProjectIndexOptions options = project_index_options_for_document(
         doc, include_native_headers, check_semantics, source_overrides);
     try {
@@ -117,7 +138,8 @@ ProjectIndexSnapshot project_index_for_document(const Document& doc, bool includ
         if (!check_semantics && allow_last_good) {
             const std::lock_guard lock(project_state_mutex);
             if (const auto found = last_good_project_indexes.find(last_good_key);
-                found != last_good_project_indexes.end()) {
+                found != last_good_project_indexes.end() &&
+                found->second->source_stamps_current()) {
                 return found->second;
             }
         }

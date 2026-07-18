@@ -331,6 +331,35 @@ void test_module_loader_recovers_missing_selective_import_without_stale_alias() 
                         }));
 }
 
+void test_module_loader_recovers_missing_module_without_stale_declarations() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_missing_module_recovery_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "main.dd", "import removed_module\n"
+                                "\n"
+                                "def current_answer() -> i32:\n"
+                                "    return 42\n");
+
+    bool strict_failed = false;
+    try {
+        (void)dudu::load_source_tree(dir / "main.dd");
+    } catch (const dudu::CompileError& error) {
+        strict_failed = error.code() == "dudu.sema.missing_module" &&
+                        error.data_name() == "removed_module" && error.location().line == 1;
+    }
+    assert(strict_failed);
+
+    const dudu::LoadSourceTreeResult recovered = dudu::load_source_tree_recovering(
+        {.entry = dir / "main.dd", .source_overrides = {}, .module_roots = {}});
+    assert(recovered.module.module_units.size() == 1);
+    assert(recovered.diagnostics.size() == 1);
+    assert(recovered.diagnostics.front().code == "dudu.sema.missing_module");
+    assert(recovered.diagnostics.front().data_name == "removed_module");
+    assert(recovered.module.functions.size() == 1);
+    assert(recovered.module.functions.front().name == "current_answer");
+}
+
 } // namespace
 
 int main() {
@@ -342,6 +371,7 @@ int main() {
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
         test_module_loader_recovers_missing_selective_import_without_stale_alias();
+        test_module_loader_recovers_missing_module_without_stale_declarations();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -232,6 +232,20 @@ void report_missing_import(const ImportDecl& import,
                        import.imported_name);
 }
 
+void report_missing_module(const ImportDecl& import,
+                           std::vector<ParseDiagnostic>* diagnostics) {
+    const std::string message = "could not resolve module '" + import.module_path + "'";
+    if (diagnostics != nullptr) {
+        diagnostics->push_back({.location = import.location,
+                                .message = message,
+                                .code = "dudu.sema.missing_module",
+                                .data_name = import.module_path});
+        return;
+    }
+    throw CompileError(import.location, message, "dudu.sema.missing_module",
+                       import.module_path);
+}
+
 void reject_selective_import_collision(const ModuleAst& module, const ImportDecl& import) {
     const std::string name = selective_import_name(import);
     if (!has_binding(module, name)) {
@@ -407,7 +421,12 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         const std::filesystem::path dependency =
             resolve_import_path(path, root, import.module_path, module_roots);
         const std::filesystem::path canonical_dependency =
-            std::filesystem::weakly_canonical(dependency);
+            canonical_source_path(dependency);
+        if (!source_overrides.contains(canonical_dependency) &&
+            !std::filesystem::exists(dependency)) {
+            report_missing_module(import, diagnostics);
+            continue;
+        }
         if (std::find(stack.begin(), stack.end(), canonical_dependency) != stack.end()) {
             throw CompileError(import.location,
                                module_cycle_message(root, stack, canonical_dependency));
