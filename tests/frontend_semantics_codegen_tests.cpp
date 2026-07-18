@@ -398,13 +398,13 @@ void test_typed_for_emission() {
 }
 
 void test_read_only_dict_iteration_emits_key_binding() {
-    const dudu::ModuleAst module = dudu::parse_source(
-        "def keys(values: &const[dict[str, i32]]) -> list[str]:\n"
-        "    result: list[str] = []\n"
-        "    for key in values:\n"
-        "        result.append(key)\n"
-        "    return result\n",
-        "dict_iteration_codegen.dd");
+    const dudu::ModuleAst module =
+        dudu::parse_source("def keys(values: &const[dict[str, i32]]) -> list[str]:\n"
+                           "    result: list[str] = []\n"
+                           "    for key in values:\n"
+                           "        result.append(key)\n"
+                           "    return result\n",
+                           "dict_iteration_codegen.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto&& [key, dudu_internal_discard_") != std::string::npos);
@@ -412,21 +412,20 @@ void test_read_only_dict_iteration_emits_key_binding() {
 }
 
 void test_named_aggregate_emission_orders_fields_and_lowers_fixed_arrays() {
-    const dudu::ModuleAst module = dudu::parse_source(
-        "class MatrixOwner:\n"
-        "    first: i32\n"
-        "    matrix: array[i32][2, 2]\n"
-        "    last: i32\n"
-        "\n"
-        "def make_owner() -> MatrixOwner:\n"
-        "    return MatrixOwner(last=9, matrix=[[1, 2], [3, 4]], first=7)\n",
-        "aggregate_fixed_array_codegen.dd");
+    const dudu::ModuleAst module =
+        dudu::parse_source("class MatrixOwner:\n"
+                           "    first: i32\n"
+                           "    matrix: array[i32][2, 2]\n"
+                           "    last: i32\n"
+                           "\n"
+                           "def make_owner() -> MatrixOwner:\n"
+                           "    return MatrixOwner(last=9, matrix=[[1, 2], [3, 4]], first=7)\n",
+                           "aggregate_fixed_array_codegen.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     const size_t first = cpp.find(".first = 7");
-    const size_t matrix = cpp.find(
-        ".matrix = std::array<std::array<int32_t, 2>, 2>{"
-        "std::array<int32_t, 2>{1, 2}, std::array<int32_t, 2>{3, 4}}");
+    const size_t matrix = cpp.find(".matrix = std::array<std::array<int32_t, 2>, 2>{"
+                                   "std::array<int32_t, 2>{1, 2}, std::array<int32_t, 2>{3, 4}}");
     const size_t last = cpp.find(".last = 9");
     assert(first != std::string::npos);
     assert(matrix != std::string::npos);
@@ -460,6 +459,26 @@ void test_class_field_defaults_and_static_fields() {
     assert(cpp.find("static int32_t bump()") != std::string::npos);
 }
 
+void test_cpp_keyword_local_names_are_escaped_injectively() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def keyword_locals(explicit: i32) -> i32:\n"
+                           "    namespace: i32 = explicit + 1\n"
+                           "    dudu_local_explicit = namespace + explicit\n"
+                           "    for concept in range(2):\n"
+                           "        namespace += concept\n"
+                           "    return namespace + dudu_local_explicit\n",
+                           "cpp_keyword_locals.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("keyword_locals(int32_t dudu_local_explicit)") != std::string::npos);
+    assert(cpp.find("int32_t dudu_local_namespace = (dudu_local_explicit + 1);") !=
+           std::string::npos);
+    assert(cpp.find("dudu_local_dudu_local_explicit = ") != std::string::npos);
+    assert(cpp.find("for (int32_t dudu_local_concept = 0; dudu_local_concept < 2; ") !=
+           std::string::npos);
+    assert(cpp.find("dudu_local_namespace += dudu_local_concept;") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -481,6 +500,7 @@ int main() {
         test_read_only_dict_iteration_emits_key_binding();
         test_named_aggregate_emission_orders_fields_and_lowers_fixed_arrays();
         test_class_field_defaults_and_static_fields();
+        test_cpp_keyword_local_names_are_escaped_injectively();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

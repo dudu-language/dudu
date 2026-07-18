@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dudu/codegen/cpp_emit_options.hpp"
+
 #include <cstddef>
 #include <set>
 #include <string>
@@ -14,12 +16,18 @@ struct CppLocalContext {
     std::string super_class;
     size_t discard_count = 0;
 
-    void bind(std::string name) {
+    std::string bind(std::string name) {
+        const std::string emitted = emitted_local_name(name);
         names.insert(std::move(name));
+        return emitted;
     }
 
     bool contains(std::string_view name) const {
         return names.find(std::string(name)) != names.end();
+    }
+
+    std::string emitted(std::string_view name) const {
+        return contains(name) ? emitted_local_name(name) : std::string(name);
     }
 
     void bind_type(std::string name) {

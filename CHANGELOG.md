@@ -4,6 +4,10 @@
 
 ### Added
 
+- Dudu parameters, locals, destructuring targets, loop bindings, and exception
+  bindings whose source names are C++ keywords now receive stable, injective
+  backend-only names. Source names remain unchanged in diagnostics and editor
+  tooling, while emitted C++ no longer rejects valid names such as `explicit`.
 - Dictionary iteration now follows Python semantics and yields keys, including
   through reference and const wrappers, without materializing a key list.
 - Multidimensional fixed-array iteration now yields the correctly shaped child

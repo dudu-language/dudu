@@ -77,10 +77,10 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
         }
         if (cpp_emit_concrete_variadic_param(fn, fn.params[i])) {
             out << cpp_emit_concrete_variadic_pack_name(fn.params[i]) << "... "
-                << fn.params[i].name;
+                << emitted_local_name(fn.params[i].name);
         } else {
             out << lower_cpp_type(fn.params[i].type_ref, aliases, options)
-                << (fn.params[i].variadic ? "... " : " ") << fn.params[i].name;
+                << (fn.params[i].variadic ? "... " : " ") << emitted_local_name(fn.params[i].name);
         }
     }
     out << ')';
@@ -265,7 +265,7 @@ void emit_c_function_declarations(std::ostringstream& out, const ModuleAst& modu
                 out << ", ";
             }
             out << lower_cpp_type(fn.params[i].type_ref) << (fn.params[i].variadic ? "... " : " ")
-                << fn.params[i].name;
+                << emitted_local_name(fn.params[i].name);
         }
         out << ");\n";
     }

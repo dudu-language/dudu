@@ -32,7 +32,8 @@ void emit_signature(std::ostringstream& out, const EnumDecl& en, const FunctionD
         if (i > 0)
             out << ", ";
         out << lower_cpp_type(substitute_self(en, method.params[i].type_ref), aliases, options)
-            << (method.params[i].variadic ? "... " : " ") << method.params[i].name;
+            << (method.params[i].variadic ? "... " : " ")
+            << emitted_local_name(method.params[i].name);
     }
     out << ')';
 }

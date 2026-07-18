@@ -274,10 +274,11 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
                 out << ", ";
             }
             out << "." << emitted_member_name(target_class->name, field.name, options) << " = ";
-            if (is_fixed_array_type(field.type_ref) && value->second->kind == ExprKind::ListLiteral) {
-                out << lower_fixed_array_literal_as_type_ref(
-                    field.type_ref, *value->second, aliases, locals, local_type_refs,
-                    function_returns, symbols, options);
+            if (is_fixed_array_type(field.type_ref) &&
+                value->second->kind == ExprKind::ListLiteral) {
+                out << lower_fixed_array_literal_as_type_ref(field.type_ref, *value->second,
+                                                             aliases, locals, local_type_refs,
+                                                             function_returns, symbols, options);
             } else {
                 out << lower_expr_as_type_ref(field.type_ref, *value->second, aliases, locals,
                                               local_type_refs, function_returns, symbols, options);
@@ -358,7 +359,8 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
         return lower_expr(expr_callee(expr).front(), aliases, locals, local_type_refs, symbols,
                           options);
     }
-    return locals.contains(expr.name) ? expr.name.str() : emitted_value_name(expr.name, options);
+    return locals.contains(expr.name) ? locals.emitted(expr.name)
+                                      : emitted_value_name(expr.name, options);
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,

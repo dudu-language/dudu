@@ -249,11 +249,12 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         }
         const ParamDecl& param = method.params[param_order[i]];
         if (cpp_emit_concrete_variadic_param(method, param)) {
-            out << cpp_emit_concrete_variadic_pack_name(param) << "... " << param.name;
+            out << cpp_emit_concrete_variadic_pack_name(param) << "... "
+                << emitted_local_name(param.name);
         } else {
             out << lower_cpp_type(method_type_for_emit(param.type_ref, class_name, param.location),
                                   aliases, options)
-                << (param.variadic ? "... " : " ") << param.name;
+                << (param.variadic ? "... " : " ") << emitted_local_name(param.name);
         }
     }
     CppLocalContext locals;

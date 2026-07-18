@@ -99,11 +99,18 @@ inline bool cpp_reserved_identifier(std::string_view name) {
            name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq";
 }
 
+inline std::string emitted_local_name(std::string_view name) {
+    constexpr std::string_view escape_prefix = "dudu_local_";
+    if (cpp_reserved_identifier(name) || name.starts_with(escape_prefix)) {
+        return std::string(escape_prefix) + std::string(name);
+    }
+    return std::string(name);
+}
+
 inline std::string emitted_member_name(const std::string& owner, const std::string& member,
                                        const CppEmitOptions& options) {
-    return cpp_reserved_identifier(member)
-               ? emitted_reserved_member_name(owner, member, options)
-               : member;
+    return cpp_reserved_identifier(member) ? emitted_reserved_member_name(owner, member, options)
+                                           : member;
 }
 
 } // namespace dudu

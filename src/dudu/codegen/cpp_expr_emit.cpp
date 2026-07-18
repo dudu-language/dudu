@@ -72,7 +72,7 @@ std::string lower_name_expr(const std::string& name, const CppLocalContext& loca
     if (!locals.contains(name)) {
         return emitted_value_name(name, options);
     }
-    return name;
+    return locals.emitted(name);
 }
 
 std::string lower_string_literal_value(std::string_view value) {
