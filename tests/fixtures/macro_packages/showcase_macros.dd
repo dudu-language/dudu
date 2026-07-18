@@ -1,4 +1,5 @@
 import dudu.ast as ast
+import generated_runtime
 
 
 class JsonOptions:
@@ -47,6 +48,18 @@ def count_function(name: str, count: i32) -> ast.FunctionDecl:
     )
 
 
+def runtime_method() -> ast.FunctionDecl:
+    call = ast.call_expression(
+        ast.member_expression(ast.name_expression("_runtime"), "answer"),
+        [],
+    )
+    return ast.FunctionDecl(
+        name="runtime_answer",
+        return_type=ast.named_type("i32"),
+        body=[ast.return_statement(call)],
+    )
+
+
 @macro
 def Debug(item: ast.ClassDecl) -> ast.Expansion:
     count: i32 = 0
@@ -54,6 +67,14 @@ def Debug(item: ast.ClassDecl) -> ast.Expansion:
         count += 1
     out = ast.expansion()
     out.add_method(count_method("debug_field_count", count))
+    return out
+
+
+@macro
+def RuntimeDependency(item: ast.ClassDecl) -> ast.Expansion:
+    out = ast.expansion()
+    out.require_module("generated_runtime", "_runtime")
+    out.add_method(runtime_method())
     return out
 
 

@@ -233,6 +233,29 @@ SDK in `lib/dudu/ast.dd`, generated from the versioned protocol schema.
 Macro modules may import normal Dudu helper modules. They compile as host tools,
 separately from the target program.
 
+Generated methods sometimes need a runtime module owned by the macro package.
+Declare that dependency normally in the macro module, request it under a
+private alias, and use the alias in generated AST:
+
+```python
+import dudu.ast as ast
+import codec_runtime
+
+
+@macro
+def Codec(item: ast.ClassDecl) -> ast.Expansion:
+    out = ast.expansion()
+    out.require_module("codec_runtime", "_runtime")
+    out.add_method(codec_method_using("_runtime"))
+    return out
+```
+
+`require_module` does not load an arbitrary module or leak its names. The
+compiler verifies that the macro definition module declares the dependency,
+assigns the private alias a stable hygienic identity, and adds a qualified
+target dependency. Users applying the macro do not import implementation
+helpers themselves.
+
 ## Public AST
 
 The read model includes:
@@ -266,6 +289,7 @@ out.add_constant(constant)
 out.add_sibling(ast.function_declaration(function))
 out.add_implementation(implementation)
 out.add_diagnostic(ast.warning(item.range, "message"))
+out.require_module("codec_runtime", "_runtime")
 ```
 
 The schema source and generated SDK are versioned. Macro packages never link
@@ -273,7 +297,7 @@ against parser, semantic-analysis, code-generation, or LSP classes.
 
 ## Complete Fixture Shapes
 
-The package fixture validates eight public macros without compiler special
+The package fixture validates nine public macros without compiler special
 cases.
 
 ### Debug

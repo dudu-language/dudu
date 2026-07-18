@@ -32,6 +32,11 @@ bash -n "$repo_root/scripts/test-vscode-package.sh"
 ctest --test-dir "$repo_root/build" --output-on-failure
 
 compile_and_expect simple_program 42
+compile_modules_path_and_expect macro_generated_runtime_import \
+    tests/fixtures/macro_packages/generated_import_main.dd 42
+expect_path_fail macro_undeclared_runtime_import \
+    tests/fixtures/macro_packages/bad_generated_import.dd --check \
+    "macro generated import is not a declared dependency"
 compile_and_expect c_direct_lowercase_macro 42
 compile_and_expect c_import_alias 42
 compile_and_expect c_lowercase_macro 42

@@ -12,7 +12,7 @@
 
 namespace dudu::macro::protocol {
 
-inline constexpr std::uint32_t schema_version = 2;
+inline constexpr std::uint32_t schema_version = 3;
 inline constexpr std::uint32_t protocol_version = 1;
 
 enum class Visibility : std::uint32_t {
@@ -342,11 +342,17 @@ struct Diagnostic {
     std::vector<Diagnostic> notes = {};
 };
 
+struct GeneratedImport {
+    std::string module_path = {};
+    std::string alias = {};
+};
+
 struct Expansion {
     std::vector<GeneratedDeclaration> members = {};
     std::vector<GeneratedDeclaration> siblings = {};
     std::vector<GeneratedDeclaration> implementations = {};
     std::vector<Diagnostic> diagnostics = {};
+    std::vector<GeneratedImport> imports = {};
 };
 
 struct Capability {
@@ -487,6 +493,10 @@ std::vector<std::uint8_t> encode(const Diagnostic& value);
 Diagnostic decode_Diagnostic(std::span<const std::uint8_t> bytes,
                              const wire::DecodeLimits& limits = {});
 std::size_t count_nodes(const Diagnostic& value);
+std::vector<std::uint8_t> encode(const GeneratedImport& value);
+GeneratedImport decode_GeneratedImport(std::span<const std::uint8_t> bytes,
+                                       const wire::DecodeLimits& limits = {});
+std::size_t count_nodes(const GeneratedImport& value);
 std::vector<std::uint8_t> encode(const Expansion& value);
 Expansion decode_Expansion(std::span<const std::uint8_t> bytes,
                            const wire::DecodeLimits& limits = {});

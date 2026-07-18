@@ -46,6 +46,8 @@ void encode_into(wire::Writer& writer, const GeneratedDeclaration& value);
 GeneratedDeclaration decode_GeneratedDeclaration_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const Diagnostic& value);
 Diagnostic decode_Diagnostic_from(wire::Reader reader);
+void encode_into(wire::Writer& writer, const GeneratedImport& value);
+GeneratedImport decode_GeneratedImport_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const Expansion& value);
 Expansion decode_Expansion_from(wire::Reader reader);
 void encode_into(wire::Writer& writer, const Capability& value);
@@ -1191,6 +1193,35 @@ Diagnostic decode_Diagnostic_from(wire::Reader reader) {
     return value;
 }
 
+void encode_into(wire::Writer& writer, const GeneratedImport& value) {
+    if (!value.module_path.empty()) {
+        writer.write_string(1, value.module_path);
+    }
+    if (!value.alias.empty()) {
+        writer.write_string(2, value.alias);
+    }
+}
+
+GeneratedImport decode_GeneratedImport_from(wire::Reader reader) {
+    GeneratedImport value;
+    std::uint32_t tag = 0;
+    wire::FieldType field_type = wire::FieldType::Varint;
+    while (reader.next(tag, field_type)) {
+        switch (tag) {
+        case 1:
+            value.module_path = reader.read_string(field_type);
+            break;
+        case 2:
+            value.alias = reader.read_string(field_type);
+            break;
+        default:
+            reader.skip(field_type);
+            break;
+        }
+    }
+    return value;
+}
+
 void encode_into(wire::Writer& writer, const Expansion& value) {
     for (const auto& item : value.members) {
         writer.write_message(1, [&](wire::Writer& nested) { encode_into(nested, item); });
@@ -1203,6 +1234,9 @@ void encode_into(wire::Writer& writer, const Expansion& value) {
     }
     for (const auto& item : value.diagnostics) {
         writer.write_message(4, [&](wire::Writer& nested) { encode_into(nested, item); });
+    }
+    for (const auto& item : value.imports) {
+        writer.write_message(5, [&](wire::Writer& nested) { encode_into(nested, item); });
     }
 }
 
@@ -1226,6 +1260,9 @@ Expansion decode_Expansion_from(wire::Reader reader) {
             break;
         case 4:
             value.diagnostics.push_back(decode_Diagnostic_from(reader.read_message(field_type)));
+            break;
+        case 5:
+            value.imports.push_back(decode_GeneratedImport_from(reader.read_message(field_type)));
             break;
         default:
             reader.skip(field_type);
@@ -2072,6 +2109,22 @@ std::size_t count_nodes(const Diagnostic& value) {
     return count;
 }
 
+std::vector<std::uint8_t> encode(const GeneratedImport& value) {
+    wire::Writer writer;
+    encode_into(writer, value);
+    return writer.take();
+}
+
+GeneratedImport decode_GeneratedImport(std::span<const std::uint8_t> bytes,
+                                       const wire::DecodeLimits& limits) {
+    return decode_GeneratedImport_from(wire::Reader::root(bytes, limits));
+}
+
+std::size_t count_nodes(const GeneratedImport& value) {
+    std::size_t count = 1;
+    return count;
+}
+
 std::vector<std::uint8_t> encode(const Expansion& value) {
     wire::Writer writer;
     encode_into(writer, value);
@@ -2094,6 +2147,9 @@ std::size_t count_nodes(const Expansion& value) {
         count += count_nodes(item);
     }
     for (const auto& item : value.diagnostics) {
+        count += count_nodes(item);
+    }
+    for (const auto& item : value.imports) {
         count += count_nodes(item);
     }
     return count;

@@ -61,6 +61,27 @@ compile_path_and_expect() {
     fi
 }
 
+compile_modules_path_and_expect() {
+    local name="$1"
+    local path="$2"
+    local expected="$3"
+    local output="$repo_root/build/${name}_modules"
+    local bin="$repo_root/build/$name"
+
+    rm -rf "$output"
+    mkdir -p "$output"
+    "$repo_root/build/duc" emit-modules "$repo_root/$path" -o "$output" >/dev/null
+    "${CXX:-c++}" -std=c++20 -I"$output" "$output"/*.cpp -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne "$expected" ]]; then
+        echo "$name returned $status, expected $expected" >&2
+        exit 1
+    fi
+}
+
 expect_fail() {
     local name="$1"
     local mode="$2"
@@ -74,6 +95,26 @@ expect_fail() {
         exit 1
     fi
     if ! grep -q "$expected" "$repo_root/build/$name.err"; then
+        echo "$name failed with an unexpected diagnostic; expected: $expected" >&2
+        cat "$repo_root/build/$name.err" >&2
+        exit 1
+    fi
+}
+
+expect_path_fail() {
+    local name="$1"
+    local path="$2"
+    local mode="$3"
+    local expected="$4"
+    local cmd=("$repo_root/build/dudu" "$repo_root/$path" "$mode")
+    if [[ "$mode" != "--check" ]]; then
+        cmd+=("$repo_root/build/$name.out")
+    fi
+    if "${cmd[@]}" 2>"$repo_root/build/$name.err"; then
+        echo "$name unexpectedly passed" >&2
+        exit 1
+    fi
+    if ! grep -Fq "$expected" "$repo_root/build/$name.err"; then
         echo "$name failed with an unexpected diagnostic; expected: $expected" >&2
         cat "$repo_root/build/$name.err" >&2
         exit 1

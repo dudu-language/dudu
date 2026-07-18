@@ -856,6 +856,20 @@ protocol::Diagnostic to_protocol(const DuduDuduAstDiagnostic& input) {
     return out;
 }
 
+DuduDuduAstGeneratedImport from_protocol(const protocol::GeneratedImport& input) {
+    DuduDuduAstGeneratedImport out;
+    out.module_path = input.module_path;
+    out.alias = input.alias;
+    return out;
+}
+
+protocol::GeneratedImport to_protocol(const DuduDuduAstGeneratedImport& input) {
+    protocol::GeneratedImport out;
+    out.module_path = input.module_path;
+    out.alias = input.alias;
+    return out;
+}
+
 DuduDuduAstExpansion from_protocol(const protocol::Expansion& input) {
     DuduDuduAstExpansion out;
     out.members.reserve(input.members.size());
@@ -873,6 +887,10 @@ DuduDuduAstExpansion from_protocol(const protocol::Expansion& input) {
     out.diagnostics.reserve(input.diagnostics.size());
     for (const auto& item : input.diagnostics) {
         out.diagnostics.push_back(from_protocol(item));
+    }
+    out.imports.reserve(input.imports.size());
+    for (const auto& item : input.imports) {
+        out.imports.push_back(from_protocol(item));
     }
     return out;
 }
@@ -894,6 +912,10 @@ protocol::Expansion to_protocol(const DuduDuduAstExpansion& input) {
     out.diagnostics.reserve(input.diagnostics.size());
     for (const auto& item : input.diagnostics) {
         out.diagnostics.push_back(to_protocol(item));
+    }
+    out.imports.reserve(input.imports.size());
+    for (const auto& item : input.imports) {
+        out.imports.push_back(to_protocol(item));
     }
     return out;
 }

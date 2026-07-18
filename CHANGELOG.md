@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- Macro expansions can declare hygienic runtime module dependencies with
+  `Expansion.require_module`.
+
 - Generic function bodies may call instance and static methods on dependent
   receiver types. Imported generic bodies retain their declaration-module
   names while concrete caller types contribute their method metadata. Each

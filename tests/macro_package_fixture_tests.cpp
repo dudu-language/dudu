@@ -52,11 +52,11 @@ void test_public_macro_packages_expand_through_codegen() {
     options.force_module_tree = true;
 
     const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
-    assert(index.macro_report().definitions.size() == 8);
-    assert(index.macro_report().invocations == 8);
-    const auto warning = std::find_if(
-        index.macro_report().expansions.begin(), index.macro_report().expansions.end(),
-        [](const auto& expansion) { return expansion.macro_name == "Warn"; });
+    assert(index.macro_report().definitions.size() == 9);
+    assert(index.macro_report().invocations == 9);
+    const auto warning =
+        std::find_if(index.macro_report().expansions.begin(), index.macro_report().expansions.end(),
+                     [](const auto& expansion) { return expansion.macro_name == "Warn"; });
     assert(warning != index.macro_report().expansions.end());
     assert(warning->expansion.diagnostics.size() == 1);
     assert(warning->expansion.diagnostics.front().severity ==
@@ -69,13 +69,13 @@ void test_public_macro_packages_expand_through_codegen() {
     assert(has_method(player, "debug_field_count"));
     assert(has_method(player, "json_field_count"));
     assert(has_method(player, "reflected_field_count"));
+    assert(has_method(player, "runtime_answer"));
     assert(has_method(find_class(merged, "Options"), "argument_count"));
     assert(has_method(find_class(merged, "Packet"), "schema_bits"));
 
     const dudu::EnumDecl& direction = find_enum(merged, "Direction");
-    assert(std::any_of(direction.methods.begin(), direction.methods.end(), [](const auto& method) {
-        return method.name == "variant_count";
-    }));
+    assert(std::any_of(direction.methods.begin(), direction.methods.end(),
+                       [](const auto& method) { return method.name == "variant_count"; }));
 
     const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(merged);
     const auto emitted = [&](const std::string& text) {
@@ -86,6 +86,8 @@ void test_public_macro_packages_expand_through_codegen() {
     assert(emitted("debug_field_count"));
     assert(emitted("json_field_count"));
     assert(emitted("reflected_field_count"));
+    assert(emitted("runtime_answer"));
+    assert(emitted("generated_runtime_answer"));
     assert(emitted("argument_count"));
     assert(emitted("schema_bits"));
     assert(emitted("variant_count"));

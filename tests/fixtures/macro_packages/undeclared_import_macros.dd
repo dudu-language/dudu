@@ -1,0 +1,8 @@
+import dudu.ast as ast
+
+
+@macro
+def UndeclaredRuntime(item: ast.ClassDecl) -> ast.Expansion:
+    out = ast.expansion()
+    out.require_module("missing_runtime", "_runtime")
+    return out

@@ -1,0 +1,10 @@
+from showcase_macros import RuntimeDependency
+
+
+@derive(RuntimeDependency)
+class Probe:
+    value: i32
+
+
+def main() -> i32:
+    return Probe(0).runtime_answer()

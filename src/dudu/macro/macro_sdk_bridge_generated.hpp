@@ -66,6 +66,8 @@ DuduDuduAstGeneratedDeclaration from_protocol(const protocol::GeneratedDeclarati
 protocol::GeneratedDeclaration to_protocol(const DuduDuduAstGeneratedDeclaration& input);
 DuduDuduAstDiagnostic from_protocol(const protocol::Diagnostic& input);
 protocol::Diagnostic to_protocol(const DuduDuduAstDiagnostic& input);
+DuduDuduAstGeneratedImport from_protocol(const protocol::GeneratedImport& input);
+protocol::GeneratedImport to_protocol(const DuduDuduAstGeneratedImport& input);
 DuduDuduAstExpansion from_protocol(const protocol::Expansion& input);
 protocol::Expansion to_protocol(const DuduDuduAstExpansion& input);
 DuduDuduAstCapability from_protocol(const protocol::Capability& input);

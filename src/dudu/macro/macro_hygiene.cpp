@@ -34,10 +34,21 @@ std::string private_name(const std::string& original, const std::string& seed) {
     return "__dudu_macro_" + stable_suffix(seed + ":" + original) + "_" + original;
 }
 
+std::string renamed_path(const std::string& value, const Renames& renames,
+                         const std::set<std::string>& shadowed) {
+    for (const auto& [original, replacement] : renames) {
+        if (shadowed.contains(original))
+            continue;
+        if (value == original)
+            return replacement;
+        if (value.starts_with(original + "."))
+            return replacement + value.substr(original.size());
+    }
+    return value;
+}
+
 void rename_type(p::TypeRef& type, const Renames& renames, const Scope& scope) {
-    if (const auto found = renames.find(type.name);
-        found != renames.end() && !scope.types.contains(type.name))
-        type.name = found->second;
+    type.name = renamed_path(type.name, renames, scope.types);
     for (p::TypeRef& child : type.children)
         rename_type(child, renames, scope);
 }
@@ -251,6 +262,25 @@ void apply_expansion_hygiene(p::Expansion& expansion, const std::string& macro_i
                              invocation.file + ":" + std::to_string(invocation.start.line) + ":" +
                              std::to_string(invocation.start.column);
     Renames renames;
+    std::map<std::string, std::string> imported_modules;
+    for (p::GeneratedImport& import : expansion.imports) {
+        if (import.module_path.empty())
+            throw std::runtime_error("generated module import path cannot be empty");
+        if (import.alias.empty() || import.alias.front() != '_')
+            throw std::runtime_error("generated module import alias must be private");
+        const auto [found, inserted] = imported_modules.emplace(import.alias, import.module_path);
+        if (!inserted && found->second != import.module_path)
+            throw std::runtime_error("generated module import alias names multiple modules: " +
+                                     import.alias);
+        const std::string hygienic_name = private_name(import.alias, seed);
+        if (const auto existing = renames.find(import.alias); existing != renames.end()) {
+            if (existing->second != hygienic_name)
+                throw std::runtime_error("conflicting generated private name: " + import.alias);
+        } else {
+            renames.emplace(import.alias, hygienic_name);
+        }
+        import.alias = hygienic_name;
+    }
     for (p::GeneratedDeclaration& generated : expansion.siblings) {
         std::string* name = private_sibling_name(generated.declaration);
         if (name == nullptr)

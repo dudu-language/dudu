@@ -340,6 +340,13 @@ Generated symbols carry stable compiler identities. A generated local named
 `value` cannot capture a source local named `value`, and a source name cannot
 capture a generated helper accidentally.
 
+Generated declarations may request a qualified runtime module through
+`Expansion.require_module(module_path, private_alias)`. The requested module
+must already be a declared dependency of the macro definition module. The
+compiler gives the alias a stable hygienic name and records a normal target
+module dependency; it never performs an undeclared load or exposes unqualified
+runtime names.
+
 Public generated names are explicit and checked for collisions. Private helper
 names are identity-based and receive stable rendered spellings only during
 code generation.

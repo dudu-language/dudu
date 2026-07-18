@@ -1,6 +1,6 @@
 {
   "schema": "dudu.macro.ast",
-  "version": 2,
+  "version": 3,
   "enums": [
     {"name": "Visibility", "values": ["Default", "Private"]},
     {"name": "DeclarationKind", "values": ["Unknown", "Class", "Enum", "Function", "Field", "Constant", "Implementation"]},
@@ -193,11 +193,16 @@
       {"name": "range", "type": "SourceRange", "tag": 4},
       {"name": "notes", "type": "Diagnostic", "tag": 5, "repeated": true}
     ]},
+    {"name": "GeneratedImport", "fields": [
+      {"name": "module_path", "type": "string", "tag": 1},
+      {"name": "alias", "type": "string", "tag": 2}
+    ]},
     {"name": "Expansion", "fields": [
       {"name": "members", "type": "GeneratedDeclaration", "tag": 1, "repeated": true},
       {"name": "siblings", "type": "GeneratedDeclaration", "tag": 2, "repeated": true},
       {"name": "implementations", "type": "GeneratedDeclaration", "tag": 3, "repeated": true},
-      {"name": "diagnostics", "type": "Diagnostic", "tag": 4, "repeated": true}
+      {"name": "diagnostics", "type": "Diagnostic", "tag": 4, "repeated": true},
+      {"name": "imports", "type": "GeneratedImport", "tag": 5, "repeated": true}
     ]},
     {"name": "Capability", "fields": [
       {"name": "kind", "type": "CapabilityKind", "tag": 1},

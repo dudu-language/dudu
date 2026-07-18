@@ -2,13 +2,14 @@ from showcase_macros import Args
 from showcase_macros import BinarySchema
 from showcase_macros import Debug
 from showcase_macros import Json
+from showcase_macros import RuntimeDependency
 from showcase_macros import StringEnum
 from showcase_macros import Warn
 from showcase_macros import plugin_exports
 from showcase_macros import reflect
 
 
-@derive(Debug, Json, Warn)
+@derive(Debug, Json, Warn, RuntimeDependency)
 @reflect
 class Player:
     id: u64
@@ -67,6 +68,7 @@ def generated_member_total(
         player.debug_field_count()
         + player.json_field_count()
         + player.reflected_field_count()
+        + player.runtime_answer()
         + options.argument_count()
         + packet.schema_bits()
         + direction.variant_count()

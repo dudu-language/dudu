@@ -1,0 +1,6 @@
+from undeclared_import_macros import UndeclaredRuntime
+
+
+@derive(UndeclaredRuntime)
+class Probe:
+    value: i32

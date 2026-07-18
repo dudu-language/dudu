@@ -3,8 +3,10 @@
 #include "dudu/macro/macro_ast_bridge.hpp"
 #include "dudu/macro/macro_diagnostic_bridge.hpp"
 #include "dudu/macro/macro_expansion_internal.hpp"
+#include "dudu/project/module_import_aliases.hpp"
 
 #include <algorithm>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -37,6 +39,98 @@ std::vector<ModuleAst*> units(ModuleAst& module) {
     for (ModuleAst& unit : module.module_units)
         out.push_back(&unit);
     return out;
+}
+
+ModuleAst* unit_named(ModuleAst& module, std::string_view module_path) {
+    for (ModuleAst* unit : units(module)) {
+        if (unit->module_path == module_path)
+            return unit;
+    }
+    return nullptr;
+}
+
+const Definition* macro_definition(const Plan& plan, std::string_view identity) {
+    const auto found = plan.definitions.find(std::string(identity));
+    return found == plan.definitions.end() ? nullptr : &found->second;
+}
+
+const ModuleDependency* declared_macro_dependency(const ModuleAst& definition_unit,
+                                                  std::string_view module_path) {
+    for (const ModuleDependency& dependency : definition_unit.dependencies) {
+        if ((dependency.kind == ImportKind::Module || dependency.kind == ImportKind::From) &&
+            (dependency.import_module_path == module_path ||
+             dependency.resolved_module_path == module_path)) {
+            return &dependency;
+        }
+    }
+    return nullptr;
+}
+
+bool import_alias_exists(const ModuleAst& unit, std::string_view alias) {
+    return std::any_of(unit.imports.begin(), unit.imports.end(), [&](const ImportDecl& import) {
+        return bound_import_name(import) == alias;
+    });
+}
+
+void merge_generated_imports(ModuleAst& module, UnitMergeState& state, const Plan& plan,
+                             const CollectedExpansion& source) {
+    if (source.expansion.imports.empty())
+        return;
+    const Definition* definition = macro_definition(plan, source.macro_identity);
+    if (definition == nullptr)
+        fail(source, "macro definition disappeared before generated imports were merged");
+    ModuleAst* definition_unit = unit_named(module, definition->module_path);
+    if (definition_unit == nullptr)
+        fail(source, "macro definition module disappeared before generated imports were merged");
+
+    std::set<std::pair<std::string, std::string>> seen;
+    for (const p::GeneratedImport& required : source.expansion.imports) {
+        if (!seen.emplace(required.module_path, required.alias).second)
+            continue;
+        const ModuleDependency* declared =
+            declared_macro_dependency(*definition_unit, required.module_path);
+        if (declared == nullptr) {
+            fail(source,
+                 "macro generated import is not a declared dependency of its definition "
+                 "module: " +
+                     required.module_path,
+                 "dudu.macro.import_dependency");
+        }
+        ModuleAst* dependency = unit_named(module, declared->resolved_module_path);
+        if (dependency == nullptr)
+            fail(source,
+                 "macro generated import module is not in the loaded project graph: " +
+                     declared->resolved_module_path,
+                 "dudu.macro.import_dependency");
+        if (dependency->compilation_domain == CompilationDomain::MacroHost) {
+            fail(source,
+                 "macro generated import cannot expose a macro-host module to target "
+                 "code: " +
+                     declared->resolved_module_path,
+                 "dudu.macro.import_domain");
+        }
+        if (state.module_names.contains(required.alias) ||
+            import_alias_exists(*state.unit, required.alias)) {
+            fail(source, "hygienic generated import alias unexpectedly collides: " + required.alias,
+                 "dudu.macro.import_collision");
+        }
+
+        ImportDecl import;
+        import.kind = ImportKind::Module;
+        import.module_path = required.module_path;
+        import.alias = required.alias;
+        import.location = source.invocation.start;
+        import.range = source.invocation;
+        import.module_range = source.invocation;
+        import.alias_range = source.invocation;
+        state.unit->imports.push_back(import);
+        state.unit->dependencies.push_back({.kind = ImportKind::Module,
+                                            .import_module_path = required.module_path,
+                                            .resolved_module_path = declared->resolved_module_path,
+                                            .source_path = declared->source_path,
+                                            .location = source.invocation.start});
+        add_qualified_module_symbols(*state.unit, *dependency, import);
+    }
 }
 
 ClassDecl* target_class(UnitMergeState& state, std::string_view name) {
@@ -278,6 +372,7 @@ void merge_expansions(ModuleAst& module, const Plan& plan,
                                                           to_protocol(source.invocation));
             }
         }
+        merge_generated_imports(module, state, plan, source);
         if (!source.expansion.members.empty()) {
             if (source.target_kind == TargetKind::Class) {
                 ClassDecl* klass = target_class(state, source.target_name);

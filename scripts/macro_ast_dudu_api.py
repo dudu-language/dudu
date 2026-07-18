@@ -27,6 +27,9 @@ DUDU_CLASS_METHODS = {
 
     def add_diagnostic(self, value: Diagnostic):
         self.diagnostics.append(value)
+
+    def require_module(self, module_path: str, alias: str):
+        self.imports.append(GeneratedImport(module_path=module_path, alias=alias))
 '''.strip("\n"),
 }
 
