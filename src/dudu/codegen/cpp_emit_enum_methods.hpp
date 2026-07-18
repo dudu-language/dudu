@@ -29,4 +29,8 @@ void emit_enum_method_definitions(std::ostringstream& out, const ModuleAst& modu
                                   const Symbols& symbols, bool header_only,
                                   const CppEmitOptions& options = {});
 
+void emit_enum_method_dispatch_overloads(std::ostringstream& out, const ModuleAst& module,
+                                         const std::vector<std::string>& aliases,
+                                         const CppEmitOptions& options = {});
+
 } // namespace dudu

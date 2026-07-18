@@ -140,6 +140,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     emit_value_enums(out, module, aliases, emit_options);
     emit_classes(out, module, aliases, function_returns, symbols, true, emit_options);
     emit_payload_enums(out, module, aliases, emit_options);
+    emit_enum_method_dispatch_overloads(out, module, aliases, emit_options);
     emit_enum_method_definitions(out, module, aliases, function_returns, symbols, true,
                                  emit_options);
     emit_cpp_early_functions(out, module, aliases, function_returns, symbols, true, false,

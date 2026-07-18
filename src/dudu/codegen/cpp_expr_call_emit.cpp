@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_emit_enum_methods.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
+#include "dudu/codegen/cpp_expr_generic_dispatch.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_emit_support.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
@@ -470,6 +471,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals, local_type_refs, symbols, options);
+    }
+    if (const auto lowered = lower_generic_method_dispatch(expr, aliases, locals, local_type_refs,
+                                                           symbols, options)) {
+        return *lowered;
     }
     if (const auto lowered =
             lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {

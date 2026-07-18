@@ -135,4 +135,62 @@ void emit_enum_method_definitions(std::ostringstream& out, const ModuleAst& modu
     }
 }
 
+void emit_enum_method_dispatch_overloads(std::ostringstream& out, const ModuleAst& module,
+                                         const std::vector<std::string>& aliases,
+                                         const CppEmitOptions& options) {
+    for (const EnumDecl& en : module.enums) {
+        for (const FunctionDecl& method : en.methods) {
+            if (!visible_in_cpp_header(method.visibility)) {
+                continue;
+            }
+            const bool instance = !method.params.empty() && method.params.front().name == "self";
+            emit_cpp_template_parameters(out, generic_cpp_params_for_function(method),
+                                         generic_cpp_value_params_for_function(method));
+            out << "inline "
+                << lower_cpp_type(substitute_self(en, function_return_type_ref(method)), aliases,
+                                  options)
+                << " dudu_dispatch_" << (instance ? "instance_" : "static_") << method.name << '(';
+            bool emitted = false;
+            if (!instance) {
+                out << "std::type_identity<" << emitted_type_name(en.name, options) << ">";
+                emitted = true;
+            }
+            for (const ParamDecl& param : method.params) {
+                if (emitted) {
+                    out << ", ";
+                }
+                out << lower_cpp_type(substitute_self(en, param.type_ref), aliases, options) << ' '
+                    << emitted_local_name(param.name);
+                emitted = true;
+            }
+            out << ") { return " << emitted_enum_method_name(en, method, options);
+            const std::vector<std::string> generic_params = generic_cpp_params_for_function(method);
+            if (!generic_params.empty()) {
+                out << '<';
+                for (size_t i = 0; i < generic_params.size(); ++i) {
+                    if (i > 0) {
+                        out << ", ";
+                    }
+                    out << generic_param_base_name(generic_params[i]);
+                    if (generic_param_is_pack(generic_params[i])) {
+                        out << "...";
+                    }
+                }
+                out << '>';
+            }
+            out << '(';
+            for (size_t i = 0; i < method.params.size(); ++i) {
+                if (i > 0) {
+                    out << ", ";
+                }
+                out << emitted_local_name(method.params[i].name);
+            }
+            out << "); }\n";
+        }
+    }
+    if (!module.enums.empty()) {
+        out << '\n';
+    }
+}
+
 } // namespace dudu

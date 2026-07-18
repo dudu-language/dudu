@@ -34,9 +34,15 @@ constexpr std::string_view enum_source =
     "            return 1\n"
     "        return 0\n"
     "\n"
+    "def generic_is_done[T](state: &const[T]) -> bool:\n"
+    "    return state.is_done()\n"
+    "\n"
+    "def generic_make[T](value: i32) -> T:\n"
+    "    return T.make(value)\n"
+    "\n"
     "def main() -> i32:\n"
-    "    state = State.make(1)\n"
-    "    if state.is_done():\n"
+    "    state = generic_make[State](1)\n"
+    "    if generic_is_done(state):\n"
     "        return state.keep[i32](state.score(42))\n"
     "    return state.score(False)\n";
 
@@ -56,8 +62,11 @@ void test_enum_methods_parse_analyze_and_emit() {
     const std::string source = dudu::emit_cpp_source(module);
     assert(header.find("State__is_done") != std::string::npos);
     assert(header.find("State__keep") != std::string::npos);
-    assert(source.find("State__make(1)") != std::string::npos);
-    assert(source.find("State__is_done(state)") != std::string::npos);
+    assert(header.find("dudu_dispatch_instance_is_done") != std::string::npos);
+    assert(header.find("dudu_dispatch_static_make") != std::string::npos);
+    assert(header.find("requires { dudu_dispatch_instance_is_done") != std::string::npos);
+    assert(header.find("requires { dudu_dispatch_static_make") != std::string::npos);
+    assert(source.find("generic_make<") != std::string::npos);
     assert(source.find("State__keep<int32_t>(state, State__score(state, 42))") !=
            std::string::npos);
 }

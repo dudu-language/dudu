@@ -4,6 +4,13 @@
 
 ### Added
 
+- Generic instance and static method calls now use a neutral dependent-receiver
+  dispatch path. Classes and imported C++ types retain normal member calls,
+  while Dudu enums expose equivalent overloads despite their compact
+  free-function C++ lowering.
+- `dudu.ast.match_statement` now populates the structured match condition used
+  by semantic analysis and code generation, allowing generated match bodies to
+  bind payload enum fields correctly.
 - Imported functions now preserve the class and enum metadata referenced by
   their public signatures across module boundaries. Inferred return and payload
   values therefore retain method lookup without redundant type imports.

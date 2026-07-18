@@ -100,6 +100,11 @@ generic `@operator("[]")` fail in Dudu sema instead of surfacing only as C++
 compiler output. Imported generic functions and methods are checked in their
 declaration module so helpers and implementation details resolve in the
 correct scope.
+Dependent method emission is uniform across Dudu classes, imported native
+classes, and Dudu enums. Classes and native types use their C++ member surface.
+Enums participate through generated dispatch overloads because their C++
+representation keeps methods as free functions, including for compact value
+enums. This distinction is backend-only.
 Diagnostics identify both the generic declaration failure and concrete
 call-site instantiation. Non-type generic value parameters are implemented for
 fixed-array extents such as `array[T][N]`; they lower to C++

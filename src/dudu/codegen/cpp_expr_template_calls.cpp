@@ -2,6 +2,7 @@
 
 #include "dudu/codegen/cpp_expr_call_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
+#include "dudu/codegen/cpp_expr_generic_dispatch.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
 #include "dudu/core/array_shape.hpp"
@@ -124,6 +125,10 @@ std::string lower_template_call_expr(const Expr& expr, const std::vector<std::st
                                      const Symbols* symbols, const CppEmitOptions& options) {
     if (!has_expr_template_type_args(expr)) {
         throw CompileError(expr.location, "malformed template call: missing parsed type arguments");
+    }
+    if (const auto lowered = lower_generic_method_dispatch(expr, aliases, locals, local_type_refs,
+                                                           symbols, options)) {
+        return *lowered;
     }
     if (const auto lowered =
             lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {

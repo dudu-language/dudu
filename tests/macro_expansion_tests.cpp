@@ -68,10 +68,10 @@ void require_semantic_token(const std::string& json, int expected_line, int expe
     assert(false && "expected semantic token is missing");
 }
 
-const dudu::EnumDecl& color_enum(const dudu::ModuleAst& module) {
+const dudu::EnumDecl& find_enum(const dudu::ModuleAst& module, std::string_view name) {
     for (const dudu::ModuleAst& unit : module.module_units) {
         for (const dudu::EnumDecl& en : unit.enums) {
-            if (en.name == "Color")
+            if (en.name == name)
                 return en;
         }
     }
@@ -473,7 +473,7 @@ void test_enum_derive_generates_a_callable_method() {
     options.force_module_tree = true;
     const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
     assert(index.macro_report().invocations == 1);
-    const dudu::EnumDecl& color = color_enum(index.merged_module());
+    const dudu::EnumDecl& color = find_enum(index.merged_module(), "Color");
     assert(color.methods.size() == 1);
     assert(color.methods.front().name == "enum_name");
     const std::vector<dudu::CppModuleArtifact> artifacts =
@@ -484,6 +484,69 @@ void test_enum_derive_generates_a_callable_method() {
     }));
 }
 
+void test_enum_derive_generated_match_binds_payloads() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_macro_enum_match_test";
+    std::filesystem::remove_all(dir);
+    write_file(dir / "dudu.toml", "name = \"macro_enum_match_fixture\"\n"
+                                  "entry = \"src/main.dd\"\n"
+                                  "build_dir = \"build\"\n");
+    write_file(dir / "src/macros.dd",
+               "import dudu.ast as ast\n"
+               "\n"
+               "@macro\n"
+               "def PayloadScore(item: ast.EnumDecl) -> ast.Expansion:\n"
+               "    self_param = ast.Parameter(\n"
+               "        name=\"self\",\n"
+               "        type=ast.reference_type(ast.named_type(\"Self\")),\n"
+               "    )\n"
+               "    payload_pattern = ast.call_expression(\n"
+               "        ast.member_expression(ast.name_expression(item.name), \"Payload\"),\n"
+               "        [ast.name_expression(\"value\")],\n"
+               "    )\n"
+               "    payload_case = ast.unguarded_case_statement(\n"
+               "        payload_pattern,\n"
+               "        [ast.return_statement(ast.name_expression(\"value\"))],\n"
+               "    )\n"
+               "    empty_case = ast.unguarded_case_statement(\n"
+               "        ast.member_expression(ast.name_expression(item.name), \"Empty\"),\n"
+               "        [ast.return_statement(ast.int_expression(\"0\"))],\n"
+               "    )\n"
+               "    method = ast.FunctionDecl(\n"
+               "        name=\"payload_score\",\n"
+               "        parameters=[self_param],\n"
+               "        return_type=ast.named_type(\"i32\"),\n"
+               "        body=[ast.match_statement(\n"
+               "            ast.name_expression(\"self\"),\n"
+               "            [payload_case, empty_case],\n"
+               "        )],\n"
+               "    )\n"
+               "    out = ast.expansion()\n"
+               "    out.add_method(method)\n"
+               "    return out\n");
+    write_file(dir / "src/main.dd", "from macros import PayloadScore\n"
+                                    "\n"
+                                    "@derive(PayloadScore)\n"
+                                    "enum Message:\n"
+                                    "    Payload:\n"
+                                    "        value: i32\n"
+                                    "    Empty\n"
+                                    "\n"
+                                    "def score(message: Message) -> i32:\n"
+                                    "    return message.payload_score()\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(dir / "dudu.toml");
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "src/main.dd";
+    options.config = config;
+    options.source_dir = dir / "src";
+    options.force_module_tree = true;
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+    const dudu::EnumDecl& message = find_enum(index.merged_module(), "Message");
+    assert(message.methods.size() == 1);
+    assert(message.methods.front().name == "payload_score");
+}
+
 } // namespace
 
 int main() {
@@ -491,5 +554,6 @@ int main() {
     test_imported_macro_definition_is_reported_without_an_invocation();
     test_macro_helper_schema_accepts_typed_collection_literals();
     test_enum_derive_generates_a_callable_method();
+    test_enum_derive_generated_match_binds_payloads();
     return 0;
 }
