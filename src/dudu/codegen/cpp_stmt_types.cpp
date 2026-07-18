@@ -6,6 +6,7 @@
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/collection_literal_inference.hpp"
 #include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_dudu_overloads.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
@@ -212,6 +213,14 @@ TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_
 TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs,
                             const std::map<std::string, TypeRef>& function_returns,
                             const Symbols* symbols) {
+    if (symbols != nullptr) {
+        FunctionScope scope{*symbols};
+        scope.local_type_refs = local_type_refs;
+        const TypeRef inferred = infer_expr_type_ast(scope, expr, nullptr);
+        if (has_type_ref(inferred) && !type_ref_is_auto(inferred)) {
+            return inferred;
+        }
+    }
     if (!has_expr_callee(expr)) {
         return infer_call_type_ref(expr.name, function_returns, symbols, expr.location);
     }
@@ -220,7 +229,10 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
         if (const auto local = local_type_refs.find(callee.name); local != local_type_refs.end()) {
             FunctionSignature signature;
             if (parse_function_type(local->second, signature)) {
-                return signature_return_type_ref(signature);
+                const TypeRef return_type = signature_return_type_ref(signature);
+                if (has_type_ref(return_type) && !type_ref_is_auto(return_type)) {
+                    return return_type;
+                }
             }
         }
         if (symbols != nullptr && expr.kind == ExprKind::TemplateCall) {
@@ -256,6 +268,12 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
             }
         }
         if (symbols != nullptr) {
+            FunctionScope scope{*symbols};
+            scope.local_type_refs = local_type_refs;
+            if (const auto selected =
+                    select_dudu_function_overload(scope, callee.name, expr.children)) {
+                return signature_return_type_ref(selected->signature);
+            }
             if (const auto overloaded_return = infer_overloaded_function_return_type_ref(
                     *symbols, callee.name, expr.children, local_type_refs, function_returns)) {
                 return *overloaded_return;

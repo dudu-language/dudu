@@ -1,0 +1,14 @@
+import protocol as p
+
+
+class Writer:
+    marker: bool = False
+
+
+def main() -> i32:
+    matrix: array[i32][2, 3] = [
+        [1, 2, 3],
+        [4, 5, 6],
+    ]
+    output = Writer()
+    return p.encode(matrix, output)

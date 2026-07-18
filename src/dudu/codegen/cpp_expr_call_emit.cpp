@@ -10,9 +10,12 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/decorators.hpp"
 #include "dudu/core/source.hpp"
+#include "dudu/native/native_signature_match.hpp"
 #include "dudu/sema/sema_constructors.hpp"
+#include "dudu/sema/sema_dudu_overloads.hpp"
 #include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
 
@@ -140,6 +143,80 @@ bool expression_has_pointer_type(const Expr& expr,
     }
     const TypeRef type = member_expr_type_ref(*symbols, local_type_refs, nullptr, expr);
     return type.kind == TypeKind::Pointer;
+}
+
+std::optional<std::string>
+lower_inferred_value_pack_call(const Expr& expr, const std::vector<std::string>& aliases,
+                               const CppLocalContext& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const Symbols* symbols, const CppEmitOptions& options) {
+    if (symbols == nullptr || has_expr_template_type_args(expr)) {
+        return std::nullopt;
+    }
+    const std::string callee_name = direct_callee_name(expr);
+    if (callee_name.empty()) {
+        return std::nullopt;
+    }
+    FunctionScope scope(*symbols);
+    scope.local_type_refs = local_type_refs;
+    scope.current_class = locals.current_class;
+    std::vector<TypeRef> generic_args;
+    FunctionSignature signature;
+    if (symbols->function_overload_decls.contains(callee_name)) {
+        const auto selected = select_dudu_function_overload(scope, callee_name, expr.children);
+        if (!selected || selected->generic_args.empty() || selected->declaration == nullptr) {
+            return std::nullopt;
+        }
+        const std::set<std::string> value_params =
+            generic_cpp_value_params_for_function(*selected->declaration);
+        const bool has_value_pack = std::ranges::any_of(
+            selected->declaration->generic_params, [&](const std::string& param) {
+                return generic_param_is_pack(param) &&
+                       value_params.contains(generic_param_base_name(param));
+            });
+        if (!has_value_pack) {
+            return std::nullopt;
+        }
+        generic_args = selected->generic_args;
+        signature = selected->signature;
+    } else if (symbols->native_function_signatures.contains(callee_name)) {
+        const auto selected =
+            match_native_signature_declaration(scope, callee_name, {}, expr.children, nullptr);
+        if (!selected || selected->declaration == nullptr ||
+            selected->inferred_template_args.empty()) {
+            return std::nullopt;
+        }
+        const NativeFunctionDecl& declaration = *selected->declaration;
+        bool has_value_pack = false;
+        for (size_t index = 0; index < declaration.template_params.size(); ++index) {
+            if (generic_param_is_pack(declaration.template_params[index]) &&
+                index < declaration.template_param_is_value.size() &&
+                declaration.template_param_is_value[index]) {
+                has_value_pack = true;
+                break;
+            }
+        }
+        if (!has_value_pack) {
+            return std::nullopt;
+        }
+        generic_args = selected->inferred_template_args;
+        signature = selected->signature;
+    } else {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) << '<';
+    for (size_t i = 0; i < generic_args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_cpp_type(generic_args[i], aliases, options);
+    }
+    out << ">("
+        << lower_call_args_for_signature(expr.children, signature, aliases, locals, local_type_refs,
+                                         symbols, options)
+        << ')';
+    return out.str();
 }
 
 struct EnumMethodCall {
@@ -470,6 +547,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if (const auto lowered =
             lower_enum_method_call(expr, aliases, locals, local_type_refs, symbols, options)) {
+        return *lowered;
+    }
+    if (const auto lowered = lower_inferred_value_pack_call(expr, aliases, locals, local_type_refs,
+                                                            symbols, options)) {
         return *lowered;
     }
     const std::string callee_name = direct_callee_name(expr);

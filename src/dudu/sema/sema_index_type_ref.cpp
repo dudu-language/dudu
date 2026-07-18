@@ -46,7 +46,7 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
     return type;
 }
 
-TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std::string>& shape) {
+TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<TypeRef>& shape) {
     TypeRef storage;
     storage.kind = TypeKind::Template;
     storage.name = "array";
@@ -62,14 +62,8 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
         if (i > 0) {
             value << ", ";
         }
-        const std::string dim_value = trim_string(shape[i]);
-        value << dim_value;
-        TypeRef dim;
-        dim.kind = TypeKind::Value;
-        dim.value = dim_value;
-        dim.location = element_type.location;
-        dim.range = element_type.range;
-        type.children.push_back(std::move(dim));
+        value << substitute_type_ref_text(shape[i], {});
+        type.children.push_back(shape[i]);
     }
     type.value = value.str();
     type.location = element_type.location;
@@ -212,7 +206,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
         return shaped_array_type_ref(element,
                                      std::vector<size_t>(shape.begin() + index_count, shape.end()));
     }
-    if (const std::vector<std::string> shape = explicit_array_shape_values(*type); !shape.empty()) {
+    if (const std::vector<TypeRef> shape = explicit_array_shape_refs(*type); !shape.empty()) {
         const TypeRef element = explicit_array_element_type_ref(*type);
         if (is_slice) {
             if (shape.size() != 1) {
@@ -233,7 +227,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
             return element;
         }
         return shaped_array_type_ref(
-            element, std::vector<std::string>(shape.begin() + index_count, shape.end()));
+            element, std::vector<TypeRef>(shape.begin() + index_count, shape.end()));
     }
     if (template_head_is(
             *type, {"dict", "std.map", "std::map", "std.unordered_map", "std::unordered_map"}) &&

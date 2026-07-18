@@ -44,11 +44,7 @@ std::vector<Candidate> viable_candidates(const FunctionScope& scope, const std::
     std::vector<Candidate> candidates;
     std::vector<const FunctionDecl*> declarations = requested;
     if (declarations.empty()) {
-        const auto found = scope.symbols.function_overload_decls.find(callee);
-        if (found == scope.symbols.function_overload_decls.end()) {
-            return candidates;
-        }
-        declarations = found->second;
+        declarations = dudu_function_declarations(scope, callee);
     }
     for (const FunctionDecl* declaration : declarations) {
         if (declaration == nullptr) {
@@ -81,17 +77,48 @@ std::vector<Candidate> viable_candidates(const FunctionScope& scope, const std::
             candidates.push_back(std::move(candidate));
         }
     }
-    std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate& left,
-                                                              const Candidate& right) {
-        if (left.generic != right.generic) {
-            return !left.generic;
-        }
-        return left.specificity > right.specificity;
-    });
+    std::stable_sort(candidates.begin(), candidates.end(),
+                     [](const Candidate& left, const Candidate& right) {
+                         if (left.generic != right.generic) {
+                             return !left.generic;
+                         }
+                         return left.specificity > right.specificity;
+                     });
     return candidates;
 }
 
 } // namespace
+
+std::vector<const FunctionDecl*> dudu_function_declarations(const FunctionScope& scope,
+                                                            const std::string& callee) {
+    if (const auto found = scope.symbols.function_overload_decls.find(callee);
+        found != scope.symbols.function_overload_decls.end()) {
+        return found->second;
+    }
+    std::vector<const FunctionDecl*> out;
+    if (scope.symbols.module_tree == nullptr) {
+        return out;
+    }
+    const std::vector<const NativeFunctionDecl*> aliases =
+        native_function_decls_for_binding(scope.symbols, callee);
+    std::set<const FunctionDecl*> seen;
+    for (const NativeFunctionDecl* alias : aliases) {
+        if (alias == nullptr || alias->identity.canonical_path.empty()) {
+            continue;
+        }
+        for (const ModuleAst& unit : scope.symbols.module_tree->module_units) {
+            for (const FunctionDecl& function : unit.functions) {
+                const std::string identity = function.origin_module.empty()
+                                                 ? function.name
+                                                 : function.origin_module + "." + function.name;
+                if (identity == alias->identity.canonical_path && seen.insert(&function).second) {
+                    out.push_back(&function);
+                }
+            }
+        }
+    }
+    return out;
+}
 
 std::optional<DuduFunctionOverload>
 select_dudu_function_overload(const FunctionScope& scope, const std::string& callee,

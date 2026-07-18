@@ -1,0 +1,9 @@
+def encode[Writer, T, Extents...](
+    value: &const[array[T][Extents...]],
+    output: &Writer,
+) -> i32:
+    return i32(len(value)) + 40
+
+
+def encode[Writer, T](value: &const[T], output: &Writer) -> i32:
+    return 1

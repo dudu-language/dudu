@@ -1,0 +1,9 @@
+def outer_count[T, Extents...](values: &const[array[T][Extents...]]) -> i32:
+    return i32(len(values))
+
+def main() -> i32:
+    matrix: array[i32][2, 3] = [
+        [1, 2, 3],
+        [4, 5, 6],
+    ]
+    return outer_count(matrix) + 40

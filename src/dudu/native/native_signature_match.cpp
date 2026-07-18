@@ -35,7 +35,9 @@ match_native_signature_declaration(const FunctionScope& scope, const std::string
         const NativeFunctionDecl* declaration =
             native_function_decl_for_overload(scope.symbols, callee, selection.index);
         return NativeSignatureMatch{.signature = std::move(*selection.signature),
-                                    .declaration = declaration};
+                                    .declaration = declaration,
+                                    .inferred_template_args =
+                                        std::move(selection.inferred_template_args)};
     }
     if (location != nullptr) {
         fail(*location, native_match_internal::native_overload_message_ast(
@@ -54,19 +56,19 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
     return matched ? std::optional<FunctionSignature>{matched->signature} : std::nullopt;
 }
 
-std::optional<FunctionSignature> match_native_method_signature(
-    const FunctionScope& scope, const std::string& callee,
-    const std::vector<FunctionSignature>& candidates,
-    const std::vector<TypeRef>& explicit_template_args, const Expr& receiver,
-    const std::vector<Expr>& args, const SourceLocation* location) {
+std::optional<FunctionSignature>
+match_native_method_signature(const FunctionScope& scope, const std::string& callee,
+                              const std::vector<FunctionSignature>& candidates,
+                              const std::vector<TypeRef>& explicit_template_args,
+                              const Expr& receiver, const std::vector<Expr>& args,
+                              const SourceLocation* location) {
     std::vector<FunctionSignature> expanded;
     expanded.reserve(candidates.size());
     for (const FunctionSignature& candidate : candidates) {
         if (!has_type_ref(candidate.receiver_type_ref)) {
             continue;
         }
-        expanded.push_back(
-            native_match_internal::signature_with_implicit_receiver(candidate));
+        expanded.push_back(native_match_internal::signature_with_implicit_receiver(candidate));
     }
     std::vector<Expr> call_args;
     call_args.reserve(args.size() + 1);
@@ -97,8 +99,8 @@ std::optional<FunctionSignature> match_native_method_signature(
         }
         std::vector<FunctionSignature> explicit_candidates = std::move(selection.candidates);
         for (FunctionSignature& candidate : explicit_candidates) {
-            candidate = native_match_internal::signature_without_implicit_receiver(
-                std::move(candidate));
+            candidate =
+                native_match_internal::signature_without_implicit_receiver(std::move(candidate));
         }
         fail(*location, native_match_internal::native_overload_message_ast(
                             scope, callee, args, explicit_arg_types, explicit_candidates,

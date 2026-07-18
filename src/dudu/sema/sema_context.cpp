@@ -463,6 +463,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
         symbols.native_function_identities_by_binding[fn.name].push_back(identity);
+        symbols.native_function_decls_by_binding[fn.name].push_back(&fn);
         symbols.native_function_decls_by_identity[identity][fn.name] = &fn;
         add_native_path_prefix(symbols, fn.name);
     }

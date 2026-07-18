@@ -1,0 +1,40 @@
+class Writer:
+    marker: bool = False
+
+
+def encode[Writer, T, First, Rest...](
+    value: &const[array[T][First, Rest...]],
+    output: &Writer,
+) -> i32:
+    total: i32 = i32(len(value)) * 10
+    for item in value:
+        total += encode_item[Writer, T, Rest...](item, output)
+    return total
+
+
+def encode[Writer](value: &const[i32], output: &Writer) -> i32:
+    return value
+
+
+def encode[Writer, T](value: &const[T], output: &Writer) -> i32:
+    return 99
+
+
+def encode_item[Writer, T, First, Rest...](
+    value: &const[array[T][First, Rest...]],
+    output: &Writer,
+) -> i32:
+    return encode[Writer, T, First, Rest...](value, output)
+
+
+def encode_item[Writer, T](value: &const[T], output: &Writer) -> i32:
+    return encode(value, output)
+
+
+def main() -> i32:
+    matrix: array[i32][2, 2] = [
+        [1, 2],
+        [3, 4],
+    ]
+    output = Writer()
+    return encode(matrix, output)

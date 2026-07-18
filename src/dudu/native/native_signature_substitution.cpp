@@ -4,6 +4,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_function_type.hpp"
+#include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_generics_detail.hpp"
 #include "dudu/sema/sema_method_templates.hpp"
 #include "dudu/sema/type_compat_native.hpp"
@@ -127,8 +128,8 @@ bool structured_substitution_allowed(const TypeRef& type, const NativeTemplateBi
     return true;
 }
 
-std::optional<std::string>
-bound_pack_placeholder(const TypeRef& type, const NativePackBindingMap& pack_bindings) {
+std::optional<std::string> bound_pack_placeholder(const TypeRef& type,
+                                                  const NativePackBindingMap& pack_bindings) {
     if (type.kind == TypeKind::PackExpansion && type.children.size() == 1) {
         return bound_pack_placeholder(type.children.front(), pack_bindings);
     }
@@ -137,8 +138,7 @@ bound_pack_placeholder(const TypeRef& type, const NativePackBindingMap& pack_bin
         return name;
     }
     for (const TypeRef& child : type.children) {
-        if (const std::optional<std::string> found =
-                bound_pack_placeholder(child, pack_bindings)) {
+        if (const std::optional<std::string> found = bound_pack_placeholder(child, pack_bindings)) {
             return found;
         }
     }
@@ -162,8 +162,8 @@ structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap&
     std::vector<TypeRef> expanded;
     expanded.reserve(found->second.size());
     for (const TypeRef& binding : found->second) {
-        expanded.push_back(substitute_type_ref(
-            param_type.children.front(), {{*pack_name, binding}}));
+        expanded.push_back(
+            substitute_type_ref(param_type.children.front(), {{*pack_name, binding}}));
     }
     return expanded;
 }
@@ -185,13 +185,32 @@ TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& 
     return type;
 }
 
+GenericTypeBindings native_explicit_template_bindings(const std::vector<std::string>& params,
+                                                      const std::vector<TypeRef>& args) {
+    GenericTypeBindings out;
+    size_t arg_index = 0;
+    for (const std::string& param : params) {
+        if (arg_index >= args.size()) {
+            break;
+        }
+        const std::string name = generic_param_base_name(param);
+        if (generic_param_is_pack(param)) {
+            out.packs.emplace(name, std::vector<TypeRef>(args.begin() + arg_index, args.end()));
+            break;
+        }
+        out.scalar.emplace(name, args[arg_index]);
+        ++arg_index;
+    }
+    return out;
+}
+
 } // namespace
 
 FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
                                                          FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
     const GenericTypeBindings bindings =
-        generic_type_bindings(signature.template_params, args);
+        native_explicit_template_bindings(signature.template_params, args);
     for (TypeRef& default_arg : signature.template_default_args) {
         if (has_type_ref(default_arg)) {
             default_arg = substitute_generic_type_ref(default_arg, bindings);
@@ -204,17 +223,15 @@ FunctionSignature substitute_explicit_template_signature(const Symbols& symbols,
             require_signature_type_ref(signature_param_type_ref(signature, i), "parameter");
         param_types.push_back(resolve_associated_type_ref(
             symbols,
-            normalize_cpp_type_artifacts_ref(
-                substitute_generic_type_ref(param_type, bindings))));
+            normalize_cpp_type_artifacts_ref(substitute_generic_type_ref(param_type, bindings))));
     }
     set_signature_param_types(signature, std::move(param_types));
     const TypeRef return_type =
         require_signature_type_ref(signature_return_type_ref(signature), "return");
     set_signature_return_type(
-        signature,
-        resolve_associated_type_ref(symbols, normalize_cpp_type_artifacts_ref(
-                                                 substitute_generic_type_ref(return_type,
-                                                                             bindings))));
+        signature, resolve_associated_type_ref(
+                       symbols, normalize_cpp_type_artifacts_ref(
+                                    substitute_generic_type_ref(return_type, bindings))));
     return signature;
 }
 

@@ -39,6 +39,7 @@ struct Symbols {
     std::map<std::string, std::vector<const FunctionDecl*>> function_overload_decls;
     std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
     std::map<std::string, std::vector<std::string>> native_function_identities_by_binding;
+    std::map<std::string, std::vector<const NativeFunctionDecl*>> native_function_decls_by_binding;
     std::map<std::string, std::map<std::string, const NativeFunctionDecl*>>
         native_function_decls_by_identity;
     std::set<std::string> native_path_prefixes;

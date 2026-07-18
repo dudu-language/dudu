@@ -1,6 +1,7 @@
 #include "dudu/project/module_import_aliases.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/generic_param_metadata.hpp"
 
 #include <algorithm>
 #include <map>
@@ -177,7 +178,9 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
-    alias.template_param_is_value = std::vector<bool>(alias.template_params.size(), false);
+    alias.template_param_is_value = fn.generic_param_is_value.size() == fn.generic_params.size()
+                                        ? fn.generic_param_is_value
+                                        : infer_function_generic_param_value_flags(fn);
     alias.identity =
         module_symbol_identity(fn.origin_module.empty() ? name : fn.origin_module + "." + fn.name);
     alias.return_type_ref = function_has_return_type(fn)

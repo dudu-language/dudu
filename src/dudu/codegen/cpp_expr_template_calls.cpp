@@ -10,6 +10,7 @@
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/source.hpp"
 #include "dudu/sema/sema_constructors.hpp"
+#include "dudu/sema/sema_dudu_overloads.hpp"
 #include "dudu/sema/sema_generics.hpp"
 #include "dudu/sema/sema_methods.hpp"
 #include "dudu/sema/sema_methods_internal.hpp"
@@ -138,11 +139,18 @@ std::string lower_template_call_expr(const Expr& expr, const std::vector<std::st
     std::vector<TypeRef> template_type_args = expr_template_type_args(expr);
     const std::string callee = direct_callee_name(expr);
     if (symbols != nullptr) {
-        if (const auto decl = symbols->function_decls.find(callee);
-            decl != symbols->function_decls.end() && !decl->second->generic_params.empty()) {
-            template_type_args =
-                filter_template_type_args(template_type_args, decl->second->generic_params,
-                                          generic_cpp_params_for_function(*decl->second));
+        if (const auto overloads = symbols->function_overload_decls.find(callee);
+            overloads != symbols->function_overload_decls.end()) {
+            FunctionScope scope(*symbols);
+            scope.local_type_refs = local_type_refs;
+            scope.current_class = locals.current_class;
+            const auto selected = select_dudu_function_overload(
+                scope, callee, expr.children, overloads->second, template_type_args);
+            if (selected && selected->declaration != nullptr) {
+                template_type_args = filter_template_type_args(
+                    template_type_args, selected->declaration->generic_params,
+                    generic_cpp_params_for_function(*selected->declaration));
+            }
         }
         template_type_args = filter_member_template_type_args(expr, std::move(template_type_args),
                                                               local_type_refs, *symbols);

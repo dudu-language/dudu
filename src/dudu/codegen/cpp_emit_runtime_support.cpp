@@ -39,6 +39,20 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4, typen
 )cpp";
 }
 
+void emit_fixed_array_runtime_support(std::ostringstream& out) {
+    out << R"cpp(template <typename T, std::size_t... Extents> struct NestedArrayImpl;
+template <typename T, std::size_t Extent> struct NestedArrayImpl<T, Extent> {
+    using type = std::array<T, Extent>;
+};
+template <typename T, std::size_t Extent, std::size_t... Rest>
+struct NestedArrayImpl<T, Extent, Rest...> {
+    using type = std::array<typename NestedArrayImpl<T, Rest...>::type, Extent>;
+};
+template <typename T, std::size_t... Extents>
+using NestedArray = typename NestedArrayImpl<T, Extents...>::type;
+)cpp";
+}
+
 void emit_index_runtime_support(std::ostringstream& out) {
     out << R"cpp(struct Slice {
     bool has_start{};

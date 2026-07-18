@@ -125,7 +125,8 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     const std::vector<std::string> aliases = namespace_aliases(module);
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
     const std::map<std::string, TypeRef> function_returns = cpp_function_return_types(module);
-    const Symbols symbols = collect_symbols(module);
+    Symbols symbols = collect_symbols(module);
+    symbols.module_tree = options.module_tree;
     emit_generated_banner(out);
     out << "#pragma once\n\n";
     if (options.emit_prelude) {
@@ -178,7 +179,8 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     const std::vector<std::string> aliases = namespace_aliases(module);
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
     const std::map<std::string, TypeRef> function_returns = cpp_function_return_types(module);
-    const Symbols symbols = collect_symbols(module);
+    Symbols symbols = collect_symbols(module);
+    symbols.module_tree = options.module_tree;
     emit_generated_banner(out);
     if (emit_options.emit_prelude) {
         emit_prelude(out, module, true);
@@ -214,7 +216,8 @@ std::string emit_cpp_module_implementation(const ModuleAst& module, const CppEmi
     const std::vector<std::string> aliases = namespace_aliases(module);
     const CppEmitOptions emit_options = source_emit_options(options, module, aliases);
     const std::map<std::string, TypeRef> function_returns = cpp_function_return_types(module);
-    const Symbols symbols = collect_symbols(module);
+    Symbols symbols = collect_symbols(module);
+    symbols.module_tree = options.module_tree;
 
     ModuleAst source_local;
     for (const ClassDecl& klass : module.classes) {

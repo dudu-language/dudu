@@ -95,39 +95,22 @@ bool is_native_class_binding(const Symbols& symbols, std::string_view binding) {
 const NativeFunctionDecl* native_function_decl_for_overload(const Symbols& symbols,
                                                             std::string_view binding,
                                                             size_t overload_index) {
-    const auto identities =
-        symbols.native_function_identities_by_binding.find(std::string(binding));
-    if (identities == symbols.native_function_identities_by_binding.end() ||
-        overload_index >= identities->second.size()) {
+    const auto declarations = symbols.native_function_decls_by_binding.find(std::string(binding));
+    if (declarations == symbols.native_function_decls_by_binding.end() ||
+        overload_index >= declarations->second.size()) {
         return nullptr;
     }
-    const auto declaration =
-        symbols.native_function_decls_by_identity.find(identities->second[overload_index]);
-    if (declaration == symbols.native_function_decls_by_identity.end()) {
-        return nullptr;
-    }
-    const auto binding_decl = declaration->second.find(std::string(binding));
-    return binding_decl == declaration->second.end() ? nullptr : binding_decl->second;
+    return declarations->second[overload_index];
 }
 
 std::vector<const NativeFunctionDecl*> native_function_decls_for_binding(const Symbols& symbols,
                                                                          std::string_view binding) {
     std::vector<const NativeFunctionDecl*> out;
-    const auto identities =
-        symbols.native_function_identities_by_binding.find(std::string(binding));
-    if (identities == symbols.native_function_identities_by_binding.end()) {
+    const auto declarations = symbols.native_function_decls_by_binding.find(std::string(binding));
+    if (declarations == symbols.native_function_decls_by_binding.end()) {
         return out;
     }
-    out.reserve(identities->second.size());
-    for (const std::string& identity : identities->second) {
-        if (const auto declaration = symbols.native_function_decls_by_identity.find(identity);
-            declaration != symbols.native_function_decls_by_identity.end()) {
-            if (const auto binding_decl = declaration->second.find(std::string(binding));
-                binding_decl != declaration->second.end()) {
-                out.push_back(binding_decl->second);
-            }
-        }
-    }
+    out = declarations->second;
     return out;
 }
 

@@ -158,11 +158,14 @@ BodyTypeSubstitutions body_type_substitutions(const std::vector<std::string>& pa
                                               const std::vector<TypeRef>& args) {
     BodyTypeSubstitutions out;
     size_t arg_index = 0;
-    for (size_t i = 0; i < params.size() && arg_index < args.size(); ++i) {
+    for (size_t i = 0; i < params.size(); ++i) {
         const std::string name = generic_param_base_name(params[i]);
         if (generic_param_is_pack(params[i])) {
             out.scalar.emplace(name, named_type_ref("auto"));
             out.packs.emplace(name, std::vector<TypeRef>(args.begin() + arg_index, args.end()));
+            break;
+        }
+        if (arg_index >= args.size()) {
             break;
         }
         out.scalar.emplace(name, args[arg_index]);

@@ -23,7 +23,7 @@ void emit_cpp_template_parameters(std::ostringstream& out, const std::vector<std
         }
         const std::string name = generic_param_base_name(params[i]);
         if (generic_param_is_pack(params[i])) {
-            out << "typename... " << name;
+            out << (value_params.contains(name) ? "size_t... " : "typename... ") << name;
         } else {
             out << (value_params.contains(name) ? "size_t " : "typename ") << name;
         }

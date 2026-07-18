@@ -15,11 +15,12 @@ struct DuduFunctionOverload {
     std::vector<TypeRef> generic_args;
 };
 
-std::optional<DuduFunctionOverload>
-select_dudu_function_overload(const FunctionScope& scope, const std::string& callee,
-                              const std::vector<Expr>& args,
-                              const std::vector<const FunctionDecl*>& declarations = {},
-                              const std::optional<std::vector<TypeRef>>& explicit_type_args =
-                                  std::nullopt);
+std::vector<const FunctionDecl*> dudu_function_declarations(const FunctionScope& scope,
+                                                            const std::string& callee);
+
+std::optional<DuduFunctionOverload> select_dudu_function_overload(
+    const FunctionScope& scope, const std::string& callee, const std::vector<Expr>& args,
+    const std::vector<const FunctionDecl*>& declarations = {},
+    const std::optional<std::vector<TypeRef>>& explicit_type_args = std::nullopt);
 
 } // namespace dudu

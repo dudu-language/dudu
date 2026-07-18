@@ -26,6 +26,20 @@ def decode[Input, T](input: &const[Input], target: DecodeTarget[T]) -> T:
     return T()
 
 
+def decode_result[Input](
+    input: &const[Input],
+    target: DecodeTarget[bool],
+) -> Result[bool, str]:
+    return Ok(False)
+
+
+def decode_result[Input](
+    input: &const[Input],
+    target: DecodeTarget[i32],
+) -> Result[i32, str]:
+    return Ok(42)
+
+
 def decode_from[T, Input](input: &const[Input]) -> T:
     return decode(input, DecodeTarget[T]())
 

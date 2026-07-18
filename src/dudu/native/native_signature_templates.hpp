@@ -14,8 +14,8 @@ using NativeTemplateBindings = std::map<std::string, TypeRef>;
 using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
 using NativeTemplateParameterNames = std::set<std::string>;
 
-NativeTemplateParameterNames
-native_type_template_parameters(const FunctionSignature& signature);
+NativeTemplateParameterNames native_type_template_parameters(const FunctionSignature& signature);
+NativeTemplateParameterNames native_template_parameters(const FunctionSignature& signature);
 std::optional<std::string>
 native_template_pack_placeholder(const TypeRef& type,
                                  const NativeTemplateParameterNames& template_params);

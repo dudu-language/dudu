@@ -91,16 +91,44 @@ bool bind_scalar_generic(const std::string& param, const TypeRef& arg_type,
     return true;
 }
 
+void flatten_fixed_array_element(TypeRef& type) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
+        return;
+    }
+    TypeRef element = explicit_array_element_type_ref(type);
+    while (element.kind == TypeKind::FixedArray) {
+        const TypeRef nested_element = explicit_array_element_type_ref(element);
+        if (!has_type_ref(nested_element) || type.children.front().children.size() != 1) {
+            break;
+        }
+        type.children.front().children.front() = nested_element;
+        const std::vector<TypeRef> nested_shape = explicit_array_shape_refs(element);
+        type.children.insert(type.children.end(), nested_shape.begin(), nested_shape.end());
+        element = nested_element;
+    }
+    std::string shape_text;
+    for (size_t index = 1; index < type.children.size(); ++index) {
+        if (index > 1) {
+            shape_text += ", ";
+        }
+        shape_text += substitute_type_ref_text(type.children[index], {});
+    }
+    type.value = std::move(shape_text);
+}
+
 } // namespace
 
 GenericTypeBindings generic_type_bindings(const std::vector<std::string>& params,
                                           const std::vector<TypeRef>& args) {
     GenericTypeBindings out;
     size_t arg_index = 0;
-    for (size_t i = 0; i < params.size() && arg_index < args.size(); ++i) {
+    for (size_t i = 0; i < params.size(); ++i) {
         const std::string name = generic_param_base_name(params[i]);
         if (generic_param_is_pack(params[i])) {
             out.packs.emplace(name, std::vector<TypeRef>(args.begin() + arg_index, args.end()));
+            break;
+        }
+        if (arg_index >= args.size()) {
             break;
         }
         out.scalar.emplace(name, args[arg_index]);
@@ -138,6 +166,7 @@ TypeRef substitute_generic_type_ref(const TypeRef& type, const GenericTypeBindin
     }
     TypeRef out = type;
     out.children = substitute_generic_type_ref_list(type.children, bindings);
+    flatten_fixed_array_element(out);
     if ((out.kind == TypeKind::FixedArray || out.kind == TypeKind::Shaped) &&
         out.children.size() > 1) {
         std::ostringstream value;
@@ -232,8 +261,8 @@ bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_ty
     if ((param_type.kind == TypeKind::Pointer || param_type.kind == TypeKind::Reference) &&
         param_type.children.size() == 1) {
         if (param_type.kind == arg_type.kind && arg_type.children.size() == 1) {
-            return infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
-                                              params, bindings, error);
+            return infer_generic_binding_pack(param_type.children.front(),
+                                              arg_type.children.front(), params, bindings, error);
         }
         if (param_type.kind == TypeKind::Reference) {
             return infer_generic_binding_pack(param_type.children.front(), arg_type, params,
@@ -242,14 +271,26 @@ bool infer_generic_binding_pack(const TypeRef& param_type, const TypeRef& arg_ty
     }
     if (param_type.kind == TypeKind::Const && param_type.children.size() == 1) {
         if (arg_type.kind == TypeKind::Const && arg_type.children.size() == 1) {
-            return infer_generic_binding_pack(param_type.children.front(), arg_type.children.front(),
-                                              params, bindings, error);
+            return infer_generic_binding_pack(param_type.children.front(),
+                                              arg_type.children.front(), params, bindings, error);
         }
         return infer_generic_binding_pack(param_type.children.front(), arg_type, params, bindings,
                                           error);
     }
     if (param_type.kind != arg_type.kind) {
         return true;
+    }
+    std::string extent_pack_name;
+    if (param_type.kind == TypeKind::FixedArray && param_type.children.size() == 2 &&
+        arg_type.children.size() > 2 && !param_type.children.front().children.empty() &&
+        !pack_expansion_name(param_type.children[1], extent_pack_name)) {
+        if (!infer_generic_binding_pack(param_type.children.front().children.front(),
+                                        fixed_array_child_type_ref(arg_type), params, bindings,
+                                        error)) {
+            return false;
+        }
+        return infer_generic_binding_pack(param_type.children[1], arg_type.children[1], params,
+                                          bindings, error);
     }
     if ((param_type.kind == TypeKind::FixedArray || param_type.kind == TypeKind::Shaped) &&
         !param_type.children.empty() && !arg_type.children.empty()) {

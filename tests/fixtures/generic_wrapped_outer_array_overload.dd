@@ -1,0 +1,23 @@
+class Reader:
+    marker: bool = False
+
+
+class Target[T]:
+    marker: bool = False
+
+
+def decode[Reader, T, N](input: &const[Reader], target: Target[array[T][N]]) -> i32:
+    return 70
+
+
+def decode[Reader, T](input: &const[Reader], target: Target[T]) -> i32:
+    return T.missing()
+
+
+def decode_from[T, Reader](input: &const[Reader]) -> i32:
+    return decode(input, Target[T]())
+
+
+def main() -> i32:
+    input = Reader()
+    return decode_from[array[i32][2, 2], Reader](input)

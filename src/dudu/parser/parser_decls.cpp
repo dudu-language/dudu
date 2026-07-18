@@ -1,5 +1,6 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/generic_param_metadata.hpp"
 #include "dudu/parser/ast_parse_utils.hpp"
 #include "dudu/parser/parser_doc_comments.hpp"
 #include "dudu/parser/parser_internal.hpp"
@@ -332,6 +333,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     consume(TokenKind::Colon, "expected : after function header");
     consume(TokenKind::Newline, "expected newline after function header");
     fn.statements = parse_statement_block();
+    fn.generic_param_is_value = infer_function_generic_param_value_flags(fn);
     fn.range.end = current().location;
     return fn;
 }

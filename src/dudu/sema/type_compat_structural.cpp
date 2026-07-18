@@ -1,5 +1,6 @@
 #include "dudu/sema/type_compat_structural.hpp"
 
+#include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/text.hpp"
 #include "dudu/native/native_header_identity.hpp"
@@ -87,17 +88,17 @@ bool structural_function_assignment_allowed(const TypeRef& expected, const TypeR
 }
 
 bool structural_fixed_array_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
-    if (expected.kind != TypeKind::FixedArray || got.kind != TypeKind::FixedArray ||
-        expected.children.size() < 2 || got.children.size() < 2 ||
-        expected.children.size() != got.children.size()) {
+    if (expected.kind != TypeKind::FixedArray || got.kind != TypeKind::FixedArray) {
         return false;
     }
-    for (size_t i = 1; i < expected.children.size(); ++i) {
-        if (!type_ref_equivalent(expected.children[i], got.children[i])) {
-            return false;
-        }
+    const std::vector<TypeRef> expected_shape = explicit_array_shape_refs(expected);
+    const std::vector<TypeRef> got_shape = explicit_array_shape_refs(got);
+    if (expected_shape.empty() || got_shape.empty() ||
+        !type_ref_equivalent(expected_shape.front(), got_shape.front())) {
+        return false;
     }
-    return structural_type_assignment_allowed(expected.children.front(), got.children.front());
+    return structural_type_assignment_allowed(fixed_array_child_type_ref(expected),
+                                              fixed_array_child_type_ref(got));
 }
 
 bool shaped_dim_assignment_allowed(const TypeRef& expected, const TypeRef& got) {

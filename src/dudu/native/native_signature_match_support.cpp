@@ -4,8 +4,8 @@
 #include "dudu/native/native_signature_match_internal.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
-#include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
+#include "dudu/sema/sema_common.hpp"
 #include "dudu/sema/sema_expr_internal.hpp"
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_inheritance.hpp"
@@ -38,7 +38,7 @@ size_t native_variadic_pack_start(const FunctionSignature& signature) {
 
 std::optional<std::string> native_variadic_pack_placeholder(const FunctionSignature& signature,
                                                             size_t pack_start) {
-    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_template_parameters(signature);
     for (size_t i = pack_start; i < signature_param_count(signature); ++i) {
         if (const std::optional<std::string> pack = native_template_pack_placeholder(
                 signature_param_type_ref(signature, i), template_params)) {
@@ -86,8 +86,7 @@ void bind_default_template_args(const FunctionSignature& signature,
         if (bindings.contains(name) || !has_type_ref(signature.template_default_args[i])) {
             continue;
         }
-        bindings.emplace(
-            name, substitute_type_ref(signature.template_default_args[i], bindings));
+        bindings.emplace(name, substitute_type_ref(signature.template_default_args[i], bindings));
     }
 }
 
@@ -324,7 +323,7 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     }
 
     std::vector<std::string> reasons;
-    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_template_parameters(signature);
     const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const TypeRef& got_ref = arg_type_refs[i];
@@ -377,13 +376,40 @@ std::string native_overload_message_ast(
     return out.str();
 }
 
-std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
-                                                     const FunctionSignature& signature,
-                                                     const std::vector<Expr>& args,
-                                                     const std::vector<TypeRef>& arg_type_refs) {
+struct MatchedNativeSignature {
+    FunctionSignature signature;
+    std::vector<TypeRef> inferred_template_args;
+};
+
+std::vector<TypeRef> ordered_template_args(const FunctionSignature& signature,
+                                           const NativeTemplateBindings& bindings,
+                                           const NativePackBindingMap& pack_bindings) {
+    std::vector<TypeRef> out;
+    for (const std::string& param : signature.template_params) {
+        const std::string name = template_param_name(param);
+        if (template_param_pack(param)) {
+            const auto found = pack_bindings.find(name);
+            if (found == pack_bindings.end()) {
+                return {};
+            }
+            out.insert(out.end(), found->second.begin(), found->second.end());
+            continue;
+        }
+        const auto found = bindings.find(name);
+        if (found == bindings.end()) {
+            return {};
+        }
+        out.push_back(found->second);
+    }
+    return out;
+}
+
+std::optional<MatchedNativeSignature>
+match_signature_ast(const FunctionScope& scope, const FunctionSignature& signature,
+                    const std::vector<Expr>& args, const std::vector<TypeRef>& arg_type_refs) {
     NativeTemplateBindings bindings;
     NativePackBindingMap pack_bindings;
-    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_template_parameters(signature);
     const size_t param_count = signature_param_count(signature);
     const size_t pack_start = native_variadic_pack_start(signature);
     const bool has_pack_param = pack_start < param_count;
@@ -436,7 +462,10 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
             pack_bindings.try_emplace(template_param_name(param));
         }
     }
-    return substitute_bound_template_signature(scope.symbols, signature, bindings, pack_bindings);
+    return MatchedNativeSignature{
+        .signature =
+            substitute_bound_template_signature(scope.symbols, signature, bindings, pack_bindings),
+        .inferred_template_args = ordered_template_args(signature, bindings, pack_bindings)};
 }
 
 int native_match_conversion_score(const FunctionScope& scope, const FunctionSignature& signature,
@@ -502,7 +531,7 @@ bool direct_native_template_placeholder(const TypeRef& type,
 }
 
 int native_template_generality_score(const FunctionSignature& signature) {
-    const NativeTemplateParameterNames template_params = native_type_template_parameters(signature);
+    const NativeTemplateParameterNames template_params = native_template_parameters(signature);
     int score = signature.template_params.empty() ? 0 : 1;
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         if (direct_native_template_placeholder(signature_param_type_ref(signature, i),
@@ -584,22 +613,23 @@ select_native_signature_candidates(const FunctionScope& scope,
             continue;
         }
         const FunctionSignature& signature = candidates[candidate_index];
-        if (const std::optional<FunctionSignature> matched =
+        if (const std::optional<MatchedNativeSignature> matched =
                 match_signature_ast(scope, signature, args, result.arg_type_refs)) {
-            const int score =
-                native_match_conversion_score(scope, *matched, args, result.arg_type_refs);
+            const int score = native_match_conversion_score(scope, matched->signature, args,
+                                                            result.arg_type_refs);
             const int qualification_score =
-                native_match_qualification_score(scope, *matched, result.arg_type_refs);
+                native_match_qualification_score(scope, matched->signature, result.arg_type_refs);
             const std::tuple rank{score, native_template_generality_score(signature),
                                   qualification_score};
             if (!result.signature || rank < *selected_rank) {
-                result.signature = *matched;
+                result.signature = matched->signature;
+                result.inferred_template_args = matched->inferred_template_args;
                 result.index = candidate_index;
                 selected_rank = rank;
-                result.equally_ranked = {{candidate_index, *matched}};
+                result.equally_ranked = {{candidate_index, matched->signature}};
             } else if (rank == *selected_rank &&
-                       !equivalent_matched_signatures(*result.signature, *matched)) {
-                result.equally_ranked.emplace_back(candidate_index, *matched);
+                       !equivalent_matched_signatures(*result.signature, matched->signature)) {
+                result.equally_ranked.emplace_back(candidate_index, matched->signature);
             }
         }
     }

@@ -14,6 +14,7 @@ struct CppEmitOptions {
     bool use_generated_names = false;
     bool test_source = false;
     bool expose_test_functions = false;
+    const ModuleAst* module_tree = nullptr;
     std::map<std::string, std::string> generated_type_names;
     std::map<std::string, std::string> generated_value_names;
 };

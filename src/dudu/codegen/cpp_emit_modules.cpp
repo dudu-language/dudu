@@ -133,23 +133,27 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
     }
 }
 
-std::string header_with_module_includes(const ModuleAst& unit, const CppModuleMap& modules,
-                                        bool test_source = false, bool public_abi = false,
+std::string header_with_module_includes(const ModuleAst& module_tree, const ModuleAst& unit,
+                                        const CppModuleMap& modules, bool test_source = false,
+                                        bool public_abi = false,
                                         bool include_macro_host_modules = false) {
     std::ostringstream out;
     emit_module_header_includes(out, unit, modules, include_macro_host_modules);
-    out << emit_cpp_header(unit,
-                           make_cpp_module_emit_options(unit, modules, test_source, public_abi,
-                                                        include_macro_host_modules));
+    CppEmitOptions options = make_cpp_module_emit_options(unit, modules, test_source, public_abi,
+                                                          include_macro_host_modules);
+    options.module_tree = &module_tree;
+    out << emit_cpp_header(unit, options);
     return out.str();
 }
 
-std::string source_with_boundary_comment(const ModuleAst& unit, const CppModuleMap& modules,
-                                         bool test_source = false, bool public_abi = false,
+std::string source_with_boundary_comment(const ModuleAst& module_tree, const ModuleAst& unit,
+                                         const CppModuleMap& modules, bool test_source = false,
+                                         bool public_abi = false,
                                          bool include_macro_host_modules = false) {
     std::ostringstream out;
-    const CppEmitOptions options = make_cpp_module_emit_options(
-        unit, modules, test_source, public_abi, include_macro_host_modules);
+    CppEmitOptions options = make_cpp_module_emit_options(unit, modules, test_source, public_abi,
+                                                          include_macro_host_modules);
+    options.module_tree = &module_tree;
     emit_generated_banner(out);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n"
         << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n\n";
@@ -161,20 +165,21 @@ std::string source_with_boundary_comment(const ModuleAst& unit, const CppModuleM
     return out.str();
 }
 
-void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
-                      const CppModuleMap& modules, bool test_source = false,
+void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& module_tree,
+                      const ModuleAst& unit, const CppModuleMap& modules, bool test_source = false,
                       bool public_abi = false, bool include_macro_host_modules = false) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(unit, modules, test_source, public_abi,
-                                                          include_macro_host_modules)});
-    out.push_back({.path = base.string() + ".cpp",
-                   .module_path = unit.module_path,
-                   .kind = CppModuleArtifactKind::Source,
-                   .content = source_with_boundary_comment(unit, modules, test_source, public_abi,
-                                                           include_macro_host_modules)});
+                   .content = header_with_module_includes(module_tree, unit, modules, test_source,
+                                                          public_abi, include_macro_host_modules)});
+    out.push_back(
+        {.path = base.string() + ".cpp",
+         .module_path = unit.module_path,
+         .kind = CppModuleArtifactKind::Source,
+         .content = source_with_boundary_comment(module_tree, unit, modules, test_source,
+                                                 public_abi, include_macro_host_modules)});
 }
 
 CppModuleMap module_map(std::span<const ModuleAst> units) {
@@ -265,7 +270,7 @@ emit_cpp_module_artifacts(const ModuleAst& module, const std::vector<std::string
     const bool public_abi = preserve_public_abi_names(module);
     for (const ModuleAst& unit : units) {
         if (should_emit_module(filter, unit, emit_options.include_macro_host_modules)) {
-            append_artifacts(out, unit, modules, false, public_abi,
+            append_artifacts(out, module, unit, modules, false, public_abi,
                              emit_options.include_macro_host_modules);
         }
     }
@@ -301,7 +306,7 @@ emit_cpp_test_module_artifacts(const ModuleAst& module,
     const CppModuleMap modules = module_map(units);
     for (const ModuleAst& unit : units) {
         if (should_emit_module(module_filter_set, unit)) {
-            append_artifacts(out, unit, modules, true);
+            append_artifacts(out, module, unit, modules, true);
         }
     }
     out.push_back({.path = "test_harness.cpp",

@@ -111,36 +111,6 @@ bool scope_owns_function(const FunctionScope& scope, const FunctionDecl* fn) {
     return false;
 }
 
-std::string function_identity(const FunctionDecl& fn) {
-    return fn.origin_module.empty() ? fn.name : fn.origin_module + "." + fn.name;
-}
-
-std::vector<const FunctionDecl*> imported_function_declarations(const FunctionScope& scope,
-                                                                const std::string& callee) {
-    std::vector<const FunctionDecl*> out;
-    if (scope.symbols.module_tree == nullptr) {
-        return out;
-    }
-    const std::vector<const NativeFunctionDecl*> aliases =
-        native_function_decls_for_binding(scope.symbols, callee);
-    if (aliases.empty()) {
-        return out;
-    }
-    for (const NativeFunctionDecl* alias : aliases) {
-        if (alias == nullptr || alias->identity.canonical_path.empty()) {
-            continue;
-        }
-        for (const ModuleAst& unit : scope.symbols.module_tree->module_units) {
-            for (const FunctionDecl& fn : unit.functions) {
-                if (function_identity(fn) == alias->identity.canonical_path) {
-                    out.push_back(&fn);
-                }
-            }
-        }
-    }
-    return out;
-}
-
 TypeRef instantiated_owner_type(const ClassDecl& owner, const std::vector<TypeRef>& receiver_args,
                                 SourceLocation location) {
     TypeRef type = named_type_ref(owner.name, location);
@@ -311,7 +281,7 @@ void check_instantiated_imported_generic_function_body(
     const FunctionScope& caller_scope, const std::string& callee, const std::vector<Expr>& args,
     const std::optional<std::vector<TypeRef>>& explicit_type_args, const SourceLocation& site) {
     const std::vector<const FunctionDecl*> declarations =
-        imported_function_declarations(caller_scope, callee);
+        dudu_function_declarations(caller_scope, callee);
     const auto selected =
         select_dudu_function_overload(caller_scope, callee, args, declarations, explicit_type_args);
     if (selected && !selected->generic_args.empty()) {

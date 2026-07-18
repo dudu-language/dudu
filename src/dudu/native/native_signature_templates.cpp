@@ -44,8 +44,7 @@ std::string strip_forwarding_suffix(std::string type) {
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             const NativeTemplateParameterNames& template_params,
-                            NativeTemplateBindings& bindings,
-                            NativePackBindingMap& pack_bindings);
+                            NativeTemplateBindings& bindings, NativePackBindingMap& pack_bindings);
 
 std::string normalized_template_param_name(std::string name) {
     const size_t qualifier = name.find_last_of(".:");
@@ -110,14 +109,25 @@ bool bind_same_shape_children(const TypeRef& expected, const TypeRef& got,
                                  pack_bindings)) {
         return true;
     }
-    if (expected.children.size() != got.children.size()) {
+    const bool trailing_pack =
+        !expected.children.empty() && expected.children.back().kind == TypeKind::PackExpansion;
+    const size_t fixed_children = expected.children.size() - (trailing_pack ? 1 : 0);
+    if ((!trailing_pack && expected.children.size() != got.children.size()) ||
+        (trailing_pack && got.children.size() < fixed_children)) {
         return false;
     }
-    for (size_t i = 0; i < expected.children.size(); ++i) {
+    for (size_t i = 0; i < fixed_children; ++i) {
         if (!bind_template_type_ref(expected.children[i], got.children[i], template_params,
                                     bindings, pack_bindings)) {
             return false;
         }
+    }
+    if (trailing_pack) {
+        return bind_template_pack_child(
+            expected.children.back(),
+            std::vector<TypeRef>(got.children.begin() + static_cast<std::ptrdiff_t>(fixed_children),
+                                 got.children.end()),
+            template_params, pack_bindings);
     }
     return true;
 }
@@ -128,8 +138,7 @@ bool same_native_template_name(const std::string& expected, const std::string& g
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             const NativeTemplateParameterNames& template_params,
-                            NativeTemplateBindings& bindings,
-                            NativePackBindingMap& pack_bindings) {
+                            NativeTemplateBindings& bindings, NativePackBindingMap& pack_bindings) {
     if (got.kind == TypeKind::Shaped && expected.kind != TypeKind::Shaped &&
         !got.children.empty()) {
         return bind_template_type_ref(expected, got.children.front(), template_params, bindings,
@@ -184,8 +193,7 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
 
 } // namespace
 
-NativeTemplateParameterNames
-native_type_template_parameters(const FunctionSignature& signature) {
+NativeTemplateParameterNames native_type_template_parameters(const FunctionSignature& signature) {
     if (signature.template_params.size() != signature.template_param_is_value.size()) {
         throw std::logic_error("native function template parameter metadata is incomplete");
     }
@@ -194,6 +202,17 @@ native_type_template_parameters(const FunctionSignature& signature) {
         if (!signature.template_param_is_value[i]) {
             out.insert(normalized_template_param_name(signature.template_params[i]));
         }
+    }
+    return out;
+}
+
+NativeTemplateParameterNames native_template_parameters(const FunctionSignature& signature) {
+    if (signature.template_params.size() != signature.template_param_is_value.size()) {
+        throw std::logic_error("native function template parameter metadata is incomplete");
+    }
+    NativeTemplateParameterNames out;
+    for (const std::string& param : signature.template_params) {
+        out.insert(normalized_template_param_name(param));
     }
     return out;
 }

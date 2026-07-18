@@ -220,9 +220,9 @@ void emit_target_macros(std::ostringstream& out, const CppRuntimeFeatures& featu
 void emit_runtime_support(std::ostringstream& out, const ModuleAst& module,
                           const CppRuntimeFeatures& features) {
     const bool freestanding = freestanding_like(module);
-    const bool has_namespace_support = features.result || features.hosted_print ||
-                                       features.tuples || features.indexing ||
-                                       features.array_view || features.strided_span;
+    const bool has_namespace_support =
+        features.result || features.hosted_print || features.fixed_array || features.tuples ||
+        features.indexing || features.array_view || features.strided_span;
     if (has_namespace_support) {
         out << "namespace dudu {\n";
         if (features.result) {
@@ -233,6 +233,9 @@ void emit_runtime_support(std::ostringstream& out, const ModuleAst& module,
         }
         if (features.tuples) {
             emit_tuple_runtime_support(out);
+        }
+        if (features.fixed_array) {
+            emit_fixed_array_runtime_support(out);
         }
         if (features.indexing) {
             emit_index_runtime_support(out);
