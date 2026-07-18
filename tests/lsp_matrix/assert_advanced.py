@@ -156,6 +156,30 @@ def assert_advanced_behavior(messages, workspace):
     if "Overloaded.choose" not in hover_value(messages, 89) or "str" not in hover_value(messages, 89):
         raise AssertionError("overloaded method hover did not report the selected str overload")
 
+    assert_definition(response(messages, 90), model, model_source, "def scalar_at", len("def "), "scalar index operator")
+    assert_definition(response(messages, 91), model, model_source, "def slice_at", len("def "), "slice index operator")
+    scalar_refs = response(messages, 92)
+    assert_reference(scalar_refs, model, model_source, "def scalar_at", len("def "), "scalar index refs")
+    assert_reference(scalar_refs, main, main_source, "indexed[0]", len("indexed"), "scalar index refs")
+    assert_no_reference(scalar_refs, main, main_source, "indexed[0:2]", len("indexed"), "scalar index refs")
+    slice_refs = response(messages, 93)
+    assert_reference(slice_refs, model, model_source, "def slice_at", len("def "), "slice index refs")
+    assert_reference(slice_refs, main, main_source, "indexed[0:2]", len("indexed"), "slice index refs")
+    assert_no_reference(slice_refs, main, main_source, "indexed[0]", len("indexed"), "slice index refs")
+    if "slice_at" not in hover_value(messages, 94) or "index: slice" not in hover_value(messages, 94):
+        raise AssertionError("slice index hover did not report the selected overload")
+    slice_signature = response(messages, 95)
+    if not slice_signature or "slice_at" not in slice_signature["signatures"][0]["label"]:
+        raise AssertionError(f"slice index signature help selected the wrong overload: {slice_signature!r}")
+    pair_signature = response(messages, 96)
+    if (
+        not pair_signature
+        or "pair_at" not in pair_signature["signatures"][0]["label"]
+        or pair_signature.get("activeParameter") != 1
+    ):
+        raise AssertionError(f"multi-index signature help was incomplete: {pair_signature!r}")
+    assert_definition(response(messages, 97), model, model_source, "def pair_at", len("def "), "pair index operator")
+
     prepare_override = response(messages, 70)
     if not prepare_override or prepare_override.get("placeholder") != "transform":
         raise AssertionError(f"override prepareRename was unavailable: {prepare_override!r}")

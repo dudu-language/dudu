@@ -235,15 +235,21 @@ std::vector<ReferenceLocation> member_reference_locations(const ModuleAst& modul
                             }
                             return;
                         }
-                        if (expr.kind == ExprKind::Binary) {
+                        if (expr.kind == ExprKind::Binary || expr.kind == ExprKind::Index) {
+                            const SourceLocation operator_location =
+                                expr.kind == ExprKind::Binary
+                                    ? expr.op_location
+                                    : range_end_location(expr.children.front().range);
+                            const std::string operator_text =
+                                expr.kind == ExprKind::Binary ? std::string(expr.op) : "[";
                             const std::optional<Symbol> symbol =
                                 dudu_operator_symbol_for_expr(module, expr, expr.location.line);
                             if (symbol.has_value() &&
                                 same_member_declaration(symbol->location, target.declaration) &&
-                                seen.insert({expr.op_location.line, expr.op_location.column})
+                                seen.insert({operator_location.line, operator_location.column})
                                     .second) {
-                                out.push_back(reference_location(doc, std::string(expr.op),
-                                                                 expr.op_location));
+                                out.push_back(
+                                    reference_location(doc, operator_text, operator_location));
                             }
                             return;
                         }

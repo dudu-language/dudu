@@ -46,6 +46,20 @@ class Overloaded:
 
     def choose(self, value: str) -> i32:
         return i32(len(value))
+
+
+class Indexed:
+    @operator("[]")
+    def scalar_at(self, index: i32) -> i32:
+        return index
+
+    @operator("[]")
+    def slice_at(self, index: slice) -> i32:
+        return 2
+
+    @operator("[]")
+    def pair_at(self, row: i32, col: i32) -> i32:
+        return row + col
 """
     model = tmp / "model.dd"
     model.write_text(model_source)
@@ -86,6 +100,7 @@ from model import Root
 from model import Branch
 from model import Leaf
 from model import Overloaded
+from model import Indexed
 from model import copy_values
 from inheritance import ScalingProcessor
 from inheritance import ConstantSource
@@ -136,10 +151,14 @@ def main() -> i32:
     overloaded = api.Overloaded()
     number_choice = overloaded.choose(3)
     text_choice = overloaded.choose("three")
+    indexed = api.Indexed()
+    scalar_index = indexed[0]
+    slice_index = indexed[0:2]
+    pair_index = indexed[1, 2]
     transformed = processor.transform(buffer.first())
     ignored = other_processor.transform(20)
     packet = Packet.Data(7)
-    return consume(packet, copied) + middle[0] + transformed + source.read() + ignored + deep + number_choice + text_choice
+    return consume(packet, copied) + middle[0] + transformed + source.read() + ignored + deep + number_choice + text_choice + scalar_index + slice_index + pair_index
 """
     main = tmp / "main.dd"
     main.write_text(main_source)

@@ -76,6 +76,14 @@ def build_advanced_requests(workspace):
         (87, "textDocument/references", model, model_source, "def choose", len("def "), 1),
         (88, "textDocument/hover", main, main_source, "root.branch.leaf.value", len("root.branch.")),
         (89, "textDocument/hover", main, main_source, 'overloaded.choose("three")', len("overloaded.")),
+        (90, "textDocument/definition", main, main_source, "indexed[0]", len("indexed")),
+        (91, "textDocument/definition", main, main_source, "indexed[0:2]", len("indexed")),
+        (92, "textDocument/references", model, model_source, "def scalar_at", len("def ")),
+        (93, "textDocument/references", model, model_source, "def slice_at", len("def ")),
+        (94, "textDocument/hover", main, main_source, "indexed[0:2]", len("indexed")),
+        (95, "textDocument/signatureHelp", main, main_source, "indexed[0:2]", len("indexed[0:")),
+        (96, "textDocument/signatureHelp", main, main_source, "indexed[1, 2]", len("indexed[1, ")),
+        (97, "textDocument/definition", main, main_source, "indexed[1, 2]", len("indexed")),
         (70, "textDocument/prepareRename", inheritance, inheritance_source, "def transform", len("def "), 1),
     ]
     for query in queries:

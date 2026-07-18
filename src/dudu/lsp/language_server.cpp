@@ -134,7 +134,7 @@ std::string LanguageServer::initialize_result() {
            "\"hoverProvider\":true,"
            "\"inlayHintProvider\":{\"resolveProvider\":false},"
            "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
-           "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
+           "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\"[\",\",\"]},"
            "\"workspaceSymbolProvider\":true,"
            "\"workspace\":{\"workspaceFolders\":{\"supported\":true,"
            "\"changeNotifications\":true}}"
