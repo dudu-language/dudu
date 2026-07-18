@@ -53,6 +53,13 @@ static_dudu_call_type_ref(const FunctionScope& scope, const Expr& expr, const st
             matching_signature_index_ast(scope, signatures, expr.children)) {
         return check_dudu_method_instantiation(scope, expr, callee, methods[*matched], location);
     }
+    if (method_args.empty()) {
+        if (const auto inferred = inferred_dudu_static_method_instantiation_for_type(
+                scope, receiver_type, method_name, expr.children, location);
+            inferred) {
+            return check_dudu_method_instantiation(scope, expr, callee, *inferred, location);
+        }
+    }
     return std::nullopt;
 }
 

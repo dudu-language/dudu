@@ -1,0 +1,14 @@
+from protocol import Codec
+from protocol import DecodeTarget
+from protocol import Reader
+from protocol import decode_from
+from protocol import decode_sequence
+from protocol import decode_static
+
+
+def main() -> i32:
+    input = Reader()
+    decoded = decode_from[i32, Reader](input)
+    sequence = decode_sequence(input, DecodeTarget[list[i32]]())
+    static_value = decode_static[Codec, Reader](input)
+    return decoded + sequence[0] + static_value - 84

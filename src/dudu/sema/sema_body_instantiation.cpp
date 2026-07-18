@@ -152,7 +152,8 @@ TypeRef instantiated_owner_type(const ClassDecl& owner, const std::vector<TypeRe
 }
 
 bool contains_unresolved_generic(const TypeRef& type, const Symbols& symbols) {
-    if (symbols.generic_params.contains(type_ref_head_name(type))) {
+    if (!has_type_ref(type) || type_ref_is_auto(type) ||
+        symbols.generic_params.contains(type_ref_head_name(type))) {
         return true;
     }
     if (type.kind == TypeKind::Value) {
@@ -180,22 +181,29 @@ void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRe
                             std::set<std::string>& expanded_bindings) {
     const std::string name = type_ref_head_name(type);
     if (!name.empty()) {
+        const bool target_declares_name =
+            target.classes.contains(name) || target.enums.contains(name);
+        const bool source_declares_name =
+            source.classes.contains(name) || source.enums.contains(name);
         target.types.insert(name);
         if (const auto found = source.alias_type_refs.find(name);
+            !target_declares_name && !source_declares_name &&
             found != source.alias_type_refs.end()) {
-            target.alias_type_refs.insert_or_assign(name, found->second);
+            target.alias_type_refs.try_emplace(name, found->second);
         }
         if (const auto found = source.alias_generic_params.find(name);
+            !target_declares_name && !source_declares_name &&
             found != source.alias_generic_params.end()) {
-            target.alias_generic_params.insert_or_assign(name, found->second);
+            target.alias_generic_params.try_emplace(name, found->second);
         }
         if (const auto found = source.alias_generic_defaults.find(name);
+            !target_declares_name && !source_declares_name &&
             found != source.alias_generic_defaults.end()) {
-            target.alias_generic_defaults.insert_or_assign(name, found->second);
+            target.alias_generic_defaults.try_emplace(name, found->second);
         }
         if (const auto found = source.classes.find(name); found != source.classes.end()) {
-            target.classes.insert_or_assign(name, found->second);
-            if (expanded_bindings.insert(name).second) {
+            const bool inserted = target.classes.try_emplace(name, found->second).second;
+            if (inserted && expanded_bindings.insert(name).second) {
                 const ClassDecl& klass = *found->second;
                 for (const FieldDecl& field : klass.fields) {
                     add_instantiation_type(target, source, field.type_ref, expanded_bindings);
@@ -212,8 +220,8 @@ void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRe
             }
         }
         if (const auto found = source.enums.find(name); found != source.enums.end()) {
-            target.enums.insert_or_assign(name, found->second);
-            if (expanded_bindings.insert(name).second) {
+            const bool inserted = target.enums.try_emplace(name, found->second).second;
+            if (inserted && expanded_bindings.insert(name).second) {
                 const EnumDecl& en = *found->second;
                 add_instantiation_type(target, source, en.underlying_type_ref, expanded_bindings);
                 for (const EnumValueDecl& value : en.values) {

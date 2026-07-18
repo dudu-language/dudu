@@ -103,6 +103,8 @@ compile_and_expect named_callback 42
 compile_and_expect function_values 42
 compile_and_expect function_overloads 44
 compile_and_expect generic_function_overloads 42
+compile_modules_path_and_expect generic_dependent_target_overload \
+    tests/fixtures/project_generic_dependent_target_overload/main.dd 42
 compile_and_expect generic_instantiated_static_member 42
 compile_and_expect generic_type_constructor 42
 compile_and_expect generic_default_constructor 42

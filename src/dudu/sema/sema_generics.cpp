@@ -20,6 +20,15 @@ namespace {
 
 constexpr std::string_view kPackSuffix = "...";
 
+bool dependent_type_ref(const Symbols& symbols, const TypeRef& type) {
+    if (!has_type_ref(type) || type_ref_is_auto(type) ||
+        symbols.generic_params.contains(type_ref_head_name(type))) {
+        return true;
+    }
+    return std::ranges::any_of(
+        type.children, [&](const TypeRef& child) { return dependent_type_ref(symbols, child); });
+}
+
 } // namespace
 
 bool generic_param_is_pack(std::string_view param) {
@@ -313,7 +322,9 @@ std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionS
             continue;
         }
         const auto binding = bindings.scalar.find(base);
-        if (binding == bindings.scalar.end() || unresolved_generic_binding(binding->second)) {
+        if (binding == bindings.scalar.end() ||
+            (unresolved_generic_binding(binding->second) &&
+             (location != nullptr || !dependent_type_ref(scope.symbols, binding->second)))) {
             if (location != nullptr) {
                 sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }

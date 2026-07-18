@@ -412,11 +412,12 @@ infer_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
 std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type_impl(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
-    const SourceLocation* location) {
+    const SourceLocation* location, bool static_only) {
     const TypeRef concrete_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     if (const EnumDecl* en = enum_for_receiver_type(scope.symbols, concrete_receiver)) {
         for (const FunctionDecl& method : en->methods) {
-            if (method.name != method_name || method.generic_params.empty()) {
+            if (method.name != method_name || method.generic_params.empty() ||
+                (static_only && !method_is_static(method))) {
                 continue;
             }
             const size_t first_param =
@@ -443,7 +444,8 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->methods) {
-        if (method.name != method_name || method.generic_params.empty()) {
+        if (method.name != method_name || method.generic_params.empty() ||
+            (static_only && !method_is_static(method))) {
             continue;
         }
         const size_t first_param =
@@ -468,7 +470,7 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
         const TypeRef base_type =
             substitute_generic_type_ref(klass->generic_params, receiver_args, base_decl.type_ref);
         if (const auto found = inferred_dudu_method_instantiation_for_type_impl(
-                scope, base_type, method_name, args, expected_return, nullptr)) {
+                scope, base_type, method_name, args, expected_return, nullptr, static_only)) {
             return found;
         }
     }
@@ -583,7 +585,7 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location) {
     return inferred_dudu_method_instantiation_for_type_impl(scope, receiver_type, method_name, args,
-                                                            std::nullopt, location);
+                                                            std::nullopt, location, false);
 }
 
 std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_type(
@@ -591,7 +593,14 @@ std::optional<DuduMethodInstantiation> inferred_dudu_method_instantiation_for_ty
     const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
     const SourceLocation* location) {
     return inferred_dudu_method_instantiation_for_type_impl(scope, receiver_type, method_name, args,
-                                                            expected_return, location);
+                                                            expected_return, location, false);
+}
+
+std::optional<DuduMethodInstantiation> inferred_dudu_static_method_instantiation_for_type(
+    const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const SourceLocation* location) {
+    return inferred_dudu_method_instantiation_for_type_impl(scope, receiver_type, method_name, args,
+                                                            std::nullopt, location, true);
 }
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(

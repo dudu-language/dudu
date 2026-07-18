@@ -1,0 +1,42 @@
+class DecodeTarget[T]:
+    marker: bool = False
+
+
+class Reader:
+    marker: bool = False
+
+    def element(self: &const[Self], index: usize) -> Reader:
+        return Reader()
+
+
+class Codec:
+    def decode[Input](input: &const[Input]) -> i32:
+        return 42
+
+
+def decode[Input](input: &const[Input], target: DecodeTarget[bool]) -> bool:
+    return False
+
+
+def decode[Input](input: &const[Input], target: DecodeTarget[i32]) -> i32:
+    return 42
+
+
+def decode[Input, T](input: &const[Input], target: DecodeTarget[T]) -> T:
+    return T()
+
+
+def decode_from[T, Input](input: &const[Input]) -> T:
+    return decode(input, DecodeTarget[T]())
+
+
+def decode_sequence[Input, T](
+    input: &const[Input],
+    target: DecodeTarget[list[T]],
+) -> list[T]:
+    child = input.element(0)
+    return [decode(child, DecodeTarget[T]())]
+
+
+def decode_static[T, Input](input: &const[Input]) -> i32:
+    return T.decode(input)
