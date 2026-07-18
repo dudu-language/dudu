@@ -153,9 +153,14 @@ void LanguageServer::queue_full_diagnostics(const std::string& uri) {
     const auto found = documents_.find(uri);
     if (found == documents_.end())
         return;
+    size_t revision = 0;
+    {
+        const std::lock_guard lock(diagnostics_mutex_);
+        revision = document_revisions_[uri];
+    }
     DiagnosticsJob job{.document = found->second,
                        .source_overrides = {},
-                       .revision = document_revisions_[uri]};
+                       .revision = revision};
     for (const auto& [_, document] : documents_)
         job.source_overrides[document.path] = document.text;
     {
@@ -191,6 +196,7 @@ void LanguageServer::diagnostics_worker_loop() {
             native_ready_revisions_[job.document.uri] = job.revision;
             publish_diagnostics(job.document.uri, diagnostics, job.document.version);
             transport_.request_client_refresh("workspace/semanticTokens/refresh");
+            transport_.request_client_refresh("workspace/inlayHint/refresh");
         }
     }
 }

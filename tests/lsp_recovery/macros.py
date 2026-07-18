@@ -84,6 +84,18 @@ def run_macro_worker_failure(repo_root):
         )
         if not failure["params"]["diagnostics"]:
             raise AssertionError("macro worker failure did not publish a diagnostic")
+        refreshes = set()
+        while refreshes != {
+            "workspace/semanticTokens/refresh",
+            "workspace/inlayHint/refresh",
+        }:
+            refresh = session.receive_until(
+                lambda message: message.get("method") in {
+                    "workspace/semanticTokens/refresh",
+                    "workspace/inlayHint/refresh",
+                }
+            )
+            refreshes.add(refresh["method"])
 
         use = position(main_source, "current_macro_worker(41)", 2)
         hover = session.request(
