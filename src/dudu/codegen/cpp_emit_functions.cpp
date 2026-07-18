@@ -160,6 +160,13 @@ void emit_cpp_function_body(std::ostringstream& out, const FunctionDecl& fn,
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     CppLocalContext locals;
+    const std::set<std::string> value_params = generic_value_params_for_function(fn);
+    for (const std::string& param : fn.generic_params) {
+        const std::string name = generic_param_base_name(param);
+        if (!value_params.contains(name)) {
+            locals.bind_type(name);
+        }
+    }
     std::map<std::string, TypeRef> local_type_refs;
     for (const ParamDecl& param : fn.params) {
         locals.bind(param.name);

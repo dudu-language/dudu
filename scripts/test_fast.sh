@@ -234,7 +234,10 @@ compile_and_expect generic_box 42
 compile_and_expect generic_identity 42
 compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_dependent_member 42
+compile_and_expect generic_dependent_static_member 42
+compile_path_and_expect project_imported_generic_codec tests/fixtures/project_imported_generic_codec/main.dd 42
 expect_fail bad_generic_dependent_member --check "unknown function: value.encoded while instantiating"
+expect_fail bad_generic_dependent_static_member --check "unknown function: i32.decoded while instantiating"
 compile_and_expect string_index 42
 compile_and_expect generic_inferred_structured 42
 compile_and_expect generic_method 42

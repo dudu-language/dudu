@@ -176,6 +176,64 @@ bool has_unresolved_generic(const std::vector<TypeRef>& args, const Symbols& sym
         args, [&](const TypeRef& arg) { return contains_unresolved_generic(arg, symbols); });
 }
 
+void add_instantiation_type(Symbols& target, const Symbols& source, const TypeRef& type) {
+    const std::string name = type_ref_head_name(type);
+    if (!name.empty()) {
+        target.types.insert(name);
+        if (const auto found = source.alias_type_refs.find(name);
+            found != source.alias_type_refs.end()) {
+            target.alias_type_refs.insert_or_assign(name, found->second);
+        }
+        if (const auto found = source.alias_generic_params.find(name);
+            found != source.alias_generic_params.end()) {
+            target.alias_generic_params.insert_or_assign(name, found->second);
+        }
+        if (const auto found = source.alias_generic_defaults.find(name);
+            found != source.alias_generic_defaults.end()) {
+            target.alias_generic_defaults.insert_or_assign(name, found->second);
+        }
+        if (const auto found = source.classes.find(name); found != source.classes.end()) {
+            target.classes.insert_or_assign(name, found->second);
+        }
+        if (const auto found = source.enums.find(name); found != source.enums.end()) {
+            target.enums.insert_or_assign(name, found->second);
+        }
+        if (const auto found = source.native_class_specializations.find(name);
+            found != source.native_class_specializations.end()) {
+            target.native_class_specializations.insert_or_assign(name, found->second);
+        }
+        if (source.native_types.contains(name)) {
+            target.native_types.insert(name);
+        }
+        if (source.native_enum_types.contains(name)) {
+            target.native_enum_types.insert(name);
+        }
+        if (const auto found = source.native_type_identity_by_binding.find(name);
+            found != source.native_type_identity_by_binding.end()) {
+            target.native_type_identity_by_binding.insert_or_assign(name, found->second);
+            const std::string& identity = found->second;
+            if (const auto decls = source.native_type_decls_by_identity.find(identity);
+                decls != source.native_type_decls_by_identity.end()) {
+                target.native_type_decls_by_identity.insert_or_assign(identity, decls->second);
+            }
+            if (const auto classes = source.native_class_decls_by_identity.find(identity);
+                classes != source.native_class_decls_by_identity.end()) {
+                target.native_class_decls_by_identity.insert_or_assign(identity, classes->second);
+            }
+        }
+    }
+    for (const TypeRef& child : type.children) {
+        add_instantiation_type(target, source, child);
+    }
+}
+
+void add_instantiation_types(Symbols& target, const Symbols& source,
+                             const std::vector<TypeRef>& types) {
+    for (const TypeRef& type : types) {
+        add_instantiation_type(target, source, type);
+    }
+}
+
 } // namespace
 
 void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
@@ -191,6 +249,7 @@ void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
             declared != nullptr && !scope_owns_function(caller_scope, declared)) {
             Symbols declaration_symbols = collect_symbols(*unit);
             declaration_symbols.module_tree = caller_scope.symbols.module_tree;
+            add_instantiation_types(declaration_symbols, caller_scope.symbols, type_args);
             FunctionScope declaration_scope{declaration_symbols};
             declaration_scope.constants = caller_scope.constants;
             declaration_scope.target_mode = caller_scope.target_mode;
@@ -245,6 +304,8 @@ void check_instantiated_generic_method_body(const FunctionScope& caller_scope,
             if (method_index < declared_owner->methods.size()) {
                 Symbols declaration_symbols = collect_symbols(*unit);
                 declaration_symbols.module_tree = caller_scope.symbols.module_tree;
+                add_instantiation_types(declaration_symbols, caller_scope.symbols, receiver_args);
+                add_instantiation_types(declaration_symbols, caller_scope.symbols, method_args);
                 FunctionScope declaration_scope{declaration_symbols};
                 declaration_scope.constants = caller_scope.constants;
                 declaration_scope.target_mode = caller_scope.target_mode;

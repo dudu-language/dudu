@@ -10,6 +10,7 @@
 #include "dudu/sema/sema_function_type.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
+#include <set>
 #include <sstream>
 
 namespace dudu {
@@ -45,6 +46,13 @@ void emit_body(std::ostringstream& out, const EnumDecl& en, const FunctionDecl& 
     emit_signature(out, en, method, aliases, options);
     out << " {\n";
     CppLocalContext locals;
+    const std::set<std::string> value_params = generic_value_params_for_function(method);
+    for (const std::string& param : method.generic_params) {
+        const std::string name = generic_param_base_name(param);
+        if (!value_params.contains(name)) {
+            locals.bind_type(name);
+        }
+    }
     std::map<std::string, TypeRef> local_types;
     for (const ParamDecl& param : method.params) {
         locals.bind(param.name);

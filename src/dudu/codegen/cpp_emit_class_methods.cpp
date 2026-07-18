@@ -261,6 +261,22 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     locals.current_class = class_name;
     local_type_refs["class"] = named_type_ref(class_name, method.location);
     const auto klass = symbols.classes.find(source_class_name);
+    if (klass != symbols.classes.end()) {
+        const std::set<std::string> value_params = generic_value_params_for_class(*klass->second);
+        for (const std::string& param : klass->second->generic_params) {
+            const std::string name = generic_param_base_name(param);
+            if (!value_params.contains(name)) {
+                locals.bind_type(name);
+            }
+        }
+    }
+    const std::set<std::string> method_value_params = generic_value_params_for_function(method);
+    for (const std::string& param : method.generic_params) {
+        const std::string name = generic_param_base_name(param);
+        if (!method_value_params.contains(name)) {
+            locals.bind_type(name);
+        }
+    }
     if (klass != symbols.classes.end() && klass->second->base_class_refs.size() == 1) {
         locals.super_class =
             lower_cpp_type(klass->second->base_class_refs.front().type_ref, aliases, options);

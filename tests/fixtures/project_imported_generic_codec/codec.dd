@@ -1,0 +1,6 @@
+def encode[T](value: &const[T]) -> i32:
+    return value.encoded()
+
+
+def decode[T](value: i32) -> T:
+    return T.decoded(value)

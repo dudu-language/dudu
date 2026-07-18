@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-- Generic function bodies may call methods on dependent receiver types. Each
+- Generic function bodies may call instance and static methods on dependent
+  receiver types. Imported generic bodies retain their declaration-module
+  names while concrete caller types contribute their method metadata. Each
   concrete instantiation is still checked and reports the instantiation site
   when the substituted type does not provide the method.
 - Added checked string indexing and iteration, `str + char`, and owning-string

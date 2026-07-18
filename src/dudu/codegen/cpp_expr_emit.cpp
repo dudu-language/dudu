@@ -159,6 +159,9 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
     if (receiver.name == "class") {
         return !locals.current_class.empty();
     }
+    if (locals.contains_type(receiver.name)) {
+        return true;
+    }
     if (symbols == nullptr) {
         return false;
     }

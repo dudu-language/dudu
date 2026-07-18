@@ -64,6 +64,14 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     const Expr& member = expr_callee(expr).front();
     const Expr& receiver_expr = member.children.front();
     FunctionSignature signature;
+    if (receiver_expr.kind == ExprKind::Name &&
+        scope.symbols.generic_params.contains(receiver_expr.name) &&
+        scope.symbols.types.contains(receiver_expr.name)) {
+        for (const Expr& arg : expr.children) {
+            check_expr_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
+    }
     if (const std::optional<TypeRef> static_type =
             static_class_receiver_type_ref(scope, receiver_expr)) {
         if (const auto dudu = static_dudu_call_type_ref(scope, expr, callee, *static_type,
@@ -99,9 +107,9 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         const std::vector<FunctionSignature> signatures =
             method_signatures_for_type(scope.symbols, receiver_type_ref, method_name, {});
         if (!signatures.empty()) {
-            if (const std::optional<FunctionSignature> matched = match_native_method_signature(
-                    scope, callee, signatures, method_args, receiver_expr, expr.children,
-                    location)) {
+            if (const std::optional<FunctionSignature> matched =
+                    match_native_method_signature(scope, callee, signatures, method_args,
+                                                  receiver_expr, expr.children, location)) {
                 check_call_args_ast(scope, callee, *matched, expr.children, location);
                 return signature_return_type_ref(*matched);
             }

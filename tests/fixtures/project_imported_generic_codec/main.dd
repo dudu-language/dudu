@@ -1,0 +1,17 @@
+from codec import decode
+from codec import encode
+
+
+class Number:
+    value: i32
+
+    def encoded(self: &const[Self]) -> i32:
+        return self.value
+
+    def decoded(value: i32) -> Number:
+        return Number(value)
+
+
+def main() -> i32:
+    source = Number(42)
+    return encode(source) + decode[Number](0).value
