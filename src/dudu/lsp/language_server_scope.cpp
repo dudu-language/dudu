@@ -3,8 +3,10 @@
 #include "dudu/core/array_shape.hpp"
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
+#include "dudu/core/match_patterns.hpp"
 #include "dudu/sema/sema_body_helpers.hpp"
 #include "dudu/sema/sema_common.hpp"
+#include "dudu/sema/sema_enum.hpp"
 #include "dudu/sema/sema_expr.hpp"
 #include "dudu/sema/sema_generics.hpp"
 
@@ -95,6 +97,50 @@ void bind_lsp_statement(FunctionScope& scope, const Stmt& stmt) {
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
         bind_lsp_local(scope, stmt.name, stmt_type_ref(stmt));
+    }
+}
+
+void bind_lsp_match_case(FunctionScope& scope, const TypeRef& subject_type,
+                         const Stmt& case_statement) {
+    const WrapperMatchType wrapper = wrapper_match_type(subject_type);
+    if (wrapper.kind != WrapperMatchKind::None) {
+        const std::optional<std::string> binding =
+            wrapper_case_binding_name(stmt_pattern_expr(case_statement));
+        const std::optional<std::string> variant =
+            wrapper_case_name(stmt_pattern_expr(case_statement));
+        if (!binding || !variant) {
+            return;
+        }
+        if (wrapper.kind == WrapperMatchKind::Option && *variant == "Some" &&
+            wrapper.arg_refs.size() == 1) {
+            bind_lsp_local(scope, *binding, wrapper.arg_refs[0]);
+        } else if (wrapper.kind == WrapperMatchKind::Result && wrapper.arg_refs.size() == 2) {
+            if (*variant == "Ok") {
+                bind_lsp_local(scope, *binding, wrapper.arg_refs[0]);
+            } else if (*variant == "Err") {
+                bind_lsp_local(scope, *binding, wrapper.arg_refs[1]);
+            }
+        }
+        return;
+    }
+
+    const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
+    if (en == nullptr) {
+        return;
+    }
+    const std::optional<std::string> variant = enum_case_variant_name_for(*en, case_statement);
+    if (!variant || *variant == "_") {
+        return;
+    }
+    const EnumValueDecl* value = enum_variant_decl(*en, *variant);
+    if (value == nullptr) {
+        return;
+    }
+    for (const EnumCaseBinding& binding : enum_case_bindings(case_statement, *value)) {
+        if (binding.field_index < value->payload_fields.size()) {
+            bind_lsp_local(scope, binding.name,
+                           value->payload_fields[binding.field_index].type_ref);
+        }
     }
 }
 

@@ -1,10 +1,12 @@
 #include "dudu/lsp/language_server_references.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_generic_params.hpp"
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_macros.hpp"
+#include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_reference_query.hpp"
@@ -136,6 +138,36 @@ std::vector<ReferenceLocation> reference_locations(const Document& doc, const Js
     }
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
+    if (current_unit != nullptr) {
+        const std::string selected_name = selection.symbol.value_or("");
+        if (const std::optional<GenericParamTarget> generic =
+                generic_param_target_at(*current_unit, lsp_position(params), selected_name)) {
+            return generic_param_references(*current_unit, doc, *generic);
+        }
+        if (const std::optional<MemberReferenceTarget> member =
+                member_reference_target_at(doc, params, selection, current_unit);
+            member.has_value() && !member->declaration.file.empty() &&
+            std::filesystem::path(member->declaration.file.str()).extension() == ".dd") {
+            std::vector<ReferenceLocation> member_locations;
+            std::set<std::string> seen;
+            for (const auto& [_, candidate] : workspace) {
+                const ProjectIndexSnapshot candidate_index =
+                    workspace_candidate_index(current_index, candidate, false);
+                const ModuleAst* candidate_unit =
+                    visible_document_unit(candidate_index.get(), candidate);
+                if (candidate_unit == nullptr) {
+                    continue;
+                }
+                for (ReferenceLocation& location :
+                     member_reference_locations(*candidate_unit, candidate, *member)) {
+                    if (seen.insert(location.uri + "|" + location.range).second) {
+                        member_locations.push_back(std::move(location));
+                    }
+                }
+            }
+            return member_locations;
+        }
+    }
     const std::vector<Symbol> current_symbols_with_native =
         current_unit == nullptr ? std::vector<Symbol>{}
                                 : symbols_for_module(*current_unit, include_native);

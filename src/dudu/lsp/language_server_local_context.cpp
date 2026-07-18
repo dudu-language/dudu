@@ -2,6 +2,7 @@
 
 #include "dudu/core/ast_type.hpp"
 #include "dudu/core/text.hpp"
+#include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_scope.hpp"
@@ -37,27 +38,6 @@ bool location_before_or_at(const SourceLocation& location, int cursor_line) {
     return cursor_line == std::numeric_limits<int>::max() || location.line <= cursor_line;
 }
 
-bool range_contains_line(const SourceRange& range, int cursor_line) {
-    if (cursor_line == std::numeric_limits<int>::max()) {
-        return true;
-    }
-    const int start = range.start.line;
-    const int end = range.end.line <= 0 ? start : range.end.line;
-    return start <= cursor_line && cursor_line <= end;
-}
-
-bool function_contains_line(const FunctionDecl& fn, int cursor_line) {
-    if (cursor_line == std::numeric_limits<int>::max()) {
-        return true;
-    }
-    int end = fn.location.line;
-    if (!fn.statements.empty()) {
-        end = fn.statements.back().range.end.line > 0 ? fn.statements.back().range.end.line
-                                                      : fn.statements.back().location.line;
-    }
-    return fn.location.line <= cursor_line && cursor_line <= std::max(fn.location.line, end);
-}
-
 bool location_matches_target_file(const SourceLocation& location,
                                   const SourceLocation& target_location) {
     if (target_location.file.empty()) {
@@ -74,7 +54,8 @@ bool location_matches_target_file(const SourceLocation& location,
 
 bool function_contains_location(const FunctionDecl& fn, const SourceLocation& target_location) {
     return location_matches_target_file(fn.location, target_location) &&
-           function_contains_line(fn, target_location.line);
+           (target_location.line == std::numeric_limits<int>::max() ||
+            function_contains_source_line(fn, target_location.line));
 }
 
 bool token_is_syntax(const Token& token) {
@@ -174,7 +155,8 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
             continue;
         }
         bind_lsp_statement(scope, stmt);
-        if (!range_contains_line(stmt.range, cursor_line)) {
+        if (cursor_line != std::numeric_limits<int>::max() &&
+            !statement_contains_source_line(stmt, cursor_line)) {
             continue;
         }
         if (stmt.kind == StmtKind::For) {
@@ -182,6 +164,21 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
             collect_for_body_locals(scope, stmt, cursor_line, nested);
             if (cursor_line != std::numeric_limits<int>::max()) {
                 scope.local_type_refs = std::move(nested);
+            }
+            continue;
+        }
+        if (stmt.kind == StmtKind::Match) {
+            const TypeRef subject_type = try_infer_lsp_expr_type(scope, stmt_condition_expr(stmt));
+            for (const Stmt& case_statement : stmt.children) {
+                if (case_statement.kind != StmtKind::Case ||
+                    !statement_contains_source_line(case_statement, cursor_line)) {
+                    continue;
+                }
+                FunctionScope nested = scope;
+                bind_lsp_match_case(nested, subject_type, case_statement);
+                collect_block_locals(nested, case_statement.children, cursor_line);
+                scope.local_type_refs = std::move(nested.local_type_refs);
+                break;
             }
             continue;
         }

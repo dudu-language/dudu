@@ -11,6 +11,7 @@ from assert_core import assert_core_behavior
 from assert_native import assert_native_behavior
 from protocol import read_lsp_messages
 from requests import build_requests
+from run_advanced import run_advanced
 from workspace import create_workspace
 
 
@@ -34,6 +35,7 @@ def run(repo_root):
         assert_core_behavior(messages, workspace)
         assert_native_behavior(messages, workspace)
         assert_action_behavior(messages, workspace)
+        run_advanced(repo_root, tmp / "advanced")
         print("lsp matrix checks passed")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

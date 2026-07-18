@@ -83,8 +83,7 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
-    alias.template_param_is_value =
-        std::vector<bool>(alias.template_params.size(), false);
+    alias.template_param_is_value = std::vector<bool>(alias.template_params.size(), false);
     alias.identity =
         module_symbol_identity(fn.origin_module.empty() ? name : fn.origin_module + "." + fn.name);
     alias.return_type_ref = function_has_return_type(fn)
@@ -140,6 +139,19 @@ ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
     return klass;
 }
 
+EnumDecl imported_enum_shape(EnumDecl en, const std::string& name,
+                             const std::map<std::string, TypeRef>& type_substitutions,
+                             const SourceLocation& location) {
+    en.name = name;
+    en.location = location;
+    for (EnumValueDecl& value : en.values) {
+        for (EnumPayloadField& field : value.payload_fields) {
+            field.type_ref = substitute_type_ref(field.type_ref, type_substitutions);
+        }
+    }
+    return en;
+}
+
 } // namespace
 
 void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency,
@@ -158,6 +170,8 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
                               import.location, alias.doc_comment);
     }
     for (const EnumDecl& en : dependency.enums) {
+        module.imported_enum_shapes.push_back(
+            imported_enum_shape(en, prefix + "." + en.name, type_substitutions, import.location));
         add_module_type_alias(module, prefix, en.name,
                               module_qualified_type_ref(prefix, en.name, import.location),
                               import.location, en.doc_comment);
@@ -241,6 +255,8 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     }
     for (const EnumDecl& en : dependency.enums) {
         if (en.name == import.imported_name) {
+            module.imported_enum_shapes.push_back(
+                imported_enum_shape(en, exposed_name, type_substitutions, import.location));
             module.native_types.push_back(
                 {.name = exposed_name,
                  .native_spelling = "",

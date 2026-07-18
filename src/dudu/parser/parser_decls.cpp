@@ -32,7 +32,7 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
     const Token& name = consume_identifier("expected class name");
     klass.location = name.location;
     klass.name = name.text;
-    klass.generic_params = parse_generic_params();
+    klass.generic_params = parse_generic_params(klass.generic_param_decls);
     if (match(TokenKind::LParen)) {
         if (!at(TokenKind::RParen)) {
             while (true) {
@@ -314,7 +314,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     }
     fn.location = name_location;
     fn.visibility = visibility_from_name(fn.visibility, fn.name);
-    fn.generic_params = parse_generic_params();
+    fn.generic_params = parse_generic_params(fn.generic_param_decls);
     consume(TokenKind::LParen, "expected ( after function name");
     skip_signature_separators();
     if (!at(TokenKind::RParen)) {
@@ -336,7 +336,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     return fn;
 }
 
-std::vector<std::string> Parser::parse_generic_params() {
+std::vector<std::string> Parser::parse_generic_params(std::vector<GenericParamDecl>& declarations) {
     std::vector<std::string> params;
     if (!match(TokenKind::LBracket)) {
         return params;
@@ -345,10 +345,14 @@ std::vector<std::string> Parser::parse_generic_params() {
         fail_current("generic parameter list cannot be empty");
     }
     while (true) {
-        std::string param = std::string(consume_identifier("expected generic parameter name").text);
-        if (match(TokenKind::Ellipsis)) {
+        const Token& name = consume_identifier("expected generic parameter name");
+        std::string param(name.text);
+        const bool variadic = match(TokenKind::Ellipsis);
+        if (variadic) {
             param += "...";
         }
+        declarations.push_back(
+            {.name = std::string(name.text), .variadic = variadic, .location = name.location});
         params.push_back(std::move(param));
         if (match(TokenKind::Comma)) {
             continue;

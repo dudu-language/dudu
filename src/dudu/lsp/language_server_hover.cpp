@@ -5,6 +5,7 @@
 #include "dudu/lsp/language_server_builtin_hover.hpp"
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_decorators.hpp"
+#include "dudu/lsp/language_server_generic_params.hpp"
 #include "dudu/lsp/language_server_hover_keywords.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
@@ -248,9 +249,15 @@ std::optional<std::string> member_hover_json(const ExprPath& path, const Json* p
             }
             for (const FunctionDecl& method : klass.methods) {
                 if (method.name == member) {
+                    std::string detail = function_detail(method);
+                    const std::string unqualified = "def " + method.name;
+                    if (detail.starts_with(unqualified)) {
+                        detail.replace(0, unqualified.size(),
+                                       "def " + klass.name + "." + method.name);
+                    }
                     return symbol_hover_json(
                         {.name = method.name,
-                         .detail = function_detail(method),
+                         .detail = std::move(detail),
                          .location = method.location,
                          .kind = is_constructor_method_name(method.name)
                                      ? lsp_symbol_kind::Constructor
@@ -312,6 +319,16 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     }
     if (const std::optional<std::string> primitive = primitive_type_hover_json(query)) {
         return *primitive;
+    }
+    if (params != nullptr) {
+        if (const std::optional<GenericParamTarget> generic =
+                generic_param_target_at(current, lsp_position(params), query)) {
+            const std::string detail =
+                generic->name + (generic->value ? ": usize" : ": type parameter");
+            const std::string markdown = fenced_code("dudu", detail);
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+                   "\"},\"range\":" + range_json(generic->declaration) + "}";
+        }
     }
     const std::string generated_reference =
         selected_path ? render_expr_path(*selected_path) : query;
@@ -378,6 +395,13 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         return native_index.get();
     };
     if (selected_path.has_value()) {
+        if (selected_path->segments.size() == 2 &&
+            selected_path->segments.front().text == "super") {
+            if (const std::optional<Symbol> member = class_member_symbol_for_super(
+                    current, lsp_position(params).line + 1, selected_path->segments.back().text)) {
+                return symbol_hover_json(*member);
+            }
+        }
         if (const std::optional<std::string> builtin_member =
                 builtin_member_hover_json(*selected_path, params, current)) {
             return *builtin_member;

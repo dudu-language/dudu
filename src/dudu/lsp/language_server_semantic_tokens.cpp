@@ -6,6 +6,7 @@
 #include "dudu/lsp/language_server_semantic_token_expr.hpp"
 #include "dudu/lsp/language_server_semantic_token_wire.hpp"
 #include "dudu/project/project_index.hpp"
+#include "dudu/sema/sema_generics.hpp"
 
 #include <filesystem>
 #include <map>
@@ -112,8 +113,13 @@ void collect_function_tokens(const FunctionDecl& function, int declaration_type,
                              const NativeSemanticIndex* native_index,
                              const std::set<std::string>& resolved_macros) {
     collect_decorator_tokens(function.decorators, tokens, dudu_index, resolved_macros);
-    add_semantic_token(tokens, function.location, function.name, declaration_type,
-                       mod_declaration);
+    add_semantic_token(tokens, function.location, function.name, declaration_type, mod_declaration);
+    const std::set<std::string> value_params = generic_value_params_for_function(function);
+    for (const GenericParamDecl& param : function.generic_param_decls) {
+        add_semantic_token(tokens, param.location, param.name,
+                           value_params.contains(param.name) ? token_variable : token_type,
+                           mod_declaration | mod_readonly);
+    }
 
     std::set<std::string> local_bindings;
     std::map<std::string, TypeRef> local_types;
@@ -200,6 +206,13 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         collect_decorator_tokens(klass.decorators, tokens, dudu_index,
                                  module.resolved_macro_decorators);
         add_semantic_token(tokens, klass.location, klass.name, token_class, mod_declaration);
+        const std::set<std::string> class_value_params = generic_value_params_for_class(klass);
+        for (const GenericParamDecl& param : klass.generic_param_decls) {
+            add_semantic_token(tokens, param.location, param.name,
+                               class_value_params.contains(param.name) ? token_variable
+                                                                       : token_type,
+                               mod_declaration | mod_readonly);
+        }
         for (const FieldDecl& field : klass.fields) {
             collect_decorator_tokens(field.decorators, tokens, dudu_index,
                                      module.resolved_macro_decorators);

@@ -286,6 +286,10 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
     for (const ClassDecl& klass : module.classes) {
         set_symbol(klass.name, klass.location);
         set_symbol_path(klass.name, klass.location);
+        for (const GenericParamDecl& param : klass.generic_param_decls) {
+            set_symbol(param.name, param.location);
+            set_symbol_path(param.name, param.location);
+        }
         for (const BaseClassDecl& base : klass.base_class_refs) {
             visit_type_tree(base.type_ref, visit_type_tree);
         }
@@ -310,6 +314,10 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         for (const FunctionDecl& method : klass.methods) {
             set_symbol(method.name, method.location);
             set_symbol_path(method.name, method.location);
+            for (const GenericParamDecl& param : method.generic_param_decls) {
+                set_symbol(param.name, param.location);
+                set_symbol_path(param.name, param.location);
+            }
             visit_type_tree(method.receiver_type_ref, visit_type_tree);
             visit_type_tree(method.return_type_ref, visit_type_tree);
             for (const ParamDecl& param : method.params) {
@@ -323,6 +331,10 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
     for (const FunctionDecl& fn : module.functions) {
         set_symbol(fn.name, fn.location);
         set_symbol_path(fn.name, fn.location);
+        for (const GenericParamDecl& param : fn.generic_param_decls) {
+            set_symbol(param.name, param.location);
+            set_symbol_path(param.name, param.location);
+        }
         visit_type_tree(fn.receiver_type_ref, visit_type_tree);
         visit_type_tree(fn.return_type_ref, visit_type_tree);
         for (const ParamDecl& param : fn.params) {

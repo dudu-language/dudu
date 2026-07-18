@@ -1,8 +1,12 @@
 #include "dudu/lsp/language_server_class_members.hpp"
 
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 
+#include <algorithm>
 #include <optional>
 
 namespace dudu {
@@ -143,6 +147,16 @@ std::vector<Symbol> class_member_symbols_for_owner(const ModuleAst& module,
     return class_member_symbols_for_owner(module.native_classes, owner, true);
 }
 
+std::optional<Symbol> class_member_symbol_for_owner(const ModuleAst& module,
+                                                    const std::string& owner,
+                                                    const std::string& member) {
+    if (const std::optional<Symbol> symbol =
+            class_member_symbol_for_owner(module.classes, owner, member, false)) {
+        return symbol;
+    }
+    return class_member_symbol_for_owner(module.native_classes, owner, member, true);
+}
+
 std::optional<Symbol> class_member_symbol_for_path(const ModuleAst& module, const ExprPath& path) {
     if (path.segments.size() != 2 || path.segments[0].kind != ExprPathSegmentKind::Name ||
         path.segments[1].kind != ExprPathSegmentKind::Name) {
@@ -150,11 +164,28 @@ std::optional<Symbol> class_member_symbol_for_path(const ModuleAst& module, cons
     }
     const std::string& owner = path.segments[0].text;
     const std::string& member = path.segments[1].text;
-    if (const std::optional<Symbol> symbol =
-            class_member_symbol_for_owner(module.classes, owner, member, false)) {
-        return symbol;
+    return class_member_symbol_for_owner(module, owner, member);
+}
+
+std::optional<Symbol> class_member_symbol_for_super(const ModuleAst& module, int one_based_line,
+                                                    const std::string& member) {
+    for (const ClassDecl& klass : module.classes) {
+        const bool inside_method =
+            std::ranges::any_of(klass.methods, [&](const FunctionDecl& method) {
+                return function_contains_source_line(method, one_based_line);
+            });
+        if (!inside_method || klass.base_class_refs.size() != 1) {
+            continue;
+        }
+        const Symbols symbols = collect_symbols(module);
+        const ClassDecl* base =
+            class_for_receiver_type(symbols, klass.base_class_refs.front().type_ref);
+        if (base == nullptr) {
+            return std::nullopt;
+        }
+        return member_symbol_for_class(*base, member, base->native_declaration);
     }
-    return class_member_symbol_for_owner(module.native_classes, owner, member, true);
+    return std::nullopt;
 }
 
 } // namespace dudu

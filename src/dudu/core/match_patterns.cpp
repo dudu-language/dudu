@@ -18,11 +18,17 @@ const Expr* enum_pattern_head(const Stmt& stmt) {
 }
 
 std::optional<std::pair<std::string, std::string>> enum_variant_path_expr(const Expr& expr) {
-    if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
-        expr.children.front().kind != ExprKind::Name) {
+    const std::optional<ExprPath> path = expr_path_from_expr(expr);
+    if (!path || path->segments.size() < 2 ||
+        std::ranges::any_of(path->segments, [](const ExprPathSegment& segment) {
+            return segment.kind != ExprPathSegmentKind::Name;
+        })) {
         return std::nullopt;
     }
-    return std::make_pair(expr.children.front().name, expr.name);
+    ExprPath enum_path = *path;
+    const std::string variant = enum_path.segments.back().text;
+    enum_path.segments.pop_back();
+    return std::make_pair(render_expr_path(enum_path), variant);
 }
 
 } // namespace

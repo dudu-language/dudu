@@ -76,7 +76,7 @@ class Parser {
     FunctionDecl parse_function(const Token& start, Visibility visibility,
                                 const std::vector<Decorator>& decorators,
                                 std::string_view receiver_type = {});
-    std::vector<std::string> parse_generic_params();
+    std::vector<std::string> parse_generic_params(std::vector<GenericParamDecl>& declarations);
     void parse_params(std::vector<ParamDecl>& params, const TypeRef& receiver_type);
     void skip_signature_separators();
     ConstDecl parse_constant(const std::vector<Decorator>& decorators = {});

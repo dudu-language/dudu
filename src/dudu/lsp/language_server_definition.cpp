@@ -6,6 +6,7 @@
 #include "dudu/lsp/language_server_class_members.hpp"
 #include "dudu/lsp/language_server_declaration_references.hpp"
 #include "dudu/lsp/language_server_decorators.hpp"
+#include "dudu/lsp/language_server_generic_params.hpp"
 #include "dudu/lsp/language_server_header_definition.hpp"
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
@@ -221,20 +222,6 @@ std::optional<std::string> binary_operator_definition_json(const Document& doc,
     return location_json(uri_for_location(symbol->location, doc), range_json(symbol->location));
 }
 
-int function_end_line(const FunctionDecl& function) {
-    int line = function.location.line;
-    for (const Stmt& stmt : function.statements) {
-        line = std::max(line, stmt.range.end.line);
-        line = std::max(line, stmt.location.line);
-    }
-    return line;
-}
-
-bool function_contains_line(const FunctionDecl& function, int one_based_line) {
-    return function.location.line <= one_based_line &&
-           one_based_line <= function_end_line(function);
-}
-
 bool location_before_cursor(SourceLocation location, const LspPosition& position) {
     const int line = position.line + 1;
     const int column = position.character + 1;
@@ -268,7 +255,7 @@ std::optional<std::string> local_definition_json(const Document& doc, const Modu
     const LspPosition position = lsp_position(params);
     const int line = position.line + 1;
     const auto search_function = [&](const FunctionDecl& function) -> std::optional<std::string> {
-        if (!function_contains_line(function, line)) {
+        if (!function_contains_source_line(function, line)) {
             return std::nullopt;
         }
         for (const ParamDecl& param : function.params) {
@@ -327,6 +314,11 @@ std::string definition_json(const Document& doc, const Json* params,
     if (word.empty()) {
         return "null";
     }
+    if (const std::optional<GenericParamTarget> generic =
+            generic_param_target_at(current, lsp_position(params), word)) {
+        return location_json(uri_for_location(generic->declaration, doc),
+                             range_json(generic->declaration));
+    }
     if (const std::optional<SourceLocation> generated =
             macro_generated_definition_location(current, word)) {
         return location_json(uri_for_location(*generated, doc), range_json(*generated));
@@ -361,6 +353,12 @@ std::string definition_json(const Document& doc, const Json* params,
         return native_index.get();
     };
     const std::optional<ExprPath>& path = selection.expr_path;
+    if (path && path->segments.size() == 2 && path->segments.front().text == "super") {
+        if (const std::optional<Symbol> member = class_member_symbol_for_super(
+                current, lsp_position(params).line + 1, path->segments.back().text)) {
+            return symbol_definition_json(*member, doc);
+        }
+    }
     if (path && path->segments.size() >= 2) {
         try {
             const ProjectIndex* native = load_native_index();

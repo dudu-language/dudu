@@ -400,6 +400,10 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(en.name);
         symbols.enums[en.name] = &en;
     }
+    for (const EnumDecl& en : module.imported_enum_shapes) {
+        symbols.types.insert(en.name);
+        symbols.enums[en.name] = &en;
+    }
     for (const ClassDecl& klass : module.classes) {
         add_name(names, klass.name, klass.location);
         symbols.types.insert(klass.name);

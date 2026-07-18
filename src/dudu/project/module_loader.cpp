@@ -153,6 +153,9 @@ void append_module(ModuleAst& target, const ModuleAst& source) {
                                     source.native_namespaces.end());
     target.native_classes.insert(target.native_classes.end(), source.native_classes.begin(),
                                  source.native_classes.end());
+    target.imported_enum_shapes.insert(target.imported_enum_shapes.end(),
+                                       source.imported_enum_shapes.begin(),
+                                       source.imported_enum_shapes.end());
     target.module_strip_prefixes.insert(target.module_strip_prefixes.end(),
                                         source.module_strip_prefixes.begin(),
                                         source.module_strip_prefixes.end());
@@ -217,10 +220,9 @@ std::string selective_import_name(const ImportDecl& import) {
     return import.alias.empty() ? import.imported_name : import.alias;
 }
 
-void report_missing_import(const ImportDecl& import,
-                           std::vector<ParseDiagnostic>* diagnostics) {
-    const std::string message = "module '" + import.module_path + "' has no symbol '" +
-                                import.imported_name + "'";
+void report_missing_import(const ImportDecl& import, std::vector<ParseDiagnostic>* diagnostics) {
+    const std::string message =
+        "module '" + import.module_path + "' has no symbol '" + import.imported_name + "'";
     if (diagnostics != nullptr) {
         diagnostics->push_back({.location = import.location,
                                 .message = message,
@@ -228,12 +230,10 @@ void report_missing_import(const ImportDecl& import,
                                 .data_name = import.imported_name});
         return;
     }
-    throw CompileError(import.location, message, "dudu.sema.missing_import",
-                       import.imported_name);
+    throw CompileError(import.location, message, "dudu.sema.missing_import", import.imported_name);
 }
 
-void report_missing_module(const ImportDecl& import,
-                           std::vector<ParseDiagnostic>* diagnostics) {
+void report_missing_module(const ImportDecl& import, std::vector<ParseDiagnostic>* diagnostics) {
     const std::string message = "could not resolve module '" + import.module_path + "'";
     if (diagnostics != nullptr) {
         diagnostics->push_back({.location = import.location,
@@ -242,8 +242,7 @@ void report_missing_module(const ImportDecl& import,
                                 .data_name = import.module_path});
         return;
     }
-    throw CompileError(import.location, message, "dudu.sema.missing_module",
-                       import.module_path);
+    throw CompileError(import.location, message, "dudu.sema.missing_module", import.module_path);
 }
 
 void reject_selective_import_collision(const ModuleAst& module, const ImportDecl& import) {
@@ -420,8 +419,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         }
         const std::filesystem::path dependency =
             resolve_import_path(path, root, import.module_path, module_roots);
-        const std::filesystem::path canonical_dependency =
-            canonical_source_path(dependency);
+        const std::filesystem::path canonical_dependency = canonical_source_path(dependency);
         if (!source_overrides.contains(canonical_dependency) &&
             !std::filesystem::exists(dependency)) {
             report_missing_module(import, diagnostics);

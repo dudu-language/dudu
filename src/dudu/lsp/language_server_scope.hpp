@@ -16,6 +16,8 @@ std::optional<TypeRef> infer_lsp_loop_binding_type(FunctionScope& scope, const S
 void bind_lsp_tuple_names(FunctionScope& scope, const Stmt& stmt);
 bool try_bind_lsp_tuple_names(FunctionScope& scope, const Stmt& stmt);
 void bind_lsp_statement(FunctionScope& scope, const Stmt& stmt);
+void bind_lsp_match_case(FunctionScope& scope, const TypeRef& subject_type,
+                         const Stmt& case_statement);
 Symbols symbols_for_lsp_function(Symbols symbols, const FunctionDecl& fn);
 void bind_lsp_function_params(FunctionScope& scope, const FunctionDecl& fn);
 

@@ -5,6 +5,10 @@
 namespace dudu {
 
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const TypeRef& type) {
+    if (const auto exact = symbols.enums.find(type_ref_head_name(type));
+        exact != symbols.enums.end()) {
+        return exact->second;
+    }
     TypeRef resolved = resolve_alias_ref(symbols, type);
     while ((resolved.kind == TypeKind::Reference || resolved.kind == TypeKind::Pointer ||
             resolved.kind == TypeKind::Const) &&

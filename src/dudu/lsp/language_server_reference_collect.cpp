@@ -8,6 +8,8 @@
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
+#include "dudu/sema/sema_context.hpp"
+#include "dudu/sema/sema_methods_internal.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -22,6 +24,8 @@ namespace {
 
 std::optional<std::string> self_owner_at_location(const ModuleAst& module,
                                                   const SourceLocation& location);
+std::optional<std::string> super_owner_at_location(const ModuleAst& module,
+                                                   const SourceLocation& location);
 
 std::string dotted_tail(std::string_view name) {
     const size_t dot = name.rfind('.');
@@ -86,6 +90,11 @@ struct ReferenceCollector {
             if (const std::optional<std::string> self_owner =
                     self_owner_at_location(module, location)) {
                 candidate_types.insert(*self_owner);
+            }
+        } else if (receiver == "super") {
+            if (const std::optional<std::string> super_owner =
+                    super_owner_at_location(module, location)) {
+                candidate_types.insert(*super_owner);
             }
         }
         const std::map<std::string, TypeRef> locals =
@@ -160,15 +169,6 @@ struct ReferenceCollector {
     }
 };
 
-int function_end_line(const FunctionDecl& function) {
-    int line = function.location.line;
-    for (const Stmt& stmt : function.statements) {
-        line = std::max(line, stmt.location.line);
-        line = std::max(line, stmt.range.end.line);
-    }
-    return line;
-}
-
 bool location_matches_file(const SourceLocation& location, const SourceLocation& target) {
     if (location.file.empty() || target.file.empty()) {
         return true;
@@ -179,14 +179,9 @@ bool location_matches_file(const SourceLocation& location, const SourceLocation&
            (!left.filename().empty() && left.filename() == right.filename());
 }
 
-bool function_contains_line(const FunctionDecl& function, int one_based_line) {
-    return function.location.line <= one_based_line &&
-           one_based_line <= std::max(function.location.line, function_end_line(function));
-}
-
 bool function_contains_location(const FunctionDecl& function, const SourceLocation& location) {
     return location_matches_file(function.location, location) &&
-           function_contains_line(function, location.line);
+           function_contains_source_line(function, location.line);
 }
 
 std::optional<std::string> self_owner_at_location(const ModuleAst& module,
@@ -197,6 +192,24 @@ std::optional<std::string> self_owner_at_location(const ModuleAst& module,
                 return klass.name;
             }
         }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> super_owner_at_location(const ModuleAst& module,
+                                                   const SourceLocation& location) {
+    for (const ClassDecl& klass : module.classes) {
+        const bool inside_method =
+            std::ranges::any_of(klass.methods, [&](const FunctionDecl& method) {
+                return function_contains_location(method, location);
+            });
+        if (!inside_method || klass.base_class_refs.size() != 1) {
+            continue;
+        }
+        const Symbols symbols = collect_symbols(module);
+        const ClassDecl* base =
+            class_for_receiver_type(symbols, klass.base_class_refs.front().type_ref);
+        return base == nullptr ? std::nullopt : std::optional<std::string>{base->name};
     }
     return std::nullopt;
 }
@@ -356,7 +369,7 @@ std::optional<std::vector<ReferenceLocation>> references_in_local_scope(const Mo
     }
     const auto find_in_function =
         [&](const FunctionDecl& function) -> std::optional<std::vector<ReferenceLocation>> {
-        if (!function_contains_line(function, one_based_line) ||
+        if (!function_contains_source_line(function, one_based_line) ||
             !function_binds_name(function, query)) {
             return std::nullopt;
         }

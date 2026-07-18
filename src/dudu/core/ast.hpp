@@ -389,6 +389,12 @@ struct EnumValueDecl {
 
 struct FunctionDecl;
 
+struct GenericParamDecl {
+    std::string name;
+    bool variadic = false;
+    SourceLocation location;
+};
+
 struct EnumDecl {
     std::string name;
     std::string cpp_name;
@@ -409,6 +415,7 @@ struct FunctionDecl {
     NativeSymbolId native_identity{};
     TypeRef receiver_type_ref;
     std::vector<std::string> generic_params;
+    std::vector<GenericParamDecl> generic_param_decls;
     std::vector<bool> generic_param_is_value;
     std::vector<TypeRef> generic_default_args;
     std::vector<Decorator> decorators;
@@ -448,6 +455,7 @@ struct ClassDecl {
     std::optional<TypeLayout> layout{};
     bool native_declaration = false;
     std::vector<std::string> generic_params;
+    std::vector<GenericParamDecl> generic_param_decls;
     std::optional<size_t> generic_min_args;
     std::vector<TypeRef> generic_default_args;
     std::vector<TypeRef> native_specialization_args;
@@ -509,6 +517,7 @@ struct ModuleAst {
     std::vector<NativeMacroDecl> native_macros;
     std::vector<NativeNamespaceDecl> native_namespaces;
     std::vector<ClassDecl> native_classes;
+    std::vector<EnumDecl> imported_enum_shapes;
     std::vector<std::string> module_strip_prefixes;
     std::vector<std::string> module_import_prefixes;
     std::vector<EnumDecl> enums;
