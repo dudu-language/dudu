@@ -26,6 +26,26 @@ enum Packet:
     Empty
     Data:
         value: i32
+
+
+class Leaf:
+    value: i32
+
+
+class Branch:
+    leaf: Leaf
+
+
+class Root:
+    branch: Branch
+
+
+class Overloaded:
+    def choose(self, value: i32) -> i32:
+        return value
+
+    def choose(self, value: str) -> i32:
+        return i32(len(value))
 """
     model = tmp / "model.dd"
     model.write_text(model_source)
@@ -62,6 +82,10 @@ class ConstantSource(Source):
     facade_source = """from model import Buffer
 from model import FourInts
 from model import Packet
+from model import Root
+from model import Branch
+from model import Leaf
+from model import Overloaded
 from model import copy_values
 from inheritance import ScalingProcessor
 from inheritance import ConstantSource
@@ -107,10 +131,15 @@ def main() -> i32:
     processor = hierarchy.ScalingProcessor(2)
     other_processor = other.ScalingProcessor(9)
     source = hierarchy.ConstantSource(5)
+    root = api.Root(api.Branch(api.Leaf(11)))
+    deep = root.branch.leaf.value
+    overloaded = api.Overloaded()
+    number_choice = overloaded.choose(3)
+    text_choice = overloaded.choose("three")
     transformed = processor.transform(buffer.first())
     ignored = other_processor.transform(20)
     packet = Packet.Data(7)
-    return consume(packet, copied) + middle[0] + transformed + source.read() + ignored
+    return consume(packet, copied) + middle[0] + transformed + source.read() + ignored + deep + number_choice + text_choice
 """
     main = tmp / "main.dd"
     main.write_text(main_source)

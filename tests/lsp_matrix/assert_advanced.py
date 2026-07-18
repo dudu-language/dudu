@@ -121,6 +121,41 @@ def assert_advanced_behavior(messages, workspace):
         raise AssertionError(f"facade module segment did not resolve to model.dd: {module_target!r}")
     assert_definition(response(messages, 50), model, model_source, "class Buffer", len("class "), "facade imported name")
 
+    assert_definition(response(messages, 80), main, main_source, "root =", 0, "deep local receiver")
+    assert_definition(response(messages, 81), model, model_source, "branch: Branch", 0, "deep branch field")
+    assert_definition(response(messages, 82), model, model_source, "leaf: Leaf", 0, "deep leaf field")
+    assert_definition(
+        response(messages, 83),
+        model,
+        model_source,
+        "value: i32",
+        0,
+        "deep value field",
+        occurrence=1,
+    )
+    assert_definition(response(messages, 84), model, model_source, "def choose", len("def "), "i32 overload")
+    assert_definition(
+        response(messages, 85),
+        model,
+        model_source,
+        "def choose",
+        len("def "),
+        "str overload",
+        occurrence=1,
+    )
+    i32_overload_refs = response(messages, 86)
+    assert_reference(i32_overload_refs, model, model_source, "def choose", len("def "), "i32 overload refs")
+    assert_reference(i32_overload_refs, main, main_source, "overloaded.choose(3)", len("overloaded."), "i32 overload refs")
+    assert_no_reference(i32_overload_refs, main, main_source, 'overloaded.choose("three")', len("overloaded."), "i32 overload refs")
+    str_overload_refs = response(messages, 87)
+    assert_reference(str_overload_refs, model, model_source, "def choose", len("def "), "str overload refs", occurrence=1)
+    assert_reference(str_overload_refs, main, main_source, 'overloaded.choose("three")', len("overloaded."), "str overload refs")
+    assert_no_reference(str_overload_refs, main, main_source, "overloaded.choose(3)", len("overloaded."), "str overload refs")
+    if "Leaf.leaf" not in hover_value(messages, 88) and "Branch.leaf" not in hover_value(messages, 88):
+        raise AssertionError("deep member hover did not identify the selected leaf field")
+    if "Overloaded.choose" not in hover_value(messages, 89) or "str" not in hover_value(messages, 89):
+        raise AssertionError("overloaded method hover did not report the selected str overload")
+
     prepare_override = response(messages, 70)
     if not prepare_override or prepare_override.get("placeholder") != "transform":
         raise AssertionError(f"override prepareRename was unavailable: {prepare_override!r}")
@@ -165,6 +200,18 @@ def assert_advanced_behavior(messages, workspace):
         raise AssertionError(f"override rename crossed receiver identity: {method_rename!r}")
     if workspace.other.as_uri() in (method_rename or {}).get("changes", {}):
         raise AssertionError(f"override rename edited unrelated class: {method_rename!r}")
+
+    overload_rename = response(messages, 75)
+    model_overload_starts = edit_starts(overload_rename, model)
+    main_overload_starts = edit_starts(overload_rename, main)
+    str_decl = tuple(position(model_source, "def choose", len("def "), occurrence=1).values())
+    i32_decl = tuple(position(model_source, "def choose", len("def ")).values())
+    str_use = tuple(position(main_source, 'overloaded.choose("three")', len("overloaded.")).values())
+    i32_use = tuple(position(main_source, "overloaded.choose(3)", len("overloaded.")).values())
+    if str_decl not in model_overload_starts or i32_decl in model_overload_starts:
+        raise AssertionError(f"overload rename crossed declaration identity: {overload_rename!r}")
+    if str_use not in main_overload_starts or i32_use in main_overload_starts:
+        raise AssertionError(f"overload rename crossed call identity: {overload_rename!r}")
 
     initialize = response(messages, 1)
     legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"]

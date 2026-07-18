@@ -93,6 +93,9 @@ bool collect_expr_path_selection(const Expr& expr, const LspPosition& position,
         selection.symbol = segment.text;
         selection.symbol_path = render_expr_path(selected_path);
         selection.expr_path = selected_path;
+        if (index + 1 == path->segments.size()) {
+            selection.member_expr = expr;
+        }
         return true;
     }
     return false;

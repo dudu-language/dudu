@@ -66,6 +66,16 @@ def build_advanced_requests(workspace):
         (48, "textDocument/signatureHelp", main, main_source, "processor.transform(buffer", len("processor.transform(")),
         (49, "textDocument/definition", facade, workspace.facade_source, "from model import Buffer", len("from ")),
         (50, "textDocument/definition", facade, workspace.facade_source, "from model import Buffer", len("from model import ")),
+        (80, "textDocument/definition", main, main_source, "root.branch.leaf.value", 1),
+        (81, "textDocument/definition", main, main_source, "root.branch.leaf.value", len("root.")),
+        (82, "textDocument/definition", main, main_source, "root.branch.leaf.value", len("root.branch.")),
+        (83, "textDocument/definition", main, main_source, "root.branch.leaf.value", len("root.branch.leaf.")),
+        (84, "textDocument/definition", main, main_source, "overloaded.choose(3)", len("overloaded.")),
+        (85, "textDocument/definition", main, main_source, 'overloaded.choose("three")', len("overloaded.")),
+        (86, "textDocument/references", model, model_source, "def choose", len("def ")),
+        (87, "textDocument/references", model, model_source, "def choose", len("def "), 1),
+        (88, "textDocument/hover", main, main_source, "root.branch.leaf.value", len("root.branch.")),
+        (89, "textDocument/hover", main, main_source, 'overloaded.choose("three")', len("overloaded.")),
         (70, "textDocument/prepareRename", inheritance, inheritance_source, "def transform", len("def "), 1),
     ]
     for query in queries:
@@ -82,6 +92,7 @@ def build_advanced_requests(workspace):
         (72, main, main_source, "total + payload", len("total + "), "value"),
         (73, model, model_source, "values: array[T]", len("values: array["), "Element"),
         (74, inheritance, inheritance_source, "def transform", len("def "), "scale", 1),
+        (75, main, main_source, 'overloaded.choose("three")', len("overloaded."), "choose_text"),
     ]
     for query in rename_queries:
         request_id, path, source, needle, add, new_name, *rest = query

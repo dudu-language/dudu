@@ -11,6 +11,7 @@
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_macros.hpp"
 #include "dudu/lsp/language_server_markdown.hpp"
+#include "dudu/lsp/language_server_member_identity.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_operator.hpp"
@@ -354,6 +355,19 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
         if (const std::optional<std::string> builtin =
                 builtin_function_hover_json(selection, query, current, doc, params)) {
             return *builtin;
+        }
+        if (selection.member_expr) {
+            const SourceLocation use_location{
+                .file = SourceFileName(doc.path.string()),
+                .line = lsp_position(params).line + 1,
+                .column = lsp_position(params).character + 1,
+            };
+            const Expr* call =
+                selection.call_callee && selection.call_expr ? &*selection.call_expr : nullptr;
+            if (const std::optional<Symbol> member = dudu_member_symbol_for_expr(
+                    current, *selection.member_expr, use_location, call)) {
+                return symbol_hover_json(*member);
+            }
         }
     }
     if (has_selection) {
