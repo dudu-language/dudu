@@ -152,3 +152,47 @@ DD
 )
 grep -Eq "clean-cache .*clean_cache_smoke/build/dudu-header-cache" \
     "$repo_root/build/dudu_clean_cache.err"
+
+native_macro_smoke="$repo_root/build/native_macro_cmake_smoke"
+rm -rf "$native_macro_smoke"
+mkdir -p "$native_macro_smoke/src"
+cat >"$native_macro_smoke/dudu.toml" <<'TOML'
+name = "native_macro_cmake_smoke"
+entry = "src/main.dd"
+
+[build]
+dir = "build"
+TOML
+cat >"$native_macro_smoke/src/native_helper.dd" <<'DD'
+from cpp import variant
+
+
+def variant_get_as[T, V...](value: &const[variant[V...]]) -> &const[T]:
+    return std.get[T](value)
+DD
+cat >"$native_macro_smoke/src/macros.dd" <<'DD'
+import dudu.ast as ast
+import native_helper
+
+
+@macro
+def Empty(item: ast.ClassDecl) -> ast.Expansion:
+    return ast.expansion()
+DD
+cat >"$native_macro_smoke/src/main.dd" <<'DD'
+from macros import Empty
+
+
+@derive(Empty)
+class Probe:
+    value: i32
+
+
+def main() -> i32:
+    return Probe(42).value
+DD
+(
+    cd "$native_macro_smoke"
+    "$repo_root/build/dudu" build --quiet
+    test -d build/dudu-header-cache
+)

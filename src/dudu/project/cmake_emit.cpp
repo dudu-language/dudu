@@ -22,7 +22,9 @@ const ProjectIndex& load_cmake_project_index(const ProjectConfig& config,
     options.config = config;
     options.source_dir = config.project_dir.empty() ? input.parent_path() : config.project_dir;
     options.force_module_tree = true;
-    options.include_native_headers = false;
+    // Macro packages are compiled while the project graph is classified. Their implementation
+    // modules may call native APIs even though CMake emission does not run target semantics.
+    options.include_native_headers = true;
     options.check_semantics = false;
     return cmake_project_index_cache.get(options);
 }
