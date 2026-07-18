@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from protocol import notification, position, request, response, run_server, text_document
+from protocol import LspSession, notification, position, request, response, run_server, text_document
 
 
 def open_document(uri, version, source):
@@ -197,9 +197,122 @@ def run_missing_module_uses_current_revision(repo_root, root):
         raise AssertionError(f"missing-module diagnostic was not published: {diagnostics}")
 
 
+def run_watched_file_rename(repo_root, root):
+    helper = root / "helper.dd"
+    moved = root / "moved.dd"
+    main = root / "main.dd"
+    helper_source = "def exported(value: i32) -> i32:\n    return value + 1\n"
+    main_source = "from helper import exported\n\ndef main() -> i32:\n    return exported(1)\n"
+    helper.write_text(helper_source)
+    main.write_text(main_source)
+    main_uri = main.as_uri()
+    use = position(main_source, "exported(1)", 2)
+
+    session = LspSession(repo_root)
+    session.request(1, "initialize", {"rootUri": root.as_uri()})
+    session.send(open_document(main_uri, 1, main_source))
+    initial = session.request(
+        2, "textDocument/definition", {"textDocument": text_document(main_uri), "position": use}
+    )
+    initial_definitions = initial if isinstance(initial, list) else [initial]
+    if not any(item.get("uri") == helper.as_uri() for item in initial_definitions):
+        raise AssertionError(f"initial imported definition failed: {initial}")
+
+    helper.rename(moved)
+    session.send(
+        notification(
+            "workspace/didChangeWatchedFiles",
+            {
+                "changes": [
+                    {"uri": helper.as_uri(), "type": 3},
+                    {"uri": moved.as_uri(), "type": 1},
+                ]
+            },
+        )
+    )
+    removed = session.request(
+        3, "textDocument/definition", {"textDocument": text_document(main_uri), "position": use}
+    )
+    if removed not in (None, []):
+        raise AssertionError(f"renamed module retained stale definition: {removed}")
+
+    moved.rename(helper)
+    session.send(
+        notification(
+            "workspace/didChangeWatchedFiles",
+            {
+                "changes": [
+                    {"uri": moved.as_uri(), "type": 3},
+                    {"uri": helper.as_uri(), "type": 1},
+                ]
+            },
+        )
+    )
+    restored = session.request(
+        4, "textDocument/definition", {"textDocument": text_document(main_uri), "position": use}
+    )
+    restored_definitions = restored if isinstance(restored, list) else [restored]
+    if not any(item.get("uri") == helper.as_uri() for item in restored_definitions):
+        raise AssertionError(f"restored module definition did not recover: {restored}")
+    session.close(5)
+
+
+def run_workspace_folder_changes(repo_root, root):
+    initial_root = root / "initial"
+    added_root = root / "added"
+    initial_root.mkdir()
+    added_root.mkdir()
+    main = initial_root / "main.dd"
+    added = added_root / "extra.dd"
+    main_source = "def main() -> i32:\n    return 0\n"
+    main.write_text(main_source)
+    added.write_text("def added_symbol() -> i32:\n    return 42\n")
+    main_uri = main.as_uri()
+
+    session = LspSession(repo_root)
+    session.request(1, "initialize", {"rootUri": initial_root.as_uri()})
+    session.send(open_document(main_uri, 1, main_source))
+    before = session.request(2, "workspace/symbol", {"query": "added_symbol"})
+    if before:
+        raise AssertionError(f"symbol outside workspace leaked before folder add: {before}")
+
+    session.send(
+        notification(
+            "workspace/didChangeWorkspaceFolders",
+            {
+                "event": {
+                    "added": [{"uri": added_root.as_uri(), "name": "added"}],
+                    "removed": [],
+                }
+            },
+        )
+    )
+    present = session.request(3, "workspace/symbol", {"query": "added_symbol"})
+    if not any(item.get("name") == "added_symbol" for item in present):
+        raise AssertionError(f"added workspace folder was not indexed: {present}")
+
+    session.send(
+        notification(
+            "workspace/didChangeWorkspaceFolders",
+            {
+                "event": {
+                    "added": [],
+                    "removed": [{"uri": added_root.as_uri(), "name": "added"}],
+                }
+            },
+        )
+    )
+    removed = session.request(4, "workspace/symbol", {"query": "added_symbol"})
+    if removed:
+        raise AssertionError(f"removed workspace folder retained symbols: {removed}")
+    session.close(5)
+
+
 def run_module_recovery(repo_root):
     with tempfile.TemporaryDirectory(prefix="dudu_lsp_module_recovery_") as directory:
         root = Path(directory)
         run_removed_export(repo_root, root)
         run_restored_export(repo_root, root)
         run_missing_module_uses_current_revision(repo_root, root)
+        run_watched_file_rename(repo_root, root)
+        run_workspace_folder_changes(repo_root, root)

@@ -127,6 +127,10 @@ class LanguageServer {
                 did_save(params);
             } else if (method == "textDocument/didClose") {
                 did_close(params);
+            } else if (method == "workspace/didChangeWatchedFiles") {
+                did_change_watched_files(params);
+            } else if (method == "workspace/didChangeWorkspaceFolders") {
+                did_change_workspace_folders(params);
             } else if (method == "textDocument/formatting") {
                 if (id != nullptr) {
                     transport_.respond(*id, formatting_result(params));
@@ -215,7 +219,9 @@ class LanguageServer {
                "\"inlayHintProvider\":{\"resolveProvider\":false},"
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
-               "\"workspaceSymbolProvider\":true"
+               "\"workspaceSymbolProvider\":true,"
+               "\"workspace\":{\"workspaceFolders\":{\"supported\":true,"
+               "\"changeNotifications\":true}}"
                "},\"serverInfo\":{\"name\":\"dudu-lsp\",\"version\":\"" +
                std::string(kToolchainVersion) + "\"}}";
     }
@@ -350,6 +356,49 @@ class LanguageServer {
         invalidate_workspace_cache(uri);
         publish_syntax_diagnostics(uri);
         queue_full_diagnostics(uri);
+    }
+
+    void did_change_watched_files(const Json* params) {
+        const Json* changes = params == nullptr ? nullptr : params->get("changes");
+        const JsonArray* array = changes == nullptr ? nullptr : changes->array();
+        if (array == nullptr || array->empty()) {
+            return;
+        }
+        invalidate_all_open_documents();
+        queue_full_diagnostics(all_open_document_uris());
+    }
+
+    void did_change_workspace_folders(const Json* params) {
+        const Json* event = params == nullptr ? nullptr : params->get("event");
+        if (event == nullptr) {
+            return;
+        }
+        const auto workspace_path = [](const Json& folder) -> std::filesystem::path {
+            const std::string uri = string_value(folder.get("uri"));
+            return uri.starts_with("file://") ? std::filesystem::path(file_uri_to_path(uri))
+                                               : std::filesystem::path{};
+        };
+        if (const JsonArray* removed = event->get("removed") == nullptr
+                                           ? nullptr
+                                           : event->get("removed")->array()) {
+            for (const Json& folder : *removed) {
+                const std::filesystem::path path = workspace_path(folder);
+                std::erase(workspace_roots_, path);
+            }
+        }
+        if (const JsonArray* added = event->get("added") == nullptr
+                                         ? nullptr
+                                         : event->get("added")->array()) {
+            for (const Json& folder : *added) {
+                const std::filesystem::path path = workspace_path(folder);
+                if (!path.empty() &&
+                    std::ranges::find(workspace_roots_, path) == workspace_roots_.end()) {
+                    workspace_roots_.push_back(path);
+                }
+            }
+        }
+        invalidate_all_open_documents();
+        queue_full_diagnostics(all_open_document_uris());
     }
 
     void publish_syntax_diagnostics(const std::string& uri) {
@@ -507,7 +556,7 @@ class LanguageServer {
         if (documents_.empty()) {
             return "[]";
         }
-        return workspace_symbols_json(query, documents_);
+        return workspace_symbols_json(query, cached_workspace_documents());
     }
 
     std::string definition_result(const Json* params) const {
@@ -603,6 +652,29 @@ class LanguageServer {
                 invalidate_workspace_cache(uri);
             }
         }
+    }
+
+    std::set<std::string> all_open_document_uris() const {
+        std::set<std::string> uris;
+        for (const auto& [uri, _] : documents_) {
+            uris.insert(uri);
+        }
+        return uris;
+    }
+
+    void invalidate_all_open_documents() {
+        {
+            const std::lock_guard lock(diagnostics_mutex_);
+            ++documents_revision_;
+            for (const auto& [uri, _] : documents_) {
+                ++document_revisions_[uri];
+            }
+            native_ready_revisions_.clear();
+        }
+        workspace_cache_revision_ = std::numeric_limits<size_t>::max();
+        workspace_cache_.clear();
+        clear_language_server_module_cache();
+        set_language_server_open_documents(documents_);
     }
 
     std::set<std::string> affected_open_documents(const std::filesystem::path& changed_path,

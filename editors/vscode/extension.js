@@ -163,7 +163,11 @@ function clientOptions() {
       },
     },
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.dd"),
+      fileEvents: [
+        vscode.workspace.createFileSystemWatcher("**/*.dd"),
+        vscode.workspace.createFileSystemWatcher("**/*.{h,hh,hpp,hxx,c,cc,cpp,cxx}"),
+        vscode.workspace.createFileSystemWatcher("**/dudu.toml"),
+      ],
     },
   };
 }
