@@ -32,6 +32,13 @@ def hover_value(messages, request_id):
     return result["contents"].get("value", "")
 
 
+def edit_starts(edit_result, path):
+    return {
+        (edit["range"]["start"]["line"], edit["range"]["start"]["character"])
+        for edit in (edit_result or {}).get("changes", {}).get(path.as_uri(), [])
+    }
+
+
 def assert_advanced_behavior(messages, workspace):
     model = workspace.model
     inheritance = workspace.inheritance
@@ -113,6 +120,51 @@ def assert_advanced_behavior(messages, workspace):
     ):
         raise AssertionError(f"facade module segment did not resolve to model.dd: {module_target!r}")
     assert_definition(response(messages, 50), model, model_source, "class Buffer", len("class "), "facade imported name")
+
+    prepare_override = response(messages, 70)
+    if not prepare_override or prepare_override.get("placeholder") != "transform":
+        raise AssertionError(f"override prepareRename was unavailable: {prepare_override!r}")
+
+    loop_rename = response(messages, 71)
+    loop_starts = edit_starts(loop_rename, main)
+    expected_loop = {
+        tuple(position(main_source, "for item", len("for ")).values()),
+        tuple(position(main_source, "total += item", len("total += ")).values()),
+    }
+    if loop_starts != expected_loop:
+        raise AssertionError(f"loop rename did not stay in its binding scope: {loop_rename!r}")
+
+    match_rename = response(messages, 72)
+    match_starts = edit_starts(match_rename, main)
+    expected_match = {
+        tuple(position(main_source, "Data(payload)", len("Data(")).values()),
+        tuple(position(main_source, "total + payload", len("total + ")).values()),
+    }
+    if match_starts != expected_match:
+        raise AssertionError(f"match rename did not stay in its case scope: {match_rename!r}")
+
+    generic_rename = response(messages, 73)
+    generic_starts = edit_starts(generic_rename, model)
+    class_t = tuple(position(model_source, "class Buffer[T", len("class Buffer[")).values())
+    class_value_t = tuple(position(model_source, "values: array[T]", len("values: array[")).values())
+    class_return_t = tuple(position(model_source, "def first(self) -> T", len("def first(self) -> ")).values())
+    function_t = tuple(position(model_source, "copy_values[T", len("copy_values[")).values())
+    if not {class_t, class_value_t, class_return_t}.issubset(generic_starts) or function_t in generic_starts:
+        raise AssertionError(f"generic rename crossed owner identity: {generic_rename!r}")
+
+    method_rename = response(messages, 74)
+    inheritance_starts = edit_starts(method_rename, inheritance)
+    main_starts = edit_starts(method_rename, main)
+    derived_decl = tuple(position(inheritance_source, "def transform", len("def "), occurrence=1).values())
+    derived_use = tuple(position(main_source, "processor.transform", len("processor.")).values())
+    base_decl = tuple(position(inheritance_source, "def transform", len("def ")).values())
+    unrelated_use = tuple(position(main_source, "other_processor.transform", len("other_processor.")).values())
+    if derived_decl not in inheritance_starts or base_decl in inheritance_starts:
+        raise AssertionError(f"override rename crossed base identity: {method_rename!r}")
+    if derived_use not in main_starts or unrelated_use in main_starts:
+        raise AssertionError(f"override rename crossed receiver identity: {method_rename!r}")
+    if workspace.other.as_uri() in (method_rename or {}).get("changes", {}):
+        raise AssertionError(f"override rename edited unrelated class: {method_rename!r}")
 
     initialize = response(messages, 1)
     legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"]

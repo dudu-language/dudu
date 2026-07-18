@@ -1,8 +1,10 @@
 #include "dudu/core/ast_type.hpp"
+#include "dudu/lsp/language_server_generic_params.hpp"
 #include "dudu/lsp/language_server_import_references.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_macros.hpp"
+#include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_reference_query.hpp"
@@ -14,9 +16,12 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <sstream>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -111,6 +116,39 @@ std::optional<std::string> prepare_rename_range_json(const Document& doc, const 
     return out.str();
 }
 
+bool dudu_member_target(const std::optional<MemberReferenceTarget>& target) {
+    return target.has_value() && !target->declaration.file.empty() &&
+           std::filesystem::path(target->declaration.file.str()).extension() == ".dd";
+}
+
+std::string workspace_edit_json(const std::vector<ReferenceLocation>& locations,
+                                const std::string& new_name) {
+    std::map<std::string, std::vector<const ReferenceLocation*>> by_uri;
+    for (const ReferenceLocation& location : locations) {
+        by_uri[location.uri].push_back(&location);
+    }
+    std::ostringstream out;
+    out << "{\"changes\":{";
+    bool first_document = true;
+    for (const auto& [uri, document_locations] : by_uri) {
+        if (!first_document) {
+            out << ",";
+        }
+        first_document = false;
+        out << "\"" << json_escape(uri) << "\":[";
+        for (size_t index = 0; index < document_locations.size(); ++index) {
+            if (index > 0) {
+                out << ",";
+            }
+            out << "{\"range\":" << document_locations[index]->range << ",\"newText\":\""
+                << json_escape(new_name) << "\"}";
+        }
+        out << "]";
+    }
+    out << "}}";
+    return out.str();
+}
+
 } // namespace
 
 std::string rename_json(const Document& doc, const Json* params,
@@ -167,6 +205,22 @@ std::string rename_json(const Document& doc, const Json* params,
         current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
     const std::string old_name =
         reference_query_at(doc, params, selection, current_unit, current_symbols_with_native);
+    const std::optional<GenericParamTarget> generic =
+        current_unit == nullptr
+            ? std::nullopt
+            : generic_param_target_at(*current_unit, lsp_position(params),
+                                      selection.symbol.value_or(dotted_tail(old_name)));
+    const std::optional<MemberReferenceTarget> member =
+        member_reference_target_at(doc, params, selection, current_unit);
+    const bool local = current_unit != nullptr && old_name != "self" && old_name != "super" &&
+                       old_name.find('.') == std::string::npos &&
+                       has_type_ref(local_type_ref_before_cursor(*current_unit, old_name, params));
+    if (generic.has_value() || dudu_member_target(member) || local) {
+        if (!valid_identifier(new_name)) {
+            return "null";
+        }
+        return workspace_edit_json(reference_locations(doc, params, workspace, false), new_name);
+    }
     const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
                                               current_symbols_without_native);
     if (!valid_identifier(new_name) || scope == RenameScope::None) {
@@ -286,6 +340,17 @@ std::string prepare_rename_json(const Document& doc, const Json* params) {
         symbols_for_module(*current_unit, false);
     const std::string old_name =
         reference_query_at(doc, params, selection, current_unit, current_symbols_without_native);
+    const std::optional<GenericParamTarget> generic = generic_param_target_at(
+        *current_unit, lsp_position(params), selection.symbol.value_or(dotted_tail(old_name)));
+    const std::optional<MemberReferenceTarget> member =
+        member_reference_target_at(doc, params, selection, current_unit);
+    const bool local = old_name != "self" && old_name != "super" &&
+                       old_name.find('.') == std::string::npos &&
+                       has_type_ref(local_type_ref_before_cursor(*current_unit, old_name, params));
+    if (generic.has_value() || dudu_member_target(member) || local) {
+        const std::optional<std::string> range = prepare_rename_range_json(doc, params, old_name);
+        return range.value_or("null");
+    }
     const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
                                               current_symbols_without_native);
     if (scope == RenameScope::None) {

@@ -66,6 +66,7 @@ def build_advanced_requests(workspace):
         (48, "textDocument/signatureHelp", main, main_source, "processor.transform(buffer", len("processor.transform(")),
         (49, "textDocument/definition", facade, workspace.facade_source, "from model import Buffer", len("from ")),
         (50, "textDocument/definition", facade, workspace.facade_source, "from model import Buffer", len("from model import ")),
+        (70, "textDocument/prepareRename", inheritance, inheritance_source, "def transform", len("def "), 1),
     ]
     for query in queries:
         request_id, method, path, source, needle, add, *rest = query
@@ -75,6 +76,27 @@ def build_advanced_requests(workspace):
             "position": position(source, needle, add=add, occurrence=occurrence),
         }
         messages.append(request(request_id, method, params))
+
+    rename_queries = [
+        (71, main, main_source, "total += item", len("total += "), "element"),
+        (72, main, main_source, "total + payload", len("total + "), "value"),
+        (73, model, model_source, "values: array[T]", len("values: array["), "Element"),
+        (74, inheritance, inheritance_source, "def transform", len("def "), "scale", 1),
+    ]
+    for query in rename_queries:
+        request_id, path, source, needle, add, new_name, *rest = query
+        occurrence = rest[0] if rest else 0
+        messages.append(
+            request(
+                request_id,
+                "textDocument/rename",
+                {
+                    "textDocument": text_document(path),
+                    "position": position(source, needle, add=add, occurrence=occurrence),
+                    "newName": new_name,
+                },
+            )
+        )
 
     messages.extend(
         [
