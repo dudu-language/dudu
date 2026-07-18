@@ -542,15 +542,19 @@ before implementation.
 ### External Conformance
 
 [Protocols And Serde Design Notes](protocols-serde-design-notes.md) records the
-open problem: owned Dudu types can implement abstract contracts through normal
-inheritance, but third-party types cannot yet satisfy a static protocol without
-being modified or wrapped.
+design pressure and the result of the real `serdde` package. Serdde now proves
+derive-based serialization for owned classes, enums, generic declarations,
+recursive declarations, collections, fixed arrays, `Option`, `Result`, and
+`variant`. It also proves imported C++ template adaptation against
+`std.pair[std.string, i32]`.
 
-Drive this with a real `serdd` package. First prove derive-based serialization
-for owned classes using the existing macro system. Add external conformance only
-when adapting a real imported type demonstrates the required lookup, coherence,
-or generic-constraint rules. Do not add a general trait system merely because
-C++ and Rust have one.
+Explicit adapters were sufficient. Fields select an adapter with
+`@Serde(adapter="PairSerde")`; standalone values use
+`to_value_with[T, Adapter]` and `from_value_with[T, Adapter]`. Generated code is
+ordinary typed Dudu, visible through `duc expand`, and the compiler has no
+Serdde- or library-specific branches. Do not add global external conformance,
+coherence, or a general trait system unless a different real library proves
+that explicit adapters cannot express its static API.
 
 ### Generic Constraints
 
@@ -646,7 +650,8 @@ Do not make GitHub Actions part of the normal patch/test loop.
 3. Editor reliability, semantic correctness, latency, and native documentation
    from [Editor Reliability](editor-reliability-plan.md) (next)
 4. Architecture/readability cleanup encountered during that work
-5. `serdd`-driven external-conformance decision
+5. `serdde`-driven external-conformance decision (complete: explicit adapters
+   were sufficient; no language feature added)
 6. Numeric libraries and optional native/GPU ecosystem proof
 7. Distribution maintenance and platform validation in parallel
 

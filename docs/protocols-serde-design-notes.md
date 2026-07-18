@@ -2,8 +2,44 @@
 
 These are design notes from the abstract-class, trait, interface, and Serde
 discussion. This file is not a committed language feature list. It records the
-problem shapes we want Dudu to keep in mind while the OOP, macro, and generic
-systems mature.
+problem shapes and the result of implementing the real Serdde package.
+
+## Proven Result
+
+[Serdde](https://github.com/dudu-language/serdde) is a public, format-neutral
+serialization framework implemented entirely in Dudu. It provides derived
+serialization for classes and enums, including generic, payload, recursive,
+collection, fixed-array, `Option`, `Result`, and `variant` cases. JSON and DSON
+exercise the same `Value` conversion layer. Generated declarations remain
+ordinary typed Dudu and can be inspected with `duc expand`.
+
+Imported and third-party types use explicit adapters:
+
+```python
+class PairSerde:
+    @staticmethod
+    def serialize(value: &const[std.pair[std.string, i32]]) -> Result[Value, SerddeError]:
+        ...
+
+    @staticmethod
+    def deserialize(value: &const[Value]) -> Result[std.pair[std.string, i32], SerddeError]:
+        ...
+
+class Record:
+    @Serde(adapter="PairSerde")
+    pair: std.pair[std.string, i32]
+```
+
+Standalone values use `to_value_with[T, Adapter]` and
+`from_value_with[T, Adapter]`. This was validated against the actual imported
+`std.pair` type in standalone, class-field, and enum-payload positions.
+
+This evidence does not justify a global trait, coherence, or external
+conformance feature. Explicit adapter selection is local, unambiguous, permits
+multiple wire representations for one native type, and requires no compiler
+knowledge of Serdde. Revisit language-level conformance only when another real
+library cannot express its API with inheritance, generics, macros, and explicit
+adapters.
 
 ## Core Tension
 
@@ -285,10 +321,10 @@ The macro should inspect the class fields, types, decorators, and doc metadata,
 then generate normal Dudu declarations that participate in type checking, LSP,
 and codegen.
 
-## Serde For Third-Party Types
+## Earlier External-Conformance Candidates
 
-A Serde-like library needs a way to support native or third-party types without
-editing their declarations.
+The following forms were considered before Serdde proved explicit adapters were
+sufficient. They are not accepted Dudu syntax.
 
 External conformance shape:
 
@@ -314,7 +350,7 @@ class ThirdPartyStringSerde:
         return d.string().map(ThirdPartyString)
 ```
 
-Likely lookup order for a Serde library:
+The proposed lookup order was:
 
 1. use generated or declared serialize/deserialize support on the type
 2. use a visible external conformance or `@Serde(for_type=Type)` adapter
@@ -373,12 +409,12 @@ to keep runtime shapes and ordinary values as the default, then use static
 shape/type data at API boundaries where it clearly improves errors, layout, GPU
 dispatch, or impossible-state checking.
 
-## Open Questions
+## Remaining Questions
 
-- Which external conformance spelling is the right balance of Python-looking
-  and precise?
-- Should external conformance support runtime type-erasure adapters, or only
-  generic/static dispatch?
+- What concrete library cannot use explicit adapters and therefore requires a
+  language-level conformance spelling?
+- If that pressure appears, should conformance support runtime type erasure or
+  only generic/static dispatch?
 - Whether `Serde` should remain one derive or be a package alias that requests
   separate `Serialize` and `Deserialize` derives is a library API decision; it
   does not change the language macro model.
