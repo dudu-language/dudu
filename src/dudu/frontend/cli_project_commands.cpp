@@ -93,6 +93,9 @@ ProjectConfig cli_project_config(const CliOptions& options) {
     if (options.project_driver) {
         ensure_project_dependencies(config, false, options.quiet);
     }
+    if (!config.dependencies.empty()) {
+        merge_dependency_native_inputs(config);
+    }
     return config;
 }
 

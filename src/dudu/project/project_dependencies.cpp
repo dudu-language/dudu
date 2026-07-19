@@ -3,6 +3,7 @@
 #include "dudu/core/file_io.hpp"
 #include "dudu/native/native_build.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -155,6 +156,42 @@ void write_lock_if_changed(const ProjectConfig& config) {
     out << text;
 }
 
+void append_unique(std::vector<std::string>& target, const std::vector<std::string>& source) {
+    for (const std::string& value : source) {
+        if (std::find(target.begin(), target.end(), value) == target.end()) {
+            target.push_back(value);
+        }
+    }
+}
+
+void append_unique_paths(std::vector<std::string>& target, const ProjectConfig& target_owner,
+                         const ProjectConfig& source_owner,
+                         const std::vector<std::string>& source) {
+    for (const std::string& value : source) {
+        const std::string absolute = project_path(source_owner, value).string();
+        const bool present = std::any_of(target.begin(), target.end(), [&](const std::string& item) {
+            return project_path(target_owner, item).lexically_normal() ==
+                   std::filesystem::path(absolute).lexically_normal();
+        });
+        if (!present) {
+            target.push_back(absolute);
+        }
+    }
+}
+
+void merge_native_inputs(ProjectConfig& target, const ProjectConfig& dependency) {
+    append_unique_paths(target.c_sources, target, dependency, dependency.c_sources);
+    append_unique_paths(target.cpp_sources, target, dependency, dependency.cpp_sources);
+    append_unique_paths(target.include_dirs, target, dependency, dependency.include_dirs);
+    append_unique_paths(target.lib_dirs, target, dependency, dependency.lib_dirs);
+    append_unique_paths(target.pkg_config_paths, target, dependency, dependency.pkg_config_paths);
+    append_unique(target.defines, dependency.defines);
+    append_unique(target.flags, dependency.flags);
+    append_unique(target.libs, dependency.libs);
+    append_unique(target.link_flags, dependency.link_flags);
+    append_unique(target.pkg_config_packages, dependency.pkg_config_packages);
+}
+
 } // namespace
 
 std::filesystem::path dependency_cache_root(const ProjectConfig& config) {
@@ -216,6 +253,15 @@ void ensure_project_dependencies(ProjectConfig& config, bool update, bool quiet)
         fail_dependency("Dudu dependency '" + name + "' has unknown kind: " + dependency.kind);
     }
     write_lock_if_changed(config);
+}
+
+void merge_dependency_native_inputs(ProjectConfig& config) {
+    for (const auto& [name, dependency] : config.dependencies) {
+        const std::filesystem::path root = dependency_package_root(config, dependency);
+        validate_dependency_package_root(name, root);
+        const ProjectConfig package = parse_project_config(root / "dudu.toml");
+        merge_native_inputs(config, package);
+    }
 }
 
 } // namespace dudu

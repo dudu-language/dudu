@@ -106,6 +106,62 @@ void test_project_dependency_manifest_and_lockfile(const std::filesystem::path& 
     assert(rejected);
 }
 
+void test_dependency_native_inputs(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-native-deps";
+    const std::filesystem::path dependency =
+        root / "build" / "project-config-native-deps-local";
+    std::filesystem::remove_all(project);
+    std::filesystem::remove_all(dependency);
+    write_text(project / "dudu.toml", "name = \"native_consumer\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[deps]\n"
+                                      "native_lib = { path = \"../project-config-native-deps-local\" }\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+    write_text(dependency / "dudu.toml", "name = \"native_lib\"\n"
+                                         "entry = \"src/native_lib.dd\"\n"
+                                         "\n"
+                                         "[include]\n"
+                                         "paths = [\"include\"]\n"
+                                         "\n"
+                                         "[sources]\n"
+                                         "cpp = [\"src/native.cpp\"]\n"
+                                         "c = [\"src/native.c\"]\n"
+                                         "\n"
+                                         "[cc]\n"
+                                         "defines = [\"NATIVE_LIB=1\"]\n"
+                                         "flags = [\"-fno-strict-aliasing\"]\n"
+                                         "\n"
+                                         "[link]\n"
+                                         "paths = [\"lib\"]\n"
+                                         "libs = [\"m\"]\n"
+                                         "flags = [\"-pthread\"]\n"
+                                         "\n"
+                                         "[pkg_config]\n"
+                                         "packages = [\"zlib\"]\n"
+                                         "paths = [\"pkgconfig\"]\n");
+    write_text(dependency / "src" / "native_lib.dd", "def value() -> i32:\n    return 1\n");
+
+    dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
+    dudu::ensure_project_dependencies(config, false, true);
+    dudu::merge_dependency_native_inputs(config);
+
+    assert(config.cpp_sources ==
+           std::vector<std::string>{(dependency / "src/native.cpp").string()});
+    assert(config.c_sources ==
+           std::vector<std::string>{(dependency / "src/native.c").string()});
+    assert(config.include_dirs ==
+           std::vector<std::string>{(dependency / "include").string()});
+    assert(config.lib_dirs == std::vector<std::string>{(dependency / "lib").string()});
+    assert(config.pkg_config_paths ==
+           std::vector<std::string>{(dependency / "pkgconfig").string()});
+    assert(config.defines == std::vector<std::string>{"NATIVE_LIB=1"});
+    assert(config.flags == std::vector<std::string>{"-fno-strict-aliasing"});
+    assert(config.libs == std::vector<std::string>{"m"});
+    assert(config.link_flags == std::vector<std::string>{"-pthread"});
+    assert(config.pkg_config_packages == std::vector<std::string>{"zlib"});
+}
+
 void test_macro_capability_manifest(const std::filesystem::path& root) {
     const std::filesystem::path project = root / "build" / "project-config-macro-capabilities";
     std::filesystem::remove_all(project);
@@ -485,6 +541,7 @@ int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_project_dependency_manifest_and_lockfile(DUDU_REPO_ROOT);
+        test_dependency_native_inputs(DUDU_REPO_ROOT);
         test_macro_capability_manifest(DUDU_REPO_ROOT);
         test_cmake_emit_depends_on_manifest(DUDU_REPO_ROOT);
         test_cmake_project_config(DUDU_REPO_ROOT);

@@ -33,6 +33,9 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
     if (options.project_driver) {
         ensure_project_dependencies(config, false, options.quiet);
     }
+    if (!config.dependencies.empty()) {
+        merge_dependency_native_inputs(config);
+    }
     return config;
 }
 
